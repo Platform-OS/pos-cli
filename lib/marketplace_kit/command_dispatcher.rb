@@ -5,7 +5,20 @@ module MarketplaceKit
     end
 
     def execute
-      puts @args
+      command.new.execute
+    end
+
+    private
+
+    def command
+      @command ||= case command_name
+        when "sync" then Commands::Sync
+        else raise("Usage: nearme-marketpalce sync | deploy | pull")
+      end
+    end
+
+    def command_name
+      @args[0]
     end
   end
 end
