@@ -8,16 +8,25 @@ module MarketplaceKit
           changed_file_paths = added + modified
 
           changed_file_paths.each do |changed_file_path|
-            connection = Faraday.new(url: 'http://localhost:3000', headers: { 'Content-Type' => 'application/json' })
-
-            body = File.read(changed_file_path)
-            changed_file_path = changed_file_path.gsub("#{Dir.getwd}/#{MARKETPLACE_BUILDER_FOLDER}/", "")
-            connection.put("api/marketplace_releases/sync", { "path": changed_file_path, body: body }.to_json)
+            on_file_change(changed_file_path)
           end
         end
 
         listener.start
         sleep
+      end
+
+      private
+
+      def on_file_change(file_path)
+        body = File.read(file_path)
+        relative_file_path = file_path.gsub("#{Dir.getwd}/#{MARKETPLACE_BUILDER_FOLDER}/", "")
+
+        gateway.send_file_change relative_file_path, body
+      end
+
+      def gateway
+        @gateway ||= Services::ApiGateway.new
       end
     end
   end
