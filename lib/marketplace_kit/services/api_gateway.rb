@@ -31,7 +31,7 @@ module MarketplaceKit
 
       def faraday_basic_configuration
         {
-          url: 'http://localhost:3000',
+          url: ENV['LOCALHOST_URL'],
           headers: {}
         }
       end

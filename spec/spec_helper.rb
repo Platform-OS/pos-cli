@@ -12,7 +12,6 @@ RSpec.configure do |config|
   config.include Helpers::ListenGemStub
 
   config.before(:each) do
-    stub_const 'MarketplaceKit::MARKETPLACE_BUILDER_FOLDER', 'spec/example_marketplace'
     allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
     @fake_listener = stub_listen_gem
   end

@@ -16,7 +16,7 @@ describe "sync command" do
 
   it 'sends API call with modified file' do
     allow(@fake_listener).to receive(:start) do
-      @fake_listener.on_file_changed.call ["#{MarketplaceKit.root}/spec/example_marketplace/liquid_views/index.liquid"], [], []
+      @fake_listener.on_file_changed.call ["#{MarketplaceKit.root}/marketplace_builder/liquid_views/index.liquid"], [], []
     end
 
     subject
