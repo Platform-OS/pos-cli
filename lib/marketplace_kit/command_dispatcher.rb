@@ -12,7 +12,8 @@ module MarketplaceKit
 
     def command
       @command ||= case command_name
-        when "sync" then Commands::Sync
+        when "sync"   then Commands::Sync
+        when "deploy" then Commands::Deploy
         else raise("Usage: nearme-marketpalce sync | deploy | pull")
       end
     end
