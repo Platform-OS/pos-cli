@@ -11,12 +11,20 @@ describe "deploy command" do
 
   it 'sends API call with proper zip file' do
     expect_any_instance_of(Faraday::Connection).to receive(:post) do |_, reques_url, request_body|
+      unzip_zip_from_mocked_request(request_body)
+
       expect(reques_url).to eq('api/marketplace_releases')
-      File.open('tmp/zip_file_from_request.zip', 'w') { |file| file.write(request_body[:marketplace_builder][:zip_file].read) }
-      system "unzip -o tmp/zip_file_from_request.zip -d tmp/zip_file_from_request"
       expect(File.read('tmp/zip_file_from_request/liquid_views/index.liquid')).to eq("<h1>Hello</h1>\n")
     end
 
     subject
+  end
+
+  def unzip_zip_from_mocked_request(request_body)
+    File.open('tmp/zip_file_from_request.zip', 'w') do |file|
+      file.write(request_body[:marketplace_builder][:zip_file].read)
+    end
+
+    system "unzip -o tmp/zip_file_from_request.zip -d tmp/zip_file_from_request"
   end
 end
