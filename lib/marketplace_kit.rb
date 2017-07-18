@@ -1,11 +1,11 @@
 require 'json'
 require 'listen'
 require 'faraday'
-require 'dotenv'
 require 'io/console'
 
 require "marketplace_kit/version"
 require "marketplace_kit/command_dispatcher"
+require "marketplace_kit/services/config"
 require "marketplace_kit/services/api_gateway"
 require "marketplace_kit/commands/sync"
 require "marketplace_kit/commands/deploy"
@@ -21,9 +21,7 @@ module MarketplaceKit
     "#{Dir.getwd}/#{MARKETPLACE_BUILDER_FOLDER}/"
   end
 
-  def self.load_dotenv
-    Dotenv.load("#{MarketplaceKit.builder_folder}/.builder-env.local", "#{MarketplaceKit.builder_folder}/.builder-env")
+  def self.config
+    @config ||= Services::Config.new
   end
 end
-
-MarketplaceKit.load_dotenv

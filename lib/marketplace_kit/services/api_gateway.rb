@@ -28,7 +28,7 @@ module MarketplaceKit
         @json_connection ||= Faraday.new(faraday_basic_configuration.merge(
           headers: { 
             'Content-Type' => 'application/json',
-            'UserTemporaryToken' => ENV['LOCALHOST_TOKEN'].to_s,
+            'UserTemporaryToken' => MarketplaceKit.config.token,
             'Accept' => 'application/vnd.nearme.v4+json'
           }
         ))
@@ -37,7 +37,7 @@ module MarketplaceKit
       def multipart_connection
         @multipart_connection ||= Faraday.new(faraday_basic_configuration.merge(
           headers: {
-            'UserTemporaryToken' => ENV['LOCALHOST_TOKEN'].to_s,
+            'UserTemporaryToken' => MarketplaceKit.config.token,
             'Accept' => 'application/vnd.nearme.v4+json'
           }
         )) do |conn|
@@ -49,7 +49,7 @@ module MarketplaceKit
 
       def faraday_basic_configuration
         {
-          url: ENV['LOCALHOST_URL'],
+          url: MarketplaceKit.config.url,
           headers: {}
         }
       end

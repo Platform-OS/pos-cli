@@ -5,7 +5,8 @@ module MarketplaceKit
     end
 
     def execute
-      unless ENV['LOCALHOST_TOKEN']
+      MarketplaceKit.config.load
+      if MarketplaceKit.config.token.empty?
         puts "Enter your email"
         email = STDIN.gets.chomp
 
@@ -16,7 +17,7 @@ module MarketplaceKit
         if response[:status] == 401
           raise('Error: Invalid email or password!')
         else
-          ENV['LOCALHOST_TOKEN'] = response[:body]['token']
+          MarketplaceKit.config.set_token(response[:body]['token'])
         end
       end
 

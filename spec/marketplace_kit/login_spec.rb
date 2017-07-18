@@ -1,7 +1,12 @@
 describe "login" do
   context "when no token stored" do
     before(:each) do
-      ENV['LOCALHOST_TOKEN'] = nil
+      allow(File).to receive(:read).with("#{MarketplaceKit.builder_folder}/.builder").and_return('{
+        "localhost": {
+          "url": "http://localhost:3000"
+        }
+      }')
+
       allow(STDIN).to receive(:gets).and_return('correct-email')
       allow(STDIN).to receive(:noecho).and_return('correct-password')
 
@@ -16,10 +21,6 @@ describe "login" do
       }).to_return(status: 401, body: {}.to_json)
 
       stub_request(:post, 'http://localhost:3000/api/marketplace_releases').to_return(status: 200)
-    end
-
-    after(:each) do
-      ENV['LOCALHOST_TOKEN'] = 'correct-token'
     end
 
     it 'asks for login and password' do
@@ -54,8 +55,8 @@ describe "login" do
     end
 
     it 'stores token after login' do
-      expect(STDIN).to receive(:gets).and_return('correct-email').once
-      expect(STDIN).to receive(:noecho).and_return('correct-password').once
+      expect(STDIN).to receive(:gets).and_return('correct-email').twice
+      expect(STDIN).to receive(:noecho).and_return('correct-password').twice
 
       execute_command('deploy')
       execute_command('deploy')
