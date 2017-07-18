@@ -2,6 +2,7 @@ require 'json'
 require 'listen'
 require 'faraday'
 require 'dotenv'
+require 'io/console'
 
 require "marketplace_kit/version"
 require "marketplace_kit/command_dispatcher"

@@ -1,6 +1,15 @@
 module MarketplaceKit
   module Services
     class ApiGateway
+      def login(email, password)
+        response = json_connection.post("api/marketplace_builder/sessions", { 
+          email: email, 
+          password: password
+        }.to_json)
+
+        { status: response.status, body: JSON.parse(response.body) }
+      end
+
       def send_file_change(file_path, file_content)
         json_connection.put("api/marketplace_releases/sync", { 
           path: file_path, 
@@ -16,13 +25,22 @@ module MarketplaceKit
       private
 
       def json_connection
-        @connection ||= Faraday.new(faraday_basic_configuration.merge(
-          headers: { 'Content-Type' => 'application/json' }
+        @json_connection ||= Faraday.new(faraday_basic_configuration.merge(
+          headers: { 
+            'Content-Type' => 'application/json',
+            'UserTemporaryToken' => ENV['LOCALHOST_TOKEN'].to_s,
+            'Accept' => 'application/vnd.nearme.v4+json'
+          }
         ))
       end
 
       def multipart_connection
-        @connection ||= Faraday.new(faraday_basic_configuration) do |conn|
+        @multipart_connection ||= Faraday.new(faraday_basic_configuration.merge(
+          headers: {
+            'UserTemporaryToken' => ENV['LOCALHOST_TOKEN'].to_s,
+            'Accept' => 'application/vnd.nearme.v4+json'
+          }
+        )) do |conn|
           conn.request :multipart
           conn.request :url_encoded
           conn.adapter :net_http
