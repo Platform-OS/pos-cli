@@ -2,6 +2,7 @@ require 'json'
 require 'listen'
 require 'faraday'
 require 'io/console'
+require 'deep_merge/rails_compat'
 
 require "marketplace_kit/version"
 require "marketplace_kit/command_dispatcher"

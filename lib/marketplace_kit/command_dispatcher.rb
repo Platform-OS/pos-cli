@@ -6,6 +6,7 @@ module MarketplaceKit
 
     def execute
       MarketplaceKit.config.load
+
       if MarketplaceKit.config.token.empty?
         puts "Enter your email"
         email = STDIN.gets.chomp

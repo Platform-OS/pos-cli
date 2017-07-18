@@ -39,4 +39,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "listen"
   spec.add_dependency "faraday"
+  spec.add_dependency "deep_merge"
 end
