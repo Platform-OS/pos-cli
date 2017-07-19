@@ -6,6 +6,7 @@ require 'deep_merge/rails_compat'
 
 require "marketplace_kit/version"
 require "marketplace_kit/command_dispatcher"
+require "marketplace_kit/services/user_authentication"
 require "marketplace_kit/services/config"
 require "marketplace_kit/services/api_driver"
 require "marketplace_kit/services/api_gateway"

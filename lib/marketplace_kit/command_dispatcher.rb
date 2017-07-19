@@ -6,17 +6,7 @@ module MarketplaceKit
 
     def execute
       MarketplaceKit.config.load
-
-      if MarketplaceKit.config.token.empty? || gateway.login_required?
-        puts "Enter your email"
-        email = STDIN.gets.chomp
-
-        puts "Enter your password"
-        password = STDIN.noecho(&:gets).chomp
-
-        user_token = gateway.login(email, password)
-        MarketplaceKit.config.set_token(user_token)
-      end
+      user_authentication.authenticate
 
       command.new.execute
     end
@@ -35,8 +25,8 @@ module MarketplaceKit
       @args[0]
     end
 
-    def gateway
-      @gateway ||= Services::ApiGateway.new
+    def user_authentication
+      @user_authentication ||= Services::UserAuthentication.new
     end
   end
 end
