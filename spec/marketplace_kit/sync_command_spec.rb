@@ -2,7 +2,7 @@ describe "sync command" do
   subject { execute_command("sync") }
 
   before(:each) do
-    stub_request(:put, 'http://localhost:3000/api/marketplace_builder/marketplace_releases/sync').to_return(status: 200)
+    stub_request(:put, 'http://localhost:3000/api/marketplace_builder/marketplace_releases/sync').to_return(status: 200, body: {}.to_json)
   end
 
   it 'displays ready message' do

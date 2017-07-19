@@ -2,63 +2,30 @@ module MarketplaceKit
   module Services
     class ApiGateway
       def login(email, password)
-        response = json_connection.post("api/marketplace_builder/sessions", { 
-          email: email, 
-          password: password
-        }.to_json)
+        response = send(:post, 'sessions', { email: email, password: password })
+        raise('Error: Invalid email or password!') if response.status == 401
 
-        { status: response.status, body: JSON.parse(response.body) }
+        response.body['token']
       end
 
       def login_required?
-        response = json_connection.get(
-          "api/marketplace_builder/sessions?temporary_token=#{MarketplaceKit.config.token}", {})
-
-        JSON.parse(response.body)['login_required']
+        response = send(:get, "sessions?temporary_token=#{MarketplaceKit.config.token}")
+        response.body['login_required']
       end
 
       def send_file_change(file_path, file_content)
-        json_connection.put("api/marketplace_builder/marketplace_releases/sync", { 
-          path: file_path, 
-          body: file_content
-        }.to_json)
+        send(:put, 'marketplace_releases/sync', { path: file_path, body: file_content })
       end
 
       def deploy(zip_file_path, deploy_options)
         upload_file = Faraday::UploadIO.new(zip_file_path, 'application/zip')
-        multipart_connection.post('api/marketplace_builder/marketplace_releases', marketplace_builder: { zip_file: upload_file, force_mode: deploy_options[:force]})
+        send(:post, 'marketplace_releases', { marketplace_builder: { zip_file: upload_file, force_mode: deploy_options[:force] } }, multipart: true)
       end
 
       private
 
-      def json_connection
-        @json_connection ||= Faraday.new(faraday_basic_configuration.merge(
-          headers: { 
-            'Content-Type' => 'application/json',
-            'UserTemporaryToken' => MarketplaceKit.config.token,
-            'Accept' => 'application/vnd.nearme.v4+json'
-          }
-        ))
-      end
-
-      def multipart_connection
-        @multipart_connection ||= Faraday.new(faraday_basic_configuration.merge(
-          headers: {
-            'UserTemporaryToken' => MarketplaceKit.config.token,
-            'Accept' => 'application/vnd.nearme.v4+json'
-          }
-        )) do |conn|
-          conn.request :multipart
-          conn.request :url_encoded
-          conn.adapter :net_http
-        end
-      end
-
-      def faraday_basic_configuration
-        {
-          url: MarketplaceKit.config.url,
-          headers: {}
-        }
+      def send(request_type, url, body = {}, options = {})
+        ApiDriver.new(request_type, url, body, options).send_request
       end
     end
   end

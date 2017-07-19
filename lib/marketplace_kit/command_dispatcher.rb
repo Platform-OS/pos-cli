@@ -14,12 +14,8 @@ module MarketplaceKit
         puts "Enter your password"
         password = STDIN.noecho(&:gets).chomp
 
-        response = gateway.login(email, password)
-        if response[:status] == 401
-          raise('Error: Invalid email or password!')
-        else
-          MarketplaceKit.config.set_token(response[:body]['token'])
-        end
+        user_token = gateway.login(email, password)
+        MarketplaceKit.config.set_token(user_token)
       end
 
       command.new.execute

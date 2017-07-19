@@ -16,7 +16,7 @@ describe "login" do
         password: 'wrong-password'
       }).to_return(status: 401, body: {}.to_json)
 
-      stub_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').to_return(status: 200)
+      stub_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').to_return(status: 200, body: {}.to_json)
     end
 
     it 'asks for login and password' do
