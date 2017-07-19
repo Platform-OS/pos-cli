@@ -10,6 +10,13 @@ module MarketplaceKit
         { status: response.status, body: JSON.parse(response.body) }
       end
 
+      def login_required?
+        response = json_connection.get(
+          "api/marketplace_builder/sessions?temporary_token=#{MarketplaceKit.config.token}", {})
+
+        JSON.parse(response.body)['login_required']
+      end
+
       def send_file_change(file_path, file_content)
         json_connection.put("api/marketplace_releases/sync", { 
           path: file_path, 

@@ -1,5 +1,1 @@
-{
-  "localhost": {
-    "token": "example-token"
-  }
-}
+{"localhost":{"token":"example-user-token"}}

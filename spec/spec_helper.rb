@@ -16,5 +16,11 @@ RSpec.configure do |config|
   config.before(:each) do
     allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
     @fake_listener = stub_listen_gem
+
+    stub_request(:get, "http://localhost:3000/api/marketplace_builder/sessions?temporary_token=example-user-token").
+      to_return(status: 200, body: { login_required: false }.to_json)
+
+    stub_request(:get, "http://localhost:3000/api/marketplace_builder/sessions?temporary_token=expired-token").
+      to_return(status: 200, body: { login_required: true }.to_json)
   end
 end

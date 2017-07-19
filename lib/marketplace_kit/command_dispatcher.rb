@@ -7,7 +7,7 @@ module MarketplaceKit
     def execute
       MarketplaceKit.config.load
 
-      if MarketplaceKit.config.token.empty?
+      if MarketplaceKit.config.token.empty? || gateway.login_required?
         puts "Enter your email"
         email = STDIN.gets.chomp
 
