@@ -2,7 +2,7 @@ describe "sync command" do
   subject { execute_command("sync") }
 
   before(:each) do
-    stub_request(:put, 'http://localhost:3000/api/marketplace_releases/sync').to_return(status: 200)
+    stub_request(:put, 'http://localhost:3000/api/marketplace_builder/marketplace_releases/sync').to_return(status: 200)
   end
 
   it 'displays ready message' do
@@ -21,7 +21,7 @@ describe "sync command" do
 
     subject
 
-    expect(a_request(:put, "http://localhost:3000/api/marketplace_releases/sync").with( body: {
+    expect(a_request(:put, "http://localhost:3000/api/marketplace_builder/marketplace_releases/sync").with( body: {
       path: 'liquid_views/index.liquid',
       body: "<h1>Hello</h1>\n"
     }.to_json)).to have_been_made

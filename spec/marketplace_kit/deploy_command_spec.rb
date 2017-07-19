@@ -2,7 +2,7 @@ describe "deploy command" do
   subject { execute_command("deploy") }
 
   before(:each) do
-    stub_request(:post, 'http://localhost:3000/api/marketplace_releases').to_return(status: 200)
+    stub_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').to_return(status: 200)
   end
 
   it 'displays start message' do
@@ -13,7 +13,7 @@ describe "deploy command" do
     expect_any_instance_of(Faraday::Connection).to receive(:post) do |_, reques_url, request_body|
       unzip_zip_from_mocked_request(request_body)
 
-      expect(reques_url).to eq('api/marketplace_releases')
+      expect(reques_url).to eq('api/marketplace_builder/marketplace_releases')
       expect(File.read('tmp/zip_file_from_request/liquid_views/index.liquid')).to eq("<h1>Hello</h1>\n")
     end
 

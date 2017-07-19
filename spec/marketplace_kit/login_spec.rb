@@ -16,7 +16,7 @@ describe "login" do
         password: 'wrong-password'
       }).to_return(status: 401, body: {}.to_json)
 
-      stub_request(:post, 'http://localhost:3000/api/marketplace_releases').to_return(status: 200)
+      stub_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').to_return(status: 200)
     end
 
     it 'asks for login and password' do
@@ -38,7 +38,7 @@ describe "login" do
     it 'continues command if login was success' do
       expect { execute_command('deploy') }.to output(/Deploy command started/).to_stdout
 
-      expect(a_request(:post, "http://localhost:3000/api/marketplace_releases").with(headers: {
+      expect(a_request(:post, "http://localhost:3000/api/marketplace_builder/marketplace_releases").with(headers: {
         'UserTemporaryToken' => 'example-user-token',
       })).to have_been_made
     end

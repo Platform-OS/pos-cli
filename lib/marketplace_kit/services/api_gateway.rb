@@ -18,7 +18,7 @@ module MarketplaceKit
       end
 
       def send_file_change(file_path, file_content)
-        json_connection.put("api/marketplace_releases/sync", { 
+        json_connection.put("api/marketplace_builder/marketplace_releases/sync", { 
           path: file_path, 
           body: file_content
         }.to_json)
@@ -26,7 +26,7 @@ module MarketplaceKit
 
       def deploy(zip_file_path, deploy_options)
         upload_file = Faraday::UploadIO.new(zip_file_path, 'application/zip')
-        multipart_connection.post('api/marketplace_releases', marketplace_builder: { zip_file: upload_file, force_mode: deploy_options[:force]})
+        multipart_connection.post('api/marketplace_builder/marketplace_releases', marketplace_builder: { zip_file: upload_file, force_mode: deploy_options[:force]})
       end
 
       private
