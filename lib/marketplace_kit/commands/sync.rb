@@ -1,6 +1,6 @@
 module MarketplaceKit
   module Commands
-    class Sync
+    class Sync < BaseCommand
       def execute
         puts "Sync mode enabled"
 
@@ -19,14 +19,11 @@ module MarketplaceKit
       private
 
       def on_file_change(file_path)
-        body = File.read(file_path)
-        relative_file_path = file_path.gsub("#{Dir.getwd}/#{MARKETPLACE_BUILDER_FOLDER}/", "")
-
-        gateway.send_file_change relative_file_path, body
+        gateway.send_file_change relative_file_path(file_path), File.read(file_path)
       end
 
-      def gateway
-        @gateway ||= Services::ApiGateway.new
+      def relative_file_path(file_path)
+        file_path.gsub("#{Dir.getwd}/#{MARKETPLACE_BUILDER_FOLDER}/", "")
       end
     end
   end

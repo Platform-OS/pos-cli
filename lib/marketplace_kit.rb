@@ -8,6 +8,7 @@ require "marketplace_kit/version"
 require "marketplace_kit/command_dispatcher"
 require "marketplace_kit/services/config"
 require "marketplace_kit/services/api_gateway"
+require "marketplace_kit/commands/base_command"
 require "marketplace_kit/commands/sync"
 require "marketplace_kit/commands/deploy"
 
