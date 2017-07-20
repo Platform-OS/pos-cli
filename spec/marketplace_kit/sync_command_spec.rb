@@ -23,7 +23,7 @@ describe "sync command" do
 
     expect(a_request(:put, "http://localhost:3000/api/marketplace_builder/marketplace_releases/sync").with( body: {
       path: 'liquid_views/index.liquid',
-      body: "<h1>Hello</h1>\n"
+      marketplace_builder_file_body: "<h1>Hello</h1>\n"
     }.to_json)).to have_been_made
   end
 end

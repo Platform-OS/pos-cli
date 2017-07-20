@@ -14,7 +14,7 @@ module MarketplaceKit
       end
 
       def send_file_change(file_path, file_content)
-        send(:put, 'marketplace_releases/sync', { path: file_path, body: file_content })
+        send(:put, 'marketplace_releases/sync', { path: file_path, marketplace_builder_file_body: file_content })
       end
 
       def deploy(zip_file_path, deploy_options)
