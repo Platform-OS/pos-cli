@@ -13,7 +13,20 @@ module MarketplaceKit
         body = prepare_body_to_send
 
         response = connection.method(@request_type).call(url, body)
-        parse_resposne response
+        parsed_response = JSON.parse(response.body)
+
+        unless response.success?
+          puts "Builder error: #{parsed_response['error']}"
+          puts "Details:"
+          puts parsed_response['details']
+        end
+
+        OpenStruct.new(status: response.status, body: parsed_response)
+      rescue JSON::ParserError => e
+        puts "Error while parsing JSON"
+        puts "Raw body:\n#{response.body}"
+      rescue StandardError => e
+        puts "Error: #{e.message} (#{e.class})"
       end
 
       protected
@@ -30,10 +43,6 @@ module MarketplaceKit
 
       def body_should_be_json?
         [:post, :put, :patch].include?(@request_type)
-      end
-
-      def parse_resposne(response)
-        OpenStruct.new(status: response.status, body: JSON.parse(response.body))
       end
 
       private
