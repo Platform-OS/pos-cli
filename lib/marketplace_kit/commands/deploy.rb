@@ -2,13 +2,13 @@ module MarketplaceKit
   module Commands
     class Deploy < BaseCommand
       def execute
-        puts 'Deploy command started!'
+        puts 'Deploy command started!'.green
         ensure_tmp_folder_exist
 
-        puts 'Compressing marketplace_builder folder'
+        puts 'Compressing marketplace_builder folder'.yellow
         zip_marketplace_builder_directory
 
-        puts 'Sending zip to the server'
+        puts 'Sending zip to the server'.yellow
         send_zip_to_server
       end
 

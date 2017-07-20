@@ -2,7 +2,7 @@ module MarketplaceKit
   module Commands
     class Sync < BaseCommand
       def execute
-        puts 'Sync mode enabled'
+        puts 'Sync mode enabled'.green
 
         listener = Listen.to(MARKETPLACE_BUILDER_FOLDER) do |modified, added, _removed|
           changed_file_paths = added + modified

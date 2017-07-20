@@ -15,18 +15,11 @@ module MarketplaceKit
         response = connection.method(@request_type).call(url, body)
         parsed_response = JSON.parse(response.body)
 
-        unless response.success?
-          puts "Builder error: #{parsed_response['error']}"
-          puts 'Details:'
-          puts parsed_response['details']
-        end
-
+        raise Errors::ApiError.new(parsed_response) unless response.success?
         OpenStruct.new(status: response.status, body: parsed_response)
-      rescue JSON::ParserError => e
-        puts 'Error while parsing JSON'
-        puts "Raw body:\n#{response.body}"
       rescue StandardError => e
-        puts "Error: #{e.message} (#{e.class})"
+        ApiErrorHandler.new(e, response).process
+        OpenStruct.new(status: response&.status, body: parsed_response)
       end
 
       protected
