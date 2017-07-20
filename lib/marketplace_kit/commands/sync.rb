@@ -2,9 +2,9 @@ module MarketplaceKit
   module Commands
     class Sync < BaseCommand
       def execute
-        puts "Sync mode enabled"
+        puts 'Sync mode enabled'
 
-        listener = Listen.to(MARKETPLACE_BUILDER_FOLDER) do |modified, added, removed|
+        listener = Listen.to(MARKETPLACE_BUILDER_FOLDER) do |modified, added, _removed|
           changed_file_paths = added + modified
 
           changed_file_paths.each do |changed_file_path|
@@ -23,7 +23,7 @@ module MarketplaceKit
       end
 
       def relative_file_path(file_path)
-        file_path.gsub("#{Dir.getwd}/#{MARKETPLACE_BUILDER_FOLDER}/", "")
+        file_path.gsub("#{Dir.getwd}/#{MARKETPLACE_BUILDER_FOLDER}/", '')
       end
     end
   end

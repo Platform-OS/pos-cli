@@ -1,5 +1,5 @@
-describe "deploy command" do
-  subject { execute_command("deploy") }
+describe 'deploy command' do
+  subject { execute_command('deploy') }
 
   before(:each) do
     stub_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').to_return(status: 200, body: {}.to_json)
@@ -16,7 +16,7 @@ describe "deploy command" do
       expect(reques_url).to eq('api/marketplace_builder/marketplace_releases')
       expect(File.read('tmp/zip_file_from_request/liquid_views/index.liquid')).to eq("<h1>Hello</h1>\n")
 
-      OpenStruct.new({ status: 200, body: {}.to_json })
+      OpenStruct.new(status: 200, body: {}.to_json)
     end
 
     subject
@@ -27,6 +27,6 @@ describe "deploy command" do
       file.write(request_body[:marketplace_builder][:zip_file].read)
     end
 
-    system "unzip -o tmp/zip_file_from_request.zip -d tmp/zip_file_from_request"
+    system 'unzip -o tmp/zip_file_from_request.zip -d tmp/zip_file_from_request'
   end
 end

@@ -1,7 +1,6 @@
 module MarketplaceKit
   module Commands
     class BaseCommand
-
       protected
 
       def gateway

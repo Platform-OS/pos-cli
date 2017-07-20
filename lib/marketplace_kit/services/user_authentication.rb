@@ -15,10 +15,10 @@ module MarketplaceKit
       end
 
       def ask_for_email_and_password
-        puts "Enter your email"
+        puts 'Enter your email'
         email = STDIN.gets.chomp
 
-        puts "Enter your password"
+        puts 'Enter your password'
         password = STDIN.noecho(&:gets).chomp
 
         { email: email, password: password }

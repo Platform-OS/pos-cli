@@ -3,7 +3,7 @@ module Helpers
     def stub_listen_gem
       fake_listener = double(start: nil)
 
-      allow(Listen).to receive(:to) do |*args, &block|
+      allow(Listen).to receive(:to) do |*_args, &block|
         allow(fake_listener).to receive(:on_file_changed).and_return(block)
         fake_listener
       end

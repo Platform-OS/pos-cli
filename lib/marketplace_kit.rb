@@ -4,18 +4,18 @@ require 'faraday'
 require 'io/console'
 require 'deep_merge/rails_compat'
 
-require "marketplace_kit/version"
-require "marketplace_kit/command_dispatcher"
-require "marketplace_kit/services/user_authentication"
-require "marketplace_kit/services/config"
-require "marketplace_kit/services/api_driver"
-require "marketplace_kit/services/api_gateway"
-require "marketplace_kit/commands/base_command"
-require "marketplace_kit/commands/sync"
-require "marketplace_kit/commands/deploy"
+require 'marketplace_kit/version'
+require 'marketplace_kit/command_dispatcher'
+require 'marketplace_kit/services/user_authentication'
+require 'marketplace_kit/services/config'
+require 'marketplace_kit/services/api_driver'
+require 'marketplace_kit/services/api_gateway'
+require 'marketplace_kit/commands/base_command'
+require 'marketplace_kit/commands/sync'
+require 'marketplace_kit/commands/deploy'
 
 module MarketplaceKit
-  MARKETPLACE_BUILDER_FOLDER = "marketplace_builder"
+  MARKETPLACE_BUILDER_FOLDER = 'marketplace_builder'.freeze
 
   def self.root
     File.dirname __dir__

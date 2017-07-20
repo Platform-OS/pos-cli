@@ -2,7 +2,7 @@ module MarketplaceKit
   module Services
     class ApiGateway
       def login(email, password)
-        response = send(:post, 'sessions', { email: email, password: password })
+        response = send(:post, 'sessions', email: email, password: password)
         raise('Error: Invalid email or password!') if response.status == 401
 
         response.body['token']
@@ -14,7 +14,7 @@ module MarketplaceKit
       end
 
       def send_file_change(file_path, file_content)
-        send(:put, 'marketplace_releases/sync', { path: file_path, marketplace_builder_file_body: file_content })
+        send(:put, 'marketplace_releases/sync', path: file_path, marketplace_builder_file_body: file_content)
       end
 
       def deploy(zip_file_path, deploy_options)

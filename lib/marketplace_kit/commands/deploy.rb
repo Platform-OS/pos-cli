@@ -2,7 +2,7 @@ module MarketplaceKit
   module Commands
     class Deploy < BaseCommand
       def execute
-        puts "Deploy command started!"
+        puts 'Deploy command started!'
         ensure_tmp_folder_exist
 
         puts 'Compressing marketplace_builder folder'
@@ -15,7 +15,7 @@ module MarketplaceKit
       protected
 
       def ensure_tmp_folder_exist
-        Dir.mkdir('tmp') unless File.exists?('tmp')
+        Dir.mkdir('tmp') unless File.exist?('tmp')
       end
 
       def zip_marketplace_builder_directory

@@ -17,13 +17,13 @@ module MarketplaceKit
 
         unless response.success?
           puts "Builder error: #{parsed_response['error']}"
-          puts "Details:"
+          puts 'Details:'
           puts parsed_response['details']
         end
 
         OpenStruct.new(status: response.status, body: parsed_response)
       rescue JSON::ParserError => e
-        puts "Error while parsing JSON"
+        puts 'Error while parsing JSON'
         puts "Raw body:\n#{response.body}"
       rescue StandardError => e
         puts "Error: #{e.message} (#{e.class})"
