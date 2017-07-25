@@ -8,7 +8,7 @@ module MarketplaceKit
       MarketplaceKit.config.load
       user_authentication.authenticate
 
-      command.new.execute
+      command.new(command_args).execute
     end
 
     private
@@ -23,6 +23,10 @@ module MarketplaceKit
 
     def command_name
       @args[0]
+    end
+
+    def command_args
+      @args[1..-1]
     end
 
     def user_authentication

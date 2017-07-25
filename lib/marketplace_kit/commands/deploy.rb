@@ -24,7 +24,13 @@ module MarketplaceKit
       end
 
       def send_zip_to_server
-        gateway.deploy("#{Dir.getwd}/tmp/marketplace_builder.zip", force: true)
+        gateway.deploy("#{Dir.getwd}/tmp/marketplace_builder.zip", force: is_force_mode)
+      end
+
+      private
+
+      def is_force_mode
+        (@command_args& ['--force', '-f']).any?
       end
     end
   end
