@@ -55,7 +55,7 @@ module MarketplaceKit
       private
 
       def is_force_mode
-        (@command_args& ['--force', '-f']).any?
+        (@command_args & ['--force', '-f']).any?
       end
     end
   end

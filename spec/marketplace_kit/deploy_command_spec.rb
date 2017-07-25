@@ -25,17 +25,17 @@ describe 'deploy command' do
   it 'sends API call without force mode as default' do
     subject
 
-    expect(a_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').with { |req|
+    expect(a_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').with do |req|
       expect(req.body).to match(/Content-Disposition: form-data; name="marketplace_builder\[force_mode\]"\s+false/)
-    }).to have_been_made
+    end).to have_been_made
   end
 
   it 'sends API call with force mode if -f passed' do
     execute_command('deploy -f')
 
-    expect(a_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').with { |req|
+    expect(a_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').with do |req|
       expect(req.body).to match(/Content-Disposition: form-data; name="marketplace_builder\[force_mode\]"\s+true/)
-    }).to have_been_made
+    end).to have_been_made
   end
 
   it 'waits for deploy to finish' do
@@ -56,7 +56,7 @@ describe 'deploy command' do
 
   it 'waits for deploy and displays error' do
     stub_request(:get, 'http://localhost:3000/api/marketplace_builder/marketplace_releases/1').to_return(status: 200, body: {
-      id: 1, status: 'error', error: { message: "Template path has already been taken", details: { model_id: 1, model_class: 'Workflow' }}.to_json
+      id: 1, status: 'error', error: { message: 'Template path has already been taken', details: { model_id: 1, model_class: 'Workflow' } }.to_json
     }.to_json)
 
     expect { execute_command('deploy') }.to output(/Builder error: Template path has already been taken/).to_stdout
