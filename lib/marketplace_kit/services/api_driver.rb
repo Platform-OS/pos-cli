@@ -18,14 +18,20 @@ module MarketplaceKit
         raise Errors::ApiError.new(parsed_response) unless response.success?
         OpenStruct.new(status: response.status, body: parsed_response, success?: true)
       rescue StandardError => e
-        ApiErrorHandler.new(e, response).process
+        log_error(e, response)
         OpenStruct.new(status: response&.status, body: parsed_response, success?: false)
       end
 
-      protected
+      private
 
-      def connection
-        @options[:multipart] ? multipart_connection : json_connection
+      def log_error(error, response)
+        if error.is_a?(JSON::ParserError)
+          MarketplaceKit.logger.log_json_error response.body
+        elsif error.is_a?(Errors::ApiError)
+          MarketplaceKit.logger.log_api_error error.parsed_response['error'], error.parsed_response['details']
+        else
+          MarketplaceKit.logger.log_standard_error error
+        end
       end
 
       def prepare_body_to_send
@@ -38,7 +44,9 @@ module MarketplaceKit
         [:post, :put, :patch].include?(@request_type)
       end
 
-      private
+      def connection
+        @options[:multipart] ? multipart_connection : json_connection
+      end
 
       def json_connection
         @json_connection ||= Faraday.new(basic_configuration.deeper_merge(headers: { 'Content-Type' => 'application/json' }))

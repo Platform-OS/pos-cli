@@ -10,6 +10,7 @@ require 'marketplace_kit/command_dispatcher'
 require 'marketplace_kit/errors/api_error'
 require 'marketplace_kit/services/api_error_handler'
 require 'marketplace_kit/services/user_authentication'
+require 'marketplace_kit/services/logger'
 require 'marketplace_kit/services/config'
 require 'marketplace_kit/services/api_driver'
 require 'marketplace_kit/services/api_gateway'
@@ -30,5 +31,9 @@ module MarketplaceKit
 
   def self.config
     @config ||= Services::Config.new
+  end
+
+  def self.logger
+    @logger ||= Services::Logger.new
   end
 end
