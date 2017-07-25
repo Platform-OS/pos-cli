@@ -22,6 +22,10 @@ module MarketplaceKit
         send(:post, 'marketplace_releases', { marketplace_builder: { zip_file: upload_file, force_mode: deploy_options[:force] } }, multipart: true)
       end
 
+      def get_deploy(deploy_id)
+        send(:get, "marketplace_releases/#{deploy_id}")
+      end
+
       private
 
       def send(request_type, url, body = {}, options = {})

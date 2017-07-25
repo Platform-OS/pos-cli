@@ -16,10 +16,10 @@ module MarketplaceKit
         parsed_response = JSON.parse(response.body)
 
         raise Errors::ApiError.new(parsed_response) unless response.success?
-        OpenStruct.new(status: response.status, body: parsed_response)
+        OpenStruct.new(status: response.status, body: parsed_response, success?: true)
       rescue StandardError => e
         ApiErrorHandler.new(e, response).process
-        OpenStruct.new(status: response&.status, body: parsed_response)
+        OpenStruct.new(status: response&.status, body: parsed_response, success?: false)
       end
 
       protected
