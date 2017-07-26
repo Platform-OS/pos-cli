@@ -18,10 +18,6 @@ module MarketplaceKit
 
       protected
 
-      def ensure_tmp_folder_exist
-        Dir.mkdir('tmp') unless File.exist?('tmp')
-      end
-
       def zip_marketplace_builder_directory
         system "rm #{Dir.getwd}/tmp/marketplace_builder.zip"
         system "cd #{MarketplaceKit::MARKETPLACE_BUILDER_FOLDER}; zip -r #{Dir.getwd}/tmp/marketplace_builder.zip ."

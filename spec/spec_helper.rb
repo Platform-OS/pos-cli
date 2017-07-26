@@ -15,6 +15,10 @@ RSpec.configure do |config|
 
   config.before(:each) do
     allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
+    allow_any_instance_of(Object).to receive(:system).and_call_original
+    allow_any_instance_of(Object).to receive(:system).with("curl -o marketplace_release.zip 'http://fake-zip-file-url.com'").and_return(nil)
+    allow_any_instance_of(Object).to receive(:system).with("unzip -o marketplace_release.zip -d marketplace_builder").and_return(nil)
+
     @fake_listener = stub_listen_gem
 
     stub_request(:get, 'http://localhost:3000/api/marketplace_builder/sessions?temporary_token=example-user-token')
@@ -24,6 +28,6 @@ RSpec.configure do |config|
       .to_return(status: 200, body: { login_required: true }.to_json)
 
     stub_request(:get, 'http://localhost:3000/api/marketplace_builder/marketplace_releases/1')
-      .to_return(status: 200, body: { id: 1, status: 'success' }.to_json)
+      .to_return(status: 200, body: { id: 1, status: 'success', zip_file: { url: 'http://fake-zip-file-url.com' } }.to_json)
   end
 end
