@@ -5,7 +5,7 @@ module MarketplaceKit
     end
 
     def execute
-      MarketplaceKit.config.load
+      MarketplaceKit.config.load current_env
       user_authentication.authenticate
 
       command.new(command_args).execute
@@ -29,7 +29,14 @@ module MarketplaceKit
     end
 
     def command_args
-      @args[1..-1]
+      @args[1..-1] || []
+    end
+
+    def current_env
+      e_arg_index = command_args.find_index { |x| x == '-e' }
+      return 'localhost' unless e_arg_index
+
+      command_args[e_arg_index + 1] || 'localhost'
     end
 
     def user_authentication
