@@ -21,7 +21,7 @@ module MarketplaceKit
         OpenStruct.new(status: response.status, body: parsed_response, success?: true)
       rescue StandardError => e
         log_error(e, response)
-        OpenStruct.new(status: response&.status, body: parsed_response, success?: false)
+        OpenStruct.new(status: (response && response.status), body: parsed_response, success?: false)
       end
 
       private
