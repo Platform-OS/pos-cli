@@ -3,14 +3,14 @@ module MarketplaceKit
     class ApiGateway
       def login(email, password)
         response = send(:post, 'sessions', email: email, password: password)
-        raise('Error: Invalid email or password!') if response.status == 401
+        raise Errors::MarketplaceError.new('Error: Invalid email or password!') if response.status == 401
 
         response.body['token']
       end
 
       def login_required?
         response = send(:get, "sessions?temporary_token=#{MarketplaceKit.config.token}")
-        raise('Login failed.') unless response.success?
+        raise Errors::MarketplaceError.new('Login failed.') unless response.success?
         response.body['login_required']
       end
 

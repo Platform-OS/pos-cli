@@ -9,7 +9,7 @@ module MarketplaceKit
       user_authentication.authenticate
 
       command.new(command_args).execute
-    rescue => e
+    rescue Errors::MarketplaceError => e
       puts e.message.red
     end
 
@@ -20,7 +20,7 @@ module MarketplaceKit
                    when 'sync'   then Commands::Sync
                    when 'deploy' then Commands::Deploy
                    when 'pull'   then Commands::Pull
-                   else raise('Usage: nearme-marketpalce sync | deploy | pull')
+                   else raise Errors::MarketplaceError.new('Usage: nearme-marketpalce sync | deploy | pull')
       end
     end
 
