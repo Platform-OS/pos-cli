@@ -1,36 +1,17 @@
-# MarketplaceKit
+# MarketplaceKit [![Version](http://img.shields.io/gem/v/marketplace-kit.svg)](https://rubygems.org/gems/marketplace-kit) [![Build Status](https://travis-ci.org/mdyd-dev/marketplace-kit.svg?branch=master)](https://travis-ci.org/mdyd-dev/marketplace-kit) [![Code Climate](https://codeclimate.com/github/crashbreak/crashbreak/badges/gpa.svg)](https://codeclimate.com/github/mdyd-dev/marketplace-kit) [![Coverage Status](https://coveralls.io/repos/github/mdyd-dev/marketplace-kit/badge.svg?branch=master)](https://coveralls.io/github/mdyd-dev/marketplace-kit?branch=master)
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/marketplace_kit`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+MarketplaceKit is a gem for Marketplace Platform users.
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Install it yourself as:
 
-```ruby
-gem 'marketplace-kit'
-```
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install marketplace_kit
+    $ gem install marketplace-kit
 
 ## Usage
 
 TODO: Write usage instructions here
 
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
-
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/marketplace_kit.
-
+Bug reports and pull requests are welcome on GitHub at https://github.com/mdyd-dev/marketplace-kit.
