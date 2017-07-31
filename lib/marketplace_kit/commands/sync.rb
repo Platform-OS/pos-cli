@@ -1,8 +1,10 @@
 module MarketplaceKit
   module Commands
     class Sync < BaseCommand
+      include Services::Loggable
+
       def execute
-        puts 'Sync mode enabled'.green
+        log :sync_command_started
 
         listener = Listen.to(MARKETPLACE_BUILDER_FOLDER) do |modified, added, _removed|
           changed_file_paths = added + modified
@@ -19,9 +21,10 @@ module MarketplaceKit
       private
 
       def on_file_change(file_path)
-        puts "Updating: #{file_path}".green
+        log :sync_updating, file_path
         response = gateway.send_file_change relative_file_path(file_path), File.read(file_path)
-        puts 'Done!'.green if response.success?
+
+        log :sync_done if response.success?
       end
 
       def relative_file_path(file_path)

@@ -1,14 +1,16 @@
 module MarketplaceKit
   module Commands
     class Pull < BaseCommand
+      include Services::Loggable
+
       def execute
-        puts 'Pull command started!'.green
+        log :pull_started
         ensure_tmp_folder_exist
 
-        puts 'Requesting system backup...'.yellow
+        log :request_backup
         response = send_backup_request
 
-        puts 'Waiting for backup to finish'.yellow
+        log :wait_for_backup_finish
         success_response = wait_for_backup(response[:body]['id']) if response.success?
 
         download_and_unzip_exported_zip(success_response) if success_response
@@ -50,7 +52,7 @@ module MarketplaceKit
           deploy_response
         else
           parsed_error = JSON.parse(deploy_response.body['error'])
-          MarketplaceKit.logger.log_api_error parsed_error['message'], parsed_error['details']
+          log :api_error, parsed_error['message'], parsed_error['details']
         end
       end
     end

@@ -1,18 +1,20 @@
 module MarketplaceKit
   module Commands
     class Deploy < BaseCommand
+      include Services::Loggable
+
       def execute
-        puts 'Deploy command started!'.green
+        log :deploy_started
         ensure_tmp_folder_exist
 
-        puts 'Compressing marketplace_builder folder'.yellow
+        log :compressing_folder
         zip_marketplace_builder_directory
 
-        puts 'Sending zip to the server'.yellow
+        log :sending_zip
         response = send_zip_to_server
         return unless response.success?
 
-        puts 'Waiting for deploy to finish'.yellow
+        log :wait_for_deploy_finish
         wait_for_deploy(response[:body]['id'])
       end
 
@@ -48,7 +50,7 @@ module MarketplaceKit
           puts 'success'.green
         else
           parsed_error = JSON.parse(deploy_response.body['error'])
-          MarketplaceKit.logger.log_api_error parsed_error['message'], parsed_error['details']
+          log :api_error, parsed_error['message'], parsed_error['details']
         end
       end
 

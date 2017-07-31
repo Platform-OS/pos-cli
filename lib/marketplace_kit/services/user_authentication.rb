@@ -1,6 +1,8 @@
 module MarketplaceKit
   module Services
     class UserAuthentication
+      include Services::Loggable
+
       def authenticate
         return unless requires_login?
 
@@ -15,10 +17,10 @@ module MarketplaceKit
       end
 
       def ask_for_email_and_password
-        puts 'Enter your email'
+        log :ask_for_email
         email = STDIN.gets.chomp
 
-        puts 'Enter your password'
+        log :ask_for_password
         password = STDIN.noecho(&:gets).chomp
 
         { email: email, password: password }

@@ -11,6 +11,7 @@ module MarketplaceKit
       def login_required?
         response = send(:get, "sessions?temporary_token=#{MarketplaceKit.config.token}")
         raise Errors::MarketplaceError.new('Login failed.') unless response.success?
+
         response.body['login_required']
       end
 

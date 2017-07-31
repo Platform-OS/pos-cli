@@ -1,6 +1,8 @@
 module MarketplaceKit
   module Services
     class ApiDriver
+      include Loggable
+
       def initialize(request_type, url, hash_body, options)
         @request_type = request_type
         @url = url
@@ -26,14 +28,14 @@ module MarketplaceKit
 
       def log_error(error, response)
         if error.is_a?(JSON::ParserError)
-          MarketplaceKit.logger.log_json_error response.body
+          log :json_error, response.body
         elsif error.is_a?(Errors::ApiError)
-          MarketplaceKit.logger.log_api_error error.parsed_response['error'], error.parsed_response['details']
+          log :api_error, error.parsed_response['error'], error.parsed_response['details']
         else
-          MarketplaceKit.logger.log_standard_error error
+          log :standard_error, error
         end
 
-        MarketplaceKit.logger.log_redirect_tip if response && [301,302].include?(response.status)
+        log :redirect_tip if response && [301,302].include?(response.status)
       end
 
       def prepare_body_to_send
