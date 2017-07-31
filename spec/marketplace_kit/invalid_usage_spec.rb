@@ -33,7 +33,6 @@ describe 'invalid usage' do
 
   it 'handles wrong domain' do
     stub_request(:get, 'http://localhost:3000/api/marketplace_builder/sessions?temporary_token=example-user-token').to_return(status: 301, body: '')
-
     expect { execute_command('deploy') }.to output(/Server returned redirect code/).to_stdout
   end
 end

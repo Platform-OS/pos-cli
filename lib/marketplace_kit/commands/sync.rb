@@ -21,7 +21,7 @@ module MarketplaceKit
       def on_file_change(file_path)
         puts "Updating: #{file_path}".green
         response = gateway.send_file_change relative_file_path(file_path), File.read(file_path)
-        puts "Done!".green if response.success?
+        puts 'Done!'.green if response.success?
       end
 
       def relative_file_path(file_path)

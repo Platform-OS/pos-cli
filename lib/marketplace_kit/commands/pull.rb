@@ -2,10 +2,10 @@ module MarketplaceKit
   module Commands
     class Pull < BaseCommand
       def execute
-        puts "Pull command started!".green
+        puts 'Pull command started!'.green
         ensure_tmp_folder_exist
 
-        puts "Requesting system backup...".yellow
+        puts 'Requesting system backup...'.yellow
         response = send_backup_request
 
         puts 'Waiting for backup to finish'.yellow
@@ -27,7 +27,6 @@ module MarketplaceKit
         print '.'
         sleep 5
         wait_for_backup(backup_id)
-
       end
 
       def download_and_unzip_exported_zip(release)
@@ -35,7 +34,7 @@ module MarketplaceKit
         url = url.prepend(MarketplaceKit.config.url) if url.start_with?('/')
 
         system "curl -o marketplace_release.zip '#{url}'"
-        system "unzip -o marketplace_release.zip -d marketplace_builder"
+        system 'unzip -o marketplace_release.zip -d marketplace_builder'
       end
 
       private

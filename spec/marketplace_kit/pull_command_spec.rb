@@ -6,7 +6,7 @@ describe 'deploy command' do
   end
 
   it 'displays start message' do
-    subject 
+    subject
   end
 
   it 'sends API call to schedule a backup' do
@@ -46,7 +46,7 @@ describe 'deploy command' do
     }.to_json)
 
     expect_any_instance_of(Object).to receive(:system).with("curl -o marketplace_release.zip 'http://fake-zip-file-url.com'").once
-    expect_any_instance_of(Object).to receive(:system).with("unzip -o marketplace_release.zip -d marketplace_builder").once
+    expect_any_instance_of(Object).to receive(:system).with('unzip -o marketplace_release.zip -d marketplace_builder').once
 
     execute_command('pull')
   end
@@ -57,7 +57,7 @@ describe 'deploy command' do
     }.to_json)
 
     expect_any_instance_of(Object).to_not receive(:system).with("curl -o marketplace_release.zip 'http://fake-zip-file-url.com'")
-    expect_any_instance_of(Object).to_not receive(:system).with("unzip -o marketplace_release.zip -d marketplace_builder")
+    expect_any_instance_of(Object).to_not receive(:system).with('unzip -o marketplace_release.zip -d marketplace_builder')
 
     execute_command('pull')
   end
