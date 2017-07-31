@@ -1,5 +1,8 @@
 module MarketplaceKit
   class CommandDispatcher
+    extend Forwardable
+    def_delegators :args_parser, :command_name, :command_args, :current_env
+
     def initialize(args)
       @args = args
     end
@@ -24,19 +27,8 @@ module MarketplaceKit
       end
     end
 
-    def command_name
-      @args[0]
-    end
-
-    def command_args
-      @args[1..-1] || []
-    end
-
-    def current_env
-      e_arg_index = command_args.find_index { |x| x == '-e' }
-      return 'localhost' unless e_arg_index
-
-      command_args[e_arg_index + 1] || 'localhost'
+    def args_parser
+      @args_parse ||= Services::ArgsParser.new @args
     end
 
     def user_authentication
