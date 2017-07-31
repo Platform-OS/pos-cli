@@ -1,4 +1,4 @@
-describe 'deploy command' do
+describe 'pull command' do
   subject { execute_command('pull') }
 
   before(:each) do
@@ -6,7 +6,7 @@ describe 'deploy command' do
   end
 
   it 'displays start message' do
-    subject
+    expect { subject }.to output(/Pull command started!/).to_stdout
   end
 
   it 'sends API call to schedule a backup' do
