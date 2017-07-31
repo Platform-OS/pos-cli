@@ -9,6 +9,8 @@ module MarketplaceKit
       user_authentication.authenticate
 
       command.new(command_args).execute
+    rescue => e
+      puts e.message.red
     end
 
     private

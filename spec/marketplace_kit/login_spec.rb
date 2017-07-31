@@ -47,7 +47,7 @@ describe 'login' do
       expect(STDIN).to receive(:gets).and_return('correct-email')
       expect(STDIN).to receive(:noecho).and_return('wrong-password')
 
-      expect { execute_command('deploy') }.to raise_error('Error: Invalid email or password!')
+      expect { execute_command('deploy') }.to output(/Invalid email or password/).to_stdout
     end
 
     it 'stores token after login' do

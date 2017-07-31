@@ -21,6 +21,10 @@ module MarketplaceKit
         puts "Error: #{error.message} (#{error.class})".red
         puts '```'.red
       end
+
+      def log_redirect_tip
+        puts 'Server returned redirect code (possible a wrong domain in config file?)'.yellow
+      end
     end
   end
 end

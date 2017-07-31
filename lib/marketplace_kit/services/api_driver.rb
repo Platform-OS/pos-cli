@@ -32,6 +32,8 @@ module MarketplaceKit
         else
           MarketplaceKit.logger.log_standard_error error
         end
+
+        MarketplaceKit.logger.log_redirect_tip if [301,302].include?(response.status)
       end
 
       def prepare_body_to_send

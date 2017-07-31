@@ -1,11 +1,11 @@
 describe 'invalid usage' do
   it 'aborts with usage when no arguments passed' do
-    expect { execute_command('') }.to raise_error('Usage: nearme-marketpalce sync | deploy | pull')
+    expect { execute_command('') }.to output(/Usage: nearme-marketpalce sync | deploy | pull/).to_stdout
   end
 
   it 'aborts when no .builder file found' do
     expect(File).to receive(:read).with("#{MarketplaceKit.builder_folder}.builder").and_raise(Errno::ENOENT)
-    expect { execute_command('sync') }.to raise_error('Please create .builder file in order to continue.')
+    expect { execute_command('sync') }.to output(/Please create .builder file in order to continue./).to_stdout
   end
 
   it 'handles server timeout' do
@@ -29,5 +29,11 @@ describe 'invalid usage' do
 
     expect { execute_command('deploy') }.to output(/Builder error: Template path has already been taken/).to_stdout
     expect { execute_command('deploy') }.to output(/"model_class"=>"Example"/).to_stdout
+  end
+
+  it 'handles wrong domain' do
+    stub_request(:get, 'http://localhost:3000/api/marketplace_builder/sessions?temporary_token=example-user-token').to_return(status: 301, body: '')
+
+    expect { execute_command('deploy') }.to output(/Server returned redirect code/).to_stdout
   end
 end
