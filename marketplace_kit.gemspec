@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.name          = 'marketplace-kit'
   spec.version       = MarketplaceKit::VERSION
   spec.authors       = ['Michal Janeczek']
-  spec.email         = ['michal.janeczek@ymail.com']
+  spec.email         = ['support@near-me.com']
 
   spec.summary       = 'Marketplace Kit'
   spec.description   = 'Marketplace Kit'
