@@ -8,9 +8,48 @@ Install it yourself as:
 
     $ gem install marketplace-kit
 
-## Usage
+## Configuration
 
-TODO: Write usage instructions here
+1. Go to marketplace folder you are working on
+2. Ensure marketplace_builder directory exists
+3. Create marketplace_builder/.builder file
+```
+{
+  "staging": {
+    "url": "https://staging-url.near-me.com"
+  },
+  "production": {
+    "url": "https://production-url.near-me.com"
+  }
+}
+```
+
+## Commands
+All commands should be run in the marketplace directory (ie. marketplace-nearme/)
+
+```
+marketplace-kit pull
+```
+Pulls files from database and saves them in the filesystem
+
+```
+marketplace-kit deploy
+```
+Updates database using the filesystem as a source
+
+```
+marketplace-kit deploy -e staging
+```
+Deploys to staging environment (-e option is available for all commands)
+
+```
+marketplace-kit deploy -f
+```
+Updates database using the filesystem as a source with force mode enabled (override all files, don't skip not changed)
+```
+marketplace-kit sync
+```
+Enables sync mode - saves changes made in the filesystem to the database
 
 ## Contributing
 
