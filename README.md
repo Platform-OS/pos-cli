@@ -15,6 +15,9 @@ Install it yourself as:
 3. Create marketplace_builder/.builder file
 ```
 {
+  "localhost": {
+    "url": "http://marketplace-name.lvh.me:3000"
+  },
   "staging": {
     "url": "https://staging-url.near-me.com"
   },
