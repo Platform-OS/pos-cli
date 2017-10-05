@@ -39,6 +39,7 @@ module MarketplaceKit
       end
 
       def prepare_body_to_send
+        fix_font_file_encoding
         return @hash_body if @options[:multipart]
 
         body_should_be_json? ? @hash_body.to_json : @hash_body
@@ -72,6 +73,12 @@ module MarketplaceKit
             'Accept' => 'application/vnd.nearme.v4+json'
           }
         }
+      end
+
+      def fix_font_file_encoding
+        return unless @hash_body[:marketplace_builder_file_body]
+
+        @hash_body[:marketplace_builder_file_body] = @hash_body[:marketplace_builder_file_body].force_encoding('ISO-8859-1').encode('UTF-8')
       end
     end
   end
