@@ -11,8 +11,8 @@ Install it yourself as:
 ## Configuration
 
 1. Go to marketplace folder you are working on
-2. Ensure marketplace_builder directory exists
-3. Create marketplace_builder/.builder file
+2. Ensure `marketplace_builder` directory exists
+3. Create `marketplace_builder/.builder` file with endpoint names and their urls
 ```
 {
   "localhost": {
@@ -27,32 +27,23 @@ Install it yourself as:
 }
 ```
 
-## Commands
-All commands should be run in the marketplace directory (ie. marketplace-nearme/)
+## Usage
+`marketplace-kit <command> [flags]`
 
-```
-marketplace-kit pull
-```
-Pulls files from database and saves them in the filesystem
+Example:
+`marketplace-kit deploy -f -e staging`
 
-```
-marketplace-kit deploy
-```
-Updates database using the filesystem as a source
+## Available commands
+All commands should be run in the marketplace directory (ie. `marketplace-nearme/`)
 
-```
-marketplace-kit deploy -e staging
-```
-Deploys to staging environment (-e option is available for all commands)
+| Command            | Description           |
+| ----------------- | ------------- |
+| `pull`      | Pulls files from database and saves them in the filesystem |
+| `deploy`      | Updates database using the filesystem as a source      |
+| `deploy -e staging` | Deploys to staging environment (-e option is available for all commands)      |
+| `deploy -f` | Updates database using the filesystem as a source with force mode enabled (override all files, don't skip not changed) |
+| `sync` | Watches filesystem and updates the database on every change |
 
-```
-marketplace-kit deploy -f
-```
-Updates database using the filesystem as a source with force mode enabled (override all files, don't skip not changed)
-```
-marketplace-kit sync
-```
-Enables sync mode - saves changes made in the filesystem to the database
 
 ## Contributing
 
