@@ -23,7 +23,7 @@ module MarketplaceKit
                    when 'sync'   then Commands::Sync
                    when 'deploy' then Commands::Deploy
                    when 'pull'   then Commands::Pull
-                   else raise Errors::MarketplaceError.new('Usage: nearme-marketpalce sync | deploy | pull')
+                   else raise Errors::MarketplaceError.new('Usage: marketplace-kit sync | deploy | pull')
       end
     end
 

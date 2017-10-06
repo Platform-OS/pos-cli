@@ -1,6 +1,6 @@
 describe 'invalid usage' do
   it 'aborts with usage when no arguments passed' do
-    expect { execute_command('') }.to output(/Usage: nearme-marketpalce sync | deploy | pull/).to_stdout
+    expect { execute_command('') }.to output(/Usage: marketplace-kit sync | deploy | pull/).to_stdout
   end
 
   it 'aborts when no .builder file found' do
