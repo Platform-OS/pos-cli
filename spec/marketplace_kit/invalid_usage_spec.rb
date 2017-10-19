@@ -1,4 +1,8 @@
 describe 'invalid usage' do
+  before(:each) do
+    stub_request(:get, 'http://localhost:3000/api/marketplace_builder/settings').to_return(status: 200, body: { manifest: {} }.to_json)
+  end
+
   it 'aborts with usage when no arguments passed' do
     expect { execute_command('') }.to output(/Usage: marketplace-kit sync | deploy | pull/).to_stdout
   end

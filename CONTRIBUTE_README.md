@@ -3,7 +3,7 @@ How to release and test gem
 
 ## Test
 
-    rake rspec
+    rake spec
 
 ## Test locally
 

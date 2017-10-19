@@ -3,6 +3,15 @@ describe 'deploy command' do
 
   before(:each) do
     stub_request(:post, 'http://localhost:3000/api/marketplace_builder/marketplace_releases').to_return(status: 200, body: { id: 1 }.to_json)
+    stub_request(:get, "http://localhost:3000/api/marketplace_builder/settings").to_return(
+      status: 200,
+      body: { manifest: {
+                '/liquid_views/index.liquid' => { 'md5' => '86588137cb4fa781fcf1f5f4f294d201'},
+                '/liquid_views/unchanged_file.liquid' => { 'md5' => 'd41d8cd98f00b204e9800998ecf8427e'},
+                '/custom_themes/default_custom_theme/foo.txt' => { 'md5' => 'd41d8cd98f00b204e9800998ecf8427e' },
+                '/custom_themes/default_custom_theme/foo_unchanged.txt' => { 'md5' => 'be367fa3a96ffb1989b2e3196c3e6774' }
+              }}.to_json
+    )
   end
 
   it 'displays start message' do
@@ -15,6 +24,15 @@ describe 'deploy command' do
 
       expect(reques_url).to eq('api/marketplace_builder/marketplace_releases')
       expect(File.read('tmp/zip_file_from_request/liquid_views/index.liquid')).to eq("<h1>Hello</h1>\n")
+      expect(File.exists?('tmp/zip_file_from_request/liquid_views/unchanged_file.liquid')).to(be true)
+      expect(File.exists?('tmp/zip_file_from_request/custom_themes/default_custom_theme/foo.txt')).to(be true)
+      expect(File.exists?('tmp/zip_file_from_request/custom_themes/default_custom_theme/foo_unchanged.txt')).to(be false)
+      expect(request_body.dig(:marketplace_builder, :manifest)).to eq(
+                                                                     "/liquid_views/index.liquid" => {"md5"=>"86588137cb4fa781fcf1f5f4f294d200"},
+                                                                     '/liquid_views/unchanged_file.liquid' => { 'md5' => 'd41d8cd98f00b204e9800998ecf8427e'},
+                                                                     '/custom_themes/default_custom_theme/foo.txt' => { 'md5' => 'd3b07384d113edec49eaa6238ad5ff00' },
+                                                                     '/custom_themes/default_custom_theme/foo_unchanged.txt' => { 'md5' => 'be367fa3a96ffb1989b2e3196c3e6774' }
+                                                                    )
 
       OpenStruct.new(status: 200, body: { id: 1 }.to_json)
     end
@@ -64,6 +82,8 @@ describe 'deploy command' do
   end
 
   def unzip_zip_from_mocked_request(request_body)
+    system 'rm -f tmp/zip_file_from_request.zip'
+    system 'rm -rf tmp/zip_file_from_request/'
     File.open('tmp/zip_file_from_request.zip', 'w') do |file|
       file.write(request_body[:marketplace_builder][:zip_file].read)
     end
