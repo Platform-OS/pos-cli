@@ -47,4 +47,8 @@ All commands should be run in the marketplace directory (ie. `marketplace-nearme
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/mdyd-dev/marketplace-kit.
+Contributing quick start: https://github.com/mdyd-dev/marketplace-kit/blob/master/CONTRIBUTE_README.md
+
+Bug reports, feature requests: https://github.com/mdyd-dev/marketplace-kit/issues
+
+Pull requests https://github.com/mdyd-dev/marketplace-kit/pulls
