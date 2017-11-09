@@ -1,5 +1,7 @@
 # MarketplaceKit contribute guide
-How to release and test gem
+How to develop, test and release new version of the gem
+
+When setting new version to release, please read [SemVer](http://semver.org/).
 
 ## Test
 
@@ -10,7 +12,7 @@ How to release and test gem
 1. Change code
 2. `gem build marketplace_kit.gemspec`
 3. `gem install marketplace-kit-x.x.x.gem`
-4. Run commands `marketplace-kit`
+4. Run `marketplace-kit`
 
 ## Release
 
