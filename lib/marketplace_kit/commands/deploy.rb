@@ -22,11 +22,21 @@ module MarketplaceKit
 
       def zip_marketplace_builder_directory
         system "rm #{Dir.getwd}/tmp/marketplace_builder.zip"
-        system "cd #{MarketplaceKit::MARKETPLACE_BUILDER_FOLDER}; zip -r #{Dir.getwd}/tmp/marketplace_builder.zip ."
+        force_mode? ? zip_all_files : zip_files_without_old_assets
+      end
+
+      def zip_files_without_old_assets
+        files_path = changed_files.map { |path| path.gsub(%r{^\/}, '') }
+        File.open('tmp/files_to_zip.txt', 'w+') { |file| file.puts files_path }
+        system "cd #{MarketplaceKit::MARKETPLACE_BUILDER_FOLDER}; zip #{root}/tmp/marketplace_builder.zip -@ < #{root}/tmp/files_to_zip.txt"
+      end
+
+      def zip_all_files
+        system "cd #{MarketplaceKit::MARKETPLACE_BUILDER_FOLDER}; zip -r #{root}/tmp/marketplace_builder.zip ."
       end
 
       def send_zip_to_server
-        gateway.deploy("#{Dir.getwd}/tmp/marketplace_builder.zip", force: is_force_mode)
+        gateway.deploy("#{root}/tmp/marketplace_builder.zip", force: force_mode?, manifest: manifest)
       end
 
       def wait_for_deploy(deploy_id)
@@ -54,8 +64,44 @@ module MarketplaceKit
         end
       end
 
-      def is_force_mode
+      def force_mode?
         (@command_args & ['--force', '-f']).any?
+      end
+
+      def manifest
+        Dir.glob("marketplace_builder/**/*")
+           .select { |path| File.file?(path) }
+           .map { |path| [path.gsub('marketplace_builder', ''), { 'md5' => Digest::MD5.hexdigest(File.read(path)) }] }
+           .to_h
+      end
+
+      def root
+        Dir.getwd
+      end
+
+      def changed_files
+        ListChangedFiles.new(manifest, gateway.settings.body).call.keys
+      end
+
+      class ListChangedFiles
+        def initialize(manifest, settings)
+          @manifest = manifest
+          @settings = settings
+        end
+
+        def call
+          @manifest.reject do |path, meta|
+            path.start_with?('/custom_themes/') &&
+              manifest_on_server[path] &&
+              manifest_on_server[path]['md5'] == meta['md5']
+          end
+        end
+
+        private
+
+        def manifest_on_server
+          @manifest_on_server ||= @settings['manifest']
+        end
       end
     end
   end

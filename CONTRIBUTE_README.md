@@ -5,7 +5,7 @@ When setting new version to release, please read [SemVer](http://semver.org/).
 
 ## Test
 
-    rake rspec
+    rake spec
 
 ## Test locally
 
