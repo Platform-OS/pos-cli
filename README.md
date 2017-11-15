@@ -27,20 +27,28 @@ Install it yourself as:
 ## Usage
 `marketplace-kit <command> [flags]`
 
-Examples:
-`marketplace-kit deploy -f -e staging`
-`marketplace-kit sync -e production`
+## Available flags
+| Flag  | For command | Description           |
+| ----------------- | ------------- | ------ |
+| `-e <endpoint>`  | all | Specifies endpoint. Endpoint name is the key inside the `.builder` config file  |
+| `-f` / `--force`  | deploy    | When added to deploy command it will deploy all the files (also those not changed) to specified endpoint |
+
 
 ## Available commands
 All commands should be run in the marketplace directory (ie. `marketplace-nearme/`)
 
-| Command with flags  | Description           |
+| Command  | Description           |
 | ----------------- | ------------- |
-| `pull -e <env>`      | Pulls files from database and saves them in the filesystem |
-| `deploy -e <env>` | Deploys to staging environment (-e option is available for all commands)      |
-| `deploy -f -e <env>` | Updates database using the filesystem as a source with force mode enabled (override all files, don't skip not changed) |
-| `sync -e <env>` | Watches filesystem and updates the database on every change |
+| `pull`      | Pulls files from database and saves them in the filesystem |
+| `sync` | Watches filesystem and updates specified endpoint on every file change inside `marketplace_builder` directory |
+| `deploy` | Updates database using the filesystem as a source. By default this command is trying to send only files that changed since the last deploy  |
 
+### Examples
+`marketplace-kit pull -e qa`
+
+`marketplace-kit sync -e production`
+
+`marketplace-kit deploy -f -e staging`
 
 ## Contributing
 
