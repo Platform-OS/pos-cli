@@ -34,7 +34,7 @@ Examples:
 ## Available commands
 All commands should be run in the marketplace directory (ie. `marketplace-nearme/`)
 
-| Command            | Description           |
+| Command with flags  | Description           |
 | ----------------- | ------------- |
 | `pull -e <env>`      | Pulls files from database and saves them in the filesystem |
 | `deploy -e <env>` | Deploys to staging environment (-e option is available for all commands)      |
