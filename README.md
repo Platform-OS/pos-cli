@@ -15,9 +15,6 @@ Install it yourself as:
 3. Create `marketplace_builder/.builder` file with endpoint names and their urls
 ```
 {
-  "localhost": {
-    "url": "http://marketplace-name.lvh.me:3000"
-  },
   "staging": {
     "url": "https://staging-url.near-me.com"
   },
@@ -30,19 +27,19 @@ Install it yourself as:
 ## Usage
 `marketplace-kit <command> [flags]`
 
-Example:
+Examples:
 `marketplace-kit deploy -f -e staging`
+`marketplace-kit sync -e production`
 
 ## Available commands
 All commands should be run in the marketplace directory (ie. `marketplace-nearme/`)
 
 | Command            | Description           |
 | ----------------- | ------------- |
-| `pull`      | Pulls files from database and saves them in the filesystem |
-| `deploy`      | Updates database using the filesystem as a source      |
-| `deploy -e staging` | Deploys to staging environment (-e option is available for all commands)      |
-| `deploy -f` | Updates database using the filesystem as a source with force mode enabled (override all files, don't skip not changed) |
-| `sync` | Watches filesystem and updates the database on every change |
+| `pull -e <env>`      | Pulls files from database and saves them in the filesystem |
+| `deploy -e <env>` | Deploys to staging environment (-e option is available for all commands)      |
+| `deploy -f -e <env>` | Updates database using the filesystem as a source with force mode enabled (override all files, don't skip not changed) |
+| `sync -e <env>` | Watches filesystem and updates the database on every change |
 
 
 ## Contributing
