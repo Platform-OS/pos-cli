@@ -27,14 +27,14 @@ Install it yourself as:
 ## Usage
 `marketplace-kit <command> [flags]`
 
-## Available flags
+### Available flags
 | Flag  | For command | Description           |
 | ----------------- | ------------- | ------ |
 | `-e <endpoint>`  | all | Specifies endpoint. Endpoint name is the key inside the `.builder` config file  |
 | `-f` / `--force`  | deploy    | When added to deploy command it will deploy all the files (also those not changed) to specified endpoint |
 
 
-## Available commands
+### Available commands
 All commands should be run in the marketplace directory (ie. `marketplace-nearme/`)
 
 | Command  | Description           |
