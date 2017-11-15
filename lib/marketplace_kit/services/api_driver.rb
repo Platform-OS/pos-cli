@@ -76,9 +76,23 @@ module MarketplaceKit
       end
 
       def fix_font_file_encoding
-        return unless @hash_body[:marketplace_builder_file_body]
+        return unless font_file?
 
-        @hash_body[:marketplace_builder_file_body] = @hash_body[:marketplace_builder_file_body].force_encoding('ISO-8859-1').encode('UTF-8')
+        @hash_body[:marketplace_builder_file_body] = file_body.force_encoding('ISO-8859-1').encode('UTF-8')
+      end
+
+      FONT_TYPES = %w(.eot .otf .ttc .ttf .woff .woff2 .svg)
+
+      def font_file?
+        path && path.start_with?('custom_themes') && FONT_TYPES.include?(File.extname(path)) && file_body
+      end
+
+      def file_body
+        @hash_body[:marketplace_builder_file_body]
+      end
+
+      def path
+        @hash_body[:path]
       end
     end
   end
