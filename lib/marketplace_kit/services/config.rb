@@ -1,6 +1,10 @@
 module MarketplaceKit
   module Services
     class Config
+      def endpoint
+        @endpoint
+      end
+
       def load(endpoint_name)
         @config = {}
         @endpoint = endpoint_name
