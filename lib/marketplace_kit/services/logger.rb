@@ -2,7 +2,7 @@ module MarketplaceKit
   module Services
     class Logger
       def deploy_started
-        puts 'Deploy command started!'.green
+        puts 'Deploy command started'.green
       end
 
       def compressing_folder
@@ -10,15 +10,19 @@ module MarketplaceKit
       end
 
       def sending_zip
-        puts 'Sending zip to the server'.yellow
+        puts 'Sending zip file to the server'.yellow
       end
 
       def wait_for_deploy_finish
         puts 'Waiting for deploy to finish'.yellow
       end
 
+      def deploy_succeeded
+        puts 'Deploy command succeded'.green
+      end
+
       def pull_started
-        puts 'Pull command started!'.green
+        puts 'Pull command started'.green
       end
 
       def request_backup
@@ -29,6 +33,10 @@ module MarketplaceKit
         puts 'Waiting for backup to finish'.yellow
       end
 
+      def pull_succeeded
+        puts 'Pull command succeded'.green
+      end
+
       def sync_command_started
         puts 'Sync mode enabled'.green
       end
@@ -37,16 +45,12 @@ module MarketplaceKit
         puts "Updating: #{file_path}".green
       end
 
-      def sync_done
-        puts 'Done!'.green
-      end
-
       def ask_for_email
-        puts 'Enter your email'
+        puts 'Enter your email:'.yellow
       end
 
       def ask_for_password
-        puts 'Enter your password'
+        puts 'Enter your password:'.yellow
       end
 
       def redirect_tip

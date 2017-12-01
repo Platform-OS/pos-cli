@@ -6,7 +6,7 @@ describe 'pull command' do
   end
 
   it 'displays start message' do
-    expect { subject }.to output(/Pull command started!/).to_stdout
+    expect { subject }.to output(/Pull command started/).to_stdout
   end
 
   it 'sends API call to schedule a backup' do
@@ -28,7 +28,7 @@ describe 'pull command' do
     end
 
     expect_any_instance_of(Object).to receive(:sleep).exactly(5).times.and_return(nil)
-    expect { execute_command('pull') }.to output(/.....success/).to_stdout
+    expect { execute_command('pull') }.to output(/.....Pull command succeded/).to_stdout
   end
 
   it 'waits for backup and displays error' do

@@ -23,8 +23,6 @@ module MarketplaceKit
       def on_file_change(file_path)
         log :sync_updating, file_path
         response = gateway.send_file_change relative_file_path(file_path), File.read(file_path)
-
-        log :sync_done if response.success?
       end
 
       def relative_file_path(file_path)
