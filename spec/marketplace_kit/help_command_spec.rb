@@ -5,6 +5,7 @@ describe 'help commands' do
     it 'displays help message' do
       expect { subject }.to output(
 "marketplace-kit #{MarketplaceKit::VERSION}
+
 Usage: marketplace-kit sync | deploy | pull
   -e endpoint     endpoint from your config file
   -v              show current version

@@ -12,20 +12,6 @@ module MarketplaceKit
       def command_args
         @args[1..-1] || []
       end
-
-      def current_env
-        e_arg_index && env_arg_value || MarketplaceKit.config.default_endpoint
-      end
-
-      private
-
-      def e_arg_index
-        @e_arg_index ||= command_args.find_index { |arg| arg == '-e' }
-      end
-
-      def env_arg_value
-        command_args[e_arg_index + 1]
-      end
     end
   end
 end

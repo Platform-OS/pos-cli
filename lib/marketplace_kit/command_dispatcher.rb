@@ -1,16 +1,13 @@
 module MarketplaceKit
   class CommandDispatcher
     extend Forwardable
-    def_delegators :args_parser, :command_name, :command_args, :current_env
+    def_delegators :args_parser, :command_name, :command_args
 
     def initialize(args)
       @args = args
     end
 
     def execute
-      MarketplaceKit.config.load current_env
-      user_authentication.authenticate
-
       command.new(command_args).execute
     rescue Errors::MarketplaceError => e
       puts e.message.red
@@ -24,17 +21,13 @@ module MarketplaceKit
                    when 'deploy' then Commands::Deploy
                    when 'pull'   then Commands::Pull
                    when '--version', '-v' then Commands::ShowVersion
-                   when '--version', '-v' then Commands::ShowHelp
+                   when '--help', '-h' then Commands::ShowHelp
                    else Commands::ShowHelp
                    end
     end
 
     def args_parser
       @args_parse ||= Services::ArgsParser.new @args
-    end
-
-    def user_authentication
-      @user_authentication ||= Services::UserAuthentication.new
     end
   end
 end

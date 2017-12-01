@@ -27,7 +27,8 @@ module MarketplaceKit
       end
 
       def default_endpoint
-        require 'pry'; binding.pry
+        'localhost'
+        # require 'pry'; binding.pry
         # @config.find('localhost'.freeze) { |endpoint| endpoint['default'] }
       end
 
