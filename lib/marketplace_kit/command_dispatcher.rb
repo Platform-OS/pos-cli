@@ -23,8 +23,10 @@ module MarketplaceKit
                    when 'sync'   then Commands::Sync
                    when 'deploy' then Commands::Deploy
                    when 'pull'   then Commands::Pull
-                   else raise Errors::MarketplaceError.new('Usage: marketplace-kit sync | deploy | pull')
-      end
+                   when '--version', '-v' then Commands::ShowVersion
+                   when '--version', '-v' then Commands::ShowHelp
+                   else Commands::ShowHelp
+                   end
     end
 
     def args_parser

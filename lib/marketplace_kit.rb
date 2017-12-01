@@ -20,6 +20,8 @@ require 'marketplace_kit/commands/base_command'
 require 'marketplace_kit/commands/sync'
 require 'marketplace_kit/commands/deploy'
 require 'marketplace_kit/commands/pull'
+require 'marketplace_kit/commands/show_version'
+require 'marketplace_kit/commands/show_help'
 
 module MarketplaceKit
   MARKETPLACE_BUILDER_FOLDER = 'marketplace_builder'.freeze

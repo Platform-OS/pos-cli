@@ -53,6 +53,16 @@ module MarketplaceKit
         puts 'Server returned redirect code (possible a wrong domain in config file?)'.yellow
       end
 
+      def version(version)
+        puts "marketplace-kit #{version}"
+      end
+
+      def usage
+        puts 'Usage: marketplace-kit sync | deploy | pull'
+        puts '  -e endpoint     endpoint from your config file'
+        puts '  -v              show current version'
+      end
+
       def json_error(source)
         puts '```'.red
         puts 'Error while parsing JSON'.red
