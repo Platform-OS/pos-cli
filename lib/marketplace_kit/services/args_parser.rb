@@ -1,8 +1,6 @@
 module MarketplaceKit
   module Services
     class ArgsParser
-      DEFAULT_ENV = 'localhost'
-
       def initialize(args)
         @args = args
       end
@@ -16,8 +14,7 @@ module MarketplaceKit
       end
 
       def current_env
-        return DEFAULT_ENV unless e_arg_index
-        env_arg_value || DEFAULT_ENV
+        e_arg_index && env_arg_value || MarketplaceKit.config.default_endpoint
       end
 
       private
