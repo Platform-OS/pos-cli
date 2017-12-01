@@ -22,7 +22,7 @@ module MarketplaceKit
       end
 
       def current_env
-        endpoint_arg_value || MarketplaceKit.config.default_endpoint
+        endpoint_arg_value
       end
 
       def endpoint_arg_index
