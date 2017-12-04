@@ -15,7 +15,7 @@ describe 'deploy command' do
   end
 
   it 'displays start message' do
-    expect { subject }.to output(/Deploy command started!/).to_stdout
+    expect { subject }.to output(/Deploy command started/).to_stdout
   end
 
   it 'sends API call with proper zip file' do
@@ -69,7 +69,7 @@ describe 'deploy command' do
     end
 
     expect_any_instance_of(Object).to receive(:sleep).exactly(5).times.and_return(nil)
-    expect { execute_command('deploy') }.to output(/.....success/).to_stdout
+    expect { execute_command('deploy') }.to output(/.....Deploy command succeded/).to_stdout
   end
 
   it 'waits for deploy and displays error' do

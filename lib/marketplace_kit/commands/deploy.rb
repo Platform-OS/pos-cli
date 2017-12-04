@@ -55,7 +55,7 @@ module MarketplaceKit
       def handle_deploy_result(deploy_response)
         print "\n"
         if deploy_response.body['status'] == 'success'
-          puts 'success'.green
+          log :deploy_succeeded
         else
           parsed_error = JSON.parse(deploy_response.body['error'])
           log :api_error, parsed_error['message'], parsed_error['details']
