@@ -1,8 +1,6 @@
 module MarketplaceKit
   module Commands
-    class Deploy < BaseCommand
-      include Services::Loggable
-
+    class Deploy < BaseAuthorizedCommand
       def execute
         log :deploy_started
         ensure_tmp_folder_exist

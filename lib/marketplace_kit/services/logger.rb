@@ -58,6 +58,7 @@ module MarketplaceKit
       end
 
       def usage
+        puts ''
         puts 'Usage: marketplace-kit sync | deploy | pull'
         puts '  -e endpoint     endpoint from your config file'
         puts '  -v              show current version'

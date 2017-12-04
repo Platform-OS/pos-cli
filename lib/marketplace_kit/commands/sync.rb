@@ -1,8 +1,6 @@
 module MarketplaceKit
   module Commands
-    class Sync < BaseCommand
-      include Services::Loggable
-
+    class Sync < BaseAuthorizedCommand
       def execute
         log :sync_command_started
 

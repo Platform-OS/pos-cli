@@ -1,8 +1,6 @@
 module MarketplaceKit
   module Commands
-    class Pull < BaseCommand
-      include Services::Loggable
-
+    class Pull < BaseAuthorizedCommand
       def execute
         log :pull_started
         ensure_tmp_folder_exist
