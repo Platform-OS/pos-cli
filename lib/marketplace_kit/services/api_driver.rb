@@ -72,7 +72,9 @@ module MarketplaceKit
             'UserTemporaryToken' => MarketplaceKit.config.token,
             'Accept' => 'application/vnd.nearme.v4+json'
           }
-        }
+        }.tap do |config|
+          config[:ssl] = { verify: false } unless MarketplaceKit.config.endpoint == 'production'
+        end
       end
 
       def fix_font_file_encoding
