@@ -13,6 +13,7 @@ Install it yourself as:
 1. Go to marketplace folder you are working on
 2. Ensure `marketplace_builder` directory exists
 3. Create `marketplace_builder/.builder` file with endpoint names and their urls
+
 ```
 {
   "staging": {
@@ -24,26 +25,40 @@ Install it yourself as:
 }
 ```
 
+4. [Optional] `default`. Endpoint marked as default will be used if you do not pass any endpoint with `-e` flag.
+
+```
+{
+   "staging": {
+     "url": "https://staging-url.near-me.com",
+     "default": true
+   }
+}
+```
+
 ## Usage
+
 `marketplace-kit <command> [flags]`
 
 ### Available flags
-| Flag  | For command | Description           |
-| ----------------- | ------------- | ------ |
-| `-e <endpoint>`  | all | Specifies endpoint. Endpoint name is the key inside the `.builder` config file  |
-| `-f` / `--force`  | deploy    | When added to deploy command it will deploy all the files (also those not changed) to specified endpoint |
 
+| Flag                       | For command | Description                                                                                              |
+| -------------------------- | ----------- | -------------------------------------------------------------------------------------------------------- |
+| <pre>`-e <endpoint>`</pre> | all         | Specifies endpoint. Endpoint name is the key inside the `.builder` config file                           |
+| `-f`<br/>`--force`         | deploy      | When added to deploy command it will deploy all the files (also those not changed) to specified endpoint |
 
 ### Available commands
+
 All commands should be run in the marketplace directory (ie. `marketplace-nearme/`)
 
-| Command  | Description           |
-| ----------------- | ------------- |
-| `pull`      | Pulls files from database and saves them in the filesystem |
-| `sync` | Watches filesystem and updates specified endpoint on every file change inside `marketplace_builder` directory |
-| `deploy` | Updates database using the filesystem as a source. By default this command is trying to send only files that changed since the last deploy  |
+| Command  | Description                                                                                                                                |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pull`   | Pulls files from database and saves them in the filesystem                                                                                 |
+| `sync`   | Watches filesystem and updates specified endpoint on every file change inside `marketplace_builder` directory                              |
+| `deploy` | Updates database using the filesystem as a source. By default this command is trying to send only files that changed since the last deploy |
 
 ### Examples
+
 `marketplace-kit pull -e qa`
 
 `marketplace-kit sync -e production`
