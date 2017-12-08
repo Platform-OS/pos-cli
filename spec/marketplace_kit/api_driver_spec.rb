@@ -1,4 +1,5 @@
 # coding: utf-8
+
 describe 'ApiDriver' do
   subject { MarketplaceKit::Services::ApiDriver.new(:post, 'foo', body, {}).send_request }
   let(:body) { {

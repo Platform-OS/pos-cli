@@ -39,7 +39,6 @@ module MarketplaceKit
       end
 
       def prepare_body_to_send
-        fix_font_file_encoding
         return @hash_body if @options[:multipart]
 
         body_should_be_json? ? @hash_body.to_json : @hash_body
@@ -75,18 +74,6 @@ module MarketplaceKit
         }.tap do |config|
           config[:ssl] = { verify: false } unless MarketplaceKit.config.endpoint == 'production'
         end
-      end
-
-      def fix_font_file_encoding
-        return unless font_file?
-
-        @hash_body[:marketplace_builder_file_body] = file_body.force_encoding('ISO-8859-1').encode('UTF-8')
-      end
-
-      FONT_TYPES = %w(.eot .otf .ttc .ttf .woff .woff2 .svg)
-
-      def font_file?
-        path && path.start_with?('custom_themes') && FONT_TYPES.include?(File.extname(path)) && file_body
       end
 
       def file_body

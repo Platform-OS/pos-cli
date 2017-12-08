@@ -15,8 +15,17 @@ module MarketplaceKit
         response.body['login_required']
       end
 
-      def send_file_change(file_path, file_content)
-        send_request(:put, 'marketplace_releases/sync', path: file_path, marketplace_builder_file_body: file_content)
+      def send_file_change(relative_file_path, file_path)
+        file = Faraday::UploadIO.new(file_path, 'application/octet-stream')
+        send_request(
+          :put,
+          'marketplace_releases/sync',
+          {
+            path: relative_file_path,
+            marketplace_builder_file_body: file
+          },
+          multipart: true
+        )
       end
 
       def get_deploy(deploy_id)
