@@ -14,10 +14,6 @@ describe 'deploy command' do
     )
   end
 
-  it 'displays start message' do
-    expect { subject }.to output(/Deploy command started/).to_stdout
-  end
-
   it 'sends API call with proper zip file' do
     expect_any_instance_of(Faraday::Connection).to receive(:post) do |_, reques_url, request_body|
       unzip_zip_from_mocked_request(request_body)
@@ -27,12 +23,11 @@ describe 'deploy command' do
       expect(File.exists?('tmp/zip_file_from_request/liquid_views/unchanged_file.liquid')).to(be true)
       expect(File.exists?('tmp/zip_file_from_request/custom_themes/default_custom_theme/foo.txt')).to(be true)
       expect(File.exists?('tmp/zip_file_from_request/custom_themes/default_custom_theme/foo_unchanged.txt')).to(be false)
-      expect(request_body.dig(:marketplace_builder, :manifest)).to eq(
-                                                                     "/liquid_views/index.liquid" => {"md5"=>"86588137cb4fa781fcf1f5f4f294d200"},
-                                                                     '/liquid_views/unchanged_file.liquid' => { 'md5' => 'd41d8cd98f00b204e9800998ecf8427e'},
-                                                                     '/custom_themes/default_custom_theme/foo.txt' => { 'md5' => 'd3b07384d113edec49eaa6238ad5ff00' },
-                                                                     '/custom_themes/default_custom_theme/foo_unchanged.txt' => { 'md5' => 'be367fa3a96ffb1989b2e3196c3e6774' }
-                                                                    )
+      manifest = request_body.dig(:marketplace_builder, :manifest)
+      expect(manifest).to include('/custom_themes/default_custom_theme/foo.txt' => { 'md5' => 'd3b07384d113edec49eaa6238ad5ff00' })
+      expect(manifest).to include('/custom_themes/default_custom_theme/foo_unchanged.txt' => { 'md5' => 'be367fa3a96ffb1989b2e3196c3e6774' })
+      expect(manifest).to include("/liquid_views/index.liquid" => {"md5"=>"86588137cb4fa781fcf1f5f4f294d200"})
+      expect(manifest).to include('/liquid_views/unchanged_file.liquid' => { 'md5' => 'd41d8cd98f00b204e9800998ecf8427e'})
 
       OpenStruct.new(status: 200, body: { id: 1 }.to_json)
     end
@@ -79,6 +74,10 @@ describe 'deploy command' do
 
     expect { execute_command('deploy') }.to output(/Builder error: Template path has already been taken/).to_stdout
     expect { execute_command('deploy') }.to output(/"model_class"=>"Workflow"/).to_stdout
+  end
+
+  it 'displays start message' do
+    expect { subject }.to output(/Deploy command started/).to_stdout
   end
 
   def unzip_zip_from_mocked_request(request_body)
