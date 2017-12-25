@@ -30,7 +30,7 @@ module MarketplaceKit
         if error.is_a?(JSON::ParserError)
           log :json_error, response.body
         elsif error.is_a?(Errors::ApiError)
-          log :api_error, error.parsed_response['error'], error.parsed_response['details']
+          log :api_error, error.message, error.details
         else
           log :standard_error, error
         end
