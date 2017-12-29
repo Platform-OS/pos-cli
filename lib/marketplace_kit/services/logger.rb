@@ -78,7 +78,7 @@ module MarketplaceKit
       def api_error(message, details)
         puts '```'.red
         puts "Builder error: #{message}".red
-        puts 'Details:'
+        puts 'Details:' if details
         puts details
         puts '```'.red
       end
