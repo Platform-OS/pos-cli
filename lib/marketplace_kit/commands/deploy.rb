@@ -26,15 +26,17 @@ module MarketplaceKit
       def zip_files_without_old_assets
         files_path = changed_files.map { |path| path.gsub(%r{^\/}, '') }
         File.open('tmp/files_to_zip.txt', 'w+') { |file| file.puts files_path }
-        system "cd #{MarketplaceKit::MARKETPLACE_BUILDER_FOLDER}; zip #{root}/tmp/marketplace_builder.zip -@ < #{root}/tmp/files_to_zip.txt"
+        system "cd #{MarketplaceKit::MARKETPLACE_BUILDER_FOLDER}; zip #{build_zip_path} -@ < #{root}/tmp/files_to_zip.txt"
+        print_build_size
       end
 
       def zip_all_files
-        system "cd #{MarketplaceKit::MARKETPLACE_BUILDER_FOLDER}; zip -r #{root}/tmp/marketplace_builder.zip ."
+        system "cd #{MarketplaceKit::MARKETPLACE_BUILDER_FOLDER}; zip -r #{build_zip_path} ."
+        print_build_size
       end
 
       def send_zip_to_server
-        gateway.deploy("#{root}/tmp/marketplace_builder.zip", force: force_mode?, manifest: manifest)
+        gateway.deploy(build_zip_path, force: force_mode?, manifest: manifest)
       end
 
       def wait_for_deploy(deploy_id)
@@ -75,6 +77,14 @@ module MarketplaceKit
 
       def root
         Dir.getwd
+      end
+
+      def build_zip_path
+        "#{root}/tmp/marketplace_builder.zip"
+      end
+
+      def print_build_size
+        system "du -sh #{build_zip_path}"
       end
 
       def changed_files
