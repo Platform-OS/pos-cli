@@ -11,6 +11,7 @@ module MarketplaceKit
       command.new(command_args).execute
     rescue Errors::MarketplaceError => e
       puts e.message.red
+      exit 1
     end
 
     private
