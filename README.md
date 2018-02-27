@@ -4,9 +4,22 @@ MarketplaceKit is a gem for Marketplace Platform users.
 
 ## Installation
 
-Install it yourself as:
+### Locally
+Install gem (and all its dependencies) yourself using:
 
     $ gem install marketplace-kit
+
+### Docker image
+
+Using docker image that has all dependencies installed already.
+If image is not found in your system it will download automatically.
+
+Example usage:
+
+    docker run --rm -it -v $PWD:/src platformos/marketplace-kit sync -e sandbox -f
+
+    docker run --rm -it -v $PWD:/src platformos/marketplace-kit deploy -e production
+
 
 ## Configuration
 
@@ -64,14 +77,6 @@ All commands should be run in the marketplace directory (ie. `marketplace-nearme
 `marketplace-kit sync -e production`
 
 `marketplace-kit deploy -f -e staging`
-
-### Docker version
-
-In case of problems with installing MPKit on your system we recommend using dockerized version of MPKit.
-
-    docker run --rm -it -v $PWD:/src platformos/marketplace-kit sync -e sandbox -f
-
-    docker run --rm -it -v $PWD:/src platformos/marketplace-kit deploy -e production
 
 
 ## Contributing
