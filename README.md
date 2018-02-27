@@ -65,6 +65,15 @@ All commands should be run in the marketplace directory (ie. `marketplace-nearme
 
 `marketplace-kit deploy -f -e staging`
 
+### Docker version
+
+In case of problems with installing MPKit on your system we recommend using dockerized version of MPKit.
+
+    docker run --rm -it -v $PWD:/src platformos/marketplace-kit sync -e sandbox -f
+
+    docker run --rm -it -v $PWD:/src platformos/marketplace-kit deploy -e production
+
+
 ## Contributing
 
 [Contributing quick start](https://github.com/mdyd-dev/marketplace-kit/blob/master/CONTRIBUTE_README.md)
