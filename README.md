@@ -16,8 +16,10 @@ If image is not found in your system it will download automatically.
 
 Example usage:
 
+    # print markeplace kit version and exit
     docker run --rm -it -v $PWD:/src platformos/marketplace-kit -v
 
+    # start sync session do the sandbox instance
     docker run --rm -it -v $PWD:/src platformos/marketplace-kit sync -e sandbox -f
 
     docker run --rm -it -v $PWD:/src platformos/marketplace-kit deploy -e production
