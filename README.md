@@ -20,6 +20,10 @@ Example usage:
 
     docker run --rm -it -v $PWD:/src platformos/marketplace-kit deploy -e production
 
+#### Get Docker Community Edition
+
+https://www.docker.com/community-edition#/download
+
 
 ## Configuration
 
