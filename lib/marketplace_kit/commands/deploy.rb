@@ -61,6 +61,7 @@ module MarketplaceKit
         else
           parsed_error = JSON.parse(deploy_response.body['error'])
           log :api_error, parsed_error['message'], parsed_error['details']
+          exit 1
         end
       end
 
