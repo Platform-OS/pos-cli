@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+
+const program = require('commander'),
+      rl = require('readline');
+
+program
+  .version('0.3.0')
+  .option('name <name>', 'name of environment endpoint')
+  .option('--email <email>', 'email')
+  .parse(process.argv);
+
+if (!program.args.length) program.help();
+
+if (typeof program.email === 'undefined') { console.error('no email given!'); process.exit(1); }
+if (typeof program.name === 'undefined') { console.error('no name of environment given!'); process.exit(1); }
+
+const reader = rl.createInterface({input: process.stdin, output: process.stdout});
+let password = '';
+reader.stdoutMuted = true;
+reader.question('Password: ', (answer) => { password = answer; reader.close(); console.log("\nPassword: "+password);});
+
+reader._writeToOutput = (stringToWrite) => {
+  reader.stdoutMuted && reader.output.write('*') || reader.output.write(stringToWrite);
+};

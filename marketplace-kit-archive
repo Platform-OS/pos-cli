@@ -1,0 +1,49 @@
+#!/usr/bin/env node
+
+const program = require('commander');
+const fs = require('fs');
+const archiver = require('archiver');
+
+program
+  .version('0.1.0')
+  .option('-f --force [forceUpdate]>', 'force update')
+  .parse(process.argv);
+
+const makeArchive = (path, source) => {
+  // create a file to stream archive data to.
+  try {
+    fs.unlinkSync(path);
+  } catch(error) {}
+
+  const output = fs.createWriteStream(path);
+  const archive = archiver('zip', { zlib: { level: 9 } });
+
+  // listen for all archive data to be written
+  // 'close' event is fired only when a file descriptor is involved
+  output.on('close', function() {
+    console.log('INFO: ' + archive.pointer() + ' total bytes');
+    console.log('INFO: ' + 'archiver has been finalized and the output file descriptor has closed.');
+  });
+
+  archive.on('warning', function(err) {
+    if (err.code === 'ENOENT') {
+      console.log(err)
+    } else {
+      throw err;
+    }
+  });
+
+  archive.on('error', function(err) { throw err; });
+
+  // pipe archive data to the file
+  archive.pipe(output);
+
+  // append files from a sub-directory, putting its contents at the root of archive
+  archive.directory(source, false);
+
+  // finalize the archive (ie we are done appending files but streams have to finish yet)
+  // 'close', 'end' or 'finish' may be fired right after calling this method so register to them beforehand
+  archive.finalize();
+}
+
+makeArchive(__dirname + '/tmp' + '/marketplace-kit.zip', 'marketplace_builder/');

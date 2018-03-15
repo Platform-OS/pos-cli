@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+
+const program = require('commander');
+
+program
+  .version('0.1.0')
+  .option('--api-key <apiKey>', 'API KEY')
+  .option('-u --url <url>', 'instance endpoint')
+  .option('-f --force [forceUpdate]>', 'force update')
+  .action((url, options) => { console.log('Name is: %s', options); })
+  .parse(process.argv);
+
+if (typeof program.apiKey === 'undefined') { console.error('no API KEY given!'); process.exit(1); }
+if (typeof program.url === 'undefined') { console.error('no URL given!'); process.exit(1); }
+
+if (program.deploy) console.log('deploying to %s', program.url);
+if (program.apiKey) console.log(program.apiKey);

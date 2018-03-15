@@ -7,4 +7,5 @@
 /pkg/
 /spec/reports/
 /tmp/
-/marketplace-kit-*
+/marketplace-kit-*.gem
+node_modules
