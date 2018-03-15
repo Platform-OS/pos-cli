@@ -72,8 +72,7 @@ describe 'deploy command' do
       id: 1, status: 'error', error: { message: 'Template path has already been taken', details: { model_id: 1, model_class: 'Workflow' } }.to_json
     }.to_json)
 
-    expect { execute_command('deploy') }.to output(/Builder error: Template path has already been taken/).to_stdout
-    expect { execute_command('deploy') }.to output(/"model_class"=>"Workflow"/).to_stdout
+    expect { execute_command('deploy') }.to raise_error SystemExit    
   end
 
   it 'displays start message' do
