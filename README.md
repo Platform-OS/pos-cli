@@ -4,7 +4,7 @@ Command line tool for making changes in your marketplace on Platform OS.
 
 ## Install
 
-    npm i @platform-os/marketplace-kit
+    npm i -g @platform-os/marketplace-kit
 
 ## usage
 
