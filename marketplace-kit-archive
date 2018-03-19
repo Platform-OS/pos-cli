@@ -16,7 +16,7 @@ const makeArchive = (path, source) => {
   } catch(error) {}
 
   const output = fs.createWriteStream(path);
-  const archive = archiver('zip', { zlib: { level: 9 } });
+  const archive = archiver('zip', { zlib: { level: 6 } });
 
   // listen for all archive data to be written
   // 'close' event is fired only when a file descriptor is involved
