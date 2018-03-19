@@ -9,7 +9,7 @@ program
   .version('0.3.0')
   .option('--api-key <apiKey>', 'your API KEY', process.env.MARKETPLACE_API_KEY)
   .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
-  .option('--files <files>', 'watch files', process.env.FILES || 'js,css,liquid,grapqh')
+  .option('--files <files>', 'watch files', process.env.FILES || 'js,css,liquid,graphql')
   .parse(process.argv);
 
 if (typeof program.apiKey === 'undefined') { console.error('no API KEY given!'); process.exit(1); }
