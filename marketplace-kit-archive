@@ -4,11 +4,6 @@ const program = require('commander');
 const fs = require('fs');
 const archiver = require('archiver');
 
-program
-  .version('0.1.0')
-  .option('-f --force [forceUpdate]>', 'force update')
-  .parse(process.argv);
-
 const makeArchive = (path, source) => {
   // create a file to stream archive data to.
   try {
@@ -46,4 +41,10 @@ const makeArchive = (path, source) => {
   archive.finalize();
 }
 
-makeArchive(__dirname + '/tmp' + '/marketplace-kit.zip', 'marketplace_builder/');
+program
+  .version('0.1.0')
+  .option('-f --force [forceUpdate]>', 'force update')
+  .option('-d --dir <dir>', 'compress whole directory')
+  .parse(process.argv);
+
+makeArchive(__dirname + '/tmp' + '/marketplace-kit.zip', program.dir);
