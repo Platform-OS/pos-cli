@@ -1,23 +1,25 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-      spawn = require('child_process').spawn,
-      loadSettingsToEnv = require('./authorize');
+  spawn = require('child_process').spawn,
+  fetchAuthData = require('./authorize');
 
 program
   .version('0.3.0')
   .arguments('<endpoint>', 'endpoint of environment endpoint')
   .action((endpoint, params) => {
-    loadSettingsToEnv(endpoint);
-    const p = spawn('./marketplace-kit-sync', [], {
-      stdio: 'inherit'
-    });
+    const authData = fetchAuthData(endpoint);
+    const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
+    const p = spawn('./marketplace-kit-sync', [], { stdio: 'inherit', env: env });
     p.on('close', code => {
       if (code === 1) {
-        console.error(`✖ failed.`);
+        console.error('✖ failed.');
       }
     });
   });
 
 program.parse(process.argv);
-if (!program.args.length) { program.help(); process.exit(1); }
+if (!program.args.length) {
+  program.help();
+  process.exit(1);
+}

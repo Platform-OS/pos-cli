@@ -5,8 +5,9 @@ const program = require('commander');
 program
   .version('0.0.3')
   .command('deploy', 'deploy marketplace').alias('d')
-  .command('sync', 'enter sync mode').alias('s')
+  .command('watch', 'enter sync mode').alias('w')
   .command('remote', 'remote endpoints')
+  .command('sync', 'remote endpoints')
   .parse(process.argv);
 
 if (!program.args.length) program.help();

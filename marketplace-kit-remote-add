@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-      fs = require('fs'),
-      rl = require('readline'),
-      request = require('request');
+  fs = require('fs'),
+  rl = require('readline'),
+  request = require('request');
 
 const checkParams = (params) => {
-  if (!params.args.length) { params.help(); process.exit(1); }
-  if (typeof params.email === 'undefined') { console.error('no email given!'); process.exit(1); }
-  if (typeof params.url === 'undefined') { console.error('no URL given!'); process.exit(1); }
-}
+  if (!params.args.length) {
+    params.help();
+    process.exit(1);
+  }
+  if (typeof params.email === 'undefined') {
+    console.error('no email given!');
+    process.exit(1);
+  }
+  if (typeof params.url === 'undefined') {
+    console.error('no URL given!');
+    process.exit(1);
+  }
+};
 
 // turn to promise
 const getPassword = () => {
@@ -25,7 +34,7 @@ const getPassword = () => {
       reader.stdoutMuted && reader.output.write('*') || reader.output.write(stringToWrite);
     };
   });
- }
+};
 
 const login = (email, password, settings) => {
   request({
@@ -45,7 +54,7 @@ const login = (email, password, settings) => {
       console.log(`\nError: ${body.error}`);
     }
   });
-}
+};
 
 const storeEndpoint = (settings) => {
   const endpointSettings = {
@@ -56,14 +65,14 @@ const storeEndpoint = (settings) => {
     }
   };
   saveFile(Object.assign(existingSettings(), endpointSettings));
-}
+};
 
 const settingsFileName = '.marketplace-kit';
 const saveFile = (settings) => {
   fs.writeFileSync(settingsFileName, JSON.stringify(settings), (err) => {
     if (err) throw err;
   });
-}
+};
 
 const existingSettings = () => {
   if (fs.existsSync(settingsFileName)) {
@@ -71,7 +80,7 @@ const existingSettings = () => {
   } else {
     return {};
   }
-}
+};
 
 program
   .version('0.3.0')
@@ -82,8 +91,12 @@ program
     checkParams(params);
     getPassword().then((password) => {
       const settings = { url: params.url, endpoint: endpoint, email: params.email };
-      login(params.email, password, settings)
-    })
-  })
+      login(params.email, password, settings);
+    });
+  });
 
 program.parse(process.argv);
+if (!program.args.length) {
+  program.help();
+  process.exit(1);
+}

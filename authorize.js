@@ -12,10 +12,9 @@ const existingSettings = () => {
 const loadSettingsToEnv = (endpoint) => {
   const settings = existingSettings()[endpoint];
   if (settings) {
-    process.env.MARKETPLACE_API_KEY = settings.token;
-    process.env.MARKETPLACE_URL = settings.url;
+    return settings;
   } else {
-    console.log(`No settings for ${endpoint} endpoint, please add remote`);
+    console.log(`No settings for ${endpoint} endpoint, please see marketplace-kit remote add`);
     process.exit(1);
   }
 };
