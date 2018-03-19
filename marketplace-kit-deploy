@@ -28,7 +28,6 @@ program
         if (code === 1) {
           console.error('✖ failed.');
         }
-        console.log("Polling goes here")
       });
     });
   });

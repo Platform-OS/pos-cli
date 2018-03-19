@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  spawn = require('child_process').spawn;
+  spawn = require('child_process').spawn,
   request = require('request'),
   fs = require('fs');
 
@@ -25,22 +25,47 @@ if (typeof program.url === 'undefined') {
 if (program.url) console.log('Deploying to: %s', program.url);
 
 const fetchDeploymentStatus = (id, authData) => {
-  request({
-    uri: authData.url + 'api/marketplace_builder/marketplace_releases/'+id,
-    method: 'GET',
-    headers: { 'UserTemporaryToken': authData.apiKey }
-  }, (error, response, body) => {
-    if (error)
-      console.log(error);
-    else {
-      console.log(body);
-    }
-  })
-}
+  return new Promise((resolve, reject) => {
+    request({
+      uri: authData.url + 'api/marketplace_builder/marketplace_releases/'+id,
+      method: 'GET',
+      headers: { 'UserTemporaryToken': authData.apiKey }
+    }, (error, response, body) => {
+      if (error) {
+        console.log(error);
+        process.exit(1);
+      } else {
+        if (JSON.parse(body).status === 'ready_for_import')
+          reject();
+        else
+          resolve(body);
+      };
+    });
+  });
+};
+
+const getDeploymentStatus = (id, authData) => {
+  return new Promise((resolve, reject) => {
+    (getStatus = () => {
+      fetchDeploymentStatus(id, authData)
+        .then(
+          (status) => {
+            const jsonStatus = JSON.parse(status);
+            if (jsonStatus.status === 'error')
+              reject(jsonStatus.error);
+            else
+              resolve(status);
+          },
+          () => {
+            process.stdout.write('.');
+            setTimeout(getStatus, 1500);
+          }
+        );
+    })();
+  });
+};
 
 const pushFile = (path) => {
-  console.log(path);
-
   request({
     uri: program.url + 'api/marketplace_builder/marketplace_releases',
     method: 'POST',
@@ -49,10 +74,14 @@ const pushFile = (path) => {
       'marketplace_builder[zip_file]': fs.createReadStream(path)
     }
   }, (error, response, body) => {
-    console.log(`Sending: ${path} done`);
-    console.log(body);
-    console.log(error);
-    fetchDeploymentStatus(JSON.parse(body).id, program)
+    if (error) console.log(error);
+    const responseBody = JSON.parse(body);
+
+    getDeploymentStatus(responseBody.id, program)
+      .then(
+        () => console.log('\nDONE'),
+        (error) => console.error('\nERROR:', error)
+      );
   });
 };
 
