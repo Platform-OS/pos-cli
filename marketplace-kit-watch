@@ -5,13 +5,10 @@ const program = require('commander'),
   fs = require('fs'),
   watch = require('node-watch');
 
-const shouldBeSynced = (filename) => {
-  console.log("testing file: ", filename);
-  const script = filename.split('.').pop();
-
-  console.log(script[0]);
-
-  return program.files.split(',').includes(script);
+const shouldBeSynced = (path) => {
+  console.log("testing file: ", path);
+  const ext = path.split('.').pop();
+  return program.files.split(',').includes(ext);
 };
 
 program

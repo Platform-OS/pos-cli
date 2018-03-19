@@ -1,0 +1,44 @@
+#!/usr/bin/env node
+
+const program = require('commander'),
+  spawn = require('child_process').spawn;
+  request = require('request'),
+  fs = require('fs');
+
+program
+  .version('0.1.0')
+  .option('--api-key <apiKey>', 'API KEY', process.env.MARKETPLACE_API_KEY)
+  .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
+  .option('-f --force>', 'force update');
+
+program.parse(process.argv);
+
+if (typeof program.apiKey === 'undefined') {
+  console.error('no API KEY given!');
+  process.exit(1);
+}
+if (typeof program.url === 'undefined') {
+  console.error('no URL given!');
+  process.exit(1);
+}
+
+if (program.url) console.log('Deploying to: %s', program.url);
+
+const pushFile = (path) => {
+  console.log(path);
+
+  request({
+    uri: program.url + 'api/marketplace_builder/marketplace_releases',
+    method: 'POST',
+    headers: { 'UserTemporaryToken': program.apiKey },
+    formData: {
+      'marketplace_builder[zip_file]': fs.createReadStream(path)
+    }
+  }, (error, response, body) => {
+    console.log(`Sending: ${path} done`);
+    console.log(body);
+    console.log(error);
+  });
+};
+
+pushFile(__dirname + '/tmp' + '/marketplace-kit.zip');

@@ -1,17 +1,39 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const program = require('commander'),
+  fetchAuthData = require('./settings'),
+  spawn = require('child_process').spawn;
 
 program
   .version('0.1.0')
-  .option('--api-key <apiKey>', 'API KEY')
-  .option('-u --url <url>', 'instance endpoint')
-  .option('-f --force [forceUpdate]>', 'force update')
-  .action((url, options) => { console.log('Name is: %s', options); })
-  .parse(process.argv);
+  .arguments('<endpoint>', 'endpoint of environment endpoint')
+  .option('-f --force', 'force update')
+  .action((endpoint, params) => {
+    const authData = fetchAuthData(endpoint);
+    const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
 
-if (typeof program.apiKey === 'undefined') { console.error('no API KEY given!'); process.exit(1); }
-if (typeof program.url === 'undefined') { console.error('no URL given!'); process.exit(1); }
+    // make an archive
+    const archive = spawn('marketplace-kit-archive', [], { stdio: 'inherit' });
 
-if (program.deploy) console.log('deploying to %s', program.url);
-if (program.apiKey) console.log(program.apiKey);
+    archive.on('close', (code) => {
+      if (code === 1) {
+        console.error('✖ failed.');
+        process.exit(1);
+      };
+
+      console.log("Compression done.");
+
+      const push = spawn('marketplace-kit-push', [], { stdio: 'inherit', env: env });
+      push.on('close', code => {
+        if (code === 1) {
+          console.error('✖ failed.');
+        }
+      });
+    });
+  });
+
+program.parse(process.argv);
+if (!program.args.length) {
+  program.help();
+  process.exit(1);
+}
