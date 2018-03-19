@@ -2,7 +2,7 @@
 
 const program = require('commander'),
   spawn = require('child_process').spawn,
-  fetchAuthData = require('./settings');
+  fetchAuthData = require('./settings').fetchSettings;
 
 program
   .version('0.3.0')
