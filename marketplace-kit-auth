@@ -1,0 +1,40 @@
+#!/usr/bin/env node
+
+const program = require('commander'),
+      fs = require('fs');
+
+const checkParams = (params) => {
+  if (!params.args.length) { params.help(); process.exit(1); }
+}
+
+const settingsFileName = '.marketplace-kit';
+const existingSettings = () => {
+  if (fs.existsSync(settingsFileName)) {
+    return JSON.parse(fs.readFileSync(settingsFileName));
+  } else {
+    return {};
+  }
+}
+
+const loadSettingsToEnv = (endpoint) => {
+  const settings = existingSettings()[endpoint];
+
+  if (settings) {
+    process.env['MARKETPLACE_API_KEY'] = settings.token;
+    process.env['MARKETPLACE_URL'] = settings.url;
+  } else {
+    console.log(`No settings for ${endpoint} endpoint, please add remote`);
+    process.exit(1);
+  }
+}
+
+program
+  .version('0.3.0')
+  .arguments('<endpoint>', 'endpoint of environment endpoint')
+  .action((endpoint, params) => {
+    checkParams(params);
+    loadSettingsToEnv(endpoint);
+    console.log(process.env.MARKETPLACE_URL);
+  })
+
+program.parse(process.argv);
