@@ -27,21 +27,6 @@ const getPassword = () => {
   });
  }
 
-program
-  .version('0.3.0')
-  .arguments('<endpoint>', 'endpoint of environment endpoint')
-  .option('--email <email>', 'email')
-  .option('--url <url>', 'instance endpoint')
-  .action((endpoint, params) => {
-    checkParams(params);
-    getPassword().then((password) => {
-      const settings = { url: params.url, endpoint: params.endpoint, email: params.email };
-      login(params.email, password, settings)
-    })
-  })
-
-program.parse(process.argv);
-
 const login = (email, password, settings) => {
   request({
     uri: settings.url + 'api/marketplace_builder/sessions',
@@ -70,11 +55,35 @@ const storeEndpoint = (settings) => {
       email: settings.email
     }
   };
-  saveFile(endpointSettings);
+  saveFile(Object.assign(existingSettings(), endpointSettings));
 }
 
+const settingsFileName = '.marketplace-kit';
 const saveFile = (settings) => {
-  fs.writeFileSync('.marketplace-kit', JSON.stringify(settings), (err) => {
+  fs.writeFileSync(settingsFileName, JSON.stringify(settings), (err) => {
     if (err) throw err;
   });
 }
+
+const existingSettings = () => {
+  if (fs.existsSync(settingsFileName)) {
+    return JSON.parse(fs.readFileSync(settingsFileName));
+  } else {
+    return {};
+  }
+}
+
+program
+  .version('0.3.0')
+  .arguments('<endpoint>', 'endpoint of environment endpoint')
+  .option('--email <email>', 'email')
+  .option('--url <url>', 'instance endpoint')
+  .action((endpoint, params) => {
+    checkParams(params);
+    getPassword().then((password) => {
+      const settings = { url: params.url, endpoint: endpoint, email: params.email };
+      login(params.email, password, settings)
+    })
+  })
+
+program.parse(process.argv);
