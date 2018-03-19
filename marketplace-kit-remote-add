@@ -4,33 +4,38 @@ const program = require('commander'),
       rl = require('readline'),
       request = require('request');
 
+const checkParams = (params) => {
+  if (!params.args.length) { params.help(); process.exit(1); }
+  if (typeof params.email === 'undefined') { console.error('no email given!'); process.exit(1); }
+  if (typeof params.url === 'undefined') { console.error('no URL given!'); process.exit(1); }
+}
+
+// turn to promise
+const getPassword = (params) => {
+  const reader = rl.createInterface({input: process.stdin, output: process.stdout});
+  reader.stdoutMuted = true;
+  reader.question('Password: ', (password) => {
+    reader.close();
+    const settings = { url: params.url, endpoint: params.endpoint, email: params.email };
+    login(params.email, password, settings);
+  });
+
+  reader._writeToOutput = (stringToWrite) => {
+    reader.stdoutMuted && reader.output.write('*') || reader.output.write(stringToWrite);
+  };
+}
+
 program
   .version('0.3.0')
-  .option('endpoint <endpoint>', 'name of environment endpoint')
+  .arguments('<endpoint>', 'endpoint of environment endpoint')
   .option('--email <email>', 'email')
   .option('--url <url>', 'instance endpoint')
-  .parse(process.argv);
+  .action((endpoint, params) => {
+    checkParams(params);
+    getPassword(params);
+  })
 
-if (!program.args.length) program.help();
-
-if (typeof program.email === 'undefined') { console.error('no email given!'); process.exit(1); }
-program.endpoint = 'development';
-if (typeof program.endpoint === 'undefined') { console.error('no name of environment given!'); process.exit(1); }
-if (typeof program.url === 'undefined') { console.error('no URL given!'); process.exit(1); }
-
-const reader = rl.createInterface({input: process.stdin, output: process.stdout});
-let password = '';
-reader.stdoutMuted = true;
-reader.question('Password: ', (answer) => {
-  password = answer;
-  reader.close();
-  const settings = { url: program.url, endpoint: program.endpoint, email: program.email };
-  login(program.email, password, settings);
-});
-
-reader._writeToOutput = (stringToWrite) => {
-  reader.stdoutMuted && reader.output.write('*') || reader.output.write(stringToWrite);
-};
+program.parse(process.argv);
 
 const login = (email, password, settings) => {
   request({
@@ -38,6 +43,10 @@ const login = (email, password, settings) => {
     method: 'POST',
     json: {email, password}
   }, function (error, response, body) {
+    if(error) {
+      console.error(error);
+      process.exit(1);
+    }
     if (body.token){
       storeEndpoint(
         Object.assign(settings, { token: body.token })
