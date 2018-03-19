@@ -12,19 +12,20 @@ const checkParams = (params) => {
 }
 
 // turn to promise
-const getPassword = (params) => {
-  const reader = rl.createInterface({input: process.stdin, output: process.stdout});
-  reader.stdoutMuted = true;
-  reader.question('Password: ', (password) => {
-    reader.close();
-    const settings = { url: params.url, endpoint: params.endpoint, email: params.email };
-    login(params.email, password, settings);
-  });
+const getPassword = () => {
+  return new Promise((resolve, reject) => {
+    const reader = rl.createInterface({ input: process.stdin, output: process.stdout });
+    reader.stdoutMuted = true;
+    reader.question('Password: ', (password) => {
+      reader.close();
+      resolve(password);
+    });
 
-  reader._writeToOutput = (stringToWrite) => {
-    reader.stdoutMuted && reader.output.write('*') || reader.output.write(stringToWrite);
-  };
-}
+    reader._writeToOutput = (stringToWrite) => {
+      reader.stdoutMuted && reader.output.write('*') || reader.output.write(stringToWrite);
+    };
+  });
+ }
 
 program
   .version('0.3.0')
@@ -33,7 +34,10 @@ program
   .option('--url <url>', 'instance endpoint')
   .action((endpoint, params) => {
     checkParams(params);
-    getPassword(params);
+    getPassword().then((password) => {
+      const settings = { url: params.url, endpoint: params.endpoint, email: params.email };
+      login(params.email, password, settings)
+    })
   })
 
 program.parse(process.argv);
