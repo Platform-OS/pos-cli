@@ -6,7 +6,10 @@ const program = require('commander'),
   watch = require('node-watch');
 
 const shouldBeSynced = (filename) => {
-  const script = file.split('.').pop();
+  console.log("testing file: ", filename);
+  const script = filename.split('.').pop();
+
+  console.log(script[0]);
 
   return program.files.split(',').includes(script);
 };
@@ -43,11 +46,8 @@ const pushFile = (path) => {
       marketplace_builder_file_body: fs.createReadStream(path)
     }
   }, (error, response, body) => {
-    if (error) {
-      console.error(body);
-      exit(1);
-    } else {
-      console.log(`syncing: ${file} done`);
-    }
+    console.log(`syncing: ${path} done`);
+    console.log(body);
+    console.log(error);
   });
 };
