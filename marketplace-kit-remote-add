@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
+      fs = require('fs'),
       rl = require('readline'),
       request = require('request');
 
@@ -65,5 +66,11 @@ const storeEndpoint = (settings) => {
       email: settings.email
     }
   };
-  console.log(endpointSettings);
+  saveFile(endpointSettings);
+}
+
+const saveFile = (settings) => {
+  fs.writeFileSync('.marketplace-kit', JSON.stringify(settings), (err) => {
+    if (err) throw err;
+  });
 }
