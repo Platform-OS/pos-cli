@@ -1,7 +1,7 @@
 {
-  "name": "marketplace-kit",
+  "name": "@platform-os/marketplace-kit",
   "version": "1.0.0",
-  "description": "",
+  "description": "Make changes in your marketplace on Platform OS",
   "main": "marketplace-kit",
   "dependencies": {
     "archiver": "^2.1.1",

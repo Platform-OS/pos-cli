@@ -10,3 +10,5 @@
 /marketplace-kit-*.gem
 node_modules
 /.marketplace-kit
+/marketplace_builder
+/.DS_Store
