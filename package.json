@@ -1,0 +1,25 @@
+{
+  "name": "marketplace-kit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "marketplace-kit",
+  "dependencies": {
+    "commander": "^2.15.0",
+    "node-watch": "^0.5.8",
+    "request": "^2.85.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mdyd-dev/marketplace-kit.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mdyd-dev/marketplace-kit/issues"
+  },
+  "homepage": "https://github.com/mdyd-dev/marketplace-kit#readme"
+}
