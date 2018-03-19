@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+
+const program = require('commander'),
+      spawn = require('child_process').spawn,
+      loadSettingsToEnv = require('./authorize');
+
+program
+  .version('0.3.0')
+  .arguments('<endpoint>', 'endpoint of environment endpoint')
+  .action((endpoint, params) => {
+    loadSettingsToEnv(endpoint);
+    const p = spawn('./marketplace-kit-sync', [], {
+      stdio: 'inherit'
+    });
+    p.on('close', code => {
+      if (code === 1) {
+        console.error(`✖ failed.`);
+      }
+    });
+  });
+
+program.parse(process.argv);
+if (!program.args.length) { program.help(); process.exit(1); }

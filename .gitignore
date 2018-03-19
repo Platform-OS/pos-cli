@@ -9,3 +9,4 @@
 /tmp/
 /marketplace-kit-*.gem
 node_modules
+/.marketplace-kit

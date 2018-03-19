@@ -4,6 +4,7 @@
   "description": "",
   "main": "marketplace-kit",
   "dependencies": {
+    "archiver": "^2.1.1",
     "commander": "^2.15.0",
     "node-watch": "^0.5.8",
     "request": "^2.85.0"
