@@ -1,24 +1,49 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-      rl = require('readline');
+      rl = require('readline'),
+      request = require('request');
 
 program
   .version('0.3.0')
-  .option('name <name>', 'name of environment endpoint')
+  .option('endpoint <endpoint>', 'name of environment endpoint')
   .option('--email <email>', 'email')
+  .option('--url <url>', 'instance endpoint')
   .parse(process.argv);
 
 if (!program.args.length) program.help();
 
 if (typeof program.email === 'undefined') { console.error('no email given!'); process.exit(1); }
-if (typeof program.name === 'undefined') { console.error('no name of environment given!'); process.exit(1); }
+if (typeof program.endpoint === 'undefined') { console.error('no name of environment given!'); process.exit(1); }
+if (typeof program.url === 'undefined') { console.error('no URL given!'); process.exit(1); }
 
 const reader = rl.createInterface({input: process.stdin, output: process.stdout});
 let password = '';
 reader.stdoutMuted = true;
-reader.question('Password: ', (answer) => { password = answer; reader.close(); console.log("\nPassword: "+password);});
+reader.question('Password: ', (answer) => {
+  password = answer;
+  reader.close();
+  console.log(program.endpoint.toString());
+  const settings = { url: program.url, endpoint: program.endpoint, email: program.email };
+  login(program.email, password, settings);
+});
 
 reader._writeToOutput = (stringToWrite) => {
   reader.stdoutMuted && reader.output.write('*') || reader.output.write(stringToWrite);
 };
+
+const login = (email, password, settings) => {
+  request({
+    uri: settings.url + 'api/marketplace_builder/sessions',
+    method: 'POST',
+    json: {email, password}
+  }, function (error, response, body) {
+    storeEndpoint(
+      Object.assign(settings, { token: body.token })
+    );
+  });
+}
+
+const storeEndpoint = (settings) => {
+  console.log(settings);
+}

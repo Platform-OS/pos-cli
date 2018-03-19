@@ -10,3 +10,17 @@ program
   .parse(process.argv);
 
 if (!program.args.length) program.help();
+
+
+// fs.open('.builder', 'r', (err, fd) => {
+//     if (err) {
+//         if (err.code === 'ENOENT') {
+//             console.error('myfile does not exist');
+//             return;
+//         }
+
+//         throw err;
+//     }
+
+//     console.log(fd);
+// });
