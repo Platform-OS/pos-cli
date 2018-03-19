@@ -1,15 +1,15 @@
 const fs = require('fs');
 
-const settingsFileName = '.marketplace-kit';
+const filename = '.marketplace-kit';
 const existingSettings = () => {
-  if (fs.existsSync(settingsFileName)) {
-    return JSON.parse(fs.readFileSync(settingsFileName));
+  if (fs.existsSync(filename)) {
+    return JSON.parse(fs.readFileSync(filename));
   } else {
     return {};
   }
 };
 
-const loadSettingsToEnv = (endpoint) => {
+const fetchSettings = (endpoint) => {
   const settings = existingSettings()[endpoint];
   if (settings) {
     return settings;
@@ -19,4 +19,4 @@ const loadSettingsToEnv = (endpoint) => {
   }
 };
 
-module.exports = loadSettingsToEnv;
+module.exports = fetchSettings;
