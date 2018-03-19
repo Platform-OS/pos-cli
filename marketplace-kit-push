@@ -24,6 +24,20 @@ if (typeof program.url === 'undefined') {
 
 if (program.url) console.log('Deploying to: %s', program.url);
 
+const fetchDeploymentStatus = (id, authData) => {
+  request({
+    uri: authData.url + 'api/marketplace_builder/marketplace_releases/'+id,
+    method: 'GET',
+    headers: { 'UserTemporaryToken': authData.apiKey }
+  }, (error, response, body) => {
+    if (error)
+      console.log(error);
+    else {
+      console.log(body);
+    }
+  })
+}
+
 const pushFile = (path) => {
   console.log(path);
 
@@ -38,6 +52,7 @@ const pushFile = (path) => {
     console.log(`Sending: ${path} done`);
     console.log(body);
     console.log(error);
+    fetchDeploymentStatus(JSON.parse(body).id, program)
   });
 };
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  fetchAuthData = require('./settings'),
+  fetchAuthData = require('./settings').fetchSettings,
   spawn = require('child_process').spawn;
 
 program
@@ -28,6 +28,7 @@ program
         if (code === 1) {
           console.error('✖ failed.');
         }
+        console.log("Polling goes here")
       });
     });
   });

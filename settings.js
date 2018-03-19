@@ -14,9 +14,19 @@ const fetchSettings = (endpoint) => {
   if (settings) {
     return settings;
   } else {
-    console.log(`No settings for ${endpoint} endpoint, please see marketplace-kit remote add`);
+    console.log(`No settings for ${endpoint} endpoint, please see marketplace-kit env add`);
     process.exit(1);
   }
 };
 
-module.exports = fetchSettings;
+const listEnvironments= () => {
+  const list = Object.keys(existingSettings());
+  if (list.length) {
+    return list;
+  } else {
+    console.log("No environments registered yet, please see marketplace-kit env add");
+    process.exit(1);
+  }
+};
+
+module.exports = { fetchSettings, listEnvironments };
