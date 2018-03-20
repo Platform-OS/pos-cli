@@ -5,17 +5,26 @@ const program = require('commander'),
   fs = require('fs'),
   watch = require('node-watch');
 
-const shouldBeSynced = (path) => {
-  console.log("testing file: ", path);
-  const ext = path.split('.').pop();
-  return program.files.split(',').includes(ext);
+const shouldBeSynced = (path, event) => {
+  return !fileRemoved(event) &&
+    extensionAllowed(ext(path)) &&
+    !isHiddenFile(filename(path));
 };
+
+const isHiddenFile = (filename) => {
+  return filename.startsWith('.');
+}
+
+const extensionAllowed = (ext) => program.files.split(',').includes(ext);
+const filename = (path) => path.split('/').pop();
+const ext = (path) => path.split('.').pop();
+const fileRemoved = (event) => event === 'remove';
 
 program
   .version('0.3.0')
   .option('--api-key <apiKey>', 'your API KEY', process.env.MARKETPLACE_API_KEY)
   .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
-  .option('--files <files>', 'watch files', process.env.FILES || 'js,css,liquid,graphql')
+  .option('--files <files>', 'watch files', process.env.FILES || 'js,css,liquid,graphql,yml')
   .parse(process.argv);
 
 if (typeof program.apiKey === 'undefined') {
@@ -27,13 +36,14 @@ if (typeof program.url === 'undefined') {
   process.exit(1);
 }
 
-console.log('Sync mode enabled.');
+console.log(`Sync mode enabled for ${program.files} files.`);
 
-watch('marketplace_builder/', { recursive: true }, (e, file) => {
-  shouldBeSynced(file) && pushFile(file);
+watch('marketplace_builder/', { recursive: true }, (event, file) => {
+  shouldBeSynced(file, event) && pushFile(file);
 });
 
 const pushFile = (path) => {
+  console.log(`syncing: ${path} started`);
   request({
     uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
     method: 'PUT',
