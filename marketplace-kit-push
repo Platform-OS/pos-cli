@@ -5,25 +5,6 @@ const program = require('commander'),
   request = require('request'),
   fs = require('fs');
 
-program
-  .version('0.1.0')
-  .option('--api-key <apiKey>', 'API KEY', process.env.MARKETPLACE_API_KEY)
-  .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
-  .option('-f --force>', 'force update');
-
-program.parse(process.argv);
-
-if (typeof program.apiKey === 'undefined') {
-  console.error('no API KEY given!');
-  process.exit(1);
-}
-if (typeof program.url === 'undefined') {
-  console.error('no URL given!');
-  process.exit(1);
-}
-
-if (program.url) console.log('Deploying to: %s', program.url);
-
 const fetchDeploymentStatus = (id, authData) => {
   return new Promise((resolve, reject) => {
     request({
@@ -85,4 +66,23 @@ const pushFile = (path) => {
   });
 };
 
-pushFile(__dirname + '/tmp' + '/marketplace-kit.zip');
+program
+  .version('0.1.0')
+  .option('--api-key <apiKey>', 'API KEY', process.env.MARKETPLACE_API_KEY)
+  .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
+  .option('-f --force>', 'force update');
+
+program.parse(process.argv);
+
+if (typeof program.apiKey === 'undefined') {
+  console.error('no API KEY given!');
+  process.exit(1);
+}
+if (typeof program.url === 'undefined') {
+  console.error('no URL given!');
+  process.exit(1);
+}
+
+console.log('Deploying to: %s', program.url);
+
+pushFile('./tmp/marketplace-release.zip');
