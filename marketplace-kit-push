@@ -55,7 +55,10 @@ const pushFile = (path) => {
       'marketplace_builder[zip_file]': fs.createReadStream(path)
     }
   }, (error, response, body) => {
-    if (error) console.log(error);
+    if (response.statusCode != 200) {
+      console.log(response.statusMessage);
+      process.exit(1);
+    }
     const responseBody = JSON.parse(body);
 
     getDeploymentStatus(responseBody.id, program)
