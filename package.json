@@ -13,6 +13,18 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "preferGlobal": "true",
+  "bin": {
+    "marketplace-kit": "./marketplace-kit",
+    "marketplace-kit-env": "./marketplace-kit-env",
+    "marketplace-kit-env-list": "./marketplace-kit-env-list",
+    "marketplace-kit-env-add": "./marketplace-kit-env-add",
+    "marketplace-kit-deploy": "./marketplace-kit-deploy",
+    "marketplace-kit-push": "./marketplace-kit-push",
+    "marketplace-kit-archive": "./marketplace-kit-archive",
+    "marketplace-kit-sync": "./marketplace-kit-sync",
+    "marketplace-kit-watch": "./marketplace-kit-watch"
+  },
   "repository": "mdyd-dev/marketplace-kit",
   "author": "",
   "license": "ISC",
