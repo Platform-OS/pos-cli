@@ -18,6 +18,10 @@ const checkParams = (params) => {
     console.error('no URL given!');
     process.exit(1);
   }
+
+  if (params.url.slice(-1) != '/') {
+    params.url = params.url + '/'
+  }
 };
 
 // turn to promise
