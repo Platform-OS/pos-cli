@@ -78,8 +78,8 @@ const saveFile = (settings) => {
 };
 
 const existingSettings = () => {
-  if (fs.existsSync(settingsFileName)) {
-    return JSON.parse(fs.readFileSync(settingsFileName));
+  if (fs.existsSync(process.env.CONFIG_FILE_PATH)) {
+    return JSON.parse(fs.readFileSync(process.env.CONFIG_FILE_PATH));
   } else {
     return {};
   }
