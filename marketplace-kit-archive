@@ -17,7 +17,6 @@ const makeArchive = (path, directory) => {
   // 'close' event is fired only when a file descriptor is involved
   output.on('close', function() {
     console.log('INFO: ' + archive.pointer() + ' total bytes');
-    console.log('INFO: ' + 'archiver has been finalized and the output file descriptor has closed.');
   });
 
   archive.on('warning', function(err) {
