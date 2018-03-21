@@ -46,16 +46,16 @@ const login = (email, password, settings) => {
     method: 'POST',
     json: {email, password}
   }, function (error, response, body) {
-    if(error) {
-      console.error(error);
-      process.exit(1);
-    }
-    if (body.token){
+    if (!error && response.statusCode == 200 && body.token) {
       storeEndpoint(
         Object.assign(settings, { token: body.token })
       );
     } else {
-      console.log(`\nError: ${body.error}`);
+      console.log('Error')
+      console.error(error);
+      if (response) console.error(`HTTP Status code: ${response.statusCode}`);
+      if (body) console.log(`\nError: ${body.error}`);
+      process.exit(1);
     }
   });
 };
