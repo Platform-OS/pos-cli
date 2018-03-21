@@ -3,7 +3,8 @@
 const program = require('commander'),
   spawn = require('child_process').spawn,
   request = require('request'),
-  fs = require('fs');
+  fs = require('fs'),
+  handleResponse = require('./handleResponse');
 
 const fetchDeploymentStatus = (id, authData) => {
   return new Promise((resolve, reject) => {
@@ -52,20 +53,18 @@ const pushFile = (path) => {
     method: 'POST',
     headers: { 'UserTemporaryToken': program.apiKey },
     formData: {
-      'marketplace_builder[zip_file]': fs.createReadStream(path)
+      'marketplace_builder[zip_file]': fs.createReadStream(path),
+      'marketplace_builder[force_mode]': (program.force || '').toString()
     }
   }, (error, response, body) => {
-    if (response.statusCode != 200) {
-      console.log(response.statusMessage);
-      process.exit(1);
-    }
-    const responseBody = JSON.parse(body);
-
-    getDeploymentStatus(responseBody.id, program)
-      .then(
-        () => console.log('\nDONE'),
-        (error) => console.error('\nERROR:', error)
-      );
+    handleResponse(error, response, body, (body) => {
+      const responseBody = JSON.parse(body);
+      getDeploymentStatus(responseBody.id, program)
+        .then(
+          () => console.log('\nDONE'),
+          (error) => console.error('\nERROR:', error)
+        );
+    });
   });
 };
 

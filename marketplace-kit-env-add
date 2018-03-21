@@ -3,7 +3,8 @@
 const program = require('commander'),
   fs = require('fs'),
   rl = require('readline'),
-  request = require('request');
+  request = require('request'),
+  handleResponse = require('./handleResponse');
 
 const checkParams = (params) => {
   if (!params.args.length) {
@@ -20,7 +21,7 @@ const checkParams = (params) => {
   }
 
   if (params.url.slice(-1) != '/') {
-    params.url = params.url + '/'
+    params.url = params.url + '/';
   }
 };
 
@@ -46,17 +47,16 @@ const login = (email, password, settings) => {
     method: 'POST',
     json: {email, password}
   }, function (error, response, body) {
-    if (!error && response.statusCode == 200 && body.token) {
-      storeEndpoint(
-        Object.assign(settings, { token: body.token })
-      );
-    } else {
-      console.log('Error')
-      console.error(error);
-      if (response) console.error(`HTTP Status code: ${response.statusCode}`);
-      if (body) console.log(`\nError: ${body.error}`);
-      process.exit(1);
-    }
+    handleResponse(error, response, body, (body) => {
+      if (body.token) {
+        storeEndpoint(
+          Object.assign(settings, { token: body.token })
+        );
+      } else {
+        console.log('Error: response from server invalid, token is missing');
+        process.exit(1);
+      }
+    });
   });
 };
 
