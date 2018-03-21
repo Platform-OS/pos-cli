@@ -8,7 +8,9 @@ program
   .version('0.1.0')
   .arguments('<endpoint>', 'endpoint of environment endpoint')
   .option('-f --force', 'force update')
+  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((endpoint, params) => {
+    process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(endpoint);
     const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
 

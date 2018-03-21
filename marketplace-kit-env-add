@@ -71,9 +71,8 @@ const storeEndpoint = (settings) => {
   saveFile(Object.assign(existingSettings(), endpointSettings));
 };
 
-const settingsFileName = '.marketplace-kit';
 const saveFile = (settings) => {
-  fs.writeFileSync(settingsFileName, JSON.stringify(settings), (err) => {
+  fs.writeFileSync(process.env.CONFIG_FILE_PATH, JSON.stringify(settings), (err) => {
     if (err) throw err;
   });
 };
@@ -91,7 +90,9 @@ program
   .arguments('<endpoint>', 'endpoint of environment endpoint')
   .option('--email <email>', 'email')
   .option('--url <url>', 'instance endpoint')
+  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((endpoint, params) => {
+    process.env.CONFIG_FILE_PATH = params.configFile;
     checkParams(params);
     getPassword().then((password) => {
       const settings = { url: params.url, endpoint: endpoint, email: params.email };

@@ -4,7 +4,10 @@ const program = require('commander');
 
 program
   .version('0.3.0')
+  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .parse(process.argv);
+
+process.env.CONFIG_FILE_PATH = program.configFile;
 
 const list = require('./settings').listEnvironments();
 

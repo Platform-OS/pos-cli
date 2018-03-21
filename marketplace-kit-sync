@@ -7,7 +7,9 @@ const program = require('commander'),
 program
   .version('0.3.0')
   .arguments('<endpoint>', 'endpoint of environment endpoint')
+  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((endpoint, params) => {
+    process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(endpoint);
     const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
     const p = spawn('marketplace-kit-watch', [], { stdio: 'inherit', env: env });

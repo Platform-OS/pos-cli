@@ -1,9 +1,8 @@
 const fs = require('fs');
 
-const filename = '.marketplace-kit';
 const existingSettings = () => {
-  if (fs.existsSync(filename)) {
-    return JSON.parse(fs.readFileSync(filename));
+  if (fs.existsSync(process.env.CONFIG_FILE_PATH)) {
+    return JSON.parse(fs.readFileSync(process.env.CONFIG_FILE_PATH));
   } else {
     return {};
   }
@@ -24,7 +23,7 @@ const listEnvironments= () => {
   if (list.length) {
     return list;
   } else {
-    console.log("No environments registered yet, please see marketplace-kit env add");
+    console.log('No environments registered yet, please see marketplace-kit env add');
     process.exit(1);
   }
 };
