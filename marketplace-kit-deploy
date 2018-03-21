@@ -29,6 +29,7 @@ program
       push.on('close', code => {
         if (code === 1) {
           console.error('✖ failed.');
+          process.exit(1);
         }
       });
     });
