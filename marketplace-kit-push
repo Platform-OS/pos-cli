@@ -62,7 +62,10 @@ const pushFile = (path) => {
       getDeploymentStatus(responseBody.id, program)
         .then(
           () => console.log('\nDONE'),
-          (error) => console.error('\nERROR:', error)
+          (error) => {
+            console.error('\nERROR:', error);
+            process.exit(1);
+          }
         );
     });
   });
