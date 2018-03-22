@@ -2,10 +2,11 @@
 
 const program = require('commander'),
   spawn = require('child_process').spawn,
-  fetchAuthData = require('./settings').fetchSettings;
+  fetchAuthData = require('./lib/settings').fetchSettings,
+  version = require("./package.json").version;
 
 program
-  .version('0.3.0')
+  .version(version)
   .arguments('<endpoint>', 'endpoint of environment endpoint')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((endpoint, params) => {

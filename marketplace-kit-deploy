@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  fetchAuthData = require('./settings').fetchSettings,
-  spawn = require('child_process').spawn;
+  fetchAuthData = require('./lib/settings').fetchSettings,
+  spawn = require('child_process').spawn,
+  version = require("./package.json").version;
 
 program
-  .version('0.1.0')
+  .version(version)
   .arguments('<endpoint>', 'endpoint of environment endpoint')
   .option('-f --force', 'force update')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

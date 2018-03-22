@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const program = require('commander'),
+      version = require("./package.json").version;
 
 program
-  .version('0.0.3')
+  .version(version)
   .command('add', 'add remote endpoint')
   .command('list', 'list remote endpoints')
   .parse(process.argv);

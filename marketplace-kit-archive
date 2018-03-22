@@ -3,6 +3,7 @@
 const program = require('commander');
 const fs = require('fs');
 const archiver = require('archiver');
+const version = require("./package.json").version;
 
 const makeArchive = (path, directory) => {
   try {
@@ -45,7 +46,7 @@ const makeArchive = (path, directory) => {
 }
 
 program
-  .version('1.0.0')
+  .version(version)
   .option('--dir <dir>', 'files to be added to build', './marketplace_builder')
   .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
   .parse(process.argv);

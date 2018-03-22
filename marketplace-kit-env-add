@@ -4,7 +4,8 @@ const program = require('commander'),
   fs = require('fs'),
   rl = require('readline'),
   request = require('request'),
-  handleResponse = require('./handleResponse');
+  handleResponse = require('./lib/handleResponse'),
+  version = require("./package.json").version;
 
 const checkParams = (params) => {
   if (!params.args.length) {
@@ -86,7 +87,7 @@ const existingSettings = () => {
 };
 
 program
-  .version('0.3.0')
+  .version(version)
   .arguments('<endpoint>', 'endpoint of environment endpoint')
   .option('--email <email>', 'email')
   .option('--url <url>', 'instance endpoint')

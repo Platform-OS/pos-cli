@@ -3,7 +3,8 @@
 const program = require('commander'),
   request = require('request'),
   fs = require('fs'),
-  watch = require('node-watch');
+  watch = require('node-watch'),
+  version = require("./package.json").version;
 
 const shouldBeSynced = (path, event) => {
   return !fileRemoved(event) &&
@@ -21,7 +22,7 @@ const ext = (path) => path.split('.').pop();
 const fileRemoved = (event) => event === 'remove';
 
 program
-  .version('0.3.0')
+  .version(version)
   .option('--api-key <apiKey>', 'your API KEY', process.env.MARKETPLACE_API_KEY)
   .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
   .option('--files <files>', 'watch files', process.env.FILES || 'js,css,liquid,graphql,yml,html,ttf,otf,woff,woff2,svg,ico,gif,jpg,jpeg,png,webp,webm,mp3,mp4,csv,xls,pdf,doc,docx')

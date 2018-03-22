@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const program = require('commander'),
+  version = require("./package.json").version;
 
 program
-  .version('0.3.0')
+  .version(version)
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .parse(process.argv);
 
 process.env.CONFIG_FILE_PATH = program.configFile;
 
-const list = require('./settings').listEnvironments();
+const list = require('./lib/settings').listEnvironments();
 
 console.log('Available environments:', list.join(", "));
