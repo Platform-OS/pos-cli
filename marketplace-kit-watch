@@ -24,7 +24,7 @@ program
   .version('0.3.0')
   .option('--api-key <apiKey>', 'your API KEY', process.env.MARKETPLACE_API_KEY)
   .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
-  .option('--files <files>', 'watch files', process.env.FILES || 'js,css,liquid,graphql,yml')
+  .option('--files <files>', 'watch files', process.env.FILES || 'js,css,liquid,graphql,yml,html,ttf,otf,woff,woff2,svg,ico,gif,jpg,jpeg,png,webp,webm,mp3,mp4,csv,xls,pdf,doc,docx')
   .parse(process.argv);
 
 if (typeof program.apiKey === 'undefined') {
