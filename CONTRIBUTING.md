@@ -11,6 +11,6 @@ When using [`npm version`](https://docs.npmjs.com/cli/version) command please ke
 
     npm version patch
     
-    git push
+    git push --tags
        
     npm publish
