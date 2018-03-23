@@ -2,6 +2,7 @@
 
 const program = require('commander'),
       fs = require('fs'),
+      log = require("./lib/logFormat"),
       version = require("./package.json").version;
 
 const checkParams = (params) => {
@@ -24,7 +25,7 @@ const loadSettingsToEnv = (endpoint) => {
     process.env['MARKETPLACE_API_KEY'] = settings.token;
     process.env['MARKETPLACE_URL'] = settings.url;
   } else {
-    console.log(`No settings for ${endpoint} endpoint, please add remote`);
+    log.Error(`No settings for ${endpoint} endpoint, please add remote`);
     process.exit(1);
   }
 }
@@ -35,7 +36,7 @@ program
   .action((endpoint, params) => {
     checkParams(params);
     loadSettingsToEnv(endpoint);
-    console.log(process.env.MARKETPLACE_URL);
+    log.Info(process.env.MARKETPLACE_URL);
   })
 
 program.parse(process.argv);

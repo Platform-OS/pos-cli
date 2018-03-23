@@ -7,6 +7,7 @@
     "archiver": "^2.1.1",
     "commander": "^2.15.0",
     "node-watch": "^0.5.8",
+    "chalk": "^2.3.2",
     "request": "^2.85.0"
   },
   "devDependencies": {},

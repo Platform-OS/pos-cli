@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
+  log = require('./lib/logFormat'),
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
   fetchAuthData = require('./lib/settings').fetchSettings,
@@ -18,11 +19,11 @@ program
 
     p.on('close', code => {
       if (code === 1) {
-        console.error('✖ failed.');
+        log.Error('✖ failed.');
       }
     });
     p.on('error', error => {
-      console.error(error);
+      log.Error(error);
     });
   });
 
