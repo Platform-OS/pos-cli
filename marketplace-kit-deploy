@@ -3,6 +3,7 @@
 const program = require('commander'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   spawn = require('child_process').spawn,
+  command = require('./lib/command'),
   version = require("./package.json").version;
 
 program
@@ -17,7 +18,7 @@ program
     const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
 
     // make an archive
-    const archive = spawn('marketplace-kit-archive', [], { stdio: 'inherit' });
+    const archive = spawn(command('marketplace-kit-archive'), [], { stdio: 'inherit' });
 
     archive.on('close', (code) => {
       if (code === 1) {
@@ -27,7 +28,7 @@ program
 
       console.log("Compression done.");
 
-      const push = spawn('marketplace-kit-push', [], { stdio: 'inherit', env: env });
+      const push = spawn(command('marketplace-kit-push'), [], { stdio: 'inherit', env: env });
       push.on('close', code => {
         if (code === 1) {
           console.error('✖ failed.');
