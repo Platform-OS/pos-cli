@@ -12,6 +12,7 @@ program
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((endpoint, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
+    process.env.FORCE = params.force;
     const authData = fetchAuthData(endpoint);
     const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
 

@@ -55,7 +55,7 @@ const pushFile = (path) => {
     headers: { 'UserTemporaryToken': program.apiKey },
     formData: {
       'marketplace_builder[zip_file]': fs.createReadStream(path),
-      'marketplace_builder[force_mode]': (program.force || '').toString()
+      'marketplace_builder[force_mode]': (program.force || process.env.FORCE || '').toString()
     }
   }, (error, response, body) => {
     handleResponse(error, response, body, (body) => {
@@ -76,7 +76,7 @@ program
   .version(version)
   .option('--api-key <apiKey>', 'API KEY', process.env.MARKETPLACE_API_KEY)
   .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
-  .option('-f --force>', 'force update');
+  .option('-f --force', 'force update', process.env.FORCE); // not using force argument from parent process env
 
 program.parse(process.argv);
 
