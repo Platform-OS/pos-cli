@@ -25,40 +25,63 @@ program
   .version(version)
   .option('--api-key <apiKey>', 'your API KEY', process.env.MARKETPLACE_API_KEY)
   .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
+  .option('--path <path>', 'path to folder with marketplace files', process.env.MARKETPLACE_PATH)
   .option('--files <files>', 'watch files', process.env.FILES || 'js,css,liquid,graphql,yml,html,ttf,otf,woff,woff2,svg,ico,gif,jpg,jpeg,png,webp,webm,mp3,mp4,csv,xls,pdf,doc,docx')
   .parse(process.argv);
 
-if (typeof program.apiKey === 'undefined') {
-  console.error('no API KEY given!');
-  process.exit(1);
-}
-if (typeof program.url === 'undefined') {
-  console.error('no URL given!');
-  process.exit(1);
-}
+const checkParams = (params) => {
+  const errors = [];
+  if (typeof params.apiKey === 'undefined') {
+    errors.push(' no API-KEY given! Please add --api-key API-KEY');
+  }
+  if (typeof params.url === 'undefined') {
+    errors.push(' no URL given. Please add --url URL');
+  }
+  if (typeof params.path === 'undefined') {
+    errors.push(' no PATH given. Please add --path PATH');
+  }
 
-console.log(`Sync mode enabled for ${program.files} files.`);
+  if (errors.length > 0) {
+    console.error("Missing arguments:");
+    console.error(errors.join('\n'));
+    params.help();
+    process.exit(1);
+  };
+};
 
-watch('marketplace_builder/', { recursive: true }, (event, file) => {
+checkParams(program);
+
+if (!fs.existsSync(process.env.MARKETPLACE_PATH)) {
+  console.error('Folder ' + process.env.MARKETPLACE_PATH + ' does not exist. Did you run sync in proper folder? Did you run init?');
+  process.exit(1);
+};
+
+console.log(`Sync mode enabled for: \n${program.files.split(',').join(', ')} \nfolder: ${program.path}\n`);
+
+watch(process.env.MARKETPLACE_PATH, { recursive: true }, (event, file) => {
   shouldBeSynced(file, event) && pushFile(file);
 });
 
 const pushFile = (path) => {
-  console.log(`syncing: ${path} started`);
+  process.stdout.write(`syncing: ${path}`);
+
   request({
     uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
     method: 'PUT',
     headers: { 'UserTemporaryToken': program.apiKey },
     formData: {
-      path: path.replace('marketplace_builder/',''),
+      path: path.replace(process.env.MARKETPLACE_PATH,''),
       marketplace_builder_file_body: fs.createReadStream(path)
     }
   }, (error, response, body) => {
     if (error)
       console.log(error);
     else {
-      console.log(`syncing: ${path} done`);
-        console.log(body);
+      if (body != '{}') {
+        process.stdout.write(`\n${body}\n`);
+      }
+      else
+        process.stdout.write(' - ok\n')
     }
   });
 };

@@ -10,10 +10,15 @@ program
   .version(version)
   .arguments('<endpoint>', 'endpoint of environment endpoint')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
+  .option('--path <path>', 'path to folder with markeplace files', 'marketplace_builder')
   .action((endpoint, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(endpoint);
-    const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
+    const env = Object.assign(process.env, {
+      MARKETPLACE_API_KEY: authData.token,
+      MARKETPLACE_URL: authData.url,
+      MARKETPLACE_PATH: params.path
+    });
     const p = spawn(command('marketplace-kit-watch'), [], { stdio: 'inherit', env: env });
 
     p.on('close', code => {
