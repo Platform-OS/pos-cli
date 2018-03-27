@@ -23,13 +23,13 @@ const fileRemoved = (event) => event === 'remove';
 
 program
   .version(version)
-  .option('--api-key <apiKey>', 'your API KEY', process.env.MARKETPLACE_API_KEY)
+  .option('--token <token>', 'your TOKEN', process.env.MARKETPLACE_TOKEN)
   .option('--url <url>', 'instance endpoint', process.env.MARKETPLACE_URL)
   .option('--files <files>', 'watch files', process.env.FILES || 'js,css,liquid,graphql,yml,html,ttf,otf,woff,woff2,svg,ico,gif,jpg,jpeg,png,webp,webm,mp3,mp4,csv,xls,pdf,doc,docx')
   .parse(process.argv);
 
-if (typeof program.apiKey === 'undefined') {
-  console.error('no API KEY given!');
+if (typeof program.token === 'undefined') {
+  console.error('no TOKEN given!');
   process.exit(1);
 }
 if (typeof program.url === 'undefined') {
@@ -48,7 +48,7 @@ const pushFile = (path) => {
   request({
     uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
     method: 'PUT',
-    headers: { 'UserTemporaryToken': program.apiKey },
+    headers: { 'UserTemporaryToken': program.token },
     formData: {
       path: path.replace('marketplace_builder/',''),
       marketplace_builder_file_body: fs.createReadStream(path)
