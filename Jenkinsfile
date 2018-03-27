@@ -3,7 +3,7 @@ pipeline {
   stages {
     stage('Build') {
       when {
-        branch 'node-version'
+        branch 'master'
       }
       steps {
         build job: 'build-marketplace-kit', parameters: [], quietPeriod: 0
