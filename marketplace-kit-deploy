@@ -4,6 +4,7 @@ const program = require('commander'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
+  fs = require('fs'),
   version = require("./package.json").version;
 
 program
@@ -11,14 +12,24 @@ program
   .arguments('<endpoint>', 'endpoint of environment endpoint')
   .option('-f --force', 'force update')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
+  .option('--path <path>', 'path to folder with markeplace files', 'marketplace_builder')
   .action((endpoint, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     process.env.FORCE = params.force;
     const authData = fetchAuthData(endpoint);
-    const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
+    const env = Object.assign(process.env, {
+      MARKETPLACE_API_KEY: authData.token,
+      MARKETPLACE_URL: authData.url,
+      MARKETPLACE_PATH: params.path
+    });
+
+    if (!fs.existsSync(params.path)) {
+      console.error('Folder ' + params.path + ' does not exist. Did you run sync in proper folder? Did you run init?');
+      process.exit(1);
+    };
 
     // make an archive
-    const archive = spawn(command('marketplace-kit-archive'), [], { stdio: 'inherit' });
+    const archive = spawn(command('marketplace-kit-archive'), [], { stdio: 'inherit', env: env });
 
     archive.on('close', (code) => {
       if (code === 1) {

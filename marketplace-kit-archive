@@ -47,8 +47,8 @@ const makeArchive = (path, directory) => {
 
 program
   .version(version)
-  .option('--dir <dir>', 'files to be added to build', './marketplace_builder')
+  .option('--path <path>', 'path to folder with markeplace files', process.env.MARKETPLACE_PATH)
   .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
   .parse(process.argv);
 
-makeArchive(program.target, program.dir);
+makeArchive(program.target, program.path);
