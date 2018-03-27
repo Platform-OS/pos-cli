@@ -1,0 +1,13 @@
+#!/usr/bin/env node
+
+const program = require('commander');
+const version = require("./package.json").version;
+
+program
+  .version(version)
+  .command('deploy', 'deploy marketplace').alias('d')
+  .command('env', 'environments')
+  .command('sync', 'remote endpoints')
+  .parse(process.argv);
+
+if (!program.args.length) program.help();

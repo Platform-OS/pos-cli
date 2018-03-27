@@ -1,3 +1,0 @@
-#!/usr/bin/env ruby
-require 'marketplace_kit'
-MarketplaceKit::CommandDispatcher.new(ARGV).execute
