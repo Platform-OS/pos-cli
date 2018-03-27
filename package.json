@@ -1,0 +1,35 @@
+{
+  "name": "@platform-os/marketplace-kit",
+  "version": "1.0.5",
+  "description": "Make changes in your marketplace on Platform OS",
+  "main": "marketplace-kit",
+  "dependencies": {
+    "archiver": "^2.1.1",
+    "commander": "^2.15.0",
+    "node-watch": "^0.5.8",
+    "request": "^2.85.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "preferGlobal": "true",
+  "bin": {
+    "marketplace-kit": "./marketplace-kit",
+    "marketplace-kit-env": "./marketplace-kit-env",
+    "marketplace-kit-env-list": "./marketplace-kit-env-list",
+    "marketplace-kit-env-add": "./marketplace-kit-env-add",
+    "marketplace-kit-deploy": "./marketplace-kit-deploy",
+    "marketplace-kit-push": "./marketplace-kit-push",
+    "marketplace-kit-archive": "./marketplace-kit-archive",
+    "marketplace-kit-sync": "./marketplace-kit-sync",
+    "marketplace-kit-watch": "./marketplace-kit-watch"
+  },
+  "repository": "mdyd-dev/marketplace-kit",
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mdyd-dev/marketplace-kit/issues"
+  },
+  "homepage": "https://github.com/mdyd-dev/marketplace-kit#readme"
+}

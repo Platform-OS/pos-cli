@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+
+const program = require('commander'),
+  fetchAuthData = require('./lib/settings').fetchSettings,
+  spawn = require('child_process').spawn,
+  command = require('./lib/command'),
+  version = require("./package.json").version;
+
+program
+  .version(version)
+  .arguments('<endpoint>', 'endpoint of environment endpoint')
+  .option('-f --force', 'force update')
+  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
+  .action((endpoint, params) => {
+    process.env.CONFIG_FILE_PATH = params.configFile;
+    process.env.FORCE = params.force;
+    const authData = fetchAuthData(endpoint);
+    const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
+
+    // make an archive
+    const archive = spawn(command('marketplace-kit-archive'), [], { stdio: 'inherit' });
+
+    archive.on('close', (code) => {
+      if (code === 1) {
+        console.error('✖ failed.');
+        process.exit(1);
+      };
+
+      console.log("Compression done.");
+
+      const push = spawn(command('marketplace-kit-push'), [], { stdio: 'inherit', env: env });
+      push.on('close', code => {
+        if (code === 1) {
+          console.error('✖ failed.');
+          process.exit(1);
+        }
+      });
+    });
+  });
+
+program.parse(process.argv);
+if (!program.args.length) {
+  program.help();
+  process.exit(1);
+}

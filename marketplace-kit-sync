@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+
+const program = require('commander'),
+  spawn = require('child_process').spawn,
+  command = require('./lib/command'),
+  fetchAuthData = require('./lib/settings').fetchSettings,
+  version = require("./package.json").version;
+
+program
+  .version(version)
+  .arguments('<endpoint>', 'endpoint of environment endpoint')
+  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
+  .action((endpoint, params) => {
+    process.env.CONFIG_FILE_PATH = params.configFile;
+    const authData = fetchAuthData(endpoint);
+    const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
+    const p = spawn(command('marketplace-kit-watch'), [], { stdio: 'inherit', env: env });
+
+    p.on('close', code => {
+      if (code === 1) {
+        console.error('✖ failed.');
+      }
+    });
+    p.on('error', error => {
+      console.error(error);
+    });
+  });
+
+program.parse(process.argv);
+if (!program.args.length) {
+  program.help();
+  process.exit(1);
+}
