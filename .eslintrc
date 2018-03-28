@@ -27,15 +27,8 @@
     "semi": [2, "always"],
     "max-len": [1, 130]
   },
-  "globals": {
-    "jquery": true,
-    "$": true
-  },
   "env": {
-    "browser": true,
     "node": true,
-    "es6": true,
-    "commonjs": true,
-    "jquery": true
+    "commonjs": true
   }
 }

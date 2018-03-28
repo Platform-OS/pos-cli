@@ -4,16 +4,16 @@ const program = require('commander'),
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
   fetchAuthData = require('./lib/settings').fetchSettings,
-  version = require("./package.json").version;
+  version = require('./package.json').version;
 
 program
   .version(version)
-  .arguments('<endpoint>', 'endpoint of environment endpoint')
+  .arguments('<environment>', 'Name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .action((endpoint, params) => {
+  .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
-    const authData = fetchAuthData(endpoint);
-    const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
+    const authData = fetchAuthData(environment);
+    const env = Object.assign(process.env, { MARKETPLACE_API_KEY: authData.token, MARKETPLACE_URL: authData.url });
     const p = spawn(command('marketplace-kit-watch'), [], { stdio: 'inherit', env: env });
 
     p.on('close', code => {
