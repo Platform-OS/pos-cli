@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  log = require('./lib/logFormat'),
+  log = require('./lib/rainbowLogger'),
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
   fetchAuthData = require('./lib/settings').fetchSettings,

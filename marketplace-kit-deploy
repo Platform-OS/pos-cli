@@ -3,7 +3,7 @@
 const program = require('commander'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   spawn = require('child_process').spawn,
-  log = require('./lib/logFormat'),
+  log = require('./lib/rainbowLogger'),
   command = require('./lib/command'),
   version = require("./package.json").version;
 

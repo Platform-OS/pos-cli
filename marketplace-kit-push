@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  log = require('./lib/logFormat'),
+  log = require('./lib/rainbowLogger'),
   request = require('request'),
   fs = require('fs'),
   handleResponse = require('./lib/handleResponse'),

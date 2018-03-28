@@ -3,7 +3,7 @@
 const program = require('commander'),
   fs = require('fs'),
   rl = require('readline'),
-  log = require('./lib/logFormat'),
+  log = require('./lib/rainbowLogger'),
   request = require('request'),
   handleResponse = require('./lib/handleResponse'),
   version = require("./package.json").version;

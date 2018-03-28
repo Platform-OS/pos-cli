@@ -2,7 +2,7 @@
 
 const program = require('commander'),
       fs = require('fs'),
-      log = require("./lib/logFormat"),
+      log = require("./lib/rainbowLogger"),
       version = require("./package.json").version;
 
 const checkParams = (params) => {
