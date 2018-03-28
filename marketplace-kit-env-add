@@ -3,6 +3,7 @@
 const program = require('commander'),
   fs = require('fs'),
   rl = require('readline'),
+  log = require('./lib/rainbowLogger'),
   request = require('request'),
   handleResponse = require('./lib/handleResponse'),
   version = require("./package.json").version;
@@ -13,11 +14,11 @@ const checkParams = (params) => {
     process.exit(1);
   }
   if (typeof params.email === 'undefined') {
-    console.error('no email given!');
+    log.Error('no email given!');
     process.exit(1);
   }
   if (typeof params.url === 'undefined') {
-    console.error('no URL given!');
+    log.Error('no URL given!');
     process.exit(1);
   }
 
@@ -54,7 +55,7 @@ const login = (email, password, settings) => {
           Object.assign(settings, { token: body.token })
         );
       } else {
-        console.log('Error: response from server invalid, token is missing');
+        log.Error('Error: response from server invalid, token is missing');
         process.exit(1);
       }
     });

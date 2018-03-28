@@ -3,6 +3,7 @@
 const program = require('commander'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   spawn = require('child_process').spawn,
+  log = require('./lib/rainbowLogger'),
   command = require('./lib/command'),
   version = require("./package.json").version;
 
@@ -17,21 +18,22 @@ program
     const authData = fetchAuthData(endpoint);
     const env = Object.assign(process.env, { 'MARKETPLACE_API_KEY': authData.token, 'MARKETPLACE_URL': authData.url });
 
+    log.Banner();
     // make an archive
     const archive = spawn(command('marketplace-kit-archive'), [], { stdio: 'inherit' });
 
     archive.on('close', (code) => {
       if (code === 1) {
-        console.error('✖ failed.');
+        log.Error('✖ failed.');
         process.exit(1);
       };
 
-      console.log("Compression done.");
+      log.Info("Compression done.");
 
       const push = spawn(command('marketplace-kit-push'), [], { stdio: 'inherit', env: env });
       push.on('close', code => {
         if (code === 1) {
-          console.error('✖ failed.');
+          log.Error('✖ failed.');
           process.exit(1);
         }
       });

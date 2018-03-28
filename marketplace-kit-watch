@@ -2,6 +2,7 @@
 
 const program = require('commander'),
   request = require('request'),
+  log = require('./lib/rainbowLogger'),
   fs = require('fs'),
   watch = require('node-watch'),
   version = require("./package.json").version;
@@ -29,22 +30,23 @@ program
   .parse(process.argv);
 
 if (typeof program.apiKey === 'undefined') {
-  console.error('no API KEY given!');
+  log.Error('no API KEY given!');
   process.exit(1);
 }
 if (typeof program.url === 'undefined') {
-  console.error('no URL given!');
+  log.Error('no URL given!');
   process.exit(1);
 }
 
-console.log(`Sync mode enabled for ${program.files} files.`);
+log.Banner();
+log.Info(`Sync mode enabled for ${program.files} files.`);
 
 watch('marketplace_builder/', { recursive: true }, (event, file) => {
   shouldBeSynced(file, event) && pushFile(file);
 });
 
 const pushFile = (path) => {
-  console.log(`syncing: ${path} started`);
+  log.Quiet(`syncing: ${path} started`);
   request({
     uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
     method: 'PUT',
@@ -55,10 +57,13 @@ const pushFile = (path) => {
     }
   }, (error, response, body) => {
     if (error)
-      console.log(error);
+      log.Error(error);
     else {
-      console.log(`syncing: ${path} done`);
-        console.log(body);
+      log.Done(`syncing: ${path}'`);
+      if (body != '{}') {
+          log.Error(JSON.parse(body)["error"]);
+          log.Warn(body);
+      }
     }
   });
 };
