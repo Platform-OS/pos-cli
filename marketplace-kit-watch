@@ -4,6 +4,7 @@ const program = require('commander'),
   request = require('request'),
   fs = require('fs'),
   watch = require('node-watch'),
+  notifier = require('node-notifier'),
   version = require("./package.json").version;
 
 const shouldBeSynced = (path, event) => {
@@ -57,8 +58,12 @@ const pushFile = (path) => {
     if (error)
       console.log(error);
     else {
-      console.log(`syncing: ${path} done`);
+      if (body != '{}'){
+        notifier.notify({title: 'MarkeplaceKit Sync Error', message: body});
         console.log(body);
+      } else {
+        console.log(`syncing: ${path} done`);
+      };
     }
   });
 };
