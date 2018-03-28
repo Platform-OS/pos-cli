@@ -5,9 +5,9 @@ const program = require('commander'),
   rl = require('readline'),
   request = require('request'),
   handleResponse = require('./lib/handleResponse'),
-  version = require("./package.json").version;
+  version = require('./package.json').version;
 
-const checkParams = (params) => {
+const checkParams = params => {
   if (!params.args.length) {
     params.help();
     process.exit(1);
@@ -31,49 +31,50 @@ const getPassword = () => {
   return new Promise((resolve, reject) => {
     const reader = rl.createInterface({ input: process.stdin, output: process.stdout });
     reader.stdoutMuted = true;
-    reader.question('Password: ', (password) => {
+    reader.question('Password: ', password => {
       reader.close();
       resolve(password);
     });
 
-    reader._writeToOutput = (stringToWrite) => {
-      reader.stdoutMuted && reader.output.write('*') || reader.output.write(stringToWrite);
+    reader._writeToOutput = stringToWrite => {
+      (reader.stdoutMuted && reader.output.write('*')) || reader.output.write(stringToWrite);
     };
   });
 };
 
 const login = (email, password, settings) => {
-  request({
-    uri: settings.url + 'api/marketplace_builder/sessions',
-    method: 'POST',
-    json: {email, password}
-  }, function (error, response, body) {
-    handleResponse(error, response, body, (body) => {
-      if (body.token) {
-        storeEndpoint(
-          Object.assign(settings, { token: body.token })
-        );
-      } else {
-        console.log('Error: response from server invalid, token is missing');
-        process.exit(1);
-      }
-    });
-  });
+  request(
+    {
+      uri: settings.url + 'api/marketplace_builder/sessions',
+      method: 'POST',
+      json: { email, password }
+    },
+    function(error, response, body) {
+      handleResponse(error, response, body, body => {
+        if (body.token) {
+          storeEnvironment(Object.assign(settings, { token: body.token }));
+        } else {
+          console.log('Error: response from server invalid, token is missing');
+          process.exit(1);
+        }
+      });
+    }
+  );
 };
 
-const storeEndpoint = (settings) => {
-  const endpointSettings = {
+const storeEnvironment = settings => {
+  const environmentSettings = {
     [settings.endpoint]: {
       url: settings.url,
       token: settings.token,
       email: settings.email
     }
   };
-  saveFile(Object.assign(existingSettings(), endpointSettings));
+  saveFile(Object.assign(existingSettings(), environmentSettings));
 };
 
-const saveFile = (settings) => {
-  fs.writeFileSync(process.env.CONFIG_FILE_PATH, JSON.stringify(settings), (err) => {
+const saveFile = settings => {
+  fs.writeFileSync(process.env.CONFIG_FILE_PATH, JSON.stringify(settings), err => {
     if (err) throw err;
   });
 };
@@ -88,15 +89,15 @@ const existingSettings = () => {
 
 program
   .version(version)
-  .arguments('<endpoint>', 'endpoint of environment endpoint')
-  .option('--email <email>', 'email')
-  .option('--url <url>', 'instance endpoint')
+  .arguments('<environment>', 'name of environment. Example: staging')
+  .option('--email <email>', 'admin account email. Example: admin@example.com')
+  .option('--url <url>', 'marketplace url. Example: https://example.com')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .action((endpoint, params) => {
+  .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     checkParams(params);
-    getPassword().then((password) => {
-      const settings = { url: params.url, endpoint: endpoint, email: params.email };
+    getPassword().then(password => {
+      const settings = { url: params.url, endpoint: environment, email: params.email };
       login(params.email, password, settings);
     });
   });

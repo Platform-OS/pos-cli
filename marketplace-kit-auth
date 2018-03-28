@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-      fs = require('fs'),
-      version = require("./package.json").version;
+  fs = require('fs'),
+  version = require('./package.json').version;
 
-const checkParams = (params) => {
-  if (!params.args.length) { params.help(); process.exit(1); }
-}
+const checkParams = params => {
+  if (!params.args.length) {
+    params.help();
+    process.exit(1);
+  }
+};
 
 const settingsFileName = '.marketplace-kit';
 const existingSettings = () => {
@@ -15,27 +18,27 @@ const existingSettings = () => {
   } else {
     return {};
   }
-}
+};
 
-const loadSettingsToEnv = (endpoint) => {
-  const settings = existingSettings()[endpoint];
+const loadSettingsToEnv = environment => {
+  const settings = existingSettings()[environment];
 
   if (settings) {
     process.env['MARKETPLACE_TOKEN'] = settings.token;
     process.env['MARKETPLACE_URL'] = settings.url;
   } else {
-    console.log(`No settings for ${endpoint} endpoint, please add remote`);
+    console.log(`No settings for ${environment} environment, please see marketplace-kit env add`);
     process.exit(1);
   }
-}
+};
 
 program
   .version(version)
-  .arguments('<endpoint>', 'endpoint of environment endpoint')
-  .action((endpoint, params) => {
+  .arguments('<environment>', 'name of environment. Example: staging')
+  .action((environment, params) => {
     checkParams(params);
-    loadSettingsToEnv(endpoint);
+    loadSettingsToEnv(environment);
     console.log(process.env.MARKETPLACE_URL);
-  })
+  });
 
 program.parse(process.argv);
