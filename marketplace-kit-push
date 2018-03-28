@@ -12,7 +12,7 @@ const fetchDeploymentStatus = (id, authData) => {
       {
         uri: authData.url + 'api/marketplace_builder/marketplace_releases/' + id,
         method: 'GET',
-        headers: { UserTemporaryToken: authData.apiKey }
+        headers: { UserTemporaryToken: authData.token }
       },
       (error, response, body) => {
         if (error) {
@@ -50,7 +50,7 @@ const pushFile = path => {
     {
       uri: program.url + 'api/marketplace_builder/marketplace_releases',
       method: 'POST',
-      headers: { UserTemporaryToken: program.apiKey },
+      headers: { UserTemporaryToken: program.token },
       formData: {
         'marketplace_builder[zip_file]': fs.createReadStream(path),
         'marketplace_builder[force_mode]': (program.force || process.env.FORCE || '').toString()
@@ -73,14 +73,14 @@ const pushFile = path => {
 
 program
   .version(version)
-  .option('--api-key <apiKey>', 'API KEY', process.env.MARKETPLACE_API_KEY)
+  .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
   .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL)
   .option('-f --force', 'force update', process.env.FORCE); // not using force argument from parent process env
 
 program.parse(process.argv);
 
-if (typeof program.apiKey === 'undefined') {
-  console.error('no API KEY given!');
+if (typeof program.token === 'undefined') {
+  console.error('no TOKEN given!');
   process.exit(1);
 }
 if (typeof program.url === 'undefined') {

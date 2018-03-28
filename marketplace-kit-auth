@@ -24,7 +24,7 @@ const loadSettingsToEnv = environment => {
   const settings = existingSettings()[environment];
 
   if (settings) {
-    process.env['MARKETPLACE_API_KEY'] = settings.token;
+    process.env['MARKETPLACE_TOKEN'] = settings.token;
     process.env['MARKETPLACE_URL'] = settings.url;
   } else {
     console.log(`No settings for ${environment} environment, please see marketplace-kit env add`);

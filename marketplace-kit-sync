@@ -13,7 +13,10 @@ program
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(environment);
-    const env = Object.assign(process.env, { MARKETPLACE_API_KEY: authData.token, MARKETPLACE_URL: authData.url });
+    const env = Object.assign(process.env, {
+      MARKETPLACE_TOKEN: authData.token,
+      MARKETPLACE_URL: authData.url
+    });
     const p = spawn(command('marketplace-kit-watch'), [], { stdio: 'inherit', env: env });
 
     p.on('close', code => {
