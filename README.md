@@ -12,7 +12,7 @@ Command line tool for making changes in your marketplace on Platform OS.
 
     marketplace-kit env list
 
-    marketplace-kit env add sandbox --email admin@near-me.com --url https://hallmark.sandbox.near-me.com/
+    marketplace-kit env add sandbox --email admin@near-me.com --url https://sandbox.near-me.com/
 
     marketplace-kit env list
 
