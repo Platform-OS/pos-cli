@@ -30,15 +30,24 @@ program
   .option('--files <files>', 'watch files', process.env.FILES || DEFAULT_FILES)
   .parse(process.argv);
 
-if (typeof program.token === 'undefined') {
-  console.error('no TOKEN given!');
-  process.exit(1);
-}
-if (typeof program.url === 'undefined') {
-  console.error('no URL given!');
-  process.exit(1);
-}
+const checkParams = (params) => {
+  const errors = [];
+  if (typeof params.token === 'undefined') {
+    errors.push(' no token given! Please add --token token');
+  }
+  if (typeof params.url === 'undefined') {
+    errors.push(' no URL given. Please add --url URL');
+  }
 
+  if (errors.length > 0) {
+    console.error("Missing arguments:");
+    console.error(errors.join('\n'));
+    params.help();
+    process.exit(1);
+  };
+};
+
+checkParams(program);
 console.log('Sync mode enabled.');
 
 watch('marketplace_builder/', { recursive: true }, (event, file) => {
@@ -46,7 +55,7 @@ watch('marketplace_builder/', { recursive: true }, (event, file) => {
 });
 
 const pushFile = path => {
-  console.log(`Syncing: ${path} - started`);
+  process.stdout.write(`Syncing: ${path}`);
   request(
     {
       uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
@@ -62,9 +71,10 @@ const pushFile = path => {
       else {
         if (body != '{}') {
           notifier.notify({ title: 'MarkeplaceKit Sync Error', message: body });
-        } else {
-          console.log(`Syncing: ${path} - done`);
+          process.stdout.write(`\n${body}\n`);
         }
+        else
+          process.stdout.write(' - ok\n')
       }
     }
   );
