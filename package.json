@@ -24,7 +24,8 @@
     "marketplace-kit-push": "./marketplace-kit-push.js",
     "marketplace-kit-archive": "./marketplace-kit-archive.js",
     "marketplace-kit-sync": "./marketplace-kit-sync.js",
-    "marketplace-kit-watch": "./marketplace-kit-watch.js"
+    "marketplace-kit-watch": "./marketplace-kit-watch.js",
+    "marketplace-kit-logs": "./marketplace-kit-logs.js"
   },
   "repository": "mdyd-dev/marketplace-kit",
   "author": "",
