@@ -5,6 +5,7 @@ const program = require('commander'),
   fs = require('fs'),
   watch = require('node-watch'),
   notifier = require('node-notifier'),
+  logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
 const DEFAULT_FILES =
@@ -23,6 +24,52 @@ const filename = path => path.split('/').pop();
 const ext = path => path.split('.').pop();
 const fileRemoved = event => event === 'remove';
 
+const ping = (authData) => {
+  return new Promise((resolve, reject) => {
+    request(
+      {
+        uri: authData.url + 'api/marketplace_builder/logs',
+        method: 'GET',
+        headers: { UserTemporaryToken: authData.token }
+      },
+      (error, response, body) => {
+        if (error)
+          reject({status: error});
+        else if (response.statusCode != 200)
+          reject({status: response.statusCode, message: response.statusMessage});
+        else
+          resolve('OK');
+      }
+    );
+  });
+};
+
+const pushFile = path => {
+  logger.Info(`[Sync] ${path}`);
+  request(
+    {
+      uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
+      method: 'PUT',
+      headers: { UserTemporaryToken: program.token },
+      formData: {
+        path: path.replace('marketplace_builder/', ''),
+        marketplace_builder_file_body: fs.createReadStream(path)
+      }
+    },
+    (error, response, body) => {
+      if (error) logger.Error(error);
+      else {
+        if (body != '{}') {
+          notifier.notify({ title: 'MarkeplaceKit Sync Error', message: body });
+          logger.Error(` - ${body}`);
+        }
+        else
+          logger.Success(`[Sync] ${path} - done`);
+      }
+    }
+  );
+};
+
 program
   .version(version)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
@@ -40,42 +87,26 @@ const checkParams = (params) => {
   }
 
   if (errors.length > 0) {
-    console.error("Missing arguments:");
-    console.error(errors.join('\n'));
+    logger.Error("Missing arguments:");
+    logger.Error(errors.join('\n'));
     params.help();
     process.exit(1);
   };
 };
 
 checkParams(program);
-console.log('Sync mode enabled.');
 
-watch('marketplace_builder/', { recursive: true }, (event, file) => {
-  shouldBeSynced(file, event) && pushFile(file);
-});
+logger.Info(`Sync mode enabled. [${program.url}]`);
+logger.Info('---');
 
-const pushFile = path => {
-  process.stdout.write(`Syncing: ${path}`);
-  request(
-    {
-      uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
-      method: 'PUT',
-      headers: { UserTemporaryToken: program.token },
-      formData: {
-        path: path.replace('marketplace_builder/', ''),
-        marketplace_builder_file_body: fs.createReadStream(path)
-      }
-    },
-    (error, response, body) => {
-      if (error) console.log(error);
-      else {
-        if (body != '{}') {
-          notifier.notify({ title: 'MarkeplaceKit Sync Error', message: body });
-          process.stdout.write(`\n${body}\n`);
-        }
-        else
-          process.stdout.write(' - ok\n')
-      }
-    }
-  );
-};
+ping(program).then(
+  () => {
+    watch('marketplace_builder/', { recursive: true }, (event, file) => {
+      shouldBeSynced(file, event) && pushFile(file);
+    })
+  },
+  (error) => {
+    logger.Error(error)
+    process.exit(1);
+  }
+)

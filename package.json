@@ -5,6 +5,7 @@
   "main": "marketplace-kit",
   "dependencies": {
     "archiver": "^2.1.1",
+    "chalk": "^2.3.2",
     "commander": "^2.15.0",
     "node-notifier": "^5.2.1",
     "node-watch": "^0.5.8",

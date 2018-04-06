@@ -5,6 +5,7 @@ const program = require('commander'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   request = require('request'),
   notifier = require('node-notifier'),
+  logger = require('./lib/kit').logger,
   fs = require('fs');
 
 const fetchLogs = (authData) => {
@@ -28,10 +29,6 @@ const fetchLogs = (authData) => {
   });
 };
 
-const printLogEntry = (row) => {
-  process.stdout.write(`${row.id} [${row.created_at}] ${row.error_type}: ${row.message.replace(/\n$/, '')} \n`);
-};
-
 class LogStream extends EventEmitter {
   constructor(authData) {
     super();
@@ -50,12 +47,13 @@ class LogStream extends EventEmitter {
           let row = logs[k];
 
           if (!storage.exists(row.id)) {
+            storage.add(row);
             this.emit('message', row);
           }
         };
       },
       error => {
-        console.error(error);
+        logger.Error(error);
         process.exit(1);
       }
     );
@@ -85,11 +83,17 @@ program
     const authData = fetchAuthData(environment);
     const stream = new LogStream(authData);
 
-    stream.on('message', storage.add);
-    stream.on('message', printLogEntry);
-    stream.on('message', message => {
-      if (message.error_type == 'error')
-        notifier.notify({ title: message.error_type, message: message.message });
+    stream.on('message', msg => {
+      const text = `${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
+
+      if (msg.error_type.match(/error/gi))
+        logger.Error(text);
+      else
+        logger.Info(text);
+    });
+    stream.on('message', msg => {
+      if (msg.error_type.match(/error/gi))
+        notifier.notify({ title: msg.error_type, message: msg.message });
     });
 
     stream.start();

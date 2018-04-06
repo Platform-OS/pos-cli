@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-const program = require('commander');
-const fs = require('fs');
-const archiver = require('archiver');
-const version = require('./package.json').version;
+const program = require('commander'),
+  fs = require('fs'),
+  archiver = require('archiver'),
+  logger = require('./lib/kit').logger,
+  version = require('./package.json').version;
 
 const makeArchive = (path, directory) => {
   try {
@@ -22,12 +23,12 @@ const makeArchive = (path, directory) => {
   // 'close' event is fired only when a file descriptor is involved
   output.on('close', function() {
     const sizeInMB = archive.pointer() / 1024 / 1024;
-    console.log(`Archive size: ${sizeInMB.toFixed(2)} MB`);
+    logger.Info(`Archive size: ${sizeInMB.toFixed(2)} MB`);
   });
 
   archive.on('warning', function(err) {
     if (err.code === 'ENOENT') {
-      console.log(err);
+      logger.Error(err);
     } else {
       throw err;
     }

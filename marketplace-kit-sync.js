@@ -4,6 +4,7 @@ const program = require('commander'),
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
   fetchAuthData = require('./lib/settings').fetchSettings,
+  logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
 program
@@ -21,11 +22,11 @@ program
 
     p.on('close', code => {
       if (code === 1) {
-        console.error('✖ failed.');
+        logger.Error('✖ failed.');
       }
     });
     p.on('error', error => {
-      console.error(error);
+      logger.Error(error);
     });
   });
 

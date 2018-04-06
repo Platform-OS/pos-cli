@@ -5,6 +5,7 @@ const program = require('commander'),
   rl = require('readline'),
   request = require('request'),
   handleResponse = require('./lib/handleResponse'),
+  logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
 const checkParams = params => {
@@ -13,11 +14,11 @@ const checkParams = params => {
     process.exit(1);
   }
   if (typeof params.email === 'undefined') {
-    console.error('no email given!');
+    logger.Error('no email given!');
     process.exit(1);
   }
   if (typeof params.url === 'undefined') {
-    console.error('no URL given!');
+    logger.Error('no URL given!');
     process.exit(1);
   }
 
@@ -54,7 +55,7 @@ const login = (email, password, settings) => {
         if (body.token) {
           storeEnvironment(Object.assign(settings, { token: body.token }));
         } else {
-          console.log('Error: response from server invalid, token is missing');
+          logger.Error('Error: response from server invalid, token is missing');
           process.exit(1);
         }
       });

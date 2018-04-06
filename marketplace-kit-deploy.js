@@ -4,6 +4,7 @@ const program = require('commander'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
+  logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
 program
@@ -22,14 +23,14 @@ program
 
     archive.on('close', code => {
       if (code === 1) {
-        console.error('✖ failed.');
+        logger.Error('✖ failed.');
         process.exit(1);
       }
 
       const push = spawn(command('marketplace-kit-push'), [], { stdio: 'inherit', env: env });
       push.on('close', code => {
         if (code === 1) {
-          console.error('✖ failed.');
+          logger.Error('✖ failed.');
           process.exit(1);
         }
       });
