@@ -2,6 +2,7 @@
 
 const program = require('commander'),
   fs = require('fs'),
+  logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
 const checkParams = params => {
@@ -27,7 +28,7 @@ const loadSettingsToEnv = environment => {
     process.env['MARKETPLACE_TOKEN'] = settings.token;
     process.env['MARKETPLACE_URL'] = settings.url;
   } else {
-    console.log(`No settings for ${environment} environment, please see marketplace-kit env add`);
+    logger.Warn(`No settings for ${environment} environment, please see marketplace-kit env add`);
     process.exit(1);
   }
 };

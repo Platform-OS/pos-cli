@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
+  logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
 program
@@ -12,4 +13,7 @@ process.env.CONFIG_FILE_PATH = program.configFile;
 
 const list = require('./lib/settings').listEnvironments();
 
-console.log('Available environments:', list.join(', '));
+logger.Info('Available environments: ');
+for (id in list) {
+  logger.Info(`- ${list[id]}`);
+}

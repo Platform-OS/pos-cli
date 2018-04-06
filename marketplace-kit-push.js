@@ -4,6 +4,7 @@ const program = require('commander'),
   request = require('request'),
   fs = require('fs'),
   handleResponse = require('./lib/handleResponse'),
+  logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
 const fetchDeploymentStatus = (id, authData) => {
@@ -16,7 +17,7 @@ const fetchDeploymentStatus = (id, authData) => {
       },
       (error, response, body) => {
         if (error) {
-          console.log(error);
+          logger.Error(error);
           process.exit(1);
         } else {
           if (JSON.parse(body).status === 'ready_for_import') reject();
@@ -37,7 +38,7 @@ const getDeploymentStatus = (id, authData) => {
           else resolve(status);
         },
         () => {
-          process.stdout.write('.');
+          logger.Print('.');
           setTimeout(getStatus, 1500);
         }
       );
@@ -60,9 +61,10 @@ const pushFile = path => {
       handleResponse(error, response, body, body => {
         const responseBody = JSON.parse(body);
         getDeploymentStatus(responseBody.id, program).then(
-          () => console.log('\nDONE'),
+          () => logger.Success('\nDONE'),
           error => {
-            console.error('\nERROR:', error);
+            logger.Info('\n');
+            logger.Error(error);
             process.exit(1);
           }
         );
@@ -80,14 +82,14 @@ program
 program.parse(process.argv);
 
 if (typeof program.token === 'undefined') {
-  console.error('no TOKEN given!');
+  logger.Error('no TOKEN given!');
   process.exit(1);
 }
 if (typeof program.url === 'undefined') {
-  console.error('no URL given!');
+  logger.Error('no URL given!');
   process.exit(1);
 }
 
-console.log('Deploying to: %s', program.url);
+logger.Info(`Deploying to: ${program.url}`);
 
 pushFile('./tmp/marketplace-release.zip');
