@@ -22,7 +22,7 @@ const createTemp = () => mkdir('-p', TMP_DIR);
 const removeTemp = () => rm('-rf', TMP_DIR);
 
 const downloadZip = (url = DEFAULT_URL) => {
-  logger.Info('Downloading directory structure from ', url);
+  logger.Info(`Downloading directory structure from ${url}`);
   return request(url).pipe(fs.createWriteStream(TMP_PATH));
 };
 
