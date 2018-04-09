@@ -7,20 +7,19 @@
     "archiver": "^2.1.1",
     "chalk": "^2.3.2",
     "commander": "^2.15.0",
+    "extract-zip": "^1.6.6",
     "node-notifier": "^5.2.1",
     "node-watch": "^0.5.8",
-    "request": "^2.85.0"
+    "request": "^2.85.0",
+    "shelljs": "^0.8.1"
   },
-  "devDependencies": {},
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "preferGlobal": "true",
+  "preferGlobal": true,
   "bin": {
     "marketplace-kit": "./marketplace-kit.js",
     "marketplace-kit-env": "./marketplace-kit-env.js",
     "marketplace-kit-env-list": "./marketplace-kit-env-list.js",
     "marketplace-kit-env-add": "./marketplace-kit-env-add.js",
+    "marketplace-kit-init": "./marketplace-kit-init.js",
     "marketplace-kit-deploy": "./marketplace-kit-deploy.js",
     "marketplace-kit-push": "./marketplace-kit-push.js",
     "marketplace-kit-archive": "./marketplace-kit-archive.js",
