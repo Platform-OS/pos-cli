@@ -24,7 +24,7 @@ const filename = path => path.split('/').pop();
 const ext = path => path.split('.').pop();
 const fileRemoved = event => event === 'remove';
 
-const ping = (authData) => {
+const ping = authData => {
   return new Promise((resolve, reject) => {
     request(
       {
@@ -33,12 +33,9 @@ const ping = (authData) => {
         headers: { UserTemporaryToken: authData.token }
       },
       (error, response, body) => {
-        if (error)
-          reject({status: error});
-        else if (response.statusCode != 200)
-          reject({status: response.statusCode, message: response.statusMessage});
-        else
-          resolve('OK');
+        if (error) reject({ status: error });
+        else if (response.statusCode != 200) reject({ status: response.statusCode, message: response.statusMessage });
+        else resolve('OK');
       }
     );
   });
@@ -62,9 +59,7 @@ const pushFile = path => {
         if (body != '{}') {
           notifier.notify({ title: 'MarkeplaceKit Sync Error', message: body });
           logger.Error(` - ${body}`);
-        }
-        else
-          logger.Success(`[Sync] ${path} - done`);
+        } else logger.Success(`[Sync] ${path} - done`);
       }
     }
   );
@@ -77,7 +72,7 @@ program
   .option('--files <files>', 'watch files', process.env.FILES || DEFAULT_FILES)
   .parse(process.argv);
 
-const checkParams = (params) => {
+const checkParams = params => {
   const errors = [];
   if (typeof params.token === 'undefined') {
     errors.push(' no token given! Please add --token token');
@@ -87,26 +82,25 @@ const checkParams = (params) => {
   }
 
   if (errors.length > 0) {
-    logger.Error("Missing arguments:");
+    logger.Error('Missing arguments:');
     logger.Error(errors.join('\n'));
     params.help();
     process.exit(1);
-  };
+  }
 };
 
 checkParams(program);
 
-logger.Info(`Sync mode enabled. [${program.url}]`);
-logger.Info('---');
+logger.Info(`Sync mode enabled. [${program.url}] \n ---`);
 
 ping(program).then(
   () => {
     watch('marketplace_builder/', { recursive: true }, (event, file) => {
       shouldBeSynced(file, event) && pushFile(file);
-    })
+    });
   },
-  (error) => {
-    logger.Error(error)
+  error => {
+    logger.Error(error);
     process.exit(1);
   }
-)
+);
