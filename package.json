@@ -2,7 +2,12 @@
   "name": "@platform-os/marketplace-kit",
   "version": "1.0.7",
   "description": "Make changes in your marketplace on Platform OS",
-  "main": "marketplace-kit",
+  "main": "./marketplace-kit.js",
+  "keywords": [
+    "marketplace-kit",
+    "platform os",
+    "pOS"
+  ],
   "dependencies": {
     "archiver": "^2.1.1",
     "chalk": "^2.3.2",
@@ -28,7 +33,6 @@
     "marketplace-kit-logs": "./marketplace-kit-logs.js"
   },
   "repository": "mdyd-dev/marketplace-kit",
-  "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/mdyd-dev/marketplace-kit/issues"
