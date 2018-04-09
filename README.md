@@ -2,11 +2,11 @@
 
 Command line tool for making changes in your marketplace on Platform OS.
 
-## Install
+## Install or update to newest stable version
 
     npm i -g @platform-os/marketplace-kit
 
-## usage
+## Usage and overview
 
     marketplace-kit help
 
