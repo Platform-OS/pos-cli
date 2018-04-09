@@ -1,14 +1,3 @@
-/.bundle/
-/.yardoc
-/Gemfile.lock
-/_yardoc/
-/coverage/
-/doc/
-/pkg/
-/spec/reports/
-/tmp/
-/marketplace-kit-*.gem
 node_modules
-/.marketplace-kit
-/marketplace_builder
-/.DS_Store
+.marketplace-kit
+.DS_Store
