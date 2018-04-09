@@ -8,7 +8,7 @@ const program = require('commander'),
   logger = require('./lib/kit').logger,
   fs = require('fs');
 
-const fetchLogs = (authData) => {
+const fetchLogs = authData => {
   return new Promise((resolve, reject) => {
     request(
       {
@@ -18,12 +18,9 @@ const fetchLogs = (authData) => {
         headers: { UserTemporaryToken: authData.token }
       },
       (error, response, body) => {
-        if (error)
-          reject({status: error});
-        else if (response.statusCode != 200)
-          reject({status: response.statusCode, message: response.statusMessage});
-        else
-          resolve(JSON.parse(body));
+        if (error) reject({ status: error });
+        else if (response.statusCode != 200) reject({ status: response.statusCode, message: response.statusMessage });
+        else resolve(JSON.parse(body));
       }
     );
   });
@@ -42,7 +39,7 @@ class LogStream extends EventEmitter {
 
   fetchData() {
     fetchLogs(this.authData).then(
-      ({logs}) => {
+      ({ logs }) => {
         for (let k in logs) {
           let row = logs[k];
 
@@ -50,7 +47,7 @@ class LogStream extends EventEmitter {
             storage.add(row);
             this.emit('message', row);
           }
-        };
+        }
       },
       error => {
         logger.Error(error);
@@ -84,16 +81,18 @@ program
     const stream = new LogStream(authData);
 
     stream.on('message', msg => {
+      if (!msg.message) return false;
+
       const text = `${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
 
-      if (msg.error_type.match(/error/gi))
-        logger.Error(text);
-      else
-        logger.Info(text);
+      if (msg.error_type.match(/error/gi)) logger.Error(text);
+      else logger.Info(text);
     });
+
     stream.on('message', msg => {
-      if (msg.error_type.match(/error/gi))
-        notifier.notify({ title: msg.error_type, message: msg.message });
+      if (!msg.message) return false;
+
+      if (msg.error_type.match(/error/gi)) notifier.notify({ title: msg.error_type, message: msg.message });
     });
 
     stream.start();
