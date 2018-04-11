@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  version = require('./package.json').version;
+  updateNotifier = require('update-notifier'),
+  pkg = require('./package.json'),
+  version = pkg.version;
 
 program
   .version(version)
@@ -12,5 +14,9 @@ program
   .command('logs <environment>', 'attach to environment log streams')
   .command('init', 'initialize required directory structure')
   .parse(process.argv);
+
+updateNotifier({
+  pkg
+}).notify();
 
 if (!program.args.length) program.help();

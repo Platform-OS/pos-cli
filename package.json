@@ -16,7 +16,8 @@
     "node-notifier": "^5.2.1",
     "node-watch": "^0.5.8",
     "request": "^2.85.0",
-    "shelljs": "^0.8.1"
+    "shelljs": "^0.8.1",
+    "update-notifier": "^2.4.0"
   },
   "preferGlobal": true,
   "bin": {
