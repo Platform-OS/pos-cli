@@ -3,26 +3,23 @@
 const program = require('commander'),
   request = require('request'),
   fs = require('fs'),
+  path = require('path'),
   watch = require('node-watch'),
   notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
+  watchFilesExtensions = require('./lib/watch-files-extensions'),
   version = require('./package.json').version;
 
-const DEFAULT_FILES =
-  'js,css,liquid,graphql,yml,html,ttf,otf,woff,woff2,svg,ico,gif,jpg,jpeg,png,webp,webm,mp3,mp4,csv,xls,pdf,doc,docx';
-
-const shouldBeSynced = (path, event) => {
-  return !fileRemoved(event) && extensionAllowed(ext(path)) && !isHiddenFile(filename(path));
+const shouldBeSynced = (filePath, event) => {
+  return fileUpdated(event) && extensionAllowed(ext(filePath)) && !isHiddenFile(filename(filePath));
 };
 
-const isHiddenFile = filename => {
-  return filename.startsWith('.');
-};
-
-const extensionAllowed = ext => program.files.split(',').includes(ext);
-const filename = path => path.split('/').pop();
+const isHiddenFile = filename => filename.startsWith('.');
 const ext = path => path.split('.').pop();
-const fileRemoved = event => event === 'remove';
+const extensionAllowed = ext => watchFilesExtensions.includes(ext);
+const filename = filePath => filePath.split(path.sep).pop();
+const fileUpdated = event => event === 'update';
+const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
 
 const ping = authData => {
   return new Promise((resolve, reject) => {
@@ -34,23 +31,28 @@ const ping = authData => {
       },
       (error, response, body) => {
         if (error) reject({ status: error });
-        else if (response.statusCode != 200) reject({ status: response.statusCode, message: response.statusMessage });
+        else if (response.statusCode != 200)
+          reject({
+            status: response.statusCode,
+            message: response.statusMessage
+          });
         else resolve('OK');
       }
     );
   });
 };
 
-const pushFile = path => {
-  logger.Info(`[Sync] ${path}`);
+const pushFile = filePath => {
+  logger.Info(`[Sync] ${filePath}`);
+
   request(
     {
       uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
       method: 'PUT',
       headers: { UserTemporaryToken: program.token },
       formData: {
-        path: path.replace('marketplace_builder/', ''),
-        marketplace_builder_file_body: fs.createReadStream(path)
+        path: filePathUnixified(filePath), // need path with / separators
+        marketplace_builder_file_body: fs.createReadStream(filePath)
       }
     },
     (error, response, body) => {
@@ -59,7 +61,7 @@ const pushFile = path => {
         if (body != '{}') {
           notifier.notify({ title: 'MarkeplaceKit Sync Error', message: body });
           logger.Error(` - ${body}`);
-        } else logger.Success(`[Sync] ${path} - done`);
+        } else logger.Success(`[Sync] ${filePath} - done`);
       }
     }
   );
@@ -69,7 +71,7 @@ program
   .version(version)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
   .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL)
-  .option('--files <files>', 'watch files', process.env.FILES || DEFAULT_FILES)
+  // .option('--files <files>', 'watch files', process.env.FILES || watchFilesExtensions)
   .parse(process.argv);
 
 const checkParams = params => {
@@ -95,7 +97,7 @@ logger.Info(`Sync mode enabled. [${program.url}] \n ---`);
 
 ping(program).then(
   () => {
-    watch('marketplace_builder/', { recursive: true }, (event, file) => {
+    watch('marketplace_builder', { recursive: true }, (event, file) => {
       shouldBeSynced(file, event) && pushFile(file);
     });
   },
