@@ -12,6 +12,12 @@ marketplace-kit requires nodejs >= v8 to work properly. [Read more on how to ins
 
 ## Installation and update
 
+If your node is installed for all users you might need to use `sudo` to install npm packages globally:
+
+    sudo npm i -g @platform-os/marketplace-kit
+
+If you are using nvm or node installed on your account, you can omit that:
+
     npm i -g @platform-os/marketplace-kit
 
 ## Usage
