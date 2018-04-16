@@ -8,6 +8,7 @@ const program = require('commander'),
   watch = require('node-watch'),
   notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
+  platformRequestHeaders = require('./lib/platformRequestHeaders'),
   watchFilesExtensions = require('./lib/watch-files-extensions'),
   version = require('./package.json').version;
 
@@ -28,7 +29,7 @@ const ping = authData => {
       {
         uri: authData.url + 'api/marketplace_builder/logs',
         method: 'GET',
-        headers: { UserTemporaryToken: authData.token }
+        headers: platformRequestHeaders({email: authData.email, token: authData.token})
       },
       (error, response, body) => {
         if (error) reject({ status: error });
@@ -50,7 +51,7 @@ const pushFile = filePath => {
     {
       uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
       method: 'PUT',
-      headers: { UserTemporaryToken: program.token },
+      headers: platformRequestHeaders({email: program.email, token: program.token}),
       formData: {
         path: filePathUnixified(filePath), // need path with / separators
         marketplace_builder_file_body: fs.createReadStream(filePath)
@@ -73,6 +74,7 @@ const pushFile = filePath => {
 
 program
   .version(version)
+  .option('--email <email>', 'authentication token', process.env.MARKETPLACE_EMAIL)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
   .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL)
   // .option('--files <files>', 'watch files', process.env.FILES || watchFilesExtensions)

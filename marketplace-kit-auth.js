@@ -25,6 +25,7 @@ const loadSettingsToEnv = environment => {
   const settings = existingSettings()[environment];
 
   if (settings) {
+    process.env['MARKETPLACE_EMAIL'] = settings.email;
     process.env['MARKETPLACE_TOKEN'] = settings.token;
     process.env['MARKETPLACE_URL'] = settings.url;
   } else {

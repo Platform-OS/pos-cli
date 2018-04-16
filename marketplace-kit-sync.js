@@ -15,6 +15,7 @@ program
     process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(environment);
     const env = Object.assign(process.env, {
+      MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url
     });
