@@ -5,6 +5,7 @@ const program = require('commander'),
   fs = require('fs'),
   handleResponse = require('./lib/handleResponse'),
   logger = require('./lib/kit').logger,
+  platformRequestHeaders = require('./lib/platformRequestHeaders'),
   version = require('./package.json').version;
 
 const fetchDeploymentStatus = (id, authData) => {
@@ -13,7 +14,7 @@ const fetchDeploymentStatus = (id, authData) => {
       {
         uri: authData.url + 'api/marketplace_builder/marketplace_releases/' + id,
         method: 'GET',
-        headers: { UserTemporaryToken: authData.token }
+        headers: platformRequestHeaders({email: authData.email, token: authData.token})
       },
       (error, response, body) => {
         if (error) {
@@ -57,7 +58,7 @@ const pushFile = path => {
     {
       uri: program.url + 'api/marketplace_builder/marketplace_releases',
       method: 'POST',
-      headers: { UserTemporaryToken: program.token },
+      headers: platformRequestHeaders({email: program.email, token: program.token}),
       formData: formData
     },
     (error, response, body) => {
@@ -77,6 +78,7 @@ const pushFile = path => {
 
 program
   .version(version)
+  .option('--email <email>', 'developer email', process.env.MARKETPLACE_EMAIL)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
   .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL)
   .option('-f --force', 'force update', process.env.FORCE); // not using force argument from parent process env

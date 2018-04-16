@@ -44,16 +44,20 @@ const getPassword = () => {
 };
 
 const login = (email, password, settings) => {
+  const uri = partnerPortalHost() + '/api/user_tokens';
+  logger.Info(`Asking ${partnerPortalHost()} for access token...`);
   request(
     {
-      uri: settings.url + 'api/marketplace_builder/sessions',
-      method: 'POST',
-      json: { email, password }
+      uri: uri,
+      headers: { UserAuthorization: `${email}:${password}`},
+      method: 'GET',
     },
     function(error, response, body) {
       handleResponse(error, response, body, body => {
-        if (body.token) {
-          storeEnvironment(Object.assign(settings, { token: body.token }));
+        body = JSON.parse(body);
+        const token = body[0].token;
+        if (token) {
+          storeEnvironment(Object.assign(settings, { token: token }));
         } else {
           logger.Error('Error: response from server invalid, token is missing');
           process.exit(1);
@@ -62,6 +66,8 @@ const login = (email, password, settings) => {
     }
   );
 };
+
+const partnerPortalHost = () => (process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com');
 
 const storeEnvironment = settings => {
   const environmentSettings = {
@@ -91,7 +97,7 @@ const existingSettings = () => {
 program
   .version(version)
   .arguments('<environment>', 'name of environment. Example: staging')
-  .option('--email <email>', 'admin account email. Example: admin@example.com')
+  .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
   .option('--url <url>', 'marketplace url. Example: https://example.com')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
