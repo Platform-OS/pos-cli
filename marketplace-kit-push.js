@@ -47,15 +47,19 @@ const getDeploymentStatus = (id, authData) => {
 };
 
 const pushFile = path => {
+  const formData = {
+    'marketplace_builder[zip_file]': fs.createReadStream(path)
+  };
+
+  if (!!program.force)
+    formData['marketplace_builder[force_mode]'] = 'true';
+
   request(
     {
       uri: program.url + 'api/marketplace_builder/marketplace_releases',
       method: 'POST',
       headers: { UserTemporaryToken: program.token },
-      formData: {
-        'marketplace_builder[zip_file]': fs.createReadStream(path),
-        'marketplace_builder[force_mode]': (program.force || process.env.FORCE || '').toString()
-      }
+      formData: formData
     },
     (error, response, body) => {
       handleResponse(error, response, body, body => {
@@ -63,8 +67,7 @@ const pushFile = path => {
         getDeploymentStatus(responseBody.id, program).then(
           () => logger.Success('\nDONE'),
           error => {
-            logger.Info('\n');
-            logger.Error(error);
+            logger.Error(`\n${error}`);
             process.exit(1);
           }
         );
