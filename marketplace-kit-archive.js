@@ -2,19 +2,24 @@
 
 const program = require('commander'),
   fs = require('fs'),
+  shell = require('shelljs'),
   archiver = require('archiver'),
   logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
 const makeArchive = (path, directory) => {
-  try {
-    fs.mkdirSync('./tmp');
-  } catch (error) {}
+  if (!fs.existsSync(directory)) {
+    logger.Error("marketplace_builder directory doesn't exist - cannot archive it");
+    process.exit(1);
+  } else {
+    if (shell.ls(directory).length == 0) {
+      logger.Error('marketplace_builder is empty. Proceeding would remove everything from your marketplace.');
+      process.exit(1);
+    }
+  }
 
-  // create a file to stream archive data to.
-  try {
-    fs.unlinkSync(path);
-  } catch (error) {}
+  shell.mkdir('-p', 'tmp');
+  shell.rm('-rf', path);
 
   const output = fs.createWriteStream(path);
   const archive = archiver('zip', { zlib: { level: 6 } });
@@ -51,7 +56,7 @@ const makeArchive = (path, directory) => {
 
 program
   .version(version)
-  .option('--dir <dir>', 'files to be added to build', './marketplace_builder')
+  .option('--dir <dir>', 'files to be added to build', 'marketplace_builder')
   .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
   .parse(process.argv);
 
