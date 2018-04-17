@@ -4,6 +4,7 @@ const program = require('commander'),
   request = require('request'),
   fs = require('fs'),
   path = require('path'),
+  shell = require('shelljs'),
   watch = require('node-watch'),
   notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
@@ -56,12 +57,15 @@ const pushFile = filePath => {
       }
     },
     (error, response, body) => {
-      if (error) logger.Error(error);
-      else {
+      if (error) {
+        logger.Error(error);
+      } else {
         if (body != '{}') {
           notifier.notify({ title: 'MarkeplaceKit Sync Error', message: body });
           logger.Error(` - ${body}`);
-        } else logger.Success(`[Sync] ${filePath} - done`);
+        } else {
+          logger.Success(`[Sync] ${filePath} - done`);
+        }
       }
     }
   );
@@ -93,10 +97,15 @@ const checkParams = params => {
 
 checkParams(program);
 
-logger.Info(`Sync mode enabled. [${program.url}] \n ---`);
+logger.Info(`Enabling sync mode. Syncing to: [${program.url}] \n ---`);
 
 ping(program).then(
   () => {
+    if (!fs.existsSync('marketplace_builder')) {
+      logger.Error("marketplace_builder directory doesn't exist - cannot start watching it");
+      process.exit(1);
+    }
+
     watch('marketplace_builder', { recursive: true }, (event, file) => {
       shouldBeSynced(file, event) && pushFile(file);
     });
