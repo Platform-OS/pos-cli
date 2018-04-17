@@ -9,7 +9,7 @@ const program = require('commander'),
   logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
-const { mkdir, mv, cp, rm, pwd } = shell;
+const { mkdir, mv, rm, pwd } = shell;
 
 const DEFAULT_URL = 'https://github.com/mdyd-dev/directory-structure/archive/master.zip';
 
