@@ -20,6 +20,7 @@ const EXTRACTED_STRUCTURE = path.normalize(path.resolve(TMP_DIR, 'directory-stru
 const emptyTemp = () => rm('-rf', `${TMP_DIR}/*`);
 const createTemp = () => mkdir('-p', TMP_DIR);
 const removeTemp = () => rm('-rf', TMP_DIR);
+const moveStructureToDestination = () => mv('-f', EXTRACTED_STRUCTURE, pwd());
 
 const downloadZip = (url = DEFAULT_URL) => {
   logger.Info(`Downloading directory structure from ${url}`);
@@ -27,8 +28,6 @@ const downloadZip = (url = DEFAULT_URL) => {
 };
 
 const extractZip = () => {
-  const moveStructureToDestination = () => mv('-rf', EXTRACTED_STRUCTURE, pwd());
-
   extract(TMP_PATH, { dir: TMP_DIR }, error => {
     if (error) {
       logger.Error('Zip extraction failed. ', error);
