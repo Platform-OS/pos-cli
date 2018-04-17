@@ -7,16 +7,20 @@ const program = require('commander'),
   logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
-const makeArchive = (path, directory) => {
+const checkDirectory = directory => {
   if (!fs.existsSync(directory)) {
     logger.Error("marketplace_builder directory doesn't exist - cannot archive it");
     process.exit(1);
-  } else {
-    if (shell.ls(directory).length == 0) {
-      logger.Error('marketplace_builder is empty. Proceeding would remove everything from your marketplace.');
-      process.exit(1);
-    }
   }
+
+  if (shell.ls(directory).length == 0) {
+    logger.Error('marketplace_builder is empty. Proceeding would remove everything from your marketplace.');
+    process.exit(1);
+  }
+};
+
+const makeArchive = (path, directory) => {
+  checkDirectory(directory);
 
   shell.mkdir('-p', 'tmp');
   shell.rm('-rf', path);
