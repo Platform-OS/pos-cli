@@ -51,8 +51,7 @@ const pushFile = path => {
     'marketplace_builder[zip_file]': fs.createReadStream(path)
   };
 
-  if (!!program.force)
-    formData['marketplace_builder[force_mode]'] = 'true';
+  if (program.force || process.env.FORCE) formData['marketplace_builder[force_mode]'] = 'true';
 
   request(
     {
