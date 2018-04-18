@@ -5,6 +5,12 @@ const program = require('commander'),
   pkg = require('./package.json'),
   version = pkg.version;
 
+updateNotifier({
+  pkg: pkg,
+  defer: true,
+  isGlobal: true
+}).notify();
+
 program
   .version(version)
   .command('deploy <environment>', 'deploy code to environment')
@@ -14,9 +20,5 @@ program
   .command('logs <environment>', 'attach to environment log streams')
   .command('init', 'initialize required directory structure')
   .parse(process.argv);
-
-updateNotifier({
-  pkg
-}).notify();
 
 if (!program.args.length) program.help();
