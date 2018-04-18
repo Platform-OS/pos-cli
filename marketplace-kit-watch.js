@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  request = require('request'),
+  Gateway = require('./lib/proxy'),
   fs = require('fs'),
   path = require('path'),
   shell = require('shelljs'),
@@ -24,51 +24,21 @@ const filename = filePath => filePath.split(path.sep).pop();
 const fileUpdated = event => event === 'update';
 const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
 
-const ping = authData => {
-  return new Promise((resolve, reject) => {
-    request(
-      {
-        uri: authData.url + 'api/marketplace_builder/logs',
-        method: 'GET',
-        headers: platformRequestHeaders({ email: authData.email, token: authData.token })
-      },
-      (error, response, body) => {
-        if (error) reject({ status: error });
-        else if (response.statusCode != 200)
-          reject({
-            status: response.statusCode,
-            message: response.statusMessage
-          });
-        else resolve('OK');
-      }
-    );
-  });
-};
-
-const pushFile = filePath => {
+const pushFile = (filePath, authData) => {
   logger.Info(`[Sync] ${filePath}`);
 
-  request(
-    {
-      uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
-      method: 'PUT',
-      headers: platformRequestHeaders({ email: program.email, token: program.token }),
-      formData: {
-        path: filePathUnixified(filePath), // need path with / separators
-        marketplace_builder_file_body: fs.createReadStream(filePath)
-      }
+  const formData = {
+    path: filePathUnixified(filePath), // need path with / separators
+    marketplace_builder_file_body: fs.createReadStream(filePath)
+  }
+
+  gateway.sync(formData).then(
+    body => {
+      logger.Success(`[Sync] ${filePath} - done`);
     },
-    (error, response, body) => {
-      if (error) {
-        logger.Error(error);
-      } else {
-        if (body != '{}') {
-          notifier.notify({ title: 'MarkeplaceKit Sync Error', message: body });
-          logger.Error(` - ${body}`);
-        } else {
-          logger.Success(`[Sync] ${filePath} - done`);
-        }
-      }
+    error => {
+      notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error });
+      logger.Error(` - ${error}`);
     }
   );
 };
@@ -90,7 +60,9 @@ checkParams(program);
 
 logger.Info(`Enabling sync mode. Syncing to: [${program.url}] \n ---`);
 
-ping(program).then(
+const gateway = new Gateway(program);
+
+gateway.ping().then(
   () => {
     if (!fs.existsSync('marketplace_builder')) {
       logger.Error("marketplace_builder directory doesn't exist - cannot start watching it");
@@ -98,7 +70,7 @@ ping(program).then(
     }
 
     watch('marketplace_builder', { recursive: true }, (event, file) => {
-      shouldBeSynced(file, event) && pushFile(file);
+      shouldBeSynced(file, event) && pushFile(file, program);
     });
   },
   error => {

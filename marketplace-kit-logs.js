@@ -3,34 +3,17 @@
 const program = require('commander'),
   EventEmitter = require('events'),
   fetchAuthData = require('./lib/settings').fetchSettings,
-  request = require('request'),
   notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
-  platformRequestHeaders = require('./lib/platformRequestHeaders'),
+  Gateway = require('./lib/proxy'),
+  validate = require('./lib/validators'),
   fs = require('fs');
-
-const fetchLogs = authData => {
-  return new Promise((resolve, reject) => {
-    request(
-      {
-        uri: authData.url + 'api/marketplace_builder/logs',
-        qs: { last_id: storage.lastId },
-        method: 'GET',
-        headers: platformRequestHeaders({ email: authData.email, token: authData.token })
-      },
-      (error, response, body) => {
-        if (error) reject({ status: error });
-        else if (response.statusCode != 200) reject({ status: response.statusCode, message: response.statusMessage });
-        else resolve(JSON.parse(body));
-      }
-    );
-  });
-};
 
 class LogStream extends EventEmitter {
   constructor(authData) {
     super();
     this.authData = authData;
+    this.gateway = new Gateway(authData);
   }
 
   start() {
@@ -40,7 +23,7 @@ class LogStream extends EventEmitter {
   }
 
   fetchData() {
-    fetchLogs(this.authData).then(
+    this.gateway.logs({lastId: storage.lastId}).then(
       ({ logs }) => {
         for (let k in logs) {
           let row = logs[k];

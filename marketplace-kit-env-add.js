@@ -4,10 +4,11 @@ const program = require('commander'),
   fs = require('fs'),
   rl = require('readline'),
   request = require('request'),
-  handleResponse = require('./lib/handleResponse'),
+  Gateway = require('./lib/proxy'),
   logger = require('./lib/kit').logger,
   validate = require('./lib/validators'),
-  version = require('./package.json').version;
+  version = require('./package.json').version,
+  Portal = require('./lib/portal');
 
 const checkParams = params => {
   validate.existence({ argumentValue: params.email, argumentName: 'email', fail: program.help.bind(program) });
@@ -28,6 +29,7 @@ const getPassword = () => {
     reader.stdoutMuted = true;
     reader.question('Password: ', password => {
       reader.close();
+      logger.Info('');
       resolve(password);
     });
 
@@ -36,32 +38,6 @@ const getPassword = () => {
     };
   });
 };
-
-const login = (email, password, settings) => {
-  const uri = partnerPortalHost() + '/api/user_tokens';
-  logger.Info(`Asking ${partnerPortalHost()} for access token...`);
-  request(
-    {
-      uri: uri,
-      headers: { UserAuthorization: `${email}:${password}` },
-      method: 'GET'
-    },
-    function(error, response, body) {
-      handleResponse(error, response, body, body => {
-        body = JSON.parse(body);
-        const token = body[0].token;
-        if (token) {
-          storeEnvironment(Object.assign(settings, { token: token }));
-        } else {
-          logger.Error('Error: response from server invalid, token is missing');
-          process.exit(1);
-        }
-      });
-    }
-  );
-};
-
-const partnerPortalHost = () => process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com';
 
 const storeEnvironment = settings => {
   const environmentSettings = {
@@ -75,7 +51,7 @@ const storeEnvironment = settings => {
 };
 
 const saveFile = settings => {
-  fs.writeFileSync(process.env.CONFIG_FILE_PATH, JSON.stringify(settings), err => {
+  fs.writeFileSync(process.env.CONFIG_FILE_PATH, JSON.stringify(settings, null, 2), err => {
     if (err) throw err;
   });
 };
@@ -88,22 +64,46 @@ const existingSettings = () => {
   }
 };
 
+PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com';
+
 program
   .version(version)
   .arguments('<environment>', 'name of environment. Example: staging')
   .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
   .option('--url <url>', 'marketplace url. Example: https://example.com')
+  .option('--token <token>', 'if you have a token you can add it directly to mpkit configution without connecting to portal')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     checkParams(params);
+    const settings = { url: params.url, endpoint: environment, email: params.email };
+    if (params.token) {
+      storeEnvironment(Object.assign(settings, { token: params.token }));
+      logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
+      process.exit(0);
+    }
+
     logger.Info(
-      `Please make sure that you have a permission to deploy. You can verify it here: ${partnerPortalHost()}/me/permissions`,
+      `Please make sure that you have a permission to deploy. You can verify it here: ${PARTNER_PORTAL_HOST}/me/permissions`,
       { hideTimestamp: true }
     );
+
     getPassword().then(password => {
-      const settings = { url: params.url, endpoint: environment, email: params.email };
-      login(params.email, password, settings);
+
+      logger.Info(`Asking ${PARTNER_PORTAL_HOST} for access token...`);
+      Portal.login(params.email, password).then(
+        tokens => {
+          if (tokens[0].token) {
+            storeEnvironment(Object.assign(settings, { token: tokens[0].token }));
+            logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
+          }
+          else
+            logger.Error({error: "Response from server invalid, token is missing"})
+        }, error => {
+          logger.Error(error);
+          process.exit(1);
+        }
+      );
     });
   });
 
