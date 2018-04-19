@@ -103,6 +103,7 @@ program
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     checkParams(params);
+    logger.Info(`Please make sure that you have a permission to deploy. You can verify it here: ${partnerPortalHost()}/me/permissions`, {hideTimestamp: true});
     getPassword().then(password => {
       const settings = { url: params.url, endpoint: environment, email: params.email };
       login(params.email, password, settings);
