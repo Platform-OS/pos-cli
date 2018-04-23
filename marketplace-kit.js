@@ -6,10 +6,11 @@ const program = require('commander'),
   version = pkg.version;
 
 updateNotifier({
-  pkg: pkg,
+  pkg: pkg
+}).notify({
   defer: true,
   isGlobal: true
-}).notify();
+});
 
 program
   .version(version)
