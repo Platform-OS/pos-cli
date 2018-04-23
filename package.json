@@ -1,6 +1,6 @@
 {
   "name": "@platform-os/marketplace-kit",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Make changes in your marketplace on Platform OS",
   "main": "./marketplace-kit.js",
   "keywords": [
