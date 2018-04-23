@@ -10,14 +10,14 @@
   ],
   "dependencies": {
     "archiver": "^2.1.1",
-    "chalk": "^2.3.2",
-    "commander": "^2.15.0",
+    "chalk": "^2.4.0",
+    "commander": "^2.15.1",
     "extract-zip": "^1.6.6",
     "node-notifier": "^5.2.1",
     "node-watch": "^0.5.8",
     "request": "^2.85.0",
     "shelljs": "^0.8.1",
-    "update-notifier": "^2.4.0"
+    "update-notifier": "^2.5.0"
   },
   "preferGlobal": true,
   "bin": {
