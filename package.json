@@ -1,6 +1,6 @@
 {
   "name": "@platform-os/marketplace-kit",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Make changes in your marketplace on Platform OS",
   "main": "./marketplace-kit.js",
   "engines": {
@@ -9,7 +9,11 @@
   "scripts": {
     "postinstall": "node ./lib/check-node-version.js"
   },
-  "keywords": ["marketplace-kit", "platform os", "pOS"],
+  "keywords": [
+    "marketplace-kit",
+    "platform os",
+    "pOS"
+  ],
   "dependencies": {
     "archiver": "^2.1.1",
     "chalk": "^2.4.0",
