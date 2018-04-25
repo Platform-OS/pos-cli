@@ -16,7 +16,7 @@ program
     process.env.CONFIG_FILE_PATH = params.configFile;
     if (params.force) process.env.FORCE = params.force;
     const authData = fetchAuthData(environment);
-    const env = Object.assign(process.env, { MARKETPLACE_TOKEN: authData.token, MARKETPLACE_URL: authData.url });
+    const env = Object.assign(process.env, { MARKETPLACE_EMAIL: authData.email, MARKETPLACE_TOKEN: authData.token, MARKETPLACE_URL: authData.url });
 
     // make an archive
     const archive = spawn(command('marketplace-kit-archive'), [], { stdio: 'inherit' });
