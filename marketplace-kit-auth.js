@@ -3,13 +3,11 @@
 const program = require('commander'),
   fs = require('fs'),
   logger = require('./lib/kit').logger,
+  validate = require('./lib/validators'),
   version = require('./package.json').version;
 
 const checkParams = params => {
-  if (!params.args.length) {
-    params.help();
-    process.exit(1);
-  }
+  validate.existence({ argumentName: 'environment', argumentValue: params.environment, fail: program.help.bind(program) });
 };
 
 const settingsFileName = '.marketplace-kit';

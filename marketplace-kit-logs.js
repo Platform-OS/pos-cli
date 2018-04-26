@@ -16,7 +16,7 @@ const fetchLogs = authData => {
         uri: authData.url + 'api/marketplace_builder/logs',
         qs: { last_id: storage.lastId },
         method: 'GET',
-        headers: platformRequestHeaders({email: authData.email, token: authData.token})
+        headers: platformRequestHeaders({ email: authData.email, token: authData.token })
       },
       (error, response, body) => {
         if (error) reject({ status: error });
@@ -101,7 +101,5 @@ program
   });
 
 program.parse(process.argv);
-if (!program.args.length) {
-  program.help();
-  process.exit(1);
-}
+
+validate.existence({ argumentValue: program.environment, argumentName: 'environment', fail: program.help.bind(program) });
