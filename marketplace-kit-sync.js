@@ -5,6 +5,7 @@ const program = require('commander'),
   command = require('./lib/command'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   logger = require('./lib/kit').logger,
+  validate = require('./lib/validators'),
   version = require('./package.json').version;
 
 program
@@ -32,7 +33,9 @@ program
   });
 
 program.parse(process.argv);
-if (!program.args.length) {
-  program.help();
-  process.exit(1);
-}
+
+validate.existence({
+  argumentValue: program.environment,
+  argumentName: 'environment',
+  fail: program.help.bind(program)
+});

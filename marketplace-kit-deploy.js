@@ -5,6 +5,7 @@ const program = require('commander'),
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
   logger = require('./lib/kit').logger,
+  validate = require('./lib/validators'),
   version = require('./package.json').version;
 
 program
@@ -16,7 +17,11 @@ program
     process.env.CONFIG_FILE_PATH = params.configFile;
     if (params.force) process.env.FORCE = params.force;
     const authData = fetchAuthData(environment);
-    const env = Object.assign(process.env, { MARKETPLACE_EMAIL: authData.email, MARKETPLACE_TOKEN: authData.token, MARKETPLACE_URL: authData.url });
+    const env = Object.assign(process.env, {
+      MARKETPLACE_EMAIL: authData.email,
+      MARKETPLACE_TOKEN: authData.token,
+      MARKETPLACE_URL: authData.url
+    });
 
     // make an archive
     const archive = spawn(command('marketplace-kit-archive'), [], { stdio: 'inherit' });
@@ -38,7 +43,5 @@ program
   });
 
 program.parse(process.argv);
-if (!program.args.length) {
-  program.help();
-  process.exit(1);
-}
+
+validate.existence({ argumentValue: program.environment, argumentName: 'environment', fail: program.help.bind(program) });

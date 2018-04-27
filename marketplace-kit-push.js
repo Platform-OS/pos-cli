@@ -5,6 +5,7 @@ const program = require('commander'),
   fs = require('fs'),
   handleResponse = require('./lib/handleResponse'),
   logger = require('./lib/kit').logger,
+  validate = require('./lib/validators'),
   platformRequestHeaders = require('./lib/platformRequestHeaders'),
   version = require('./package.json').version;
 
@@ -14,7 +15,7 @@ const fetchDeploymentStatus = (id, authData) => {
       {
         uri: authData.url + 'api/marketplace_builder/marketplace_releases/' + id,
         method: 'GET',
-        headers: platformRequestHeaders({email: authData.email, token: authData.token})
+        headers: platformRequestHeaders({ email: authData.email, token: authData.token })
       },
       (error, response, body) => {
         if (error) {
@@ -58,7 +59,7 @@ const pushFile = path => {
     {
       uri: program.url + 'api/marketplace_builder/marketplace_releases',
       method: 'POST',
-      headers: platformRequestHeaders({email: program.email, token: program.token}),
+      headers: platformRequestHeaders({ email: program.email, token: program.token }),
       formData: formData
     },
     (error, response, body) => {
@@ -85,14 +86,8 @@ program
 
 program.parse(process.argv);
 
-if (typeof program.token === 'undefined') {
-  logger.Error('no TOKEN given!');
-  process.exit(1);
-}
-if (typeof program.url === 'undefined') {
-  logger.Error('no URL given!');
-  process.exit(1);
-}
+validate.existence({ argumentValue: program.token, argumentName: 'token', fail: program.help.bind(program) });
+validate.existence({ argumentValue: program.url, argumentName: 'url', fail: program.help.bind(program) });
 
 logger.Info(`Deploying to: ${program.url}`);
 

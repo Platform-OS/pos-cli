@@ -6,25 +6,19 @@ const program = require('commander'),
   request = require('request'),
   handleResponse = require('./lib/handleResponse'),
   logger = require('./lib/kit').logger,
+  validate = require('./lib/validators'),
   version = require('./package.json').version;
 
 const checkParams = params => {
-  if (!params.args.length) {
-    params.help();
-    process.exit(1);
-  }
-  if (typeof params.email === 'undefined') {
-    logger.Error('no email given!');
-    process.exit(1);
-  }
-  if (typeof params.url === 'undefined') {
-    logger.Error('no URL given!');
-    process.exit(1);
-  }
+  validate.existence({ argumentValue: params.email, argumentName: 'email', fail: program.help.bind(program) });
+  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: program.help.bind(program) });
+  validate.email(params.email);
 
   if (params.url.slice(-1) != '/') {
     params.url = params.url + '/';
   }
+
+  validate.url(params.url);
 };
 
 // turn to promise
@@ -49,8 +43,8 @@ const login = (email, password, settings) => {
   request(
     {
       uri: uri,
-      headers: { UserAuthorization: `${email}:${password}`},
-      method: 'GET',
+      headers: { UserAuthorization: `${email}:${password}` },
+      method: 'GET'
     },
     function(error, response, body) {
       handleResponse(error, response, body, body => {
@@ -67,7 +61,7 @@ const login = (email, password, settings) => {
   );
 };
 
-const partnerPortalHost = () => (process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com');
+const partnerPortalHost = () => process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com';
 
 const storeEnvironment = settings => {
   const environmentSettings = {
@@ -103,7 +97,10 @@ program
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     checkParams(params);
-    logger.Info(`Please make sure that you have a permission to deploy. You can verify it here: ${partnerPortalHost()}/me/permissions`, {hideTimestamp: true});
+    logger.Info(
+      `Please make sure that you have a permission to deploy. You can verify it here: ${partnerPortalHost()}/me/permissions`,
+      { hideTimestamp: true }
+    );
     getPassword().then(password => {
       const settings = { url: params.url, endpoint: environment, email: params.email };
       login(params.email, password, settings);
@@ -111,7 +108,5 @@ program
   });
 
 program.parse(process.argv);
-if (!program.args.length) {
-  program.help();
-  process.exit(1);
-}
+
+validate.existence({ argumentValue: program.environment, argumentName: 'environment', fail: program.help.bind(program) });
