@@ -8,6 +8,7 @@ const program = require('commander'),
   watch = require('node-watch'),
   notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
+  validate = require('./lib/validators'),
   platformRequestHeaders = require('./lib/platformRequestHeaders'),
   watchFilesExtensions = require('./lib/watch-files-extensions'),
   version = require('./package.json').version;
@@ -29,7 +30,7 @@ const ping = authData => {
       {
         uri: authData.url + 'api/marketplace_builder/logs',
         method: 'GET',
-        headers: platformRequestHeaders({email: authData.email, token: authData.token})
+        headers: platformRequestHeaders({ email: authData.email, token: authData.token })
       },
       (error, response, body) => {
         if (error) reject({ status: error });
@@ -51,7 +52,7 @@ const pushFile = filePath => {
     {
       uri: program.url + 'api/marketplace_builder/marketplace_releases/sync',
       method: 'PUT',
-      headers: platformRequestHeaders({email: program.email, token: program.token}),
+      headers: platformRequestHeaders({ email: program.email, token: program.token }),
       formData: {
         path: filePathUnixified(filePath), // need path with / separators
         marketplace_builder_file_body: fs.createReadStream(filePath)
@@ -72,6 +73,11 @@ const pushFile = filePath => {
   );
 };
 
+const checkParams = params => {
+  validate.existence({ argumentValue: params.token, argumentName: 'token', fail: program.help.bind(program) });
+  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: program.help.bind(program) });
+};
+
 program
   .version(version)
   .option('--email <email>', 'authentication token', process.env.MARKETPLACE_EMAIL)
@@ -79,23 +85,6 @@ program
   .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL)
   // .option('--files <files>', 'watch files', process.env.FILES || watchFilesExtensions)
   .parse(process.argv);
-
-const checkParams = params => {
-  const errors = [];
-  if (typeof params.token === 'undefined') {
-    errors.push(' no token given! Please add --token token');
-  }
-  if (typeof params.url === 'undefined') {
-    errors.push(' no URL given. Please add --url URL');
-  }
-
-  if (errors.length > 0) {
-    logger.Error('Missing arguments:');
-    logger.Error(errors.join('\n'));
-    params.help();
-    process.exit(1);
-  }
-};
 
 checkParams(program);
 

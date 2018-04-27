@@ -14,6 +14,7 @@ process.env.CONFIG_FILE_PATH = program.configFile;
 const list = require('./lib/settings').listEnvironments();
 
 logger.Info('Available environments: ');
+
 for (id in list) {
   logger.Info(`- ${list[id]}`);
 }

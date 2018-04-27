@@ -5,18 +5,15 @@ const program = require('commander'),
   shell = require('shelljs'),
   archiver = require('archiver'),
   logger = require('./lib/kit').logger,
+  validate = require('./lib/validators'),
   version = require('./package.json').version;
 
-const checkDirectory = directory => {
-  if (!fs.existsSync(directory)) {
-    logger.Error("marketplace_builder directory doesn't exist - cannot archive it");
-    process.exit(1);
-  }
-
-  if (shell.ls(directory).length == 0) {
-    logger.Error('marketplace_builder is empty. Proceeding would remove everything from your marketplace.');
-    process.exit(1);
-  }
+const checkDirectory = directoryPath => {
+  validate.directoryExists({ path: directoryPath, message: "marketplace_builder directory doesn't exist - cannot archive it" });
+  validate.directoryEmpty({
+    path: directoryPath,
+    message: 'marketplace_builder is empty. Proceeding would remove everything from your marketplace.'
+  });
 };
 
 const makeArchive = (path, directory) => {

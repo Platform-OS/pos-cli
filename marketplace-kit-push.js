@@ -77,6 +77,11 @@ const pushFile = path => {
   );
 };
 
+const checkParams = params => {
+  validate.existence({ argumentValue: params.token, argumentName: 'token', fail: program.help.bind(program) });
+  validate.existence({ argumentValue: params.url, argumentName: 'url', fail: program.help.bind(program) });
+};
+
 program
   .version(version)
   .option('--email <email>', 'developer email', process.env.MARKETPLACE_EMAIL)
@@ -86,8 +91,7 @@ program
 
 program.parse(process.argv);
 
-validate.existence({ argumentValue: program.token, argumentName: 'token', fail: program.help.bind(program) });
-validate.existence({ argumentValue: program.url, argumentName: 'url', fail: program.help.bind(program) });
+checkParams(program);
 
 logger.Info(`Deploying to: ${program.url}`);
 

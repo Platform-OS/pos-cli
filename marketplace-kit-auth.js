@@ -6,10 +6,6 @@ const program = require('commander'),
   validate = require('./lib/validators'),
   version = require('./package.json').version;
 
-const checkParams = params => {
-  validate.existence({ argumentName: 'environment', argumentValue: params.environment, fail: program.help.bind(program) });
-};
-
 const settingsFileName = '.marketplace-kit';
 const existingSettings = () => {
   if (fs.existsSync(settingsFileName)) {
@@ -36,7 +32,7 @@ program
   .version(version)
   .arguments('<environment>', 'name of environment. Example: staging')
   .action((environment, params) => {
-    checkParams(params);
+    validate.existence({ argumentName: 'environment', argumentValue: environment, fail: program.help.bind(program) });
     loadSettingsToEnv(environment);
     console.log(process.env.MARKETPLACE_URL);
   });

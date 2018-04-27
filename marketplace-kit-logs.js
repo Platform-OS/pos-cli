@@ -102,4 +102,4 @@ program
 
 program.parse(process.argv);
 
-validate.existence({ argumentValue: program.environment, argumentName: 'environment', fail: program.help.bind(program) });
+validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: program.help.bind(program) });

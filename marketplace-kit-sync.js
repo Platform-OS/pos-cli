@@ -35,7 +35,7 @@ program
 program.parse(process.argv);
 
 validate.existence({
-  argumentValue: program.environment,
+  argumentValue: program.args[0],
   argumentName: 'environment',
   fail: program.help.bind(program)
 });
