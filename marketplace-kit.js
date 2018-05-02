@@ -20,6 +20,8 @@ program
   .command('sync <environment>', 'update environment on file change')
   .command('logs <environment>', 'attach to environment log streams')
   .command('init', 'initialize required directory structure')
+  .command('gui', 'open gui')
+  .command('install', 'install module')
   .parse(process.argv);
 
 if (!program.args.length) program.help();
