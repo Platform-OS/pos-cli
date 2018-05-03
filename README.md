@@ -28,6 +28,7 @@ Authentication is done with your **Partner Portal** account credentials.
 See this [guide](https://github.com/mdyd-dev/nearme-documentation/blob/master/_PlatformOS/getting-started/setup/accessing-partner-portal.md) if you don't have Partner Portal account yet.
 
 To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
+
 ```
 marketplace-kit env add <environment> --email <your email> --url <your marketplace url>
 ```
@@ -58,8 +59,7 @@ Deploys all the changes. It is recommended to first deploy to `staging`, test, a
 
 ### Deploying with force flag (`-f` or `--force`)
 
-If you want to deploy the whole `marketplace_builder` directory to environment overriding everything there was, use `-f` flag.
-Note: It will also remove files from the server that are not present in your currently deployed source directory.
+Force flag is used to override changes made in instance admin. If you see `locked_by_admin` error and you still want to deploy, use `-f` flag.
 
 ```
 marketplace-kit deploy <environment> -f
@@ -69,7 +69,7 @@ Example: `marketplace-kit deploy staging -f`
 
 In the next section we will describe the file structure.
 
-### Listing all environments
+### Listing environments
 
 If you forgot know what your environments are named or the url that is corresponding to any name, use:
 
