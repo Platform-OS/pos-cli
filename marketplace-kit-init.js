@@ -60,8 +60,8 @@ const init = () => {
 
 program
   .version(version)
-  .option('--url <url>', `theme github repository url. Default: ${DEFAULT_REPO}`, DEFAULT_REPO)
-  .option('--branch <branch>', `branch where the theme is located. Default: ${DEFAULT_BRANCH}`, DEFAULT_BRANCH);
+  .option('--url <url>', 'theme github repository url', DEFAULT_REPO)
+  .option('--branch <branch>', 'branch where the theme is located', DEFAULT_BRANCH);
 
 program.parse(process.argv);
 
