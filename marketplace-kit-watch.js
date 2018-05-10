@@ -24,23 +24,37 @@ const filename = filePath => filePath.split(path.sep).pop();
 const fileUpdated = event => event === 'update';
 const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
 
-const pushFile = (filePath, authData) => {
-  logger.Info(`[Sync] ${filePath}`);
+CONCURRENCY = 5;
+const Queue = require('async/queue');
 
-  const formData = {
-    path: filePathUnixified(filePath), // need path with / separators
-    marketplace_builder_file_body: fs.createReadStream(filePath)
-  }
+const queue = Queue( (task, callback) => {
+  pushFile(task.path).then(callback, callback);
+}, CONCURRENCY);
 
-  gateway.sync(formData).then(
-    body => {
-      logger.Success(`[Sync] ${filePath} - done`);
-    },
-    error => {
-      notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error });
-      logger.Error(` - ${error}`);
+const enqueue = (filePath) => {
+  queue.push({path: filePath}, () => { true });
+}
+
+const pushFile = (filePath) => {
+  return new Promise((resolve, reject) => {
+
+    const formData = {
+      path: filePathUnixified(filePath), // need path with / separators
+      marketplace_builder_file_body: fs.createReadStream(filePath)
     }
-  );
+
+    gateway.sync(formData).then(
+      body => {
+        logger.Success(`[Sync] ${filePath} - done`);
+        resolve('OK');
+      },
+      error => {
+        notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error });
+        logger.Error(` - ${error}`);
+        resolve('error but OK');
+      }
+    );
+  });
 };
 
 const checkParams = params => {
@@ -70,7 +84,7 @@ gateway.ping().then(
     }
 
     watch('marketplace_builder', { recursive: true }, (event, file) => {
-      shouldBeSynced(file, event) && pushFile(file, program);
+      shouldBeSynced(file, event) && enqueue(file);
     });
   },
   error => {
