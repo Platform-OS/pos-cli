@@ -41,7 +41,8 @@ const extractZip = ({ branch }) => {
     moveStructureToDestination(branch);
     removeTemp();
 
-    logger.Success('Directory structure created.');
+    logger.Info('Directory structure created.');
+    logger.Warn('Use deploy command before syncing changes to make sure all files are deployed to your instance.');
   });
 };
 
