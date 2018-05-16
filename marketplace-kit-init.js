@@ -21,8 +21,9 @@ const TMP_PATH = path.normalize(path.resolve(TMP_DIR, 'directory-structure.zip')
 const emptyTemp = () => rm('-rf', `${TMP_DIR}/*`);
 const createTemp = () => mkdir('-p', TMP_DIR);
 const removeTemp = () => rm('-rf', TMP_DIR);
+const repoNameFrom = () => program.url.split('/').pop();
 const moveStructureToDestination = branch => {
-  const EXTRACTED_STRUCTURE = path.normalize(path.resolve(TMP_DIR, `directory-structure-${branch}`, 'marketplace_builder'));
+  const EXTRACTED_STRUCTURE = path.normalize(path.resolve(TMP_DIR, `${repoNameFrom()}-${branch}`, 'marketplace_builder'));
   return mv('-f', EXTRACTED_STRUCTURE, pwd());
 };
 
