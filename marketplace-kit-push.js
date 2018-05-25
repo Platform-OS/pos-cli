@@ -7,6 +7,8 @@ const program = require('commander'),
   logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
+const errors = require('./lib/errors');
+
 
 const getDeploymentStatus = (id) => {
   return new Promise((resolve, reject) => {
@@ -65,15 +67,15 @@ gateway
           logger.Print('\n');
           logger.Success('DONE')
         },
-        error =>{
+        error => {
           logger.Print('\n');
           logger.Error(error.error);
         }
       )
     },
     error => {
-      logger.Info('\n');
       logger.Error(error);
+      errors.describe(error, logger.Error);
       process.exit(1);
     }
   );

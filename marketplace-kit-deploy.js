@@ -20,7 +20,8 @@ program
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
-      MARKETPLACE_URL: authData.url
+      MARKETPLACE_URL: authData.url,
+      MARKETPLACE_ENV: environment
     });
 
     // make an archive
