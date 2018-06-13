@@ -42,7 +42,6 @@
     "marketplace-kit-init": "./marketplace-kit-init.js",
     "marketplace-kit-gui": "./marketplace-kit-gui.js",
     "marketplace-kit-gui-serve": "./marketplace-kit-gui-serve.js",
-    "marketplace-kit-gui-install": "./marketplace-kit-gui-install.js",
     "marketplace-kit-server": "./marketplace-kit-server.js",
     "marketplace-kit-deploy": "./marketplace-kit-deploy.js",
     "marketplace-kit-push": "./marketplace-kit-push.js",

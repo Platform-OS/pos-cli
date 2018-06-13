@@ -18,7 +18,8 @@ const gateway = new Gateway({
 });
 
 app.use(bodyParser.json());
-app.use('/gui', express.static(__dirname + '/gui/public'));
+app.use('/gui/editor', express.static(__dirname + '/gui/editor/public'));
+app.use('/gui/graphql', express.static(__dirname + '/gui/graphql/public'));
 
 // GRAPHQL
 app.post('/api/graph', (request, response) => {
@@ -27,6 +28,14 @@ app.post('/api/graph', (request, response) => {
       body => response.send(body),
       error => response.status(401).send(error.statusText)
     );
+});
+
+app.post('/graphql', (request, response) => {
+    gateway.graph(request.body.query)
+        .then(
+            body => response.send(body),
+            error => response.status(401).send(error.statusText)
+        );
 });
 
 // SYNC
@@ -51,6 +60,7 @@ app.listen(port, err => {
     return console.log('something wrong happened', err);
   }
 
-  console.log(`server is listening on ${port}`);
-  console.log(`http://localhost:${port}/gui`);
+  console.log(`Server is listening on ${port}`);
+  console.log('Content Editor:', `http://localhost:${port}/gui/editor`);
+  console.log('Graphql Browser:', `http://localhost:${port}/gui/graphql`);
 });
