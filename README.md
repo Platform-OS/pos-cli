@@ -108,4 +108,4 @@ In the right sidebar there is a schema documentation should you need it.
 
 #### Resources editor
 
-To list, edit and create resources open [http://localhost:3333/gui/](http://localhost:3333/gui/) in your web browser.
+To list, edit and create resources open [http://localhost:3333/gui/editor](http://localhost:3333/gui/) in your web browser.
