@@ -100,10 +100,10 @@ marketplace-kit gui serve staging
 
 #### GraphQL Browser
 
-To explore your instance database using graphql open `[http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql)` in your web browser.
+To explore your instance database using graphql open [http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql) in your web browser.
 
 In the right sidebar there is a schema documentation should you need it.
 
 #### Resources editor
 
-To list, edit and create resources open `[http://localhost:3333/gui/](http://localhost:3333/gui/)` in your web browser.
+To list, edit and create resources open [http://localhost:3333/gui/](http://localhost:3333/gui/) in your web browser.
