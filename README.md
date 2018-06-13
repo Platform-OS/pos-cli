@@ -89,3 +89,11 @@ It will download directory structure from official repository and extract it in 
 
 We will try to keep it up to date and also keep it as useful as possible.
 If you have any feedback for directory structure go to [github](https://github.com/mdyd-dev/directory-structure) and create an issue.
+
+### Graphql Browser
+
+```
+marketplace-kit gui serve staging
+```
+
+open http://localhost:3333/gui/graphql in your web browser and enjoy building grapqhl queries.
