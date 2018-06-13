@@ -90,10 +90,20 @@ It will download directory structure from official repository and extract it in 
 We will try to keep it up to date and also keep it as useful as possible.
 If you have any feedback for directory structure go to [github](https://github.com/mdyd-dev/directory-structure) and create an issue.
 
-### Graphql Browser
+### Graphical interface
+
+To start http server locally that will serve GUI use:
 
 ```
 marketplace-kit gui serve staging
 ```
 
-open http://localhost:3333/gui/graphql in your web browser and enjoy building grapqhl queries.
+#### GraphQL Browser
+
+To explore your instance database using graphql open `[http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql)` in your web browser.
+
+In the right sidebar there is a schema documentation should you need it.
+
+#### Resources editor
+
+To list, edit and create resources open `[http://localhost:3333/gui/](http://localhost:3333/gui/)` in your web browser.
