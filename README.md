@@ -98,11 +98,7 @@ To start http server locally that will serve GUI use:
 marketplace-kit gui serve <environment>
 ```
 
-Example for `staging`:
-
-```
-marketplace-kit gui serve staging
-```
+Example: `marketplace-kit gui serve staging`
 
 #### GraphQL Browser
 
