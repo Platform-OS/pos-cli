@@ -95,6 +95,12 @@ If you have any feedback for directory structure go to [github](https://github.c
 To start http server locally that will serve GUI use:
 
 ```
+marketplace-kit gui serve <environment>
+```
+
+Example for `staging`:
+
+```
 marketplace-kit gui serve staging
 ```
 
