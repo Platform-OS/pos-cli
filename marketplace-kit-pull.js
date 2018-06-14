@@ -29,7 +29,7 @@ program
         const files = response.data.items.results;
 
         [...files].forEach(file => {
-          console.log(file);
+          logger.Info(`File: ${file}`);
           let type = types.find(t => t.name == file.type);
 
           const source = new Liquid(file, type);

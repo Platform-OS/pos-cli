@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
+const fs = require('fs'),
+  express = require('express'),
+  bodyParser = require('body-parser'),
+  multer = require('multer'),
+  upload = multer(),
+  Gateway = require('./lib/proxy'),
+  logger = require('./lib/kit').logger;
+
 const port = process.env.PORT || 3333;
-const fs = require('fs');
-
-const express = require('express');
-const bodyParser = require('body-parser');
-const multer = require('multer');
-const upload = multer();
-const Gateway = require('./lib/proxy');
-
 const app = express();
 
 const gateway = new Gateway({
@@ -22,45 +22,34 @@ app.use('/gui/editor', express.static(__dirname + '/gui/editor/public'));
 app.use('/gui/graphql', express.static(__dirname + '/gui/graphql/public'));
 
 // GRAPHQL
-app.post('/api/graph', (request, response) => {
-  gateway.graph(request.body.query)
-    .then(
-      body => response.send(body),
-      error => response.status(401).send(error.statusText)
-    );
+app.post('/api/graph', (req, res) => {
+  gateway.graph(req.body.query).then(body => res.send(body), err => res.status(401).send(err.statusText));
 });
 
-app.post('/graphql', (request, response) => {
-    gateway.graph(request.body.query)
-        .then(
-            body => response.send(body),
-            error => response.status(401).send(error.statusText)
-        );
+app.post('/graphql', (req, res) => {
+  gateway.graph(req.body.query).then(body => res.send(body), err => res.status(401).send(err.statusText));
 });
 
 // SYNC
 app.put(
   '/api/marketplace_builder/marketplace_releases/sync',
   upload.fields([{ name: 'path' }, { name: 'marketplace_builder_file_body' }]),
-  (request, response) => {
+  (req, res) => {
     const form = {
-      path: request.body.path,
-      marketplace_builder_file_body: request.files.marketplace_builder_file_body[0].buffer
+      path: req.body.path,
+      marketplace_builder_file_body: req.files.marketplace_builder_file_body[0].buffer
     };
 
-    gateway.sync(form).then(
-      body => response.send(body),
-      error => response.send(error)
-    );
+    gateway.sync(form).then(body => res.send(body), error => res.send(error));
   }
 );
 
 app.listen(port, err => {
   if (err) {
-    return console.log('something wrong happened', err);
+    return logger.Error('Something wrong happened when trying to run Express server', err);
   }
 
-  console.log(`Server is listening on ${port}`);
-  console.log('Content Editor:', `http://localhost:${port}/gui/editor`);
-  console.log('Graphql IDE:', `http://localhost:${port}/gui/graphql`);
+  logger.Info(`Server is listening on ${port}`);
+  logger.Success('Resources Editor:', `http://localhost:${port}/gui/editor`);
+  logger.Success('GraphQL Browser:', `http://localhost:${port}/gui/graphql`);
 });

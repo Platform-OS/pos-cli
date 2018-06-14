@@ -95,7 +95,9 @@ program
           if (tokens[0].token) {
             storeEnvironment(Object.assign(settings, { token: tokens[0].token }));
             logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
-          } else logger.Error({ error: 'Response from server invalid, token is missing' });
+          } else {
+            logger.Error({ error: 'Response from server invalid, token is missing' });
+          }
         },
         error => {
           logger.Error(error);

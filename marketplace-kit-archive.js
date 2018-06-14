@@ -27,20 +27,18 @@ const makeArchive = (path, directory) => {
 
   // listen for all archive data to be written
   // 'close' event is fired only when a file descriptor is involved
-  output.on('close', function() {
+  output.on('close', () => {
     const sizeInMB = archive.pointer() / 1024 / 1024;
     logger.Info(`Archive size: ${sizeInMB.toFixed(2)} MB`);
   });
 
-  archive.on('warning', function(err) {
+  archive.on('warning', err => {
     if (err.code === 'ENOENT') {
       logger.Error(err);
-    } else {
-      throw err;
-    }
+    } else throw err;
   });
 
-  archive.on('error', function(err) {
+  archive.on('error', err => {
     throw err;
   });
 

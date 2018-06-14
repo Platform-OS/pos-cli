@@ -23,7 +23,7 @@ class LogStream extends EventEmitter {
   }
 
   fetchData() {
-    this.gateway.logs({lastId: storage.lastId}).then(
+    this.gateway.logs({ lastId: storage.lastId }).then(
       ({ logs }) => {
         for (let k in logs) {
           let row = logs[k];
@@ -54,6 +54,8 @@ const storage = {
   }
 };
 
+const isError = msg => msg.error_type.match(/error/gi);
+
 program
   .arguments('<environment>', 'name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
@@ -70,14 +72,13 @@ program
 
       const text = `${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
 
-      if (msg.error_type.match(/error/gi)) logger.Error(text);
-      else logger.Info(text);
+      isError(msg) ? logger.Error(text) : logger.Info(text);
     });
 
     stream.on('message', msg => {
       if (!msg.message) return false;
 
-      if (msg.error_type.match(/error/gi)) notifier.notify({ title: msg.error_type, message: msg.message });
+      if (isError(msg)) notifier.notify({ title: msg.error_type, message: msg.message });
     });
 
     stream.start();
