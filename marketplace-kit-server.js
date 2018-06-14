@@ -62,5 +62,5 @@ app.listen(port, err => {
 
   console.log(`Server is listening on ${port}`);
   console.log('Content Editor:', `http://localhost:${port}/gui/editor`);
-  console.log('Graphql Browser:', `http://localhost:${port}/gui/graphql`);
+  console.log('Graphql IDE:', `http://localhost:${port}/gui/graphql`);
 });

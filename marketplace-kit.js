@@ -20,7 +20,7 @@ program
   .command('sync <environment>', 'update environment on file change')
   .command('logs <environment>', 'attach to environment log streams')
   .command('init', 'initialize required directory structure')
-  .command('gui', 'open gui')
+  .command('gui', 'gui for content editor, graphql')
   .command('install', 'install module')
   .parse(process.argv);
 
