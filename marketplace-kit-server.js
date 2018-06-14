@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 
+const fs = require('fs'),
+  express = require('express'),
+  bodyParser = require('body-parser'),
+  multer = require('multer'),
+  upload = multer(),
+  Gateway = require('./lib/proxy'),
+  logger = require('./lib/kit').logger;
+
 const port = process.env.PORT || 3333;
-const fs = require('fs');
-
-const express = require('express');
-const bodyParser = require('body-parser');
-const multer = require('multer');
-const upload = multer();
-const Gateway = require('./lib/proxy');
-const logger = require('./lib/kit').logger;
-
 const app = express();
 
 const gateway = new Gateway({
