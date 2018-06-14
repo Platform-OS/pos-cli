@@ -23,7 +23,7 @@ class LogStream extends EventEmitter {
   }
 
   fetchData() {
-    this.gateway.logs({lastId: storage.lastId}).then(
+    this.gateway.logs({ lastId: storage.lastId }).then(
       ({ logs }) => {
         for (let k in logs) {
           let row = logs[k];
@@ -70,14 +70,19 @@ program
 
       const text = `${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
 
-      if (msg.error_type.match(/error/gi)) logger.Error(text);
-      else logger.Info(text);
+      if (msg.error_type.match(/error/gi)) {
+        logger.Error(text);
+      } else {
+        logger.Info(text);
+      }
     });
 
     stream.on('message', msg => {
       if (!msg.message) return false;
 
-      if (msg.error_type.match(/error/gi)) notifier.notify({ title: msg.error_type, message: msg.message });
+      if (msg.error_type.match(/error/gi)) {
+        notifier.notify({ title: msg.error_type, message: msg.message });
+      }
     });
 
     stream.start();

@@ -9,8 +9,7 @@ const program = require('commander'),
 
 const errors = require('./lib/errors');
 
-
-const getDeploymentStatus = (id) => {
+const getDeploymentStatus = id => {
   return new Promise((resolve, reject) => {
     (getStatus = () => {
       gateway.getStatus(id).then(
@@ -18,10 +17,11 @@ const getDeploymentStatus = (id) => {
           if (response.status === 'ready_for_import') {
             logger.Print('.');
             setTimeout(getStatus, 1500);
-          } else if (response.status === 'error')
+          } else if (response.status === 'error') {
             reject(response);
-          else
+          } else {
             resolve(response);
+          }
         },
         error => reject(error)
       );
@@ -56,26 +56,24 @@ const formData = {
 logger.Debug('FormData:');
 logger.Debug(formData);
 
-gateway
-  .push(formData)
-  .then(
-    body => {
-      const responseBody = JSON.parse(body);
+gateway.push(formData).then(
+  body => {
+    const responseBody = JSON.parse(body);
 
-      getDeploymentStatus(responseBody.id).then(
-        response => {
-          logger.Print('\n');
-          logger.Success('DONE')
-        },
-        error => {
-          logger.Print('\n');
-          logger.Error(error.error);
-        }
-      )
-    },
-    error => {
-      logger.Error(error);
-      errors.describe(error, logger.Error);
-      process.exit(1);
-    }
-  );
+    getDeploymentStatus(responseBody.id).then(
+      response => {
+        logger.Print('\n');
+        logger.Success('DONE');
+      },
+      error => {
+        logger.Print('\n');
+        logger.Error(error.error);
+      }
+    );
+  },
+  error => {
+    logger.Error(error);
+    errors.describe(error, logger.Error);
+    process.exit(1);
+  }
+);

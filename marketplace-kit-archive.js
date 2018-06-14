@@ -35,9 +35,7 @@ const makeArchive = (path, directory) => {
   archive.on('warning', function(err) {
     if (err.code === 'ENOENT') {
       logger.Error(err);
-    } else {
-      throw err;
-    }
+    } else throw err;
   });
 
   archive.on('error', function(err) {

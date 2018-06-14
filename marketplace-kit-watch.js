@@ -29,21 +29,22 @@ const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('mark
 CONCURRENCY = 5;
 const Queue = require('async/queue');
 
-const queue = Queue( (task, callback) => {
+const queue = Queue((task, callback) => {
   pushFile(task.path).then(callback, callback);
 }, CONCURRENCY);
 
-const enqueue = (filePath) => {
-  queue.push({path: filePath}, () => { true });
-}
+const enqueue = filePath => {
+  queue.push({ path: filePath }, () => {
+    true;
+  });
+};
 
-const pushFile = (filePath) => {
+const pushFile = filePath => {
   return new Promise((resolve, reject) => {
-
     const formData = {
       path: filePathUnixified(filePath), // need path with / separators
       marketplace_builder_file_body: fs.createReadStream(filePath)
-    }
+    };
 
     gateway.sync(formData).then(
       body => {
@@ -53,7 +54,7 @@ const pushFile = (filePath) => {
       },
       error => {
         notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error });
-        logger.Error(` - ${error}`);
+        logger.Error(`[Sync] ${filePath} - ${error}`);
         resolve('error but OK');
       }
     );
