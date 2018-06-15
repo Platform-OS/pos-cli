@@ -50,6 +50,6 @@ app.listen(port, err => {
   }
 
   logger.Info(`Server is listening on ${port}`);
-  logger.Success('Resources Editor:', `http://localhost:${port}/gui/editor`);
-  logger.Success('GraphQL Browser:', `http://localhost:${port}/gui/graphql`);
+  logger.Success(`Resources Editor: http://localhost:${port}/gui/editor`);
+  logger.Success(`GraphQL Browser: http://localhost:${port}/gui/graphql`);
 });
