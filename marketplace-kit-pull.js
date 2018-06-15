@@ -3,7 +3,6 @@
 const program = require('commander'),
   request = require('request'),
   fs = require('fs'),
-  notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
   fetchAuthData = require('./lib/settings').fetchSettings,
   yaml = require('js-yaml'),
