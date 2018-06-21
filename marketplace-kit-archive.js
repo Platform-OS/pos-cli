@@ -4,12 +4,9 @@ const program = require('commander'),
   fs = require('fs'),
   shell = require('shelljs'),
   archiver = require('archiver'),
-  filter = require('filter-files'),
   logger = require('./lib/kit').logger,
   validate = require('./lib/validators'),
   version = require('./package.json').version;
-
-const excludeExtensions = /^[^.]+$|\.(?!(ts|flow|coffee)$)([^.]+$)/;
 
 const checkDirectory = directoryPath => {
   validate.directoryExists({ path: directoryPath, message: "marketplace_builder directory doesn't exist - cannot archive it" });
@@ -21,8 +18,6 @@ const checkDirectory = directoryPath => {
 
 const makeArchive = (path, directory) => {
   checkDirectory(directory);
-
-  const files = filter.sync('marketplace_builder/assets', fp => excludeExtensions.test(fp));
 
   shell.mkdir('-p', 'tmp');
   shell.rm('-rf', path);
