@@ -23,11 +23,11 @@ app.use('/gui/graphql', express.static(__dirname + '/gui/graphql/public'));
 
 // GRAPHQL
 app.post('/api/graph', (req, res) => {
-  gateway.graph(req.body.query).then(body => res.send(body), err => res.status(401).send(err.statusText));
+  gateway.graph(req.body).then(body => res.send(body), err => res.status(401).send(err.statusText));
 });
 
 app.post('/graphql', (req, res) => {
-  gateway.graph(req.body.query).then(body => res.send(body), err => res.status(401).send(err.statusText));
+  gateway.graph(req.body).then(body => res.send(body), err => res.status(401).send(err.statusText));
 });
 
 // SYNC
