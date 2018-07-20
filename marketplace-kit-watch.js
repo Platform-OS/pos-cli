@@ -25,7 +25,7 @@ const filename = filePath => filePath.split(path.sep).pop();
 const fileUpdated = event => event === 'update';
 const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
 
-CONCURRENCY = 5;
+CONCURRENCY = 3;
 const Queue = require('async/queue');
 
 const queue = Queue((task, callback) => {
