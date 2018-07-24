@@ -69,9 +69,10 @@ program
     stream.on('message', msg => {
       if (!msg.message) return false;
 
-      const text = `${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
+      const options = { hideTimestamp: true };
+      const text = `[${msg.created_at.replace('T', ' ') }] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
 
-      isError(msg) ? logger.Error(text) : logger.Info(text);
+      isError(msg) ? logger.Error(text, options) : logger.Info(text, options);
     });
 
     stream.start();
