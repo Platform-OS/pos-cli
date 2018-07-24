@@ -2,3 +2,4 @@ node_modules
 .marketplace-kit
 .DS_Store
 *.log
+*.swp
