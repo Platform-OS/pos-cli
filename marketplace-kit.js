@@ -19,6 +19,7 @@ program
   .command('env', 'manage environments')
   .command('sync <environment>', 'update environment on file change')
   .command('logs <environment>', 'attach to environment log streams')
+  .command('migrations', 'generate or run a migration')
   .command('init', 'initialize required directory structure')
   .command('gui', 'gui for content editor, graphql')
   .command('install', 'install module')
