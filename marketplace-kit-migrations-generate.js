@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-      Gateway = require('./lib/proxy'),
-      fs = require('fs'),
-      logger = require('./lib/kit').logger,
-      fetchAuthData = require('./lib/settings').fetchSettings,
-      version = require('./package.json').version;
+  Gateway = require('./lib/proxy'),
+  fs = require('fs'),
+  logger = require('./lib/kit').logger,
+  fetchAuthData = require('./lib/settings').fetchSettings,
+  version = require('./package.json').version;
 
 program
   .version(version)
@@ -21,16 +21,16 @@ program
 
     gateway.generateMigration(formData).then(
       body => {
-        logger.Success('[GenerateMigration] generated ${body["name"]}');
-        path = `${migrationsDir}/${body["name"]}.liquid`;
-
+        logger.Success(`[Migration - Generate] Done. ${body['name']} created`);
+        path = `${migrationsDir}/${body['name']}.liquid`;
         if (!fs.existsSync(migrationsDir)) {
           fs.mkdirSync(migrationsDir);
         }
-        fs.writeFileSync(path, body["body"], logger.Error);
+        fs.writeFileSync(path, body['body'], logger.Error);
+        logger.Success(`[Migration - Generate] Wrote an empty migration file to ${path}`);
       },
       error => {
-        logger.Error(`[GenerateMigration] ${error}`);
+        logger.Error(`[Migration - Generate] Error ${error.message}`);
       }
     );
   });
