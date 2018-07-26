@@ -3,6 +3,7 @@
 const program = require('commander'),
   EventEmitter = require('events'),
   fetchAuthData = require('./lib/settings').fetchSettings,
+  notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
   Gateway = require('./lib/proxy'),
   validate = require('./lib/validators'),
@@ -73,6 +74,12 @@ program
       const text = `[${msg.created_at.replace('T', ' ') }] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
 
       isError(msg) ? logger.Error(text, options) : logger.Info(text, options);
+    });
+
+    stream.on('message', msg => {
+      if (!msg.message) return false;
+
+      if (isError(msg)) notifier.notify({ title: msg.error_type, message: msg.message });
     });
 
     stream.start();
