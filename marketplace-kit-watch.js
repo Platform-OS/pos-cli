@@ -6,6 +6,7 @@ const program = require('commander'),
   path = require('path'),
   shell = require('shelljs'),
   watch = require('node-watch'),
+  notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
   validate = require('./lib/validators'),
   platformRequestHeaders = require('./lib/platformRequestHeaders'),
@@ -52,6 +53,7 @@ const pushFile = filePath => {
         resolve('OK');
       },
       error => {
+        notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error });
         logger.Error(`[Sync] ${filePath} - ${error}`);
         resolve('error but OK');
       }
