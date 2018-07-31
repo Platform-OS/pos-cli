@@ -1,5 +1,4 @@
 const request = require('axios');
-const storage = require('./storage.js');
 
 ROUTING = {
   sync: '/api/marketplace_builder/marketplace_releases/sync',

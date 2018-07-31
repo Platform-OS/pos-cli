@@ -54,7 +54,7 @@ saveButton.onclick = event => {
 
 const reloadItemTypesData = () => {
   return new Promise((resolve, reject) => {
-    gateway.getItemTypes().then( response => {
+    gateway.getItemTypes().then(response => {
       storage.itemTypes = [];
       storage.itemTypes = [...response.data.data.itemTypes.results]
         .filter(t => t.name != 'Asset')
@@ -202,12 +202,6 @@ window.addEventListener('search-query-updated', () => {
   storage.menu.search.itemTypes.forEach(type => loadItemsData({ detail: type }));
 });
 
-// window.addEventListener('item-type-selected', (e) => {
-//   const list = document.getElementById('item-type-list');
-//   list.value = e.detail;
-//   window.scrollTo(0,0);
-// });
-
 const renderEditor = () => {
   if (storage.editor.item.data) {
     editor.createForm(
@@ -220,14 +214,14 @@ const renderEditor = () => {
 };
 
 const render = () => {
-  reloadItemTypesData().then( ()=>{
+  reloadItemTypesData().then(() => {
     loadItemsData({ detail: 'EmailNotification' });
     loadItemsData({ detail: 'SmsNotification' });
     loadItemsData({ detail: 'ApiCallNotification' });
     loadItemsData({ detail: 'AuthorizationPolicy' });
     loadItemsData({ detail: 'FormConfiguration' });
     loadItemsData({ detail: 'TransactableType' });
-  } )
+  });
 };
 
 render();

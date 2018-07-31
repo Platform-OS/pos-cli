@@ -6,8 +6,7 @@ const program = require('commander'),
   notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
   Gateway = require('./lib/proxy'),
-  validate = require('./lib/validators'),
-  fs = require('fs');
+  validate = require('./lib/validators');
 
 class LogStream extends EventEmitter {
   constructor(authData) {
@@ -71,7 +70,7 @@ program
       if (!msg.message) return false;
 
       const options = { hideTimestamp: true };
-      const text = `[${msg.created_at.replace('T', ' ') }] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
+      const text = `[${msg.created_at.replace('T', ' ')}] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
 
       isError(msg) ? logger.Error(text, options) : logger.Info(text, options);
     });

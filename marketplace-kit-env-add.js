@@ -3,8 +3,6 @@
 const program = require('commander'),
   fs = require('fs'),
   rl = require('readline'),
-  request = require('request'),
-  Gateway = require('./lib/proxy'),
   logger = require('./lib/kit').logger,
   validate = require('./lib/validators'),
   version = require('./package.json').version,

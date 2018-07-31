@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  request = require('request'),
   fs = require('fs'),
   logger = require('./lib/kit').logger,
   fetchAuthData = require('./lib/settings').fetchSettings,

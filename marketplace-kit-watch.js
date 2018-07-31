@@ -4,12 +4,10 @@ const program = require('commander'),
   Gateway = require('./lib/proxy'),
   fs = require('fs'),
   path = require('path'),
-  shell = require('shelljs'),
   watch = require('node-watch'),
   notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
   validate = require('./lib/validators'),
-  platformRequestHeaders = require('./lib/platformRequestHeaders'),
   watchFilesExtensions = require('./lib/watch-files-extensions'),
   version = require('./package.json').version;
 

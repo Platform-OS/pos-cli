@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  fetchAuthData = require('./lib/settings').fetchSettings,
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
   logger = require('./lib/kit').logger,
@@ -12,15 +11,8 @@ program
   .arguments('<environment>', 'name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .option('-p --port <port>', 'use PORT', '3333')
-  .action((environment, params) => {
+  .action((env, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
-    const authData = fetchAuthData(environment);
-    const env = Object.assign(process.env, {
-      MARKETPLACE_TOKEN: authData.token,
-      MARKETPLACE_URL: authData.url,
-      MARKETPLACE_EMAIL: authData.email,
-      PORT: params.port
-    });
 
     const server = spawn(command('marketplace-kit-server'), [], { stdio: 'inherit' });
 
