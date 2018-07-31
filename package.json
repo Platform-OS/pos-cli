@@ -15,21 +15,22 @@
     "pOS"
   ],
   "dependencies": {
-    "email-validator": "^2.0.3",
-    "semver": "^5.5.0",
-    "valid-url": "^1.0.9",
     "archiver": "^2.1.1",
     "axios": "^0.18.0",
     "chalk": "^2.4.1",
     "commander": "^2.16.0",
+    "email-validator": "^2.0.3",
+    "express": "^4.16.3",
     "extract-zip": "^1.6.7",
     "js-yaml": "^3.12.0",
     "multer": "^1.3.1",
     "node-notifier": "^5.2.1",
     "node-watch": "^0.5.8",
     "request": "^2.85.0",
+    "semver": "^5.5.0",
     "shelljs": "^0.8.1",
-    "update-notifier": "^2.5.0"
+    "update-notifier": "^2.5.0",
+    "valid-url": "^1.0.9"
   },
   "preferGlobal": true,
   "bin": {
@@ -53,9 +54,5 @@
   "bugs": {
     "url": "https://github.com/mdyd-dev/marketplace-kit/issues"
   },
-  "homepage": "https://github.com/mdyd-dev/marketplace-kit#readme",
-  "devDependencies": {
-    "webpack": "^4.6.0",
-    "webpack-cli": "^2.0.14"
-  }
+  "homepage": "https://github.com/mdyd-dev/marketplace-kit#readme"
 }
