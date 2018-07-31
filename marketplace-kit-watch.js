@@ -12,8 +12,6 @@ const program = require('commander'),
   watchFilesExtensions = require('./lib/watch-files-extensions'),
   version = require('./package.json').version;
 
-const messages = require('./lib/errors');
-
 const shouldBeSynced = (filePath, event) => {
   return fileUpdated(event) && extensionAllowed(ext(filePath)) && !isHiddenFile(filename(filePath));
 };
@@ -47,7 +45,9 @@ const pushFile = filePath => {
 
     gateway.sync(formData).then(
       body => {
-        messages.describe(filePath, logger.Warn);
+        if (body['refresh_index'])
+          logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
+
         logger.Success(`[Sync] ${filePath} - done`);
         resolve('OK');
       },
