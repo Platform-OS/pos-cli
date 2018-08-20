@@ -6,7 +6,32 @@ const program = require('commander'),
   command = require('./lib/command'),
   logger = require('./lib/kit').logger,
   validate = require('./lib/validators'),
+  deployServiceClient = require('./lib/deployServiceClient'),
   version = require('./package.json').version;
+
+const uploadArchive = (env, usingDeploymentService) => {
+  const options = usingDeploymentService ? ['--without-assets'] : [];
+  const archive = spawn(command('marketplace-kit-archive'), options, {
+    stdio: 'inherit'
+  });
+
+  archive.on('close', code => {
+    if (code === 1) {
+      logger.Error('Deploy failed.');
+      process.exit(1);
+    }
+    const push = spawn(command('marketplace-kit-push'), [], {
+      stdio: 'inherit',
+      env: env
+    });
+    push.on('close', code => {
+      if (code === 1) {
+        logger.Error('Deploy failed.');
+        process.exit(1);
+      }
+    });
+  });
+};
 
 program
   .version(version)
@@ -26,31 +51,27 @@ program
       MARKETPLACE_ENV: environment
     });
 
-    // make an archive
-    const archive = spawn(command('marketplace-kit-archive'), [], { stdio: 'inherit' });
-
-    archive.on('error', err => {
-      logger.Error('Deploy failed.');
-      logger.Error(err);
-      process.exit(1);
-    });
-
-    archive.on('close', code => {
-      if (code === 1) {
-        logger.Error('Deploy failed.');
-        process.exit(1);
-      }
-
-      const push = spawn(command('marketplace-kit-push'), [], { stdio: 'inherit', env: env });
-      push.on('close', code => {
-        if (code === 1) {
-          logger.Error('Deploy failed.');
-          process.exit(1);
+    if (process.env.DEPLOY_SERVICE_URL) {
+      deployServiceClient.deployAssets().then(
+        () => {
+          logger.Success('Assets deployed to S3. Uploading manifest.');
+          uploadArchive(env, true);
+        },
+        err => {
+          logger.Error(err);
+          logger.Info('Communicationg problem with deployment service, using classic deployment path');
+          uploadArchive(env, false);
         }
-      });
-    });
+      );
+    } else {
+      uploadArchive(env, false);
+    }
   });
 
 program.parse(process.argv);
 
-validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: program.help.bind(program) });
+validate.existence({
+  argumentValue: program.args[0],
+  argumentName: 'environment',
+  fail: program.help.bind(program)
+});
