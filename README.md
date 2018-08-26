@@ -14,11 +14,11 @@ marketplace-kit requires nodejs >= v8 to work properly. [Read more on how to ins
 
 If your node is installed for all users you might need to use `sudo` to install npm packages globally:
 
-    sudo npm i -g @platform-os/marketplace-kit
+    sudo npm install -g @platform-os/marketplace-kit
 
 If you are using nvm or node installed on your account, you can omit that:
 
-    npm i -g @platform-os/marketplace-kit
+    npm install -g @platform-os/marketplace-kit
 
 ## Usage
 
@@ -33,7 +33,7 @@ To add your environment to a config file, run the `env add` command, and authent
 marketplace-kit env add <environment> --email <your email> --url <your marketplace url>
 ```
 
-Example: marketplace-kit env add staging --email myemail@example.com --url https://example.com
+Example: `marketplace-kit env add staging --email myemail@example.com --url https://example.com`
 
 Configuration for environments lays down in `.marketplace-kit` file.
 
@@ -66,8 +66,6 @@ marketplace-kit deploy <environment> -f
 ```
 
 Example: `marketplace-kit deploy staging -f`
-
-In the next section we will describe the file structure.
 
 ### Listing environments
 
