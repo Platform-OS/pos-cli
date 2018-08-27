@@ -1,5 +1,7 @@
 ## Overview
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/mdyd-dev/marketplace-kit.svg)](https://greenkeeper.io/)
+
 [Marketplace Kit](https://github.com/mdyd-dev/marketplace-kit) is command line tool, which was developed to allow you to easily deploy your configuration files and assets to the Platform OS. It expects you to follow a certain file structure in order to correctly communicate with the Platform OS API. You do not have to use it, however it is highly recommended that you do. It is a CLI tool, hence you are expected to have basic knowledge in working with Terminal.
 
 If you have any feature requests, feedback or problems please head over to the [issues page](https://github.com/mdyd-dev/marketplace-kit/issues) and let us know.
