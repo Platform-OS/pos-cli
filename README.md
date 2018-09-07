@@ -27,7 +27,7 @@ If you are using nvm or node installed on your account, you can omit that:
 ### Adding environments and authenticating
 
 Authentication is done with your **Partner Portal** account credentials.
-See this [guide](https://github.com/mdyd-dev/nearme-documentation/blob/master/_PlatformOS/getting-started/setup/accessing-partner-portal.md) if you don't have Partner Portal account yet.
+See this [guide](https://documentation.platform-os.com/get-started/partner-portal/inviting-new-user-to-partner-portal) if you don't have Partner Portal account yet.
 
 To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
 
