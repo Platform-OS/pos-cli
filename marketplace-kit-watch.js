@@ -80,12 +80,24 @@ const gateway = new Gateway(program);
 
 gateway.ping().then(
   () => {
-    if (!fs.existsSync('marketplace_builder')) {
-      logger.Error("marketplace_builder directory doesn't exist - cannot start watching it");
+    if (!fs.existsSync('marketplace_builder') && !fs.existsSync('public') && !fs.existsSync('private')) {
+      logger.Error("marketplace_builder, public or private directory has to exist!");
       process.exit(1);
     }
 
     watch('marketplace_builder', { recursive: true }, (event, file) => {
+      shouldBeSynced(file, event) && enqueue(file);
+    });
+
+    watch('public', { recursive: true }, (event, file) => {
+      shouldBeSynced(file, event) && enqueue(file);
+    });
+
+    watch('private', { recursive: true }, (event, file) => {
+      shouldBeSynced(file, event) && enqueue(file);
+    });
+
+    watch('modules', { recursive: true }, (event, file) => {
       shouldBeSynced(file, event) && enqueue(file);
     });
   },
