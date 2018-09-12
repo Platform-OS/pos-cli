@@ -68,6 +68,7 @@ gateway.push(formData).then(
       error => {
         logger.Print('\n');
         logger.Error(error.error);
+        process.exit(1);
       }
     );
   },
