@@ -32,6 +32,10 @@ const getDeploymentStatus = id => {
 const checkParams = params => {
   validate.existence({ argumentValue: params.token, argumentName: 'token', fail: program.help.bind(program) });
   validate.existence({ argumentValue: params.url, argumentName: 'url', fail: program.help.bind(program) });
+
+  if (params.url.slice(-1) != '/') {
+      params.url = params.url + '/';
+  }
 };
 
 program
