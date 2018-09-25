@@ -45,16 +45,13 @@ const makeArchive = (path, directory) => {
   // pipe archive data to the file
   archive.pipe(output);
 
-  // append files from a sub-directory, putting its contents at the root of archive
-  // This is the legacy option for marketplace_builder
-  archive.directory(directory, false);
-
-  // New folders at the top level
-  // - public # public files for the project
-  // - private # private files visble only by the creator/owner
-  // - modules # installed modules
+  // - marketplace_builder
+  archive.directory(directory, true);
+  // - public, public files for the project
   archive.directory('public', true);
+  // - private, private files visble only to the creator/owner
   archive.directory('private', true);
+  // - modules, installed modules
   archive.directory('modules', true);
 
   // finalize the archive (ie we are done appending files but streams have to finish yet)
@@ -68,5 +65,4 @@ program
   .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
   .parse(process.argv);
 
-//makeArchive(program.target, program.dir);
-makeArchive(program.target, ".");
+makeArchive(program.target, program.dir);
