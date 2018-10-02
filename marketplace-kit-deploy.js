@@ -29,6 +29,12 @@ program
     // make an archive
     const archive = spawn(command('marketplace-kit-archive'), [], { stdio: 'inherit' });
 
+    archive.on('error', err => {
+      logger.Error('Deploy failed.');
+      logger.Error(err);
+      process.exit(1);
+    });
+
     archive.on('close', code => {
       if (code === 1) {
         logger.Error('Deploy failed.');
