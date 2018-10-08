@@ -17,14 +17,10 @@ const checkDirectory = directoryPath => {
 };
 
 const makeArchive = (path, directory) => {
-  //checkDirectory(directory);
-
   logger.Info(path);
 
   shell.mkdir('-p', 'tmp');
   shell.rm('-rf', path);
-
-
 
   const output = fs.createWriteStream(path);
   const archive = archiver('zip', { zlib: { level: 6 } });

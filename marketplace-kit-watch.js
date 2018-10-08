@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-      Gateway = require('./lib/proxy'),
-      fs = require('fs'),
-      path = require('path'),
-      watch = require('node-watch'),
-      notifier = require('node-notifier'),
-      logger = require('./lib/kit').logger,
-      validate = require('./lib/validators'),
-      watchFilesExtensions = require('./lib/watch-files-extensions'),
-      version = require('./package.json').version;
+  Gateway = require('./lib/proxy'),
+  fs = require('fs'),
+  path = require('path'),
+  watch = require('node-watch'),
+  notifier = require('node-notifier'),
+  logger = require('./lib/kit').logger,
+  validate = require('./lib/validators'),
+  watchFilesExtensions = require('./lib/watch-files-extensions'),
+  version = require('./package.json').version;
 
 const shouldBeSynced = (filePath, event) => {
   return fileUpdated(event) && extensionAllowed(ext(filePath)) && !isHiddenFile(filename(filePath));
@@ -64,6 +64,14 @@ const checkParams = params => {
   validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: program.help.bind(program) });
 };
 
+const watchDirectory = name => {
+  if (fs.existsSync(name)) {
+    watch(name, { recursive: true }, (event, file) => {
+      shouldBeSynced(file, event) && enqueue(file);
+    });
+  }
+};
+
 program
   .version(version)
   .option('--email <email>', 'authentication token', process.env.MARKETPLACE_EMAIL)
@@ -85,29 +93,10 @@ gateway.ping().then(
       process.exit(1);
     }
 
-    if (fs.existsSync('marketplace_builder')) {
-      watch('marketplace_builder', { recursive: true }, (event, file) => {
-        shouldBeSynced(file, event) && enqueue(file);
-      });
-    }
-
-    if (fs.existsSync('public')) {
-      watch('public', { recursive: true }, (event, file) => {
-        shouldBeSynced(file, event) && enqueue(file);
-      });
-    }
-
-    if (fs.existsSync('private')) {
-      watch('private', { recursive: true }, (event, file) => {
-        shouldBeSynced(file, event) && enqueue(file);
-      });
-    }
-
-    if (fs.existsSync('modules')) {
-      watch('modules', { recursive: true }, (event, file) => {
-        shouldBeSynced(file, event) && enqueue(file);
-      });
-    }
+    watchDirectory('marketplace_builder');
+    watchDirectory('public');
+    watchDirectory('private');
+    watchDirectory('modules');
   },
   error => {
     logger.Error(error);
