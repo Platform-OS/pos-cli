@@ -23,7 +23,7 @@ program
     const p = spawn(command('marketplace-kit-watch'), [], { stdio: 'inherit', env: env });
 
     p.on('close', code => {
-      if (code === 1) logger.Error('Sync failed.');
+      if (code === 1) logger.Error('Sync failed.', { exit: false });
     });
 
     p.on('error', logger.Error);

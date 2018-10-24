@@ -5,26 +5,22 @@ const program = require('commander'),
   Gateway = require('./lib/proxy'),
   fs = require('fs'),
   logger = require('./lib/kit').logger,
+  errors = require('./lib/errors'),
   version = require('./package.json').version;
-
-const errors = require('./lib/errors');
 
 const getDeploymentStatus = id => {
   return new Promise((resolve, reject) => {
     (getStatus = () => {
-      gateway.getStatus(id).then(
-        response => {
-          if (response.status === 'ready_for_import') {
-            logger.Print('.');
-            setTimeout(getStatus, 1500);
-          } else if (response.status === 'error') {
-            reject(response);
-          } else {
-            resolve(response);
-          }
-        },
-        error => reject(error)
-      );
+      gateway.getStatus(id).then(response => {
+        if (response.status === 'ready_for_import') {
+          logger.Print('.');
+          setTimeout(getStatus, 1500);
+        } else if (response.status === 'error') {
+          reject(response);
+        } else {
+          resolve(response);
+        }
+      }, reject);
     })();
   });
 };
@@ -34,7 +30,7 @@ const checkParams = params => {
   validate.existence({ argumentValue: params.url, argumentName: 'url', fail: program.help.bind(program) });
 
   if (params.url.slice(-1) != '/') {
-      params.url = params.url + '/';
+    params.url = params.url + '/';
   }
 };
 
@@ -73,13 +69,11 @@ gateway.push(formData).then(
       error => {
         logger.Print('\n');
         logger.Error(error.error);
-        process.exit(1);
       }
     );
   },
   error => {
-    logger.Error(error);
     errors.describe(error, logger.Error);
-    process.exit(1);
+    logger.Error(error);
   }
 );

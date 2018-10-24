@@ -23,6 +23,7 @@ const fileUpdated = event => event === 'update';
 const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
 
 CONCURRENCY = 3;
+
 const Queue = require('async/queue');
 
 const queue = Queue((task, callback) => {
@@ -30,30 +31,37 @@ const queue = Queue((task, callback) => {
 }, CONCURRENCY);
 
 const enqueue = filePath => {
-  queue.push({ path: filePath }, () => {
-    true;
-  });
+  queue.push({ path: filePath }, () => {});
 };
 
 const pushFile = filePath => {
-  return new Promise((resolve, reject) => {
-    const formData = {
-      path: filePathUnixified(filePath), // need path with / separators
-      marketplace_builder_file_body: fs.createReadStream(filePath)
-    };
+  const formData = {
+    path: filePathUnixified(filePath), // need path with / separators
+    marketplace_builder_file_body: fs.createReadStream(filePath)
+  };
 
+  return new Promise((resolve, reject) => {
     gateway.sync(formData).then(
       body => {
-        if (body['refresh_index'])
+        if (body['refresh_index']) {
           logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
+        }
 
         logger.Success(`[Sync] ${filePath} - done`);
-        resolve('OK');
+        resolve();
       },
       error => {
         notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error });
-        logger.Error(`[Sync] ${filePath} - ${error}`);
-        resolve('error but OK');
+        try {
+          logger.Error(`[Sync] ${filePath} \n ${JSON.stringify(JSON.parse(error), null, 2)}`, { exit: false });
+        } catch (e) {
+          logger.Error(
+            `[Sync] ${filePath} \n Something went wrong on our side, please try again later. \n
+            If problem persist, please report an issue at https://www.platform-os.com/issue-report`,
+            { exit: false }
+          ); // Server returned error page in html
+        }
+        reject();
       }
     );
   });
@@ -82,24 +90,17 @@ program
 
 checkParams(program);
 
-logger.Info(`Enabling sync mode. Syncing to: [${program.url}] \n ---`);
-
 const gateway = new Gateway(program);
 
-gateway.ping().then(
-  () => {
-    if (!fs.existsSync('marketplace_builder') && !fs.existsSync('public') && !fs.existsSync('private')) {
-      logger.Error('marketplace_builder, public or private directory has to exist!');
-      process.exit(1);
-    }
-
-    watchDirectory('marketplace_builder');
-    watchDirectory('public');
-    watchDirectory('private');
-    watchDirectory('modules');
-  },
-  error => {
-    logger.Error(error);
-    process.exit(1);
+gateway.ping().then(() => {
+  if (!fs.existsSync('marketplace_builder') && !fs.existsSync('public') && !fs.existsSync('private')) {
+    logger.Error('marketplace_builder, public or private directory has to exist!');
   }
-);
+
+  logger.Info(`Enabling sync mode. Syncing to: [${program.url}] \n`);
+
+  watchDirectory('marketplace_builder');
+  watchDirectory('public');
+  watchDirectory('private');
+  watchDirectory('modules');
+}, logger.Error);

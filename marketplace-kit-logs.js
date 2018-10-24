@@ -18,26 +18,20 @@ class LogStream extends EventEmitter {
   start() {
     const t = this;
     setInterval(() => t.fetchData(), process.env.INTERVAL);
-    logger.Info('Live logging has started. \n ---');
+    logger.Info('Live logging has started. \n');
   }
 
   fetchData() {
-    this.gateway.logs({ lastId: storage.lastId }).then(
-      ({ logs }) => {
-        for (let k in logs) {
-          let row = logs[k];
+    this.gateway.logs({ lastId: storage.lastId }).then(({ logs }) => {
+      for (let k in logs) {
+        let row = logs[k];
 
-          if (!storage.exists(row.id)) {
-            storage.add(row);
-            this.emit('message', row);
-          }
+        if (!storage.exists(row.id)) {
+          storage.add(row);
+          this.emit('message', row);
         }
-      },
-      error => {
-        logger.Error(error);
-        process.exit(1);
       }
-    );
+    }, logger.Error);
   }
 }
 

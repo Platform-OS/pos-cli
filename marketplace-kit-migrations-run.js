@@ -15,7 +15,7 @@ program
     process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(environment);
     const gateway = new Gateway(authData);
-    const formData = { 'timestamp': timestamp };
+    const formData = { timestamp: timestamp };
 
     gateway.runMigration(formData).then(
       body => {
@@ -28,3 +28,5 @@ program
   });
 
 program.parse(process.argv);
+
+if (!program.args.length) program.help();

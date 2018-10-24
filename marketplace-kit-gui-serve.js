@@ -28,14 +28,10 @@ program
     server.on('close', code => {
       if (code === 1) {
         logger.Error('✖ failed.');
-        process.exit(1);
       }
     });
   });
 
 program.parse(process.argv);
 
-if (!program.args.length) {
-  program.help();
-  process.exit(1);
-}
+if (!program.args.length) program.help();
