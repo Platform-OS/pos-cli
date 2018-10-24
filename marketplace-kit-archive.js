@@ -17,8 +17,6 @@ const checkDirectory = directoryPath => {
 };
 
 const makeArchive = (path, directory) => {
-  logger.Info(path);
-
   shell.mkdir('-p', 'tmp');
   shell.rm('-rf', path);
 

@@ -77,7 +77,7 @@ program
   .option('--email <email>', 'authentication token', process.env.MARKETPLACE_EMAIL)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
   .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL)
-// .option('--files <files>', 'watch files', process.env.FILES || watchFilesExtensions)
+  // .option('--files <files>', 'watch files', process.env.FILES || watchFilesExtensions)
   .parse(process.argv);
 
 checkParams(program);
@@ -89,7 +89,7 @@ const gateway = new Gateway(program);
 gateway.ping().then(
   () => {
     if (!fs.existsSync('marketplace_builder') && !fs.existsSync('public') && !fs.existsSync('private')) {
-      logger.Error("marketplace_builder, public or private directory has to exist!");
+      logger.Error('marketplace_builder, public or private directory has to exist!');
       process.exit(1);
     }
 
