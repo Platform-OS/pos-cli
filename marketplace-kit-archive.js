@@ -17,8 +17,6 @@ const checkDirectory = directoryPath => {
 };
 
 const makeArchive = (path, directory) => {
-  checkDirectory(directory);
-
   shell.mkdir('-p', 'tmp');
   shell.rm('-rf', path);
 
@@ -45,8 +43,14 @@ const makeArchive = (path, directory) => {
   // pipe archive data to the file
   archive.pipe(output);
 
-  // append files from a sub-directory, putting its contents at the root of archive
-  archive.directory(directory, false);
+  // - marketplace_builder
+  archive.directory(directory, true);
+  // - public, public files for the project
+  archive.directory('public', true);
+  // - private, private files visble only to the creator/owner
+  archive.directory('private', true);
+  // - modules, installed modules
+  archive.directory('modules', true);
 
   // finalize the archive (ie we are done appending files but streams have to finish yet)
   // 'close', 'end' or 'finish' may be fired right after calling this method so register to them beforehand

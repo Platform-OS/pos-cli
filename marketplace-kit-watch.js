@@ -64,6 +64,14 @@ const checkParams = params => {
   validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: program.help.bind(program) });
 };
 
+const watchDirectory = name => {
+  if (fs.existsSync(name)) {
+    watch(name, { recursive: true }, (event, file) => {
+      shouldBeSynced(file, event) && enqueue(file);
+    });
+  }
+};
+
 program
   .version(version)
   .option('--email <email>', 'authentication token', process.env.MARKETPLACE_EMAIL)
@@ -80,14 +88,15 @@ const gateway = new Gateway(program);
 
 gateway.ping().then(
   () => {
-    if (!fs.existsSync('marketplace_builder')) {
-      logger.Error("marketplace_builder directory doesn't exist - cannot start watching it");
+    if (!fs.existsSync('marketplace_builder') && !fs.existsSync('public') && !fs.existsSync('private')) {
+      logger.Error('marketplace_builder, public or private directory has to exist!');
       process.exit(1);
     }
 
-    watch('marketplace_builder', { recursive: true }, (event, file) => {
-      shouldBeSynced(file, event) && enqueue(file);
-    });
+    watchDirectory('marketplace_builder');
+    watchDirectory('public');
+    watchDirectory('private');
+    watchDirectory('modules');
   },
   error => {
     logger.Error(error);
