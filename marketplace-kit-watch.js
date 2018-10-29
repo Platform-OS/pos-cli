@@ -6,24 +6,47 @@ const program = require('commander'),
   path = require('path'),
   watch = require('node-watch'),
   notifier = require('node-notifier'),
+  Queue = require('async/queue'),
   logger = require('./lib/kit').logger,
   validate = require('./lib/validators'),
   watchFilesExtensions = require('./lib/watch-files-extensions'),
   version = require('./package.json').version;
 
-const shouldBeSynced = (filePath, event) => {
-  return fileUpdated(event) && extensionAllowed(ext(filePath)) && !isHiddenFile(filename(filePath));
-};
-
-const isHiddenFile = filename => filename.startsWith('.');
-const ext = path => path.split('.').pop();
-const extensionAllowed = ext => watchFilesExtensions.includes(ext);
+const ext = filePath => filePath.split('.').pop();
 const filename = filePath => filePath.split(path.sep).pop();
-const fileUpdated = event => event === 'update';
 const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
 
+const shouldBeSynced = (filePath, event) => {
+  return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath);
+};
+
+const fileUpdated = event => event === 'update';
+
+const extensionAllowed = filePath => {
+  const allowed = watchFilesExtensions.includes(ext(filePath));
+  if (!allowed) {
+    logger.Info(`[Sync] Not syncing, not allowed file extension: ${filePath}`);
+  }
+  return allowed;
+};
+
+const isNotHidden = filePath => {
+  const isHidden = filename(filePath).startsWith('.');
+  if (isHidden) {
+    logger.Info(`[Sync] Not syncing hidden file: ${filePath}`);
+  }
+  return !isHidden;
+};
+
+const isNotEmptyYML = filePath => {
+  if (ext(filePath) === 'yml') {
+    logger.Info(`[Sync] Not syncing empty YML file: ${filePath}`);
+    return fs.readFileSync(filePath, 'utf8', (err, data) => data.length > 0);
+  }
+  return true;
+};
+
 CONCURRENCY = 3;
-const Queue = require('async/queue');
 
 const queue = Queue((task, callback) => {
   pushFile(task.path).then(callback, callback);
