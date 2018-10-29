@@ -45,7 +45,7 @@ const storeEnvironment = settings => {
       email: settings.email
     }
   };
-  saveFile(Object.assign(existingSettings(), environmentSettings));
+  saveFile(Object.assign({}, existingSettings(process.env.CONFIG_FILE_PATH), environmentSettings));
 };
 
 const saveFile = settings => {
@@ -54,12 +54,14 @@ const saveFile = settings => {
   });
 };
 
-const existingSettings = () => {
-  if (fs.existsSync(process.env.CONFIG_FILE_PATH)) {
-    return JSON.parse(fs.readFileSync(process.env.CONFIG_FILE_PATH));
-  } else {
-    return {};
-  }
+const existingSettings = configFilePath => {
+  let settings = {};
+
+  try {
+    settings = JSON.parse(fs.readFileSync(configFilePath));
+  } catch (e) {}
+
+  return settings;
 };
 
 PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com';
