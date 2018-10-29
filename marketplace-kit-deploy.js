@@ -1,32 +1,32 @@
 #!/usr/bin/env node
 
-const program = require("commander"),
-      fetchAuthData = require("./lib/settings").fetchSettings,
-      spawn = require("child_process").spawn,
-      command = require("./lib/command"),
-      logger = require("./lib/kit").logger,
-      validate = require("./lib/validators"),
-      deployServiceClient = require("./lib/deployServiceClient"),
-      version = require("./package.json").version;
+const program = require('commander'),
+  fetchAuthData = require('./lib/settings').fetchSettings,
+  spawn = require('child_process').spawn,
+  command = require('./lib/command'),
+  logger = require('./lib/kit').logger,
+  validate = require('./lib/validators'),
+  deployServiceClient = require('./lib/deployServiceClient'),
+  version = require('./package.json').version;
 
 const uploadArchive = (env, usingDeploymentService) => {
-  const options = usingDeploymentService ? ["--without-assets"] : [];
-  const archive = spawn(command("marketplace-kit-archive"), options, {
-    stdio: "inherit"
+  const options = usingDeploymentService ? ['--without-assets'] : [];
+  const archive = spawn(command('marketplace-kit-archive'), options, {
+    stdio: 'inherit'
   });
 
-  archive.on("close", code => {
+  archive.on('close', code => {
     if (code === 1) {
-      logger.Error("Deploy failed.");
+      logger.Error('Deploy failed.');
       process.exit(1);
     }
-    const push = spawn(command("marketplace-kit-push"), [], {
-      stdio: "inherit",
+    const push = spawn(command('marketplace-kit-push'), [], {
+      stdio: 'inherit',
       env: env
     });
-    push.on("close", code => {
+    push.on('close', code => {
       if (code === 1) {
-        logger.Error("Deploy failed.");
+        logger.Error('Deploy failed.');
         process.exit(1);
       }
     });
@@ -35,21 +35,11 @@ const uploadArchive = (env, usingDeploymentService) => {
 
 program
   .version(version)
-  .arguments("<environment>", "name of environment. Example: staging")
-  .option("-f --force", "force update. Removes instance-admin lock")
-  .option(
-    "-d --skip-deployment-service",
-    "Skip deployment service which uploads assets straight to S3 servers"
-  )
-  .option(
-    "-p --partial-deploy",
-    "Partial deployment, does not remove data from directories missing from the build"
-  )
-  .option(
-    "-c --config-file <config-file>",
-    "config file path",
-    ".marketplace-kit"
-  )
+  .arguments('<environment>', 'name of environment. Example: staging')
+  .option('-f --force', 'force update. Removes instance-admin lock')
+  .option('-d --skip-deployment-service', 'Skip deployment service which uploads assets straight to S3 servers')
+  .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
+  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     if (params.force) process.env.FORCE = params.force;
@@ -68,14 +58,12 @@ program
     } else {
       deployServiceClient.deployAssets().then(
         () => {
-          logger.Success("Assets deployed to S3. Uploading manifest.");
+          logger.Success('Assets deployed to S3. Uploading manifest.');
           uploadArchive(env, true);
         },
         err => {
           logger.Debug(err);
-          logger.Info(
-            "Communicationg problem with deployment service, using classic deployment path"
-          );
+          logger.Info('Communicationg problem with deployment service, using classic deployment path');
           uploadArchive(env, false);
         }
       );
@@ -86,6 +74,6 @@ program.parse(process.argv);
 
 validate.existence({
   argumentValue: program.args[0],
-  argumentName: "environment",
+  argumentName: 'environment',
   fail: program.help.bind(program)
 });
