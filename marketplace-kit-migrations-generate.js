@@ -16,7 +16,7 @@ program
     process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(environment);
     const gateway = new Gateway(authData);
-    const formData = { 'name': name};
+    const formData = { name: name };
     const migrationsDir = 'marketplace_builder/migrations';
 
     gateway.generateMigration(formData).then(
@@ -29,9 +29,7 @@ program
         fs.writeFileSync(path, body['body'], logger.Error);
         logger.Success(`[Migration - Generate] Wrote an empty migration file to ${path}`);
       },
-      error => {
-        logger.Error(`[Migration - Generate] Error ${error.message}`);
-      }
+      error => logger.Error(`[Migration - Generate] Error ${error.message}`)
     );
   });
 

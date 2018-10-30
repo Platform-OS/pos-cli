@@ -18,7 +18,6 @@ const uploadArchive = (env, usingDeploymentService) => {
   archive.on('close', code => {
     if (code === 1) {
       logger.Error('Deploy failed.');
-      process.exit(1);
     }
     const push = spawn(command('marketplace-kit-push'), [], {
       stdio: 'inherit',
@@ -27,7 +26,6 @@ const uploadArchive = (env, usingDeploymentService) => {
     push.on('close', code => {
       if (code === 1) {
         logger.Error('Deploy failed.');
-        process.exit(1);
       }
     });
   });
@@ -63,7 +61,7 @@ program
         },
         err => {
           logger.Debug(err);
-          logger.Info('Communicationg problem with deployment service, using classic deployment path');
+          logger.Info('Communication problem with deployment service, using classic deployment.');
           uploadArchive(env, false);
         }
       );

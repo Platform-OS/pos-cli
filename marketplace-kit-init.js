@@ -54,7 +54,6 @@ const init = () => {
 
   if (fs.existsSync(path.join(process.cwd(), 'marketplace_builder'))) {
     logger.Error('marketplace_builder directory already exists. Delete it to initialize from scratch.');
-    process.exit(1);
   }
 
   downloadZip(program).on('close', () => extractZip(program));

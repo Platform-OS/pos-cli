@@ -45,7 +45,7 @@ app.put(
 
 app.listen(port, err => {
   if (err) {
-    return logger.Error('Something wrong happened when trying to run Express server', err);
+    return logger.Error(`Something wrong happened when trying to run Express server: ${err}`);
   }
 
   logger.Info(`Server is listening on ${port}`);
