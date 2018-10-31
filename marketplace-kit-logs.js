@@ -6,76 +6,90 @@ const program = require('commander'),
   notifier = require('node-notifier'),
   logger = require('./lib/kit').logger,
   Gateway = require('./lib/proxy'),
-  validate = require('./lib/validators');
+  validate = require('./lib/validators'),
+  WebSocket = require('ws'),
+  http = require('http');
 
 class LogStream extends EventEmitter {
   constructor(authData) {
     super();
     this.authData = authData;
     this.gateway = new Gateway(authData);
+    this.ws = new WebSocket(`${this.gateway.logsUrl}/connect`, this.authData.token);
+    this.ws.on('error', (e) => {
+      if(e.message.indexOf('401') > -1) {
+        logger.Error('Error connecting to server: Unauthorized request.');
+      } else
+        logger.Error('Error connecting to server: ' + e);
+    });
   }
 
   start() {
-    const t = this;
-    setInterval(() => t.fetchData(), process.env.INTERVAL);
-    logger.Info('Live logging has started. \n');
+    this.subscribe();
+    logger.Info('Live logging has started. \n ---');
   }
 
-  fetchData() {
-    this.gateway.logs({ lastId: storage.lastId }).then(({ logs }) => {
-      for (let k in logs) {
-        let row = logs[k];
+  subscribe() {
+    const _this = this;
 
-        if (!storage.exists(row.id)) {
-          storage.add(row);
-          this.emit('message', row);
-        }
+    this.ws.on('message', function incoming(data) {
+      try {
+        const msg = JSON.parse(data);
+        if (!msg.message) return false;
+
+        const options = { hideTimestamp: true };
+        const text = `[${msg.created_at.replace('T', ' ')}] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
+
+        if(isError(msg)) {
+          logger.Error(text, options);
+          notifier.notify({ title: msg.error_type, message: msg.message });
+        } else
+          logger.Info(text, options);
+      } catch (e) {
+        logger.Error('Error parsing data: ' + e)
       }
-    }, logger.Error);
+    });
   }
 }
 
-const storage = {
-  logs: {},
-  lastId: 0,
-  add: item => {
-    storage.logs[item.id] = item;
-    storage.lastId = item.id;
-  },
-  exists: key => {
-    return storage.logs.hasOwnProperty(key);
-  }
-};
+const isError = msg => !msg.error_type.match(/info|debug/gi);
 
-const isError = msg => msg.error_type.match(/error/gi);
+const fetchLogsByIndex = (authData, from, to) => {
+  this.gateway = new Gateway(authData);
+  this.gateway.logs(from, to).then(
+    (logs) => {
+      const options = { hideTimestamp: true };
+      logs = Array.isArray(logs) ? logs : [logs];
+      logs.forEach( (msg) => {
+        try {
+          msg = JSON.parse(msg);
+        } catch(e) {}
+        const text = `[${msg.created_at.replace('T', ' ')}] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
+
+        isError(msg) ? logger.Error(text, options) : logger.Info(text, options);
+      });
+    },
+    error => {
+      logger.Error(error);
+      process.exit(1);
+    }
+  );
+}
 
 program
   .arguments('<environment>', 'name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .option('--interval <interval>', 'time to wait between updates in ms', 3000)
+  .option('--index-from <integer>', 'Show logs from')
+  .option('--index-to <integer>', 'Show logs to')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
-    process.env.INTERVAL = program.interval;
-
     const authData = fetchAuthData(environment);
-    const stream = new LogStream(authData);
-
-    stream.on('message', msg => {
-      if (!msg.message) return false;
-
-      const options = { hideTimestamp: true };
-      const text = `[${msg.created_at.replace('T', ' ')}] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
-
-      isError(msg) ? logger.Error(text, options) : logger.Info(text, options);
-    });
-
-    stream.on('message', msg => {
-      if (!msg.message) return false;
-
-      if (isError(msg)) notifier.notify({ title: msg.error_type, message: msg.message });
-    });
-
-    stream.start();
+    if(params.indexFrom || params.indexTo){
+      fetchLogsByIndex(authData, params.indexFrom, params.indexTo);
+    } else {
+      const stream = new LogStream(authData);
+      stream.start();
+    }
   });
 
 program.parse(process.argv);
