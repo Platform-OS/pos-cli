@@ -1,29 +1,13 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
+  fs = require('fs'),
+  ora = require('ora'),
   validate = require('./lib/validators'),
   Gateway = require('./lib/proxy'),
-  fs = require('fs'),
   logger = require('./lib/kit').logger,
   errors = require('./lib/errors'),
   version = require('./package.json').version;
-
-const getDeploymentStatus = id => {
-  return new Promise((resolve, reject) => {
-    (getStatus = () => {
-      gateway.getStatus(id).then(response => {
-        if (response.status === 'ready_for_import') {
-          logger.Print('.');
-          setTimeout(getStatus, 1500);
-        } else if (response.status === 'error') {
-          reject(response);
-        } else {
-          resolve(response);
-        }
-      }, reject);
-    })();
-  });
-};
 
 const checkParams = params => {
   validate.existence({ argumentValue: params.token, argumentName: 'token', fail: program.help.bind(program) });
@@ -44,8 +28,6 @@ program.parse(process.argv);
 
 checkParams(program);
 
-logger.Info(`Deploying to: ${program.url}`);
-
 const gateway = new Gateway(program);
 
 const formData = {
@@ -54,23 +36,36 @@ const formData = {
   'marketplace_builder[zip_file]': fs.createReadStream('./tmp/marketplace-release.zip')
 };
 
-logger.Debug('FormData:');
-logger.Debug(formData);
+logger.Debug('FormData:', formData);
+
+const getDeploymentStatus = id => {
+  return new Promise((resolve, reject) => {
+    (getStatus = () => {
+      gateway
+        .getStatus(id, resolve, reject)
+        .then(response => {
+          if (response.status === 'ready_for_import') {
+            setTimeout(getStatus, 1500);
+          } else if (response.status === 'error') {
+            reject();
+            logger.Error(JSON.parse(response.error));
+          } else {
+            resolve(response);
+          }
+        })
+        .catch(error => {
+          logger.Error(error.response.body);
+        });
+    })();
+  });
+};
 
 gateway.push(formData).then(
   body => {
     const responseBody = JSON.parse(body);
+    const deploymentStatus = getDeploymentStatus(responseBody.id);
 
-    getDeploymentStatus(responseBody.id).then(
-      response => {
-        logger.Print('\n');
-        logger.Success('DONE');
-      },
-      error => {
-        logger.Print('\n');
-        logger.Error(error.error);
-      }
-    );
+    ora.promise(deploymentStatus, { text: `Deploying to: ${program.url}`, spinner: 'bouncingBar' });
   },
   error => {
     errors.describe(error, logger.Error);
