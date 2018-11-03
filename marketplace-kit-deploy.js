@@ -23,11 +23,6 @@ const uploadArchive = (env, usingDeploymentService) => {
       stdio: 'inherit',
       env: env
     });
-    push.on('close', code => {
-      if (code === 1) {
-        logger.Error('Deploy failed.');
-      }
-    });
   });
 };
 

@@ -2,6 +2,7 @@
 
 const program = require('commander'),
   fs = require('fs'),
+  { performance } = require('perf_hooks'),
   ora = require('ora'),
   validate = require('./lib/validators'),
   Gateway = require('./lib/proxy'),
@@ -28,6 +29,8 @@ program.parse(process.argv);
 
 checkParams(program);
 
+const spinner = ora({ text: `Deploying to: ${program.url}`, spinner: 'bouncingBar' });
+
 const gateway = new Gateway(program);
 
 const formData = {
@@ -38,6 +41,16 @@ const formData = {
 
 logger.Debug('FormData:', formData);
 
+const getDeployFailedError = response => {
+  const details = Object.assign({}, JSON.parse(response.error).details);
+  delete details.model_id;
+  delete details.model_hash.body;
+  delete details.model_hash.content;
+  delete details.model_hash.format;
+  delete details.model_hash.partial;
+  return details;
+};
+
 const getDeploymentStatus = id => {
   return new Promise((resolve, reject) => {
     (getStatus = () => {
@@ -47,28 +60,31 @@ const getDeploymentStatus = id => {
           if (response.status === 'ready_for_import') {
             setTimeout(getStatus, 1500);
           } else if (response.status === 'error') {
-            reject();
-            logger.Error(JSON.parse(response.error));
+            logger.Error(getDeployFailedError(response), { exit: false });
+            spinner.fail('Deploy failed');
+            process.exit(1);
           } else {
             resolve(response);
           }
         })
-        .catch(error => {
-          logger.Error(error.response.body);
-        });
+        .catch();
     })();
   });
 };
 
-gateway.push(formData).then(
-  body => {
-    const responseBody = JSON.parse(body);
-    const deploymentStatus = getDeploymentStatus(responseBody.id);
+const t0 = performance.now();
+spinner.start();
 
-    ora.promise(deploymentStatus, { text: `Deploying to: ${program.url}`, spinner: 'bouncingBar' });
-  },
-  error => {
+gateway
+  .push(formData)
+  .then(response => {
+    getDeploymentStatus(response.id).then(() => {
+      let t1 = performance.now();
+      const duration = Math.round((t1 - t0) / 1000);
+      spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration}s`);
+    });
+  })
+  .catch(error => {
+    spinner.stopAndPersist().fail('Deploy failed');
     errors.describe(error, logger.Error);
-    logger.Error(error);
-  }
-);
+  });
