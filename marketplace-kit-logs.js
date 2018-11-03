@@ -18,7 +18,7 @@ class LogStream extends EventEmitter {
   start() {
     const t = this;
     setInterval(() => t.fetchData(), process.env.INTERVAL);
-    logger.Info('Live logging has started. \n');
+    logger.Info('Live logging is starting. \n');
   }
 
   fetchData() {
@@ -31,7 +31,7 @@ class LogStream extends EventEmitter {
           this.emit('message', row);
         }
       }
-    }, logger.Error);
+    });
   }
 }
 
@@ -61,7 +61,9 @@ program
     const stream = new LogStream(authData);
 
     stream.on('message', msg => {
-      if (!msg.message) return false;
+      if (!msg.message) {
+        return false;
+      }
 
       const options = { exit: false, hideTimestamp: true };
       const text = `[${msg.created_at.replace('T', ' ')}] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
@@ -70,9 +72,13 @@ program
     });
 
     stream.on('message', msg => {
-      if (!msg.message) return false;
+      if (!msg.message) {
+        return false;
+      }
 
-      if (isError(msg)) notifier.notify({ title: msg.error_type, message: msg.message });
+      if (isError(msg)) {
+        notifier.notify({ title: msg.error_type, message: msg.message });
+      }
     });
 
     stream.start();
