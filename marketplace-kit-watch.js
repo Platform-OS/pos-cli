@@ -5,7 +5,6 @@ const program = require('commander'),
   fs = require('fs'),
   path = require('path'),
   watch = require('node-watch'),
-  notifier = require('node-notifier'),
   Queue = require('async/queue'),
   logger = require('./lib/kit').logger,
   validate = require('./lib/validators'),
@@ -56,44 +55,19 @@ const enqueue = filePath => {
   queue.push({ path: filePath }, () => {});
 };
 
-const getErrorDetails = error => {
-  const details = Object.assign({}, error.error.details);
-  delete details.model_class;
-  delete details.model_id;
-  delete details.model_hash.body;
-  delete details.model_hash.content;
-  delete details.model_hash.format;
-  delete details.model_hash.partial;
-  return details;
-};
-
 const pushFile = filePath => {
   const formData = {
     path: filePathUnixified(filePath), // need path with / separators
     marketplace_builder_file_body: fs.createReadStream(filePath)
   };
 
-  return gateway
-    .sync(formData)
-    .then(body => {
-      if (body.refresh_index) {
-        logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
-      }
+  return gateway.sync(formData).then(body => {
+    if (body.refresh_index) {
+      logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
+    }
 
-      logger.Success(`[Sync] ${filePath} - done`);
-    })
-    .catch(error => {
-      if (error.statusCode >= 400 && error.statusCode < 500) {
-        logger.Error(`[${error.statusCode}] ${error.error}`, { hideTimestamp: true, exit: false });
-        logger.Error(`[Sync] ${filePath} \n
-        Something went wrong on our side, please try again later. \n
-        If problem persist, please report an issue at https://www.platform-os.com/issue-report
-        `);
-      }
-
-      notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error.error.error }); // lol
-      logger.Error(`[Sync] ${JSON.stringify(getErrorDetails(error), null, 2)}`, { exit: false });
-    });
+    logger.Success(`[Sync] ${filePath} - done`);
+  });
 };
 
 const checkParams = params => {
@@ -132,4 +106,4 @@ gateway.ping().then(() => {
   watchDirectory('public');
   watchDirectory('private');
   watchDirectory('modules');
-}, logger.Error);
+});

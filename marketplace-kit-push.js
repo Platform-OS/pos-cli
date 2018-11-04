@@ -6,8 +6,8 @@ const program = require('commander'),
   ora = require('ora'),
   validate = require('./lib/validators'),
   Gateway = require('./lib/proxy'),
+  ServerError = require('./lib/ServerError'),
   logger = require('./lib/kit').logger,
-  errors = require('./lib/errors'),
   version = require('./package.json').version;
 
 const checkParams = params => {
@@ -39,36 +39,19 @@ const formData = {
   'marketplace_builder[zip_file]': fs.createReadStream('./tmp/marketplace-release.zip')
 };
 
-logger.Debug('FormData:', formData);
-
-const getDeployFailedError = response => {
-  const details = Object.assign({}, JSON.parse(response.error).details);
-  delete details.model_id;
-  delete details.model_class;
-  delete details.model_hash.body;
-  delete details.model_hash.content;
-  delete details.model_hash.format;
-  delete details.model_hash.partial;
-  return details;
-};
-
 const getDeploymentStatus = id => {
   return new Promise((resolve, reject) => {
     (getStatus = () => {
-      gateway
-        .getStatus(id, resolve, reject)
-        .then(response => {
-          if (response.status === 'ready_for_import') {
-            setTimeout(getStatus, 1500);
-          } else if (response.status === 'error') {
-            logger.Error(getDeployFailedError(response), { exit: false });
-            spinner.fail('Deploy failed');
-            process.exit(1);
-          } else {
-            resolve(response);
-          }
-        })
-        .catch();
+      gateway.getStatus(id).then(response => {
+        if (response.status === 'ready_for_import') {
+          setTimeout(getStatus, 1500);
+        } else if (response.status === 'error') {
+          ServerError.deploy(JSON.parse(response.error));
+          spinner.fail('Deploy failed');
+        } else {
+          resolve(response);
+        }
+      });
     })();
   });
 };
@@ -85,7 +68,6 @@ gateway
       spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration}s`);
     });
   })
-  .catch(error => {
+  .catch(() => {
     spinner.stopAndPersist().fail('Deploy failed');
-    errors.describe(error, logger.Error);
   });

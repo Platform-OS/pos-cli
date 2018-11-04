@@ -27,7 +27,7 @@ program
 
     server.on('close', code => {
       if (code === 1) {
-        logger.Error('✖ failed.');
+        logger.Error('✖ Failed.');
       }
     });
   });

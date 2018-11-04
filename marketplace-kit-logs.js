@@ -42,9 +42,7 @@ const storage = {
     storage.logs[item.id] = item;
     storage.lastId = item.id;
   },
-  exists: key => {
-    return storage.logs.hasOwnProperty(key);
-  }
+  exists: key => storage.logs.hasOwnProperty(key)
 };
 
 const isError = msg => msg.error_type.match(/error/gi);
