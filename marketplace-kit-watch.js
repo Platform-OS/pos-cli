@@ -56,37 +56,44 @@ const enqueue = filePath => {
   queue.push({ path: filePath }, () => {});
 };
 
+const getErrorDetails = error => {
+  const details = Object.assign({}, error.error.details);
+  delete details.model_class;
+  delete details.model_id;
+  delete details.model_hash.body;
+  delete details.model_hash.content;
+  delete details.model_hash.format;
+  delete details.model_hash.partial;
+  return details;
+};
+
 const pushFile = filePath => {
   const formData = {
     path: filePathUnixified(filePath), // need path with / separators
     marketplace_builder_file_body: fs.createReadStream(filePath)
   };
 
-  return new Promise((resolve, reject) => {
-    gateway.sync(formData).then(
-      body => {
-        if (body['refresh_index']) {
-          logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
-        }
-
-        logger.Success(`[Sync] ${filePath} - done`);
-        resolve();
-      },
-      error => {
-        notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error });
-        try {
-          logger.Error(`[Sync] ${filePath} \n ${JSON.stringify(JSON.parse(error), null, 2)}`, { exit: false });
-        } catch (e) {
-          logger.Error(
-            `[Sync] ${filePath} \n Something went wrong on our side, please try again later. \n
-            If problem persist, please report an issue at https://www.platform-os.com/issue-report`,
-            { exit: false }
-          ); // Server returned error page in html
-        }
-        reject();
+  return gateway
+    .sync(formData)
+    .then(body => {
+      if (body.refresh_index) {
+        logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
       }
-    );
-  });
+
+      logger.Success(`[Sync] ${filePath} - done`);
+    })
+    .catch(error => {
+      if (error.statusCode >= 400 && error.statusCode < 500) {
+        logger.Error(`[${error.statusCode}] ${error.error}`, { hideTimestamp: true, exit: false });
+        logger.Error(`[Sync] ${filePath} \n
+        Something went wrong on our side, please try again later. \n
+        If problem persist, please report an issue at https://www.platform-os.com/issue-report
+        `);
+      }
+
+      notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error.error.error }); // lol
+      logger.Error(`[Sync] ${JSON.stringify(getErrorDetails(error), null, 2)}`, { exit: false });
+    });
 };
 
 const checkParams = params => {
@@ -119,7 +126,7 @@ gateway.ping().then(() => {
     logger.Error('marketplace_builder, public or private directory has to exist!');
   }
 
-  logger.Info(`Enabling sync mode. Syncing to: [${program.url}] \n`);
+  logger.Info(`Enabling sync mode to: ${program.url}`);
 
   watchDirectory('marketplace_builder');
   watchDirectory('public');

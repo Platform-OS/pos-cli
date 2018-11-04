@@ -44,6 +44,7 @@ logger.Debug('FormData:', formData);
 const getDeployFailedError = response => {
   const details = Object.assign({}, JSON.parse(response.error).details);
   delete details.model_id;
+  delete details.model_class;
   delete details.model_hash.body;
   delete details.model_hash.content;
   delete details.model_hash.format;
