@@ -18,7 +18,7 @@ class LogStream extends EventEmitter {
   start() {
     const t = this;
     setInterval(() => t.fetchData(), process.env.INTERVAL);
-    logger.Info('Live logging has started. \n');
+    logger.Info('Live logging is starting. \n');
   }
 
   fetchData() {
@@ -31,7 +31,7 @@ class LogStream extends EventEmitter {
           this.emit('message', row);
         }
       }
-    }, logger.Error);
+    });
   }
 }
 
@@ -42,9 +42,7 @@ const storage = {
     storage.logs[item.id] = item;
     storage.lastId = item.id;
   },
-  exists: key => {
-    return storage.logs.hasOwnProperty(key);
-  }
+  exists: key => storage.logs.hasOwnProperty(key)
 };
 
 const isError = msg => msg.error_type.match(/error/gi);
@@ -61,18 +59,24 @@ program
     const stream = new LogStream(authData);
 
     stream.on('message', msg => {
-      if (!msg.message) return false;
+      if (!msg.message) {
+        return false;
+      }
 
-      const options = { hideTimestamp: true };
+      const options = { exit: false, hideTimestamp: true };
       const text = `[${msg.created_at.replace('T', ' ')}] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
 
       isError(msg) ? logger.Error(text, options) : logger.Info(text, options);
     });
 
     stream.on('message', msg => {
-      if (!msg.message) return false;
+      if (!msg.message) {
+        return false;
+      }
 
-      if (isError(msg)) notifier.notify({ title: msg.error_type, message: msg.message });
+      if (isError(msg)) {
+        notifier.notify({ title: msg.error_type, message: msg.message });
+      }
     });
 
     stream.start();

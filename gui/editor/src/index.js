@@ -31,25 +31,23 @@ saveButton.onclick = event => {
     storage.editor.itemType.path.ext
   );
 
-  const form = new FormData();
-  form.append('marketplace_builder_file_body', new Blob([body]));
+  const formData = new FormData();
+  formData.append('marketplace_builder_file_body', new Blob([body]));
 
   const path = storage.editor.itemType.path;
   const filename = storage.editor.item.data.path || 'FILENAME';
-  form.append('path', `${path.base}/${filename}.${path.ext}`);
+  formData.append('path', `${path.base}/${filename}.${path.ext}`);
 
-  gateway.sync(form).then(
-    response => {
-      console.log(storage.editor);
+  gateway
+    .sync(formData)
+    .then(response => {
+      // console.log(storage.editor);
       // const name =  storage.editor.item.data.name || storage.editor.item.data.slug;
       // storage.editor.item.name = name;
       flash(response.data);
       window.dispatchEvent(new CustomEvent('items-loaded', { detail: storage.editor.itemType.name }));
-    },
-    error => {
-      flash(error.response.data);
-    }
-  );
+    })
+    .catch(error => flash(error.data));
 };
 
 const reloadItemTypesData = () => {

@@ -5,7 +5,6 @@ const program = require('commander'),
   fs = require('fs'),
   path = require('path'),
   watch = require('node-watch'),
-  notifier = require('node-notifier'),
   Queue = require('async/queue'),
   logger = require('./lib/kit').logger,
   validate = require('./lib/validators'),
@@ -62,30 +61,12 @@ const pushFile = filePath => {
     marketplace_builder_file_body: fs.createReadStream(filePath)
   };
 
-  return new Promise((resolve, reject) => {
-    gateway.sync(formData).then(
-      body => {
-        if (body['refresh_index']) {
-          logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
-        }
+  return gateway.sync(formData).then(body => {
+    if (body.refresh_index) {
+      logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
+    }
 
-        logger.Success(`[Sync] ${filePath} - done`);
-        resolve();
-      },
-      error => {
-        notifier.notify({ title: 'MarkeplaceKit Sync Error', message: error });
-        try {
-          logger.Error(`[Sync] ${filePath} \n ${JSON.stringify(JSON.parse(error), null, 2)}`, { exit: false });
-        } catch (e) {
-          logger.Error(
-            `[Sync] ${filePath} \n Something went wrong on our side, please try again later. \n
-            If problem persist, please report an issue at https://www.platform-os.com/issue-report`,
-            { exit: false }
-          ); // Server returned error page in html
-        }
-        reject();
-      }
-    );
+    logger.Success(`[Sync] ${filePath} - done`);
   });
 };
 
@@ -119,10 +100,10 @@ gateway.ping().then(() => {
     logger.Error('marketplace_builder, public or private directory has to exist!');
   }
 
-  logger.Info(`Enabling sync mode. Syncing to: [${program.url}] \n`);
+  logger.Info(`Enabling sync mode to: ${program.url}`);
 
   watchDirectory('marketplace_builder');
   watchDirectory('public');
   watchDirectory('private');
   watchDirectory('modules');
-}, logger.Error);
+});

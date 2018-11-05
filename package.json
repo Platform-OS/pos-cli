@@ -3,7 +3,8 @@
   "version": "2.4.1",
   "description": "Make changes in your marketplace on PlatformOS",
   "scripts": {
-    "postinstall": "node ./lib/check-node-version.js"
+    "postinstall": "node ./lib/check-node-version.js",
+    "build-assets": "npx webpack-cli gui/editor/src/index.js -o gui/editor/public/app.js --mode=production"
   },
   "main": "./marketplace-kit.js",
   "engines": {
@@ -23,12 +24,14 @@
     "express": "^4.16.4",
     "extract-zip": "^1.6.7",
     "js-yaml": "^3.12.0",
+    "mime": "^2.3.1",
     "multer": "^1.4.1",
     "node-notifier": "^5.3.0",
-    "mime": "^2.3.1",
     "node-watch": "^0.5.8",
+    "ora": "^3.0.0",
     "readdirp": "^2.1.0",
     "request": "^2.88.0",
+    "request-promise": "^4.2.2",
     "semver": "^5.6.0",
     "shelljs": "^0.8.2",
     "socket.io-client": "^2.1.1",

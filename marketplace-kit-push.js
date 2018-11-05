@@ -1,29 +1,14 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
+  fs = require('fs'),
+  { performance } = require('perf_hooks'),
+  ora = require('ora'),
   validate = require('./lib/validators'),
   Gateway = require('./lib/proxy'),
-  fs = require('fs'),
+  ServerError = require('./lib/ServerError'),
   logger = require('./lib/kit').logger,
-  errors = require('./lib/errors'),
   version = require('./package.json').version;
-
-const getDeploymentStatus = id => {
-  return new Promise((resolve, reject) => {
-    (getStatus = () => {
-      gateway.getStatus(id).then(response => {
-        if (response.status === 'ready_for_import') {
-          logger.Print('.');
-          setTimeout(getStatus, 1500);
-        } else if (response.status === 'error') {
-          reject(response);
-        } else {
-          resolve(response);
-        }
-      }, reject);
-    })();
-  });
-};
 
 const checkParams = params => {
   validate.existence({ argumentValue: params.token, argumentName: 'token', fail: program.help.bind(program) });
@@ -44,7 +29,7 @@ program.parse(process.argv);
 
 checkParams(program);
 
-logger.Info(`Deploying to: ${program.url}`);
+const spinner = ora({ text: `Deploying to: ${program.url}`, spinner: 'bouncingBar' });
 
 const gateway = new Gateway(program);
 
@@ -54,26 +39,35 @@ const formData = {
   'marketplace_builder[zip_file]': fs.createReadStream('./tmp/marketplace-release.zip')
 };
 
-logger.Debug('FormData:');
-logger.Debug(formData);
+const getDeploymentStatus = id => {
+  return new Promise((resolve, reject) => {
+    (getStatus = () => {
+      gateway.getStatus(id).then(response => {
+        if (response.status === 'ready_for_import') {
+          setTimeout(getStatus, 1500);
+        } else if (response.status === 'error') {
+          ServerError.deploy(JSON.parse(response.error));
+          spinner.fail('Deploy failed');
+        } else {
+          resolve(response);
+        }
+      });
+    })();
+  });
+};
 
-gateway.push(formData).then(
-  body => {
-    const responseBody = JSON.parse(body);
+const t0 = performance.now();
+spinner.start();
 
-    getDeploymentStatus(responseBody.id).then(
-      response => {
-        logger.Print('\n');
-        logger.Success('DONE');
-      },
-      error => {
-        logger.Print('\n');
-        logger.Error(error.error);
-      }
-    );
-  },
-  error => {
-    errors.describe(error, logger.Error);
-    logger.Error(error);
-  }
-);
+gateway
+  .push(formData)
+  .then(response => {
+    getDeploymentStatus(response.id).then(() => {
+      let t1 = performance.now();
+      const duration = Math.round((t1 - t0) / 1000);
+      spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration}s`);
+    });
+  })
+  .catch(() => {
+    spinner.stopAndPersist().fail('Deploy failed');
+  });

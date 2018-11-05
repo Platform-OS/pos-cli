@@ -1,17 +1,12 @@
-const request = require('axios');
+const axios = require('axios');
 
-ROUTING = {
+const ROUTING = {
   sync: '/api/marketplace_builder/marketplace_releases/sync',
   graph: '/api/graph'
 };
 
 module.exports = {
-  sync: form =>
-    request({
-      method: 'PUT',
-      url: ROUTING.sync,
-      data: form
-    }),
+  sync: data => axios.put(ROUTING.sync, data),
 
   getItems(type) {
     const query = `{ items: cms_items(type: ${type}) { results { type name: resource_name data }}}`;
@@ -24,16 +19,6 @@ module.exports = {
   },
 
   graph: query => {
-    const csrf = document.querySelector('#csrf-token');
-    const csrfToken = csrf ? csrf.dataset.csrfToken : '';
-
-    return request({
-      method: 'POST',
-      url: ROUTING.graph,
-      headers: {
-        'X-CSRF-Token': csrfToken
-      },
-      data: { query: query }
-    });
+    return axios.post(ROUTING.graph, { query: query });
   }
 };

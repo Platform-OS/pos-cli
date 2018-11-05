@@ -17,14 +17,9 @@ program
     const gateway = new Gateway(authData);
     const formData = { timestamp: timestamp };
 
-    gateway.runMigration(formData).then(
-      body => {
-        logger.Success(`[Migration - Running] Check migration list for status`);
-      },
-      error => {
-        logger.Error(`[Migration - Run] Error ${error.message}`);
-      }
-    );
+    gateway.runMigration(formData).then(body => {
+      logger.Success(`[Migration Run] Done. ${body['name']} executed.`);
+    });
   });
 
 program.parse(process.argv);

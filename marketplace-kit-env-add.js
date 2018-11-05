@@ -84,7 +84,8 @@ program
     }
 
     logger.Info(
-      `Please make sure that you have a permission to deploy. You can verify it here: ${PARTNER_PORTAL_HOST}/me/permissions`,
+      `Please make sure that you have a permission to deploy. \n
+      You can verify it here: ${PARTNER_PORTAL_HOST}/me/permissions`,
       { hideTimestamp: true }
     );
 

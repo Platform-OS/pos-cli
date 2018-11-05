@@ -22,7 +22,6 @@ program
   .command('migrations', 'generate or run a migration')
   .command('init', 'initialize required directory structure')
   .command('gui', 'gui for content editor, graphql')
-  .command('install', 'install module')
   .parse(process.argv);
 
 if (!program.args.length) program.help();
