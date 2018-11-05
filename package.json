@@ -3,7 +3,8 @@
   "version": "2.4.1",
   "description": "Make changes in your marketplace on PlatformOS",
   "scripts": {
-    "postinstall": "node ./lib/check-node-version.js"
+    "postinstall": "node ./lib/check-node-version.js",
+    "build-assets": "npx webpack-cli gui/editor/src/index.js -o gui/editor/public/app.js --mode=production"
   },
   "main": "./marketplace-kit.js",
   "engines": {

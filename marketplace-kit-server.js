@@ -21,12 +21,15 @@ app.use('/gui/editor', express.static(__dirname + '/gui/editor/public'));
 app.use('/gui/graphql', express.static(__dirname + '/gui/graphql/public'));
 
 // GRAPHQL
-app.post('/api/graph', (req, res) => {
+const graphqlRouting = (req, res) => {
   gateway
     .graph(req.body)
     .then(body => res.send(body))
-    .catch(error => res.status(401).send(error.statusText));
-});
+    .catch(error => res.send(error));
+};
+
+app.post('/graphql', graphqlRouting);
+app.post('/api/graph', graphqlRouting);
 
 // SYNC
 app.put(

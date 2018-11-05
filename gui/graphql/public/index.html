@@ -1,10 +1,3 @@
-<!--
- *  Copyright (c) Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the license found in the
- *  LICENSE file in the root directory of this source tree.
--->
 <!DOCTYPE html>
 <html>
   <head>
@@ -20,26 +13,20 @@
       }
     </style>
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/graphiql/0.12.0/graphiql.min.css" integrity="sha256-0mOcJX/1dHo5oqUmlFyTgF6lFtXx6gP30MANrmtcIgA=" crossorigin="anonymous" />
+
     <!--
       This GraphiQL example depends on Promise and fetch, which are available in
       modern browsers, but can be "polyfilled" for older browsers.
-      GraphiQL itself depends on React DOM.
+
+      GraphiQL itself depends on React and React DOM packages.
       If you do not want to rely on a CDN, you can host these files locally or
-      include them directly in your favored resource bunder.
+      include them directly in your favored resource bundler.
     -->
-    <script src="//cdn.jsdelivr.net/es6-promise/4.0.5/es6-promise.auto.min.js"></script>
-    <script src="//cdn.jsdelivr.net/fetch/0.9.0/fetch.min.js"></script>
-    <script src="//cdn.jsdelivr.net/react/15.4.2/react.min.js"></script>
-    <script src="//cdn.jsdelivr.net/react/15.4.2/react-dom.min.js"></script>
-
-    <!--
-      These two files can be found in the npm module, however you may wish to
-      copy them directly into your environment, or perhaps include them in your
-      favored resource bundler.
-     -->
-    <link rel="stylesheet" href="./graphiql.css" />
-    <script src="./graphiql.min.js"></script>
-
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=Promise,fetch"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.6.2/react-with-addons.min.js" integrity="sha256-iN+8EdNwAPBg9fbehes4x7AkwJqLcSYVLRfoyPJ3tlM=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/15.6.2/react-dom.min.js" integrity="sha256-Xhtg7QJuNhwB5AzaUcgr0iqNtCitzN+c/6k5/SOtENU=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/graphiql/0.12.0/graphiql.min.js" integrity="sha256-kQDzpyqSwNpOt6vMmEn3dsR4wUbfWyf0XnxdxmyHzbc=" crossorigin="anonymous"></script>
   </head>
   <body>
     <div id="graphiql">Loading...</div>

@@ -19,17 +19,6 @@ module.exports = {
   },
 
   graph: query => {
-    const csrf = document.querySelector('#csrf-token');
-    const csrfToken = csrf ? csrf.dataset.csrfToken : '';
-
-    return axios.post(
-      ROUTING.graph,
-      { query: query },
-      {
-        headers: {
-          'X-CSRF-Token': csrfToken
-        }
-      }
-    );
+    return axios.post(ROUTING.graph, { query: query });
   }
 };
