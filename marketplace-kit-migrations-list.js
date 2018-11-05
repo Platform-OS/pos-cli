@@ -9,20 +9,27 @@ const program = require('commander'),
 program
   .version(version)
   .arguments('<environment>', 'name of the environment. Example: staging')
-  .arguments('<timestamp>', 'timestamp the migration. Example: 20180701182602')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .action((environment, timestamp, params) => {
+  .option(
+    '-c --config-file <config-file>',
+    'config file path',
+    '.marketplace-kit'
+  )
+  .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(environment);
     const gateway = new Gateway(authData);
-    const formData = { timestamp: timestamp };
 
-    gateway.runMigration(formData).then(
+    gateway.listMigrations().then(
       body => {
-        logger.Success(`[Migration - Running] Check migration list for status`);
+        logger.Success(`[Migration - List]`);
+        body['migrations'].map(migration => {
+          logger.Info(
+            `${migration['name']} - ${migration['state']} Errors: (${migration['error_messages']})`
+          );
+        });
       },
       error => {
-        logger.Error(`[Migration - Run] Error ${error.message}`);
+        logger.Error(`[Migration - List] Error ${error.message}`);
       }
     );
   });
