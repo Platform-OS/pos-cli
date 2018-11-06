@@ -24,7 +24,7 @@ const fileUpdated = event => event === 'update';
 const extensionAllowed = filePath => {
   const allowed = watchFilesExtensions.includes(ext(filePath));
   if (!allowed) {
-    logger.Info(`[Sync] Not syncing, not allowed file extension: ${filePath}`);
+    logger.Debug(`[Sync] Not syncing, not allowed file extension: ${filePath}`);
   }
   return allowed;
 };
