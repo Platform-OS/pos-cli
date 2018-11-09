@@ -2,7 +2,7 @@
 
 const program = require('commander'),
   fs = require('fs'),
-  logger = require('./lib/kit').logger,
+  logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   yaml = require('js-yaml'),
   version = require('./package.json').version,

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  logger = require('./lib/kit').logger,
+  logger = require('./lib/logger'),
   version = require('./package.json').version;
 
 program

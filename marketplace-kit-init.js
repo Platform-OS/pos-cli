@@ -6,7 +6,7 @@ const program = require('commander'),
   path = require('path'),
   shell = require('shelljs'),
   extract = require('extract-zip'),
-  logger = require('./lib/kit').logger,
+  logger = require('./lib/logger'),
   validate = require('./lib/validators'),
   version = require('./package.json').version;
 

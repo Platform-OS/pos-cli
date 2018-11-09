@@ -4,7 +4,7 @@ const program = require('commander'),
   EventEmitter = require('events'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   notifier = require('node-notifier'),
-  logger = require('./lib/kit').logger,
+  logger = require('./lib/logger'),
   Gateway = require('./lib/proxy'),
   validate = require('./lib/validators');
 

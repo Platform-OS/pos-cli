@@ -2,7 +2,7 @@
 
 const program = require('commander'),
   Gateway = require('./lib/proxy'),
-  logger = require('./lib/kit').logger,
+  logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   version = require('./package.json').version;
 

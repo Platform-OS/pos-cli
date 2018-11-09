@@ -4,7 +4,7 @@ const program = require('commander'),
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
   fetchAuthData = require('./lib/settings').fetchSettings,
-  logger = require('./lib/kit').logger,
+  logger = require('./lib/logger'),
   validate = require('./lib/validators'),
   version = require('./package.json').version;
 

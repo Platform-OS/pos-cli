@@ -3,7 +3,7 @@
 const program = require('commander'),
   fs = require('fs'),
   rl = require('readline'),
-  logger = require('./lib/kit').logger,
+  logger = require('./lib/logger'),
   validate = require('./lib/validators'),
   version = require('./package.json').version,
   Portal = require('./lib/portal');

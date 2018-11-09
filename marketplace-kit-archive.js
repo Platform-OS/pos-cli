@@ -4,7 +4,7 @@ const program = require('commander'),
   fs = require('fs'),
   shell = require('shelljs'),
   archiver = require('archiver'),
-  logger = require('./lib/kit').logger,
+  logger = require('./lib/logger'),
   version = require('./package.json').version;
 
 const ALLOWED_DIRECTORIES = ['marketplace_builder', 'public', 'private', 'modules'];
