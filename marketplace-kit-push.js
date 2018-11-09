@@ -29,7 +29,10 @@ program.parse(process.argv);
 
 checkParams(program);
 
-const spinner = ora({ text: `Deploying to: ${program.url}`, spinner: 'bouncingBar' });
+const duration = (t0, t1) => Math.round((t1 - t0) / 1000);
+const t0 = performance.now();
+
+const spinner = ora({ text: `Deploying to: ${program.url}`, spinner: 'bouncingBar' }).start();
 
 const gateway = new Gateway(program);
 
@@ -46,8 +49,9 @@ const getDeploymentStatus = id => {
         if (response.status === 'ready_for_import') {
           setTimeout(getStatus, 1500);
         } else if (response.status === 'error') {
+          const t1 = performance.now();
           ServerError.deploy(JSON.parse(response.error));
-          spinner.fail('Deploy failed');
+          spinner.fail(`Deploy failed after ${duration(t0, t1)}s`);
         } else {
           resolve(response);
         }
@@ -56,16 +60,12 @@ const getDeploymentStatus = id => {
   });
 };
 
-const t0 = performance.now();
-spinner.start();
-
 gateway
   .push(formData)
   .then(response => {
     getDeploymentStatus(response.id).then(() => {
-      let t1 = performance.now();
-      const duration = Math.round((t1 - t0) / 1000);
-      spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration}s`);
+      const t1 = performance.now();
+      spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration(t0, t1)}s`);
     });
   })
   .catch(() => {
