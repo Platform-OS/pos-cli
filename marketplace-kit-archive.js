@@ -5,22 +5,24 @@ const program = require('commander'),
   shell = require('shelljs'),
   archiver = require('archiver'),
   logger = require('./lib/kit').logger,
-  validate = require('./lib/validators'),
   version = require('./package.json').version;
 
-const checkDirectory = directoryPath => {
-  validate.directoryExists({
-    path: directoryPath,
-    message: "marketplace_builder directory doesn't exist - cannot archive it"
-  });
-  validate.directoryEmpty({
-    path: directoryPath,
-    message: 'marketplace_builder is empty. Proceeding would remove everything from your marketplace.'
-  });
+const allowedDirectories = ['marketplace_builder', 'public', 'private', 'modules'];
+const availableDirectories = () => {
+  return allowedDirectories.filter(fs.existsSync);
 };
+const isEmpty = dir => shell.ls(dir).length == 0;
 
 const makeArchive = (path, directory, withoutAssets) => {
-  checkDirectory(directory);
+  if (availableDirectories().length === 0) {
+    logger.Error(`One of ${allowedDirectories} directories needed to deploy`, { hideTimestamp: true });
+  }
+
+  availableDirectories().map(dir => {
+    if (isEmpty(dir) && !withoutAssets) {
+      logger.Error(`${dir} can't be empty if the deploy is not partial - it would remove all files`, { hideTimestamp: true });
+    }
+  });
 
   shell.mkdir('-p', 'tmp');
   shell.rm('-rf', path);
