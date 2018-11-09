@@ -29,7 +29,12 @@ program.parse(process.argv);
 
 checkParams(program);
 
-const duration = (t0, t1) => Math.round((t1 - t0) / 1000);
+const formatMMSS = s => (s - (s %= 60)) / 60 + (9 < s ? ':' : ':0') + s;
+const duration = (t0, t1) => {
+  const duration = Math.round((t1 - t0) / 1000);
+  return formatMMSS(duration);
+};
+
 const t0 = performance.now();
 
 const spinner = ora({ text: `Deploying to: ${program.url}`, spinner: 'bouncingBar' }).start();
@@ -51,7 +56,7 @@ const getDeploymentStatus = id => {
         } else if (response.status === 'error') {
           const t1 = performance.now();
           ServerError.deploy(JSON.parse(response.error));
-          spinner.fail(`Deploy failed after ${duration(t0, t1)}s`);
+          spinner.fail(`Deploy failed after ${duration(t0, t1)}`);
         } else {
           resolve(response);
         }
@@ -65,7 +70,7 @@ gateway
   .then(response => {
     getDeploymentStatus(response.id).then(() => {
       const t1 = performance.now();
-      spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration(t0, t1)}s`);
+      spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration(t0, t1)}`);
     });
   })
   .catch(() => {
