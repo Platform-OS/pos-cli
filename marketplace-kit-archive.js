@@ -7,20 +7,20 @@ const program = require('commander'),
   logger = require('./lib/kit').logger,
   version = require('./package.json').version;
 
-const allowedDirectories = ['marketplace_builder', 'public', 'private', 'modules'];
-const availableDirectories = () => {
-  return allowedDirectories.filter(fs.existsSync);
-};
+const ALLOWED_DIRECTORIES = ['marketplace_builder', 'public', 'private', 'modules'];
+const availableDirectories = () => ALLOWED_DIRECTORIES.filter(fs.existsSync);
 const isEmpty = dir => shell.ls(dir).length == 0;
 
 const makeArchive = (path, directory, withoutAssets) => {
   if (availableDirectories().length === 0) {
-    logger.Error(`One of ${allowedDirectories} directories needed to deploy`, { hideTimestamp: true });
+    logger.Error(`At least one of ${ALLOWED_DIRECTORIES} directories is needed to deploy`, { hideTimestamp: true });
   }
 
   availableDirectories().map(dir => {
     if (isEmpty(dir) && !withoutAssets) {
-      logger.Error(`${dir} can't be empty if the deploy is not partial - it would remove all files`, { hideTimestamp: true });
+      logger.Error(`${dir} can't be empty if the deploy is not partial - it would remove all the files from the instance`, {
+        hideTimestamp: true
+      });
     }
   });
 
