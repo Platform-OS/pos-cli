@@ -8,7 +8,9 @@ const program = require('commander'),
   version = require('./package.json').version;
 
 const allowedDirectories = ['marketplace_builder', 'public', 'private', 'modules'];
-const availableDirectories = () => { return allowedDirectories.filter(fs.existsSync) };
+const availableDirectories = () => {
+  return allowedDirectories.filter(fs.existsSync);
+};
 const isEmpty = dir => shell.ls(dir).length == 0;
 
 const makeArchive = (path, directory, withoutAssets) => {
@@ -18,7 +20,7 @@ const makeArchive = (path, directory, withoutAssets) => {
 
   availableDirectories().map(dir => {
     if (isEmpty(dir) && !withoutAssets) {
-       logger.Error(`${dir} can't be empty if the deploy is not partial - it would remove all files`, { hideTimestamp: true });
+      logger.Error(`${dir} can't be empty if the deploy is not partial - it would remove all files`, { hideTimestamp: true });
     }
   });
 
