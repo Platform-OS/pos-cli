@@ -7,7 +7,8 @@ const program = require('commander'),
   version = require('./package.json').version;
 
 const logMigration = migration => {
-  logger.Info(`[${migration.id}] Name: ${migration.name} - Status: ${migration.state} - Errors: (${migration.error_messages})`);
+  const errorsMsg = migration.error_messages ? `- Errors: (${migration.error_messages})` : '';
+  logger.Info(`[${migration.id}] Name: ${migration.name} - Status: ${migration.state} ${errorsMsg}`);
 };
 
 program
