@@ -2,7 +2,7 @@
 
 const semver = require('semver');
 const engines = require('../package.json').engines;
-const logger = require('./logger');
+const logger = require('../lib/logger');
 const version = engines.node;
 
 if (!semver.satisfies(process.version, version)) {
