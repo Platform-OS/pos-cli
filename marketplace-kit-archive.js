@@ -7,7 +7,7 @@ const program = require('commander'),
   logger = require('./lib/logger'),
   version = require('./package.json').version;
 
-const ALLOWED_DIRECTORIES = ['marketplace_builder', 'public', 'private', 'modules'];
+const ALLOWED_DIRECTORIES = ['marketplace_builder', 'modules'];
 const availableDirectories = () => ALLOWED_DIRECTORIES.filter(fs.existsSync);
 const isEmpty = dir => shell.ls(dir).length == 0;
 
@@ -55,13 +55,9 @@ const makeArchive = (path, directory, withoutAssets) => {
     // For modules for now we go with the old aproach (not through S3) to avoid problems
     // with deep nesting
     archive.glob('**/*', { cwd: directory, ignore: ['assets/**'] }, { prefix: directory });
-    archive.glob('**/*', { cwd: 'public', ignore: ['assets/**'] }, { prefix: 'public' });
-    archive.glob('**/*', { cwd: 'private', ignore: ['assets/**'] }, { prefix: 'private' });
     archive.glob('**/*', { cwd: 'modules' }, { prefix: 'modules' });
   } else {
     archive.directory(directory, true);
-    archive.directory('public', true);
-    archive.directory('private', true);
     archive.directory('modules', true);
   }
 

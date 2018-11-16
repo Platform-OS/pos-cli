@@ -96,14 +96,12 @@ checkParams(program);
 const gateway = new Gateway(program);
 
 gateway.ping().then(() => {
-  if (!fs.existsSync('marketplace_builder') && !fs.existsSync('public') && !fs.existsSync('private')) {
-    logger.Error('marketplace_builder, public or private directory has to exist!');
+  if (!fs.existsSync('marketplace_builder') && !fs.existsSync('modules')) {
+    logger.Error('marketplace_builder or modules directory has to exist!');
   }
 
   logger.Info(`Enabling sync mode to: ${program.url}`);
 
   watchDirectory('marketplace_builder');
-  watchDirectory('public');
-  watchDirectory('private');
   watchDirectory('modules');
 });
