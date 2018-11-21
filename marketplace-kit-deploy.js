@@ -26,6 +26,8 @@ const uploadArchive = (env, usingDeploymentService) => {
   });
 };
 
+const hasEnvSet = envValue => !(envValue == null || envValue == 'undefined')
+
 program
   .version(version)
   .arguments('<environment>', 'name of environment. Example: staging')
@@ -43,19 +45,19 @@ program
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url,
+      MARKETPLACE_ENDPOINT_URL: authData.endpointUrl,
       MARKETPLACE_ENV: environment
     });
 
-    if (process.env.SKIP_DEPLOY_SERVICE) {
+    if (process.env.SKIP_DEPLOY_SERVICE || !hasEnvSet(env.MARKETPLACE_ENDPOINT_URL)) {
       uploadArchive(env, false);
     } else {
-      deployServiceClient.deployAssets().then(
+      deployServiceClient.deployAssets(env).then(
         () => {
           logger.Success('Assets deployed to S3. Uploading manifest.');
           uploadArchive(env, true);
         },
         err => {
-          // logger.Debug(err);
           logger.Debug('Communication problem with deployment service, using classic deployment.');
           uploadArchive(env, false);
         }

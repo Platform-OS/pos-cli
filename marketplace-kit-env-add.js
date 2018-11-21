@@ -2,6 +2,7 @@
 
 const program = require('commander'),
   fs = require('fs'),
+  url = require('url'),
   rl = require('readline'),
   logger = require('./lib/logger'),
   validate = require('./lib/validators'),
@@ -42,7 +43,8 @@ const storeEnvironment = settings => {
     [settings.endpoint]: {
       url: settings.url,
       token: settings.token,
-      email: settings.email
+      email: settings.email,
+      endpointUrl: settings.endpointUrl
     }
   };
   saveFile(Object.assign({}, existingSettings(process.env.CONFIG_FILE_PATH), environmentSettings));
@@ -92,16 +94,28 @@ program
     getPassword().then(password => {
       logger.Info(`Asking ${PARTNER_PORTAL_HOST} for access token...`);
 
-      Portal.login(params.email, password)
+      Portal.authorizeDeploy(params.email, password)
         .then(response => {
           const token = response[0].token;
-
           if (token) {
-            storeEnvironment(Object.assign(settings, { token }));
+
+            Portal.authenticate(params.email, password).then(response => {
+              var instanceUrl = new url.URL(params.url);
+              logger.Debug(`[Deploy Service] Requesting endpoint data for ${instanceUrl.hostname}`);
+              Portal.findInstance(instanceUrl.hostname, response.auth_token).then(response => {
+                if (response.data[0]) {
+                  var endpointUrl = response.data[0].endpoint.url;
+                  storeEnvironment(Object.assign(settings, { token, endpointUrl }));
+                } else {
+                  storeEnvironment(Object.assign(settings, { token }));
+                }
+              }).catch((err) => logger.Debug(`[Deploy Service] Unauthorized to get instance data ${err}`));
+            }).catch((err) => logger.Debug(`[Deploy Service] Could not fetch endpoint data for instance ${err}`));
+
             logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
           }
         })
-        .catch(() => logger.Error('Response from server invalid, token is missing.'));
+        .catch((err) => logger.Error(`No response from server or response missing token (Password is wrong?)`));
     });
   });
 
