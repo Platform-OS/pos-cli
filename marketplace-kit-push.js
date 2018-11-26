@@ -37,7 +37,7 @@ const duration = (t0, t1) => {
 
 const t0 = performance.now();
 
-const spinner = ora({ text: `Deploying to: ${program.url}`, spinner: 'bouncingBar' }).start();
+const spinner = ora({ text: `Deploying to: ${program.url}`, stream: process.stdout, spinner: 'bouncingBar' }).start();
 
 const gateway = new Gateway(program);
 
