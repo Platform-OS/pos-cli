@@ -11,10 +11,12 @@ const program = require('commander'),
   watchFilesExtensions = require('./lib/watch-files-extensions'),
   version = require('./package.json').version;
 
+const WATCH_DIRECTORIES = ['marketplace_builder', 'modules'];
+const getWatchDirectories = () => WATCH_DIRECTORIES.filter(fs.existsSync);
 const ext = filePath => filePath.split('.').pop();
 const filename = filePath => filePath.split(path.sep).pop();
 const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
-
+const isEmpty = filePath => fs.readFileSync(filePath).toString().trim().length === 0;
 const shouldBeSynced = (filePath, event) => {
   return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath);
 };
@@ -31,24 +33,26 @@ const extensionAllowed = filePath => {
 
 const isNotHidden = filePath => {
   const isHidden = filename(filePath).startsWith('.');
+
   if (isHidden) {
-    logger.Info(`[Sync] Not syncing hidden file: ${filePath}`);
+    logger.Warn(`[Sync] Not syncing hidden file: ${filePath}`);
   }
   return !isHidden;
 };
 
 const isNotEmptyYML = filePath => {
-  if (ext(filePath) === 'yml') {
-    logger.Info(`[Sync] Not syncing empty YML file: ${filePath}`);
-    return fs.readFileSync(filePath, 'utf8', (err, data) => data.length > 0);
+  if (ext(filePath) === 'yml' && isEmpty(filePath)) {
+    logger.Warn(`[Sync] Not syncing empty YML file: ${filePath}`);
+    return false;
   }
+
   return true;
 };
 
 CONCURRENCY = 3;
 
 const queue = Queue((task, callback) => {
-  pushFile(task.path).then(callback, callback);
+  pushFile(task.path).then(callback);
 }, CONCURRENCY);
 
 const enqueue = filePath => {
@@ -75,14 +79,6 @@ const checkParams = params => {
   validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: program.help.bind(program) });
 };
 
-const watchDirectory = name => {
-  if (fs.existsSync(name)) {
-    watch(name, { recursive: true }, (event, file) => {
-      shouldBeSynced(file, event) && enqueue(file);
-    });
-  }
-};
-
 program
   .version(version)
   .option('--email <email>', 'authentication token', process.env.MARKETPLACE_EMAIL)
@@ -96,12 +92,15 @@ checkParams(program);
 const gateway = new Gateway(program);
 
 gateway.ping().then(() => {
-  if (!fs.existsSync('marketplace_builder') && !fs.existsSync('modules')) {
+  const directories = getWatchDirectories();
+
+  if (directories.length === 0) {
     logger.Error('marketplace_builder or modules directory has to exist!');
   }
 
   logger.Info(`Enabling sync mode to: ${program.url}`);
 
-  watchDirectory('marketplace_builder');
-  watchDirectory('modules');
+  watch(directories, { recursive: true }, (event, filePath) => {
+    shouldBeSynced(filePath, event) && enqueue(filePath);
+  });
 });
