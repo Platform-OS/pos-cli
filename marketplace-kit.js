@@ -22,6 +22,7 @@ program
   .command('migrations', 'generate or run a migration')
   .command('init', 'initialize required directory structure')
   .command('gui', 'gui for content editor, graphql')
+  .command('audit', 'check your code for deprecations, recommendations, errors')
   .parse(process.argv);
 
 if (!program.args.length) program.help();
