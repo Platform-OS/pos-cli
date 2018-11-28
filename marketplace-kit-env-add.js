@@ -115,7 +115,7 @@ program
             logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
           }
         })
-        .catch((err) => logger.Error(`No response from server or response missing token (Password is wrong?)`));
+        .catch(() => logger.Error('No response from server or response missing token (Password is wrong?)'));
     });
   });
 

@@ -26,7 +26,7 @@ const uploadArchive = (env, usingDeploymentService) => {
   });
 };
 
-const hasEnvSet = envValue => !(envValue == null || envValue == 'undefined')
+const hasEnvSet = envValue => !(envValue == null || envValue == 'undefined');
 
 program
   .version(version)
