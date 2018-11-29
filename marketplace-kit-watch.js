@@ -66,7 +66,7 @@ const pushFile = filePath => {
   };
 
   return gateway.sync(formData).then(body => {
-    if (body.refresh_index) {
+    if (body && body.refresh_index) {
       logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
     }
 
