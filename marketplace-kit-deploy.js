@@ -26,7 +26,7 @@ const uploadArchive = (env, usingDeploymentService) => {
   });
 };
 
-const hasEnvSet = envValue => !(envValue == null || envValue == 'undefined');
+const envMissing = envValue => envValue == null || (typeof envValue == 'undefined');
 
 program
   .version(version)
@@ -49,7 +49,7 @@ program
       MARKETPLACE_ENV: environment
     });
 
-    if (process.env.SKIP_DEPLOY_SERVICE || !hasEnvSet(env.MARKETPLACE_ENDPOINT_URL)) {
+    if (process.env.SKIP_DEPLOY_SERVICE || envMissing(env.MARKETPLACE_ENDPOINT_URL)) {
       uploadArchive(env, false);
     } else {
       deployServiceClient.deployAssets(env).then(
