@@ -18,8 +18,9 @@ const uploadArchive = (env, usingDeploymentService) => {
   archive.on('close', code => {
     if (code === 1) {
       logger.Error('Deploy failed.');
+      process.exit(1);
     }
-    const push = spawn(command('marketplace-kit-push'), [], {
+    spawn(command('marketplace-kit-push'), [], {
       stdio: 'inherit',
       env: env
     });

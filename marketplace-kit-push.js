@@ -57,6 +57,7 @@ const getDeploymentStatus = id => {
           const t1 = performance.now();
           ServerError.deploy(JSON.parse(response.error));
           spinner.fail(`Deploy failed after ${duration(t0, t1)}`);
+          process.exit(1);
         } else {
           resolve(response);
         }
@@ -75,4 +76,5 @@ gateway
   })
   .catch(() => {
     spinner.stopAndPersist().fail('Deploy failed');
+    process.exit(1);
   });
