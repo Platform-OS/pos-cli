@@ -1918,9 +1918,9 @@
       }
     },
     "node-watch": {
-      "version": "0.5.9",
-      "resolved": "https://registry.npmjs.org/node-watch/-/node-watch-0.5.9.tgz",
-      "integrity": "sha512-W0SgGKaB9qSCfFfNj2uQZ/5BlVumaNHjVCAPdEoXrkEJ3ynSf/806LEz1rbDFbJ4+PL9G8IxRkJJTvZndd5D9g=="
+      "version": "0.5.8",
+      "resolved": "http://registry.npmjs.org/node-watch/-/node-watch-0.5.8.tgz",
+      "integrity": "sha512-HXiCg9YS3IAzEJ4O3CNlUjsoYCxg4hVbo9oAEBQoiJV7p/R7PT6/ekXM9S3D2K3jUjSQOOjtuW/LgcSiwh/btQ=="
     },
     "normalize-path": {
       "version": "2.1.1",
