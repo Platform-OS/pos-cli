@@ -27,7 +27,7 @@
     "mime": "^2.4.0",
     "multer": "^1.4.1",
     "node-notifier": "^5.3.0",
-    "node-watch": "^0.5.9",
+    "node-watch": "0.5.8",
     "ora": "^3.0.0",
     "readdirp": "^2.2.1",
     "request": "^2.88.0",
