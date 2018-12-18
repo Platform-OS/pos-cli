@@ -4,7 +4,7 @@ const program = require('commander'),
   Gateway = require('./lib/proxy'),
   fs = require('fs'),
   path = require('path'),
-  watch = require('node-watch'),
+  chokidar = require('chokidar'),
   Queue = require('async/queue'),
   logger = require('./lib/logger'),
   validate = require('./lib/validators'),
@@ -16,12 +16,13 @@ const getWatchDirectories = () => WATCH_DIRECTORIES.filter(fs.existsSync);
 const ext = filePath => filePath.split('.').pop();
 const filename = filePath => filePath.split(path.sep).pop();
 const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
-const isEmpty = filePath => fs.readFileSync(filePath).toString().trim().length === 0;
-const shouldBeSynced = (filePath, event) => {
-  return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath);
-};
+const isEmpty = filePath =>
+  fs
+    .readFileSync(filePath)
+    .toString()
+    .trim().length === 0;
 
-const fileUpdated = event => event === 'update';
+const shouldBeSynced = filePath => extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath);
 
 const extensionAllowed = filePath => {
   const allowed = watchFilesExtensions.includes(ext(filePath));
@@ -84,7 +85,6 @@ program
   .option('--email <email>', 'authentication token', process.env.MARKETPLACE_EMAIL)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
   .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL)
-  // .option('--files <files>', 'watch files', process.env.FILES || watchFilesExtensions)
   .parse(process.argv);
 
 checkParams(program);
@@ -100,7 +100,7 @@ gateway.ping().then(() => {
 
   logger.Info(`Enabling sync mode to: ${program.url}`);
 
-  watch(directories, { recursive: true }, (event, filePath) => {
-    shouldBeSynced(filePath, event) && enqueue(filePath);
+  chokidar.watch(directories, { recursive: true }).on('change', filePath => {
+    shouldBeSynced(filePath) && enqueue(filePath);
   });
 });
