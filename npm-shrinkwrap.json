@@ -1924,7 +1924,7 @@
     },
     "node-watch": {
       "version": "0.5.8",
-      "resolved": "https://registry.npmjs.org/node-watch/-/node-watch-0.5.8.tgz",
+      "resolved": "http://registry.npmjs.org/node-watch/-/node-watch-0.5.8.tgz",
       "integrity": "sha512-HXiCg9YS3IAzEJ4O3CNlUjsoYCxg4hVbo9oAEBQoiJV7p/R7PT6/ekXM9S3D2K3jUjSQOOjtuW/LgcSiwh/btQ=="
     },
     "normalize-path": {
