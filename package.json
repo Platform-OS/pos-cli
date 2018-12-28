@@ -38,6 +38,7 @@
     "shelljs": "^0.8.3",
     "socket.io-client": "^2.1.1",
     "update-notifier": "^2.5.0",
+    "uuid": "^3.3.2",
     "valid-url": "^1.0.9"
   },
   "preferGlobal": true,
