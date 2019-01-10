@@ -15,7 +15,7 @@ updateNotifier({
 program
   .version(version)
   .command('audit', 'check your code for deprecations, recommendations, errors')
-  // .command('data', 'export, import or clean data on instance')
+  .command('data', 'export, import or clean data on instance')
   .command('deploy <environment>', 'deploy code to environment')
   .alias('d')
   .command('env', 'manage environments')

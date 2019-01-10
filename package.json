@@ -1,6 +1,6 @@
 {
   "name": "@platform-os/marketplace-kit",
-  "version": "2.6.4",
+  "version": "2.7.0",
   "description": "Make changes in your marketplace on PlatformOS",
   "scripts": {
     "postinstall": "node ./scripts/check-node-version.js",
