@@ -17,7 +17,7 @@ program
     process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(environment);
     const itemsQuery = { query: `{ items: cms_items(type: ${params.type}) { results { type name: resource_name data }}}` };
-    const typesQuery = { query: ` { itemTypes: cms_discovery { results { name  path  fields  }}}` };
+    const typesQuery = { query: `{ itemTypes: cms_discovery { results { name path fields }}}` };
     const gateway = new Gateway(authData);
 
     gateway.graph(typesQuery).then(typesResponse => {
@@ -33,7 +33,7 @@ program
           logger.Info(`File: ${source.path}`);
           let folderPath = source.path.substr(0,source.path.lastIndexOf('/'));
           fs.promises.mkdir(folderPath, {recursive: true}).then(x => {
-            fs.promises.writeFile(source.path, source.output, logger.Error)
+            fs.promises.writeFile(source.path, source.output, logger.Error);
           });
         });
       }, logger.Error);
