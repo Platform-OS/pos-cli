@@ -16,8 +16,8 @@ program
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(environment);
-    const itemsQuery = `{ items: cms_items(type: ${params.type}) { results { type name: resource_name data }}}`;
-    const typesQuery = '{ itemTypes: cms_discovery { results { name  path  fields  }}}';
+    const itemsQuery = { query: `{ items: cms_items(type: ${params.type}) { results { type name: resource_name data }}}` };
+    const typesQuery = { query: ` { itemTypes: cms_discovery { results { name  path  fields  }}}` };
     const gateway = new Gateway(authData);
 
     gateway.graph(typesQuery).then(typesResponse => {
@@ -27,11 +27,14 @@ program
         const files = response.data.items.results;
 
         [...files].forEach(file => {
-          logger.Info(`File: ${file}`);
           let type = types.find(t => t.name == file.type);
 
           const source = new Liquid(file, type);
-          fs.writeFileSync(source.path, source.output, logger.Error);
+          logger.Info(`File: ${source.path}`);
+          let folderPath = source.path.substr(0,source.path.lastIndexOf('/'));
+          fs.promises.mkdir(folderPath, {recursive: true}).then(x => {
+            fs.promises.writeFile(source.path, source.output, logger.Error)
+          });
         });
       }, logger.Error);
     }, logger.Error);
