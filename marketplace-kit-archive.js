@@ -2,14 +2,37 @@
 
 const program = require('commander'),
   fs = require('fs'),
+  paths = require('path'),
   shell = require('shelljs'),
+  glob = require('glob'),
   archiver = require('archiver'),
+  templates = require('./lib/templates'),
   logger = require('./lib/logger'),
   version = require('./package.json').version;
 
 const ALLOWED_DIRECTORIES = ['marketplace_builder', 'modules'];
 const availableDirectories = () => ALLOWED_DIRECTORIES.filter(fs.existsSync);
 const isEmpty = dir => shell.ls(dir).length == 0;
+
+const fillTemplatesAndAddModulesToArchive = archive => {
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync('modules')) return resolve(true);
+
+    glob('*/+(public|private)/**', { cwd: 'modules/' }, (err, files) => {
+      if (err) throw reject(err);
+      for (f of files) {
+        const path = `modules/${f}`;
+        fs.lstat(path, (err, stat) => {
+          if (!stat.isDirectory()) {
+            archive.append(templates.fillInTemplateValues(path), {
+              name: path
+            });
+          }
+        });
+      }
+    }).on('end', evt => resolve(true));
+  });
+};
 
 const makeArchive = (path, directory, withoutAssets) => {
   if (availableDirectories().length === 0) {
@@ -50,22 +73,16 @@ const makeArchive = (path, directory, withoutAssets) => {
   // pipe archive data to the file
   archive.pipe(output);
 
-  if (withoutAssets) {
-    // Add all files to archive, exclude assets which are deployed straight to S3
-    // For modules for now we go with the old aproach (not through S3) to avoid problems
-    // with deep nesting
-    archive.glob('**/*', { cwd: directory, ignore: ['assets/**'] }, { prefix: directory });
-    archive.glob('*/public/**/*', { cwd: 'modules/' }, { prefix: 'modules' });
-    archive.glob('*/private/**/*', { cwd: 'modules/' }, { prefix: 'modules' });
-  } else {
-    archive.directory(directory, true);
-    archive.glob('*/public/**/*', { cwd: 'modules/' }, { prefix: 'modules' });
-    archive.glob('*/private/**/*', { cwd: 'modules/' }, { prefix: 'modules' });
-  }
+  let options = { cwd: directory };
+  if (withoutAssets) options.ignore = ['assets/**'];
 
-  // finalize the archive (ie we are done appending files but streams have to finish yet)
-  // 'close', 'end' or 'finish' may be fired right after calling this method so register to them beforehand
-  archive.finalize();
+  archive.glob('**/*', options, { prefix: directory });
+
+  fillTemplatesAndAddModulesToArchive(archive).then(r => {
+    setTimeout(() => {
+      archive.finalize();
+    }, 500);
+  });
 };
 
 program

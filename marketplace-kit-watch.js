@@ -9,6 +9,7 @@ const program = require('commander'),
   logger = require('./lib/logger'),
   validate = require('./lib/validators'),
   watchFilesExtensions = require('./lib/watch-files-extensions'),
+  templates = require('./lib/templates'),
   version = require('./package.json').version;
 
 const WATCH_DIRECTORIES = ['marketplace_builder', 'modules'];
@@ -18,8 +19,7 @@ const filename = filePath => filePath.split(path.sep).pop();
 const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
 const isEmpty = filePath => fs.readFileSync(filePath).toString().trim().length === 0;
 const shouldBeSynced = (filePath, event) => {
-  return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) &&
-    isNotEmptyYML(filePath) && isModuleFile(filePath);
+  return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath) && isModuleFile(filePath);
 };
 
 const fileUpdated = event => event === 'update';
@@ -53,7 +53,7 @@ const isNotEmptyYML = filePath => {
 // Mdule files outside public or private folders are not synced
 const isModuleFile = f => {
   let pathArray = f.split(path.sep);
-  if ( 'modules' != pathArray[0]) {
+  if ('modules' != pathArray[0]) {
     return true;
   }
   return ['private', 'public'].includes(pathArray[2]);
@@ -69,10 +69,21 @@ const enqueue = filePath => {
   queue.push({ path: filePath }, () => {});
 };
 
+const getBody = (path, processTemplate) => {
+  if (processTemplate) {
+    logger.Debug('Processing module file as a template');
+    return templates.fillInTemplateValues(path);
+  } else {
+    return fs.createReadStream(path);
+  }
+};
+
 const pushFile = filePath => {
+  let path = filePathUnixified(filePath); // need path with / separators
+
   const formData = {
-    path: filePathUnixified(filePath), // need path with / separators
-    marketplace_builder_file_body: fs.createReadStream(filePath)
+    path: path,
+    marketplace_builder_file_body: getBody(path, path.startsWith('modules'))
   };
 
   return gateway.sync(formData).then(body => {
