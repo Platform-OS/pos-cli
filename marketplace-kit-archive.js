@@ -55,10 +55,12 @@ const makeArchive = (path, directory, withoutAssets) => {
     // For modules for now we go with the old aproach (not through S3) to avoid problems
     // with deep nesting
     archive.glob('**/*', { cwd: directory, ignore: ['assets/**'] }, { prefix: directory });
-    archive.glob('**/*', { cwd: 'modules' }, { prefix: 'modules' });
+    archive.glob('*/public/**/*', { cwd: 'modules/' }, { prefix: 'modules' });
+    archive.glob('*/private/**/*', { cwd: 'modules/' }, { prefix: 'modules' });
   } else {
     archive.directory(directory, true);
-    archive.directory('modules', true);
+    archive.glob('*/public/**/*', { cwd: 'modules/' }, { prefix: 'modules' });
+    archive.glob('*/private/**/*', { cwd: 'modules/' }, { prefix: 'modules' });
   }
 
   // finalize the archive (ie we are done appending files but streams have to finish yet)
