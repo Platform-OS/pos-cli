@@ -23,6 +23,7 @@ program
   .command('init', 'initialize required directory structure')
   .command('logs <environment>', 'attach to environment log streams')
   .command('migrations', 'generate or run a migration')
+  .command('modules', 'manage modules')
   .command('sync <environment>', 'update environment on file change')
   .parse(process.argv);
 

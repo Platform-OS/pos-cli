@@ -57,6 +57,8 @@
     "marketplace-kit-init": "./marketplace-kit-init.js",
     "marketplace-kit-logs": "./marketplace-kit-logs.js",
     "marketplace-kit-push": "./marketplace-kit-push.js",
+    "marketplace-kit-migrations": "./marketplace-kit-migrations.js",
+    "marketplace-kit-modules": "./marketplace-kit-modules.js",
     "marketplace-kit-server": "./marketplace-kit-server.js",
     "marketplace-kit-sync": "./marketplace-kit-sync.js",
     "marketplace-kit-watch": "./marketplace-kit-watch.js"
