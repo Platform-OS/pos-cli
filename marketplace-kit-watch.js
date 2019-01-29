@@ -52,7 +52,9 @@ const isNotEmptyYML = filePath => {
 
 // Mdule files outside public or private folders are not synced
 const isModuleFile = f => {
-  return !/^modules\/([^\/]+)\/((?!(public|private)).)*(\/.*)*$/.test(f);
+  let pathArray = f.split(path.sep);
+  if ( 'modules' != pathArray[0]) { return true }
+  return ["private", "public"].includes(pathArray[2]);
 };
 
 CONCURRENCY = 3;
