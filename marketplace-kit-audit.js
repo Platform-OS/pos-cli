@@ -14,7 +14,7 @@ const checkPath = ({ find, directory, message }) => {
     .grep('-l', find, dirGlob)
     .stdout.split('\n') // convert stdout to array of paths
     .filter(path => path) // filter out empty elements
-    .map(path => path.replace(/(marketplace_builder\/|modules\/)/, '')); // shorten path a little bit
+    .map(path => path.replace('/./', '/')); // shorten path a little bit
 
   if (matches.length === 0) {
     return;
