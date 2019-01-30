@@ -18,7 +18,8 @@ const filename = filePath => filePath.split(path.sep).pop();
 const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
 const isEmpty = filePath => fs.readFileSync(filePath).toString().trim().length === 0;
 const shouldBeSynced = (filePath, event) => {
-  return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath);
+  return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) &&
+    isNotEmptyYML(filePath) && isModuleFile(filePath);
 };
 
 const fileUpdated = event => event === 'update';
@@ -47,6 +48,15 @@ const isNotEmptyYML = filePath => {
   }
 
   return true;
+};
+
+// Mdule files outside public or private folders are not synced
+const isModuleFile = f => {
+  let pathArray = f.split(path.sep);
+  if ( 'modules' != pathArray[0]) {
+    return true;
+  }
+  return ['private', 'public'].includes(pathArray[2]);
 };
 
 CONCURRENCY = 3;
