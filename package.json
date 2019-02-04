@@ -3,7 +3,7 @@
   "version": "2.7.0",
   "description": "Make changes in your marketplace on PlatformOS",
   "scripts": {
-    "test": "jest",
+    "test": "jest --silent",
     "postinstall": "node ./scripts/check-node-version.js",
     "build-assets": "npx webpack-cli gui/editor/src/index.js -o gui/editor/public/app.js --mode=production"
   },
@@ -37,7 +37,6 @@
     "request": "^2.88.0",
     "request-promise": "^4.2.2",
     "semver": "^5.6.0",
-    "shelljs": "^0.8.3",
     "socket.io-client": "^2.1.1",
     "update-notifier": "^2.5.0",
     "uuid": "^3.3.2",
@@ -68,6 +67,7 @@
   },
   "homepage": "https://github.com/mdyd-dev/marketplace-kit#readme",
   "devDependencies": {
-    "jest": "^24.0.0"
+    "jest": "^24.0.0",
+    "shelljs": "^0.8.3"
   }
 }

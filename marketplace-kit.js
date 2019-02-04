@@ -3,6 +3,7 @@
 const program = require('commander'),
   updateNotifier = require('update-notifier'),
   pkg = require('./package.json'),
+  logger = require('./lib/logger'),
   version = pkg.version;
 
 updateNotifier({
@@ -25,5 +26,10 @@ program
   .command('migrations', 'generate or run a migration')
   .command('sync <environment>', 'update environment on file change')
   .parse(process.argv);
+
+const commandList = Object.keys(program._execs);
+if (!commandList.includes(program.args[0])) {
+  logger.Error(`unknown command: ${program.args[0]}`);
+}
 
 if (!program.args.length) program.help();
