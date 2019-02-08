@@ -83,7 +83,7 @@ const pushFile = filePath => {
 
   const formData = {
     path: path,
-    marketplace_builder_file_body: getBody(path, path.startsWith('modules'))
+    marketplace_builder_file_body: getBody(filePath, path.startsWith('modules'))
   };
 
   return gateway.sync(formData).then(body => {
