@@ -69,12 +69,12 @@ const enqueue = filePath => {
   queue.push({ path: filePath }, () => {});
 };
 
-const getBody = (cleanedUpPath, wholePath, processTemplate) => {
+const getBody = (path, processTemplate) => {
   if (processTemplate) {
     logger.Debug('Processing module file as a template');
-    return templates.fillInTemplateValues(cleanedUpPath);
+    return templates.fillInTemplateValues(path);
   } else {
-    return fs.createReadStream(wholePath);
+    return fs.createReadStream(path);
   }
 };
 
@@ -83,7 +83,7 @@ const pushFile = filePath => {
 
   const formData = {
     path: path,
-    marketplace_builder_file_body: getBody(path, filePath, path.startsWith('modules'))
+    marketplace_builder_file_body: getBody(filePath, path.startsWith('modules'))
   };
 
   return gateway.sync(formData).then(body => {
