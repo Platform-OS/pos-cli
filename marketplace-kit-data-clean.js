@@ -17,7 +17,7 @@ const clean = (gateway, confirmation) => {
 
 async function confirmCleanup(gateway) {
   const confirmationText = 'CLEAN DATA';
-  const message = `WARNING!!! You are going to REMOVE you data.
+  const message = `WARNING!!! You are going to REMOVE your data.
 There is no comming back.
 If you still want to continue please type: '${confirmationText}' `;
 

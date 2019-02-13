@@ -22,14 +22,8 @@ const transform = ({ users = { results: [] }, transactables = { results: [] }, m
 async function fetchFilesForData(data) {
   // TODO: user profiles
   // TODO: user properties
-  data.transactables = await Promise.all(
-    data.transactables.map(model => fetchFiles(model))
-  );
-  data.models = await Promise.all(
-    data.models.map(model => fetchFiles(model))
-  ).catch((error) => {
-    console.log(error,'Promise error');
-  });
+  data.transactables = await Promise.all(data.transactables.map(model => fetchFiles(model)));
+  data.models = await Promise.all(data.models.map(model => fetchFiles(model)));
 
   return data;
 };
@@ -66,8 +60,8 @@ program
       .dataExportStart()
       .then(exportTask => {
         getExportStatus(exportTask.id).then(exportTask => {
-          let data = transform(exportTask.data)
-          spinner.succeed(`Downloading files`);
+          let data = transform(exportTask.data);
+          spinner.succeed('Downloading files');
           fetchFilesForData(data).then(data => {
             fs.writeFileSync(filename, JSON.stringify(data));
             spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);

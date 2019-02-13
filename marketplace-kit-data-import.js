@@ -6,7 +6,7 @@ const program = require('commander'),
   Gateway = require('./lib/proxy'),
   logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
-  transform = require('./lib/dataTransform'),
+  transform = require('./lib/data/uploadFiles'),
   version = require('./package.json').version;
 
 let gateway;
@@ -23,7 +23,6 @@ const isValidJSON = data => {
 };
 
 PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com';
-DEPLOY_SERVICE_URL = process.env.DEPLOY_SERVICE_URL || 'https://portal.apps.near-me.com/deploy-service';
 
 program
   .version(version)
@@ -58,16 +57,17 @@ For example: https://jsonlint.com`
           spinner
             .stopAndPersist()
             .succeed('Import scheduled. Check marketplace-kit logs for info when it is done.');
-        })
-        .catch({ statusCode: 404 }, () => {
-          spinner.fail('Import failed');
-          logger.Error('[404] Data import is not supported by the server');
-        })
-        .catch(e => {
-          spinner.fail('Import failed');
-          logger.Error(e.message);
         });
-    });
+    })
+      .catch({ statusCode: 404 }, () => {
+        spinner.fail('Import failed');
+        logger.Error('[404] Data import is not supported by the server');
+      })
+      .catch(e => {
+        spinner.fail('Import failed');
+        console.log(e);
+        logger.Error(e.message);
+      });
   });
 
 program.parse(process.argv);
