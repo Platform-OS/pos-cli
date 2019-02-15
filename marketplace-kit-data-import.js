@@ -65,7 +65,7 @@ For example: https://jsonlint.com`
       })
       .catch(e => {
         spinner.fail('Import failed');
-        console.log(e);
+        logger.Error(e);
         logger.Error(e.message);
       });
   });
