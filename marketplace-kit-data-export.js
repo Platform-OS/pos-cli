@@ -6,6 +6,7 @@ const program = require('commander'),
   Gateway = require('./lib/proxy'),
   logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
+  fetchFiles = require('./lib/data/fetchFiles'),
   version = require('./package.json').version;
 
 let gateway;
@@ -16,6 +17,15 @@ const transform = ({ users = { results: [] }, transactables = { results: [] }, m
     transactables: transactables.results,
     models: models.results
   };
+};
+
+async function fetchFilesForData(data) {
+  // TODO: user profiles
+  // TODO: user properties
+  data.transactables = await Promise.all(data.transactables.map(model => fetchFiles(model)));
+  data.models = await Promise.all(data.models.map(model => fetchFiles(model)));
+
+  return data;
 };
 
 const getExportStatus = id => {
@@ -50,8 +60,12 @@ program
       .dataExportStart()
       .then(exportTask => {
         getExportStatus(exportTask.id).then(exportTask => {
-          fs.writeFileSync(filename, JSON.stringify(transform(exportTask.data)));
-          spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
+          let data = transform(exportTask.data);
+          spinner.succeed('Downloading files');
+          fetchFilesForData(data).then(data => {
+            fs.writeFileSync(filename, JSON.stringify(data));
+            spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
+          });
         });
       })
       .catch(
