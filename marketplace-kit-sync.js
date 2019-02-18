@@ -10,11 +10,11 @@ const program = require('commander'),
 
 program
   .version(version)
-  .arguments('<environment>', 'Name of environment. Example: staging')
+  .arguments('[environment]', 'Name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
-    const authData = fetchAuthData(environment);
+    const authData = fetchAuthData(environment, program);
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,

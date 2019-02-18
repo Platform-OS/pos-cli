@@ -31,14 +31,13 @@ If you still want to continue please type: '${confirmationText}' `;
 
 program
   .version(version)
-  .arguments('<environment>', 'name of the environment. Example: staging')
+  .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
-    const gateway = new Gateway(fetchAuthData(environment));
+    const gateway = new Gateway(fetchAuthData(environment, program));
 
     confirmCleanup(gateway);
   });
 
 program.parse(process.argv);
-if (!program.args.length) program.help();

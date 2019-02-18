@@ -46,13 +46,13 @@ const getExportStatus = id => {
 
 program
   .version(version)
-  .arguments('<environment>', 'name of the environment. Example: staging')
+  .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <export-file-path>', 'output for exported data', 'data.json')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     const filename = params.path;
-    const authData = fetchAuthData(environment);
+    const authData = fetchAuthData(environment, program, program);
     gateway = new Gateway(authData);
 
     spinner.start();
@@ -82,4 +82,3 @@ program
   });
 
 program.parse(process.argv);
-if (!program.args.length) program.help();

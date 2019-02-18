@@ -10,12 +10,12 @@ const program = require('commander'),
 
 program
   .version(version)
-  .arguments('<environment>', 'Name of environment. Example: staging')
+  .arguments('[environment]', 'Name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .option('-t --type <type>', 'item type - LiquidView', 'Page')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
-    const authData = fetchAuthData(environment);
+    const authData = fetchAuthData(environment, program);
     const itemsQuery = `{ items: cms_items(type: ${params.type}) { results { type name: resource_name data }}}`;
     const typesQuery = '{ itemTypes: cms_discovery { results { name  path  fields  }}}';
     const gateway = new Gateway(authData);
@@ -67,5 +67,3 @@ class Liquid {
 }
 
 program.parse(process.argv);
-
-if (!program.args.length) program.help();

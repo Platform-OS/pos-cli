@@ -10,12 +10,12 @@ const program = require('commander'),
 
 program
   .version(version)
-  .arguments('<environment>', 'name of the environment. Example: staging')
+  .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'base name of the migration. Example: cleanup_data')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, name, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
-    const authData = fetchAuthData(environment);
+    const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
     const formData = { name: name };
     const migrationsDir = 'marketplace_builder/migrations';
