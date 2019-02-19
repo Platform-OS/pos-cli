@@ -37,7 +37,7 @@ const uploadArchive = (env, usingDeploymentService) => {
 
 program
   .version(version)
-  .arguments('<environment>', 'name of environment. Example: staging')
+  .arguments('[environment]', 'name of environment. Example: staging')
   .option('-f --force', 'force update. Removes instance-admin lock')
   .option('-d --skip-deployment-service', 'Skip deployment service which uploads assets straight to S3 servers')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
@@ -47,7 +47,7 @@ program
     if (params.force) process.env.FORCE = params.force;
     if (params.partialDeploy) process.env.PARTIAL_DEPLOY = params.partialDeploy;
     if (params.skipDeployService) process.env.SKIP_DEPLOY_SERVICE = params.skipDeployService;
-    const authData = fetchAuthData(environment);
+    const authData = fetchAuthData(environment, program);
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,

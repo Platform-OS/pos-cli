@@ -32,7 +32,7 @@ See this [guide](https://documentation.platform-os.com/get-started/partner-porta
 To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
 
 ```
-marketplace-kit env add <environment> --email <your email> --url <your marketplace url>
+marketplace-kit env add [environment] --email <your email> --url <your marketplace url>
 ```
 
 Example: `marketplace-kit env add staging --email myemail@example.com --url https://example.com`
@@ -42,7 +42,7 @@ Configuration for environments lays down in `.marketplace-kit` file.
 ### Syncing changes
 
 ```
-marketplace-kit sync <environment>
+marketplace-kit sync [environment]
 ```
 
 Example: `marketplace-kit sync staging`
@@ -52,7 +52,7 @@ Enables sync mode - immediately pushes changes made to filesystem to the proper 
 ### Deploying changes
 
 ```
-marketplace-kit deploy <environment>
+marketplace-kit deploy [environment]
 ```
 
 Example: `marketplace-kit deploy staging`
@@ -64,7 +64,7 @@ Deploys all the changes. It is recommended to first deploy to `staging`, test, a
 Force flag is used to override changes made in instance admin. If you see `locked_by_admin` error and you still want to deploy, use `-f` flag.
 
 ```
-marketplace-kit deploy <environment> -f
+marketplace-kit deploy [environment] -f
 ```
 
 Example: `marketplace-kit deploy staging -f`
@@ -95,7 +95,7 @@ If you have any feedback for directory structure go to [github](https://github.c
 To start http server locally that will serve GUI use:
 
 ```
-marketplace-kit gui serve <environment>
+marketplace-kit gui serve [environment]
 ```
 
 Example: `marketplace-kit gui serve staging`

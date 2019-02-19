@@ -68,7 +68,7 @@ PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.ne
 
 program
   .version(version)
-  .arguments('<environment>', 'name of environment. Example: staging')
+  .arguments('[environment]', 'name of environment. Example: staging')
   .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
   .option('--url <url>', 'marketplace url. Example: https://example.com')
   .option('--token <token>', 'if you have a token you can add it directly to mpkit configution without connecting to portal')

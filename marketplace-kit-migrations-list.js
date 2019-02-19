@@ -13,16 +13,14 @@ const logMigration = migration => {
 
 program
   .version(version)
-  .arguments('<environment>', 'name of the environment. Example: staging')
+  .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
-    const authData = fetchAuthData(environment);
+    const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
 
     gateway.listMigrations().then(response => response.migrations.reverse().map(logMigration));
   });
 
 program.parse(process.argv);
-
-if (!program.args.length) program.help();

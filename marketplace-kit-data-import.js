@@ -26,13 +26,13 @@ PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.ne
 
 program
   .version(version)
-  .arguments('<environment>', 'name of the environment. Example: staging')
+  .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <import-file-path>', 'path of import .json file', 'data.json')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     const filename = params.path;
-    const authData = fetchAuthData(environment);
+    const authData = fetchAuthData(environment, program);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url
@@ -71,4 +71,3 @@ For example: https://jsonlint.com`
   });
 
 program.parse(process.argv);
-if (!program.args.length) program.help();
