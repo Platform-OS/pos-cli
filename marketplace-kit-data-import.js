@@ -51,8 +51,11 @@ For example: https://jsonlint.com`
 
     spinner.start();
     transform(JSON.parse(data)).then(transformedData => {
+      const tmpFileName = './tmp/data-imported.json';
+      fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
+      const formData = { 'import[data]': fs.createReadStream(tmpFileName) };
       gateway
-        .dataImport(transformedData)
+        .dataImport(formData)
         .then(() => {
           spinner
             .stopAndPersist()
