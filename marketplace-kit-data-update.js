@@ -18,7 +18,7 @@ PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.ne
 program
   .version(version)
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-p --path <import-file-path>', 'path of import .json file', 'data.json')
+  .option('-p --path <update-file-path>', 'path of update .json file', 'data.json')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
@@ -42,11 +42,11 @@ For example: https://jsonlint.com`
 
     spinner.start();
     transform(JSON.parse(data)).then(transformedData => {
-      const tmpFileName = './tmp/data-imported.json';
+      const tmpFileName = './tmp/data-updated.json';
       fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
-      const formData = { 'import[data]': fs.createReadStream(tmpFileName) };
+      const formData = { 'update[data]': fs.createReadStream(tmpFileName) };
       gateway
-        .dataImport(formData)
+        .dataUpdate(formData)
         .then(() => {
           spinner
             .stopAndPersist()
@@ -55,7 +55,7 @@ For example: https://jsonlint.com`
     })
       .catch({ statusCode: 404 }, () => {
         spinner.fail('Import failed');
-        logger.Error('[404] Data import is not supported by the server');
+        logger.Error('[404] Data update is not supported by the server');
       })
       .catch(e => {
         spinner.fail('Import failed');

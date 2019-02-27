@@ -32,6 +32,14 @@ test('should run help on data import', ()  => {
   sh.config.silent = silentState;
 });
 
+test('should run help on data update', ()  => {
+  sh.config.silent = true;
+  let command = sh.exec('./marketplace-kit.js data update');
+  expect(command.code).toEqual(0);
+  expect(command.stdout).toEqual(expect.stringContaining('Usage: marketplace-kit-data-update [options] [environment]'));
+  sh.config.silent = silentState;
+});
+
 test('should run help on data export', ()  => {
   sh.config.silent = true;
   let command = sh.exec('./marketplace-kit.js data export');
