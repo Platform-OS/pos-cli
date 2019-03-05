@@ -64,7 +64,7 @@ program
           uploadArchive(env, true);
         },
         err => {
-          // logger.Debug(err);
+          logger.Debug(err);
           logger.Debug('Communication problem with deployment service, using classic deployment.');
           uploadArchive(env, false);
         }
