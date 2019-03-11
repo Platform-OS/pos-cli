@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
-  request = require('request'),
-  fs = require('fs'),
-  path = require('path'),
-  shell = require('shelljs'),
-  extract = require('extract-zip'),
-  logger = require('./lib/logger'),
-  validate = require('./lib/validators'),
-  version = require('./package.json').version;
-
-const { mkdir, mv, rm, pwd } = shell;
+const program = require('commander');
+const request = require('request');
+const fs = require('fs');
+const path = require('path');
+const { mkdir, mv, rm, pwd } = require('shelljs');
+const extract = require('extract-zip');
+const logger = require('./lib/logger');
+const validate = require('./lib/validators');
+const version = require('./package.json').version;
 
 const DEFAULT_REPO = 'https://github.com/mdyd-dev/directory-structure';
 const DEFAULT_BRANCH = 'master';
@@ -22,8 +20,9 @@ const emptyTemp = () => rm('-rf', `${TMP_DIR}/*`);
 const createTemp = () => mkdir('-p', TMP_DIR);
 const removeTemp = () => rm('-rf', TMP_DIR);
 const repoNameFrom = () => program.url.split('/').pop();
+const dirExists = dir => fs.existsSync(path.join(process.cwd(), dir));
 const moveStructureToDestination = branch => {
-  const EXTRACTED_STRUCTURE = path.normalize(path.resolve(TMP_DIR, `${repoNameFrom()}-${branch}`, 'marketplace_builder'));
+  const EXTRACTED_STRUCTURE = path.normalize(path.resolve(TMP_DIR, `${repoNameFrom()}-${branch}`, '*'));
   return mv('-f', EXTRACTED_STRUCTURE, pwd());
 };
 
@@ -40,10 +39,10 @@ const extractZip = ({ branch }) => {
     }
 
     moveStructureToDestination(branch);
-    removeTemp();
 
-    logger.Info('Directory structure created.');
-    logger.Warn('Use deploy command before syncing changes to make sure all files are deployed to your instance.');
+    logger.Info('Directory structure created in your file system.');
+
+    removeTemp();
   });
 };
 
@@ -52,8 +51,8 @@ const init = () => {
   createTemp();
   emptyTemp();
 
-  if (fs.existsSync(path.join(process.cwd(), 'marketplace_builder'))) {
-    logger.Error('marketplace_builder directory already exists. Delete it to initialize from scratch.');
+  if (dirExists('marketplace_builder') || dirExists('modules')) {
+    logger.Error('Diretory structure already exists. Operation aborted.');
   }
 
   downloadZip(program).on('close', () => extractZip(program));
