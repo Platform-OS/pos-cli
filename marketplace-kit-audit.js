@@ -19,7 +19,6 @@ const checkPath = ({ find, directory, message }) => {
   if (matches.length === 0) {
     return;
   }
-
   message(matches);
   console.log('\n');
 };
