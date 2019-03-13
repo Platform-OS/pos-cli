@@ -30,6 +30,8 @@ const uploadArchive = (env, usingDeploymentService) => {
       if (exitCode === 1) {
         logger.Error('Deploy failed.');
         process.exit(1);
+      } else if(exitCode === 0) {
+        process.exit(0);
       }
     });
   });
