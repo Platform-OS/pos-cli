@@ -42,14 +42,13 @@ program
   .version(version)
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('-f --force', 'force update. Removes instance-admin lock')
-  .option('-d --skip-deployment-service', 'Skip deployment service which uploads assets straight to S3 servers')
+  .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     if (params.force) process.env.FORCE = params.force;
     if (params.partialDeploy) process.env.PARTIAL_DEPLOY = params.partialDeploy;
-    if (params.skipDeployService) process.env.SKIP_DEPLOY_SERVICE = params.skipDeployService;
     const authData = fetchAuthData(environment, program);
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
@@ -58,9 +57,7 @@ program
       MARKETPLACE_ENV: environment
     });
 
-    if (process.env.SKIP_DEPLOY_SERVICE) {
-      uploadArchive(env, false);
-    } else {
+    if (params.directAssetsUpload) {
       const gateway = new Gateway(authData);
       deployServiceClient.deployAssets(gateway).then(
         () => {
@@ -69,10 +66,12 @@ program
         },
         err => {
           logger.Debug(err);
-          logger.Debug('Communication problem with deployment service, using classic deployment.');
+          logger.Warn('Communication problem with deployment service, using classic deployment.');
           uploadArchive(env, false);
         }
       );
+    } else {
+      uploadArchive(env, false);
     }
   });
 
