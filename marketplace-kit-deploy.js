@@ -6,6 +6,7 @@ const program = require('commander'),
   command = require('./lib/command'),
   logger = require('./lib/logger'),
   validate = require('./lib/validators'),
+  Gateway = require('./lib/proxy'),
   deployServiceClient = require('./lib/deployServiceClient'),
   version = require('./package.json').version;
 
@@ -60,7 +61,8 @@ program
     if (process.env.SKIP_DEPLOY_SERVICE) {
       uploadArchive(env, false);
     } else {
-      deployServiceClient.deployAssets().then(
+      const gateway = new Gateway(authData);
+      deployServiceClient.deployAssets(gateway).then(
         () => {
           logger.Success('Assets deployed to S3. Uploading manifest.');
           uploadArchive(env, true);
