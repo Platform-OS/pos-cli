@@ -10,6 +10,7 @@ const program = require('commander'),
   validate = require('./lib/validators'),
   watchFilesExtensions = require('./lib/watch-files-extensions'),
   templates = require('./lib/templates'),
+  settings = require('./lib/settings'),
   version = require('./package.json').version;
 
 const WATCH_DIRECTORIES = ['marketplace_builder', 'modules'];
@@ -72,10 +73,18 @@ const enqueue = filePath => {
 const getBody = (path, processTemplate) => {
   if (processTemplate) {
     logger.Debug('Processing module file as a template');
-    return templates.fillInTemplateValues(path);
+
+    const templatePath = `modules/${path.split(path.sep)[1]}/template-values.json`
+    const moduleTemplateData = templateData(templatePath);
+
+    return templates.fillInTemplateValues(path, moduleTemplateData);
   } else {
     return fs.createReadStream(path);
   }
+};
+
+const templateData = (path) => {
+  return settings.loadSettingsFile(path);
 };
 
 const pushFile = filePath => {
