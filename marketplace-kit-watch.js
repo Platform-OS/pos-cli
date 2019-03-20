@@ -76,7 +76,6 @@ const getBody = (filePath, processTemplate) => {
 
     const templatePath = `modules/${filePath.split(path.sep)[1]}/template-values.json`
     const moduleTemplateData = templateData(templatePath);
-console.log( templates.fillInTemplateValues(filePath, moduleTemplateData));
     return templates.fillInTemplateValues(filePath, moduleTemplateData);
   } else {
     return fs.createReadStream(filePath);
