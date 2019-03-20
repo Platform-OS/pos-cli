@@ -70,16 +70,16 @@ const enqueue = filePath => {
   queue.push({ path: filePath }, () => {});
 };
 
-const getBody = (path, processTemplate) => {
+const getBody = (filePath, processTemplate) => {
   if (processTemplate) {
     logger.Debug('Processing module file as a template');
 
-    const templatePath = `modules/${path.split(path.sep)[1]}/template-values.json`
+    const templatePath = `modules/${filePath.split(path.sep)[1]}/template-values.json`
     const moduleTemplateData = templateData(templatePath);
-
-    return templates.fillInTemplateValues(path, moduleTemplateData);
+console.log( templates.fillInTemplateValues(filePath, moduleTemplateData));
+    return templates.fillInTemplateValues(filePath, moduleTemplateData);
   } else {
-    return fs.createReadStream(path);
+    return fs.createReadStream(filePath);
   }
 };
 
