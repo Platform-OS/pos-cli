@@ -95,7 +95,6 @@ const makeArchive = (path, directory, withoutAssets) => {
   archive.glob('**/*', options, { prefix: directory });
 
   addModulesToArchive(archive).then(r => {
-    console.log("finalize");
     archive.finalize();
   });
 };
