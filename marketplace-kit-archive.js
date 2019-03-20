@@ -34,7 +34,7 @@ const addModuleToArchive = (module, archive) => {
       return Promise.all(
         files.map(f => {
           const path = `modules/${module}/${f}`;
-          return new Promise((resolve, reject2) => {
+          return new Promise((resolve, reject) => {
             fs.lstat(path, (err, stat) => {
               if (!stat.isDirectory()) {
                 archive.append(templates.fillInTemplateValues(path, moduleTemplateData), {
