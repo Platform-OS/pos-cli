@@ -31,17 +31,22 @@ const addModuleToArchive = (module, archive) => {
       if (err) throw reject(err);
       const moduleTemplateData = templateData(`modules/${module}/template-values.json`);
 
-      for (f of files) {
-        const path = `modules/${module}/${f}`;
-        fs.lstat(path, (err, stat) => {
-          if (!stat.isDirectory()) {
-            archive.append(templates.fillInTemplateValues(path, moduleTemplateData), {
-              name: path
+      return Promise.all(
+        files.map(f => {
+          const path = `modules/${module}/${f}`;
+          return new Promise((resolve, reject2) => {
+            fs.lstat(path, (err, stat) => {
+              if (!stat.isDirectory()) {
+                archive.append(templates.fillInTemplateValues(path, moduleTemplateData), {
+                  name: path
+                });
+              }
+              resolve();
             });
-          }
-        });
-      }
-    }).on('end', evt => resolve(true));
+          });
+        })
+      ).then(r => { resolve() } )
+    });
   });
 }
 
@@ -90,9 +95,8 @@ const makeArchive = (path, directory, withoutAssets) => {
   archive.glob('**/*', options, { prefix: directory });
 
   addModulesToArchive(archive).then(r => {
-    setTimeout(() => {
-      archive.finalize();
-    }, 500);
+    console.log("finalize");
+    archive.finalize();
   });
 };
 
