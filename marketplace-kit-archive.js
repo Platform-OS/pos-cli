@@ -46,7 +46,7 @@ const addModuleToArchive = (module, archive) => {
           });
         })
       ).then(r => {
-        resolve()
+        resolve();
       });
     });
   });
