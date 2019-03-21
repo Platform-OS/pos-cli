@@ -8,29 +8,47 @@ const program = require('commander'),
   archiver = require('archiver'),
   templates = require('./lib/templates'),
   logger = require('./lib/logger'),
+  settings = require('./lib/settings'),
   version = require('./package.json').version;
 
 const ALLOWED_DIRECTORIES = ['marketplace_builder', 'modules'];
 const availableDirectories = () => ALLOWED_DIRECTORIES.filter(fs.existsSync);
 const isEmpty = dir => shell.ls(dir).length == 0;
 
-const fillTemplatesAndAddModulesToArchive = archive => {
-  return new Promise((resolve, reject) => {
-    if (!fs.existsSync('modules')) return resolve(true);
+const addModulesToArchive = archive => {
+  if (!fs.existsSync('modules')) return Promise.resolve(true);
 
-    glob('*/+(public|private)/**', { cwd: 'modules/' }, (err, files) => {
+  return Promise.all(
+    glob.sync('*/', { cwd: 'modules' }).map(
+      module => ( addModuleToArchive(module, archive))
+    )
+  );
+};
+
+const addModuleToArchive = (module, archive) => {
+  return new Promise((resolve, reject) => {
+    glob('?(public|private)/**', { cwd: `modules/${module}` }, (err, files) => {
       if (err) throw reject(err);
-      for (f of files) {
-        const path = `modules/${f}`;
-        fs.lstat(path, (err, stat) => {
-          if (!stat.isDirectory()) {
-            archive.append(templates.fillInTemplateValues(path), {
-              name: path
+      const moduleTemplateData = templateData(`modules/${module}/template-values.json`);
+
+      return Promise.all(
+        files.map(f => {
+          const path = `modules/${module}/${f}`;
+          return new Promise((resolve, reject) => {
+            fs.lstat(path, (err, stat) => {
+              if (!stat.isDirectory()) {
+                archive.append(templates.fillInTemplateValues(path, moduleTemplateData), {
+                  name: path
+                });
+              }
+              resolve();
             });
-          }
-        });
-      }
-    }).on('end', evt => resolve(true));
+          });
+        })
+      ).then(r => {
+        resolve();
+      });
+    });
   });
 };
 
@@ -78,11 +96,13 @@ const makeArchive = (path, directory, withoutAssets) => {
 
   archive.glob('**/*', options, { prefix: directory });
 
-  fillTemplatesAndAddModulesToArchive(archive).then(r => {
-    setTimeout(() => {
-      archive.finalize();
-    }, 500);
+  addModulesToArchive(archive).then(r => {
+    archive.finalize();
   });
+};
+
+const templateData = (path) => {
+  return settings.loadSettingsFile(path);
 };
 
 program
