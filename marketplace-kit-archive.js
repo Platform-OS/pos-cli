@@ -16,7 +16,7 @@ const availableDirectories = () => ALLOWED_DIRECTORIES.filter(fs.existsSync);
 const isEmpty = dir => shell.ls(dir).length == 0;
 
 const addModulesToArchive = archive => {
-  if (!fs.existsSync('modules')) return Promise.resolve(true)
+  if (!fs.existsSync('modules')) return Promise.resolve(true);
 
   return Promise.all(
     glob.sync('*/', { cwd: 'modules' }).map(
@@ -45,10 +45,12 @@ const addModuleToArchive = (module, archive) => {
             });
           });
         })
-      ).then(r => { resolve() } )
+      ).then(r => {
+        resolve()
+      });
     });
   });
-}
+};
 
 const makeArchive = (path, directory, withoutAssets) => {
   if (availableDirectories().length === 0) {

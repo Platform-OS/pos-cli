@@ -74,7 +74,7 @@ const getBody = (filePath, processTemplate) => {
   if (processTemplate) {
     logger.Debug('Processing module file as a template');
 
-    const templatePath = `modules/${filePath.split(path.sep)[1]}/template-values.json`
+    const templatePath = `modules/${filePath.split(path.sep)[1]}/template-values.json`;
     const moduleTemplateData = templateData(templatePath);
     return templates.fillInTemplateValues(filePath, moduleTemplateData);
   } else {
