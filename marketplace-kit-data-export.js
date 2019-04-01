@@ -20,8 +20,11 @@ const transform = ({ users = { results: [] }, transactables = { results: [] }, m
 };
 
 async function fetchFilesForData(data) {
-  // TODO: user profiles
   // TODO: user properties
+  data.users = await Promise.all(data.users.map(user => {
+    model.profiles = model.profiles.map(profile => fetchFiles(profile));
+    return model
+  }));
   data.transactables = await Promise.all(data.transactables.map(model => fetchFiles(model)));
   data.models = await Promise.all(data.models.map(model => fetchFiles(model)));
 
@@ -54,40 +57,34 @@ program
     const filename = params.path;
     const authData = fetchAuthData(environment, program, program);
     gateway = new Gateway(authData);
-
     spinner.start();
-
-    const data = transform(JSON.parse(fs.readFileSync(`tmp/${filename}`)));
-    fetchFilesForData(data).then(data => {
-      spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
-    });
-
-    // gateway
-    //   .dataExportStart()
-    //   .then(exportTask => {
-    //     getExportStatus(exportTask.id).then(exportTask => {
-    //       fs.writeFileSync(`tmp/${filename}`, JSON.stringify(exportTask.data));
-    //       let data = transform(exportTask.data);
-    //       spinner.succeed('Downloading files');
-    //       fetchFilesForData(data).then(data => {
-    //         fs.writeFileSync(filename, JSON.stringify(data));
-    //         spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
-    //       }).catch(e => {
-    //         logger.Warn('export catch');
-    //       });
-    //     });
-    //   })
-    //   .catch(
-    //     { statusCode: 404 },
-    //     () => {
-    //       spinner.fail('Export failed');
-    //       logger.Error('[404] Data export is not supported by the server');
-    //     }
-    //   )
-    //   .catch(e => {
-    //     spinner.fail('Export failed');
-    //     logger.Error(e.message);
-    //   });
+    gateway
+      .dataExportStart()
+      .then(exportTask => {
+        getExportStatus(exportTask.id).then(exportTask => {
+          fs.writeFileSync(`tmp/${filename}`, JSON.stringify(exportTask.data));
+          let data = transform(exportTask.data);
+          spinner.succeed('Downloading files');
+          fetchFilesForData(data).then(data => {
+            fs.writeFileSync(filename, JSON.stringify(data));
+            spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
+          }).catch(e => {
+            logger.Warn('export error');
+            logger.Warn(e.message);
+          });
+        });
+      })
+      .catch(
+        { statusCode: 404 },
+        () => {
+          spinner.fail('Export failed');
+          logger.Error('[404] Data export is not supported by the server');
+        }
+      )
+      .catch(e => {
+        spinner.fail('Export failed');
+        logger.Error(e.message);
+      });
   });
 
 program.parse(process.argv);
