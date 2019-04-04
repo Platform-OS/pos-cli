@@ -1,3 +1,0 @@
-version=`git describe`
-docker build . -t platformos/marketplace-kit:$version
-docker push platformos/marketplace-kit:$version

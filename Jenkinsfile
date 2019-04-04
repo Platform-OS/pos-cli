@@ -20,9 +20,7 @@ pipeline {
     }
 
     stage('Build') {
-      when {
-        branch 'master'
-      }
+      when { branch 'master' }
       steps {
         script {
           docker.withRegistry('https://registry.hub.docker.com', 'posops-dockerhub') {
