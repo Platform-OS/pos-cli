@@ -72,8 +72,6 @@ const enqueue = filePath => {
 
 const getBody = (filePath, processTemplate) => {
   if (processTemplate) {
-    logger.Debug('Processing module file as a template');
-
     const templatePath = `modules/${filePath.split(path.sep)[1]}/template-values.json`;
     const moduleTemplateData = templateData(templatePath);
     return templates.fillInTemplateValues(filePath, moduleTemplateData);
@@ -86,12 +84,12 @@ const templateData = (path) => {
   return settings.loadSettingsFile(path);
 };
 
-const pushFile = filePath => {
-  let path = filePathUnixified(filePath); // need path with / separators
+const pushFile = syncedFilePath => {
+  let filePath = filePathUnixified(syncedFilePath); // need path with / separators
 
   const formData = {
-    path: path,
-    marketplace_builder_file_body: getBody(filePath, path.startsWith('modules'))
+    path: filePath,
+    marketplace_builder_file_body: getBody(syncedFilePath, filePath.startsWith('modules'))
   };
 
   return gateway.sync(formData).then(body => {
