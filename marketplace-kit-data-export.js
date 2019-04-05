@@ -21,9 +21,9 @@ const transform = ({ users = { results: [] }, transactables = { results: [] }, m
 
 async function fetchFilesForData(data) {
   // TODO: user properties
-  data.users = await Promise.all(data.users.map(user => {
-    model.profiles = model.profiles.map(profile => fetchFiles(profile));
-    return model
+  data.users = await Promise.all(data.users.map(async(user) => {
+    user.profiles = await Promise.all(user.profiles.map(profile => fetchFiles(profile)));
+    return user;
   }));
   data.transactables = await Promise.all(data.transactables.map(model => fetchFiles(model)));
   data.models = await Promise.all(data.models.map(model => fetchFiles(model)));
