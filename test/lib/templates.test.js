@@ -1,12 +1,13 @@
 const templates = require('./../../lib/templates');
+const fs = require('fs');
 
 process.env.TEMPLATE_VALUES_FILE_PATH = 'test/fixtures/template-values.json';
 
 const fileWithTemplatePath = 'test/fixtures/template.liquid';
 const missformatedTemplatePath = 'test/fixtures/missformatedTemplate.html';
 
-test('returns nothing if it cannont parse the template', () => {
-  expect(templates.fillInTemplateValues(missformatedTemplatePath)).toEqual('');
+test('returns oryginal file body if it runs into error', () => {
+  expect(templates.fillInTemplateValues(missformatedTemplatePath)).toEqual(fs.readFileSync(missformatedTemplatePath, 'utf8'));
 });
 
 test('fills template with values ', () => {
