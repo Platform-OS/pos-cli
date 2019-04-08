@@ -4,6 +4,10 @@ const fs = require('fs');
 const fileWithTemplatePath = 'test/fixtures/template.liquid';
 const missformatedTemplatePath = 'test/fixtures/missformatedTemplate.html';
 
+test('ignores file if template values are empty', () => {
+  expect(templates.fillInTemplateValues(missformatedTemplatePath, Object({}))).not.toEqual(fs.readFileSync(missformatedTemplatePath, 'utf8'));
+});
+
 test('returns oryginal file body if it runs into error', () => {
   expect(templates.fillInTemplateValues(missformatedTemplatePath, Object({ "aKey": 1}))).toEqual(fs.readFileSync(missformatedTemplatePath, 'utf8'));
 });
