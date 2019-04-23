@@ -20,8 +20,11 @@ const transform = ({ users = { results: [] }, transactables = { results: [] }, m
 };
 
 async function fetchFilesForData(data) {
-  // TODO: user profiles
   // TODO: user properties
+  data.users = await Promise.all(data.users.map(async(user) => {
+    user.profiles = await Promise.all(user.profiles.map(profile => fetchFiles(profile)));
+    return user;
+  }));
   data.transactables = await Promise.all(data.transactables.map(model => fetchFiles(model)));
   data.models = await Promise.all(data.models.map(model => fetchFiles(model)));
 
@@ -54,17 +57,20 @@ program
     const filename = params.path;
     const authData = fetchAuthData(environment, program, program);
     gateway = new Gateway(authData);
-
     spinner.start();
     gateway
       .dataExportStart()
       .then(exportTask => {
         getExportStatus(exportTask.id).then(exportTask => {
+          fs.writeFileSync(`tmp/${filename}`, JSON.stringify(exportTask.data));
           let data = transform(exportTask.data);
           spinner.succeed('Downloading files');
           fetchFilesForData(data).then(data => {
             fs.writeFileSync(filename, JSON.stringify(data));
             spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
+          }).catch(e => {
+            logger.Warn('export error');
+            logger.Warn(e.message);
           });
         });
       })

@@ -51,17 +51,17 @@ For example: https://jsonlint.com`
           spinner
             .stopAndPersist()
             .succeed('Import scheduled. Check marketplace-kit logs for info when it is done.');
+        })
+        .catch({ statusCode: 404 }, () => {
+          spinner.fail('Import failed');
+          logger.Error('[404] Data import is not supported by the server');
+        })
+        .catch(e => {
+          spinner.fail('Import failed');
+          logger.Error(e);
+          logger.Error(e.message);
         });
-    })
-      .catch({ statusCode: 404 }, () => {
-        spinner.fail('Import failed');
-        logger.Error('[404] Data import is not supported by the server');
-      })
-      .catch(e => {
-        spinner.fail('Import failed');
-        logger.Error(e);
-        logger.Error(e.message);
-      });
+    });
   });
 
 program.parse(process.argv);
