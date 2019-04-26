@@ -8,7 +8,7 @@ const program = require('commander'),
   paths = require('path'),
   shell = require('shelljs'),
   glob = require('glob'),
-  archiver = require('archiver'),
+  prepareArchive = require('./lib/prepareArchive'),
   templates = require('./lib/templates'),
   logger = require('./lib/logger'),
   settings = require('./lib/settings'),
@@ -28,11 +28,11 @@ const addModulesToArchive = archive => {
   );
 };
 
-const addModuleToArchive = (module, archive) => {
+const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') => {
   return new Promise((resolve, reject) => {
-    glob('?(public|private)/**', { cwd: `${MODULES_DIR}/${module}` }, (err, files) => {
+    glob(pattern, { cwd: `${MODULES_DIR}/${module}` }, (err, files) => {
       if (err) throw reject(err);
-      const moduleTemplateData = templateData(`${MODULES_DIR}/${module}/template-values.json`);
+      const moduleTemplateData = templateData(module);
 
       return Promise.all(
         files.map(f => {
@@ -62,50 +62,23 @@ const makeArchive = (path, directory, withoutAssets) => {
 
   availableDirectories().map(dir => {
     if (isEmpty(dir) && !withoutAssets) {
-      logger.Error(`${dir} can't be empty if the deploy is not partial - it would remove all the files from the instance`, {
-        hideTimestamp: true
-      });
+      logger.Error(`${dir} can't be empty if the deploy is not partial - it would remove all the files from the instance`,
+                   { hideTimestamp: true });
     }
   });
 
-  shell.mkdir('-p', 'tmp');
-  shell.rm('-rf', path);
-
-  const output = fs.createWriteStream(path);
-  const archive = archiver('zip', { zlib: { level: 6 } });
-
-  // listen for all archive data to be written
-  // 'close' event is fired only when a file descriptor is involved
-  output.on('close', () => {
-    const sizeInMB = archive.pointer() / 1024 / 1024;
-    logger.Info(`Archive size: ${sizeInMB.toFixed(2)} MB`);
-  });
-
-  archive.on('warning', err => {
-    if (err.code === 'ENOENT') {
-      logger.Error(err);
-    } else throw err;
-  });
-
-  archive.on('error', err => {
-    throw err;
-  });
-
-  // pipe archive data to the file
-  archive.pipe(output);
-
+  const releaseArchive = prepareArchive(path);
   let options = { cwd: directory };
   if (withoutAssets) options.ignore = ['assets/**'];
+  releaseArchive.glob('**/*', options, { prefix: directory });
 
-  archive.glob('**/*', options, { prefix: directory });
-
-  addModulesToArchive(archive).then(r => {
-    archive.finalize();
+  addModulesToArchive(releaseArchive).then(r => {
+    releaseArchive.finalize();
   });
 };
 
-const templateData = (path) => {
-  return settings.loadSettingsFile(path);
+const templateData = (module) => {
+  return settings.loadSettingsFileForModule(module);
 };
 
 program

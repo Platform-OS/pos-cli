@@ -76,16 +76,15 @@ const enqueue = filePath => {
 
 const getBody = (filePath, processTemplate) => {
   if (processTemplate) {
-    const templatePath = `${MODULES_DIR}/${filePath.split(path.sep)[1]}/template-values.json`;
-    const moduleTemplateData = templateData(templatePath);
+    const moduleTemplateData = templateData(filePath.split(path.sep)[1]);
     return templates.fillInTemplateValues(filePath, moduleTemplateData);
   } else {
     return fs.createReadStream(filePath);
   }
 };
 
-const templateData = (path) => {
-  return settings.loadSettingsFile(path);
+const templateData = (module) => {
+  return settings.loadSettingsFileForModule(module);
 };
 
 const pushFile = syncedFilePath => {

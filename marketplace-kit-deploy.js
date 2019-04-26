@@ -7,36 +7,49 @@ const program = require('commander'),
   logger = require('./lib/logger'),
   validate = require('./lib/validators'),
   Gateway = require('./lib/proxy'),
-  deployServiceClient = require('./lib/deployServiceClient'),
+  assets = require('./lib/assets'),
   version = require('./package.json').version;
 
 const uploadArchive = (env, usingDeploymentService) => {
   const options = usingDeploymentService ? ['--without-assets'] : [];
-  const archive = spawn(command('marketplace-kit-archive'), options, {
-    stdio: 'inherit'
-  });
-
-  archive.on('close', code => {
-    if (code === 1) {
-      logger.Error('Deploy failed.');
-      process.exit(1);
-    }
-
-    const push = spawn(command('marketplace-kit-push'), [], {
-      stdio: 'inherit',
-      env: env
+  return new Promise((resolve, reject) => {
+    const archive = spawn(command('marketplace-kit-archive'), options, {
+      stdio: 'inherit'
     });
 
-    push.on('close', exitCode => {
-      if (exitCode === 1) {
+    archive.on('close', code => {
+      if (code === 1) {
         logger.Error('Deploy failed.');
-        process.exit(1);
-      } else if(exitCode === 0) {
-        process.exit(0);
+        reject(e);
       }
+
+      const push = spawn(command('marketplace-kit-push'), [], {
+        stdio: 'inherit',
+        env: env
+      });
+
+      push.on('close', (exitCode) => {
+        if (exitCode === 1) {
+          logger.Error('Deploy failed.');
+          reject(false);
+        } else if(exitCode === 0) {
+          resolve(true);
+        }
+      });
     });
   });
 };
+
+const deploy = async(env, authData, params) => {
+  await uploadArchive(env, params.directAssetsUpload);
+  if (params.directAssetsUpload){
+    const gateway = new Gateway(authData);
+    await assets.deployAssets(gateway);
+    logger.Success('Assets deployed to S3');
+  }
+};
+
+PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com';
 
 program
   .version(version)
@@ -45,7 +58,7 @@ program
   .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .action((environment, params) => {
+  .action(async (environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
     if (params.force) process.env.FORCE = params.force;
     if (params.partialDeploy) process.env.PARTIAL_DEPLOY = params.partialDeploy;
@@ -57,21 +70,11 @@ program
       MARKETPLACE_ENV: environment
     });
 
-    if (params.directAssetsUpload) {
-      const gateway = new Gateway(authData);
-      deployServiceClient.deployAssets(gateway).then(
-        () => {
-          logger.Success('Assets deployed to S3. Uploading manifest.');
-          uploadArchive(env, true);
-        },
-        err => {
-          logger.Debug(err);
-          logger.Warn('Communication problem with deployment service, using classic deployment.');
-          uploadArchive(env, false);
-        }
-      );
-    } else {
-      uploadArchive(env, false);
+    try{
+      await deploy(env, authData, params);
+      process.exit(0);
+    } catch(error) {
+      process.exit(1);
     }
   });
 
