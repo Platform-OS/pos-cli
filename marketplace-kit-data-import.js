@@ -3,6 +3,7 @@
 const program = require('commander'),
   fs = require('fs'),
   ora = require('ora'),
+  shell = require('shelljs'),
   Gateway = require('./lib/proxy'),
   logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
@@ -34,7 +35,7 @@ program
     const data = fs.readFileSync(filename, 'utf8');
 
     if (!isValidJSON(data)) {
-      return logger.Failed(
+      return logger.Error(
         `Invalid format of ${filename}. Must be a valid json file. Check your file using one of JSON validators online.
 For example: https://jsonlint.com`
       );
@@ -43,6 +44,7 @@ For example: https://jsonlint.com`
     spinner.start();
     transform(JSON.parse(data)).then(transformedData => {
       const tmpFileName = './tmp/data-imported.json';
+      shell.mkdir('-p', './tmp');
       fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
       const formData = { 'import[data]': fs.createReadStream(tmpFileName) };
       gateway
