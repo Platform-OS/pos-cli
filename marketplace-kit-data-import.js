@@ -36,8 +36,7 @@ program
 
     if (!isValidJSON(data)) {
       return logger.Error(
-        `Invalid format of ${filename}. Must be a valid json file. Check your file using one of JSON validators online.
-For example: https://jsonlint.com`
+        `Invalid format of ${filename}. Must be a valid json file. Check file using one of JSON validators online: https://jsonlint.com`
       );
     }
 
