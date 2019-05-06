@@ -65,7 +65,7 @@ program
       .dataExportStart(exportInternalIds)
       .then(exportTask => {
         getExportStatus(exportTask.id).then(exportTask => {
-          fs.writeFileSync(`tmp/${filename}`, JSON.stringify(exportTask.data));
+          fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
           let data = transform(exportTask.data);
           spinner.succeed('Downloading files');
           fetchFilesForData(data).then(data => {
