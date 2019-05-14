@@ -3,6 +3,7 @@
 const program = require('commander'),
   fs = require('fs'),
   ora = require('ora'),
+  shell = require('shelljs'),
   Gateway = require('./lib/proxy'),
   logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
@@ -65,6 +66,7 @@ program
       .dataExportStart(exportInternalIds)
       .then(exportTask => {
         getExportStatus(exportTask.id).then(exportTask => {
+          shell.mkdir('-p', './tmp');
           fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
           let data = transform(exportTask.data);
           spinner.succeed('Downloading files');
