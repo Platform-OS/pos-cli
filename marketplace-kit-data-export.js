@@ -66,7 +66,7 @@ program
       .dataExportStart(exportInternalIds)
       .then(exportTask => {
         getExportStatus(exportTask.id).then(exportTask => {
-          shell.mkdir('-p', './tmp');
+          shell.mkdir('-p', 'tmp');
           fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
           let data = transform(exportTask.data);
           spinner.succeed('Downloading files');
