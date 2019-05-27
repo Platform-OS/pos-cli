@@ -72,9 +72,13 @@ gateway
     getDeploymentStatus(response.id).then(() => {
       const t1 = performance.now();
       spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration(t0, t1)}`);
-    }).catch(() => process.exit(1));
+    }).catch((error) => {
+      logger.Error(error.message);
+      process.exit(1);
+    });
   })
-  .catch(() => {
+  .catch((error) => {
+    logger.Error(error.message);
     spinner.stopAndPersist().fail('Deploy failed');
     process.exit(1);
   });
