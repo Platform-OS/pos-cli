@@ -8,6 +8,7 @@ const program = require('commander'),
   logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   fetchFiles = require('./lib/data/fetchFiles'),
+  waitForStatus = require('./lib/data/waitForStatus'),
   version = require('./package.json').version;
 
 let gateway;
@@ -32,22 +33,6 @@ async function fetchFilesForData(data) {
   return data;
 };
 
-const getExportStatus = id => {
-  return new Promise((resolve, reject) => {
-    (getStatus = () => {
-      gateway.dataExportStatus(id).then(response => {
-        if (response.status === 'pending') {
-          setTimeout(getStatus, 1500);
-        } else if (response.status === 'done') {
-          resolve(response);
-        } else {
-          spinner.fail('Export failed');
-        }
-      });
-    })();
-  });
-};
-
 program
   .version(version)
   .arguments('[environment]', 'name of the environment. Example: staging')
@@ -65,7 +50,7 @@ program
     gateway
       .dataExportStart(exportInternalIds)
       .then(exportTask => {
-        getExportStatus(exportTask.id).then(exportTask => {
+        waitForStatus(exportTask.id, gateway.dataExportStatus).then(exportTask => {
           shell.mkdir('-p', 'tmp');
           fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
           let data = transform(exportTask.data);
@@ -77,6 +62,8 @@ program
             logger.Warn('export error');
             logger.Warn(e.message);
           });
+        }).catch(error => {
+          spinner.fail('Export failed');
         });
       })
       .catch(

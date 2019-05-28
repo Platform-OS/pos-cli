@@ -9,12 +9,49 @@ const program = require('commander'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   transform = require('./lib/data/uploadFiles'),
   isValidJSON = require('./lib/data/isValidJSON'),
+  waitForStatus = require('./lib/data/waitForStatus'),
   version = require('./package.json').version;
 
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
+const tmpFileName = './tmp/data-imported.json';
 
 PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com';
+
+const logInvalidFile = (filename) => {
+  return logger.Error(
+    `Invalid format of ${filename}. Must be a valid json file. Check file using one of JSON validators online: https://jsonlint.com`
+  );
+};
+
+const dataImport = async(filename) => {
+  const data = fs.readFileSync(filename, 'utf8');
+  if (!isValidJSON(data)) return logInvalidFile(filename);
+
+  spinner.start();
+  const transformedData = await transform(JSON.parse(data));
+  shell.mkdir('-p', './tmp');
+  fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
+  const formData = { 'import[data]': fs.createReadStream(tmpFileName) };
+  gateway
+    .dataImportStart(formData)
+    .then((importTask) => {
+      spinner.stopAndPersist().succeed('Data sent').start('Importing data');
+      waitForStatus(importTask.id, gateway.dataImportStatus).then(importTask => {
+        spinner.stopAndPersist().succeed('Import done.');
+      }).catch(error => {
+        spinner.fail('Import failed');
+      });
+    })
+    .catch({ statusCode: 404 }, () => {
+      spinner.fail('Import failed');
+      logger.Error('[404] Data import is not supported by the server');
+    })
+    .catch(e => {
+      spinner.fail('Import failed');
+      logger.Error(e.message);
+    });
+};
 
 program
   .version(version)
@@ -31,38 +68,7 @@ program
     });
 
     gateway = new Gateway(authData);
-
-    const data = fs.readFileSync(filename, 'utf8');
-
-    if (!isValidJSON(data)) {
-      return logger.Error(
-        `Invalid format of ${filename}. Must be a valid json file. Check file using one of JSON validators online: https://jsonlint.com`
-      );
-    }
-
-    spinner.start();
-    transform(JSON.parse(data)).then(transformedData => {
-      const tmpFileName = './tmp/data-imported.json';
-      shell.mkdir('-p', './tmp');
-      fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
-      const formData = { 'import[data]': fs.createReadStream(tmpFileName) };
-      gateway
-        .dataImport(formData)
-        .then(() => {
-          spinner
-            .stopAndPersist()
-            .succeed('Import scheduled. Check marketplace-kit logs for info when it is done.');
-        })
-        .catch({ statusCode: 404 }, () => {
-          spinner.fail('Import failed');
-          logger.Error('[404] Data import is not supported by the server');
-        })
-        .catch(e => {
-          spinner.fail('Import failed');
-          logger.Error(e);
-          logger.Error(e.message);
-        });
-    });
+    dataImport(filename);
   });
 
 program.parse(process.argv);
