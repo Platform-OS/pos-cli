@@ -20,6 +20,14 @@ app.use(bodyParser.json());
 app.use('/gui/editor', express.static(__dirname + '/gui/editor/public'));
 app.use('/gui/graphql', express.static(__dirname + '/gui/graphql/public'));
 
+// INFO
+const info = (req, res) => {
+  return res.send(JSON.stringify({ MPKIT_URL: process.env.MPKIT_URL}))
+};
+
+app.get('/info', info);
+
+
 // GRAPHQL
 const graphqlRouting = (req, res) => {
   gateway
@@ -54,6 +62,7 @@ app.listen(port, err => {
   }
 
   logger.Debug(`Server is listening on ${port}`);
+  logger.Success(`Connected to ${process.env.MARKETPLACE_URL}`)
   logger.Success(`Resources Editor: http://localhost:${port}/gui/editor`);
   logger.Success(`GraphQL Browser: http://localhost:${port}/gui/graphql`);
 });

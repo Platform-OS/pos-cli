@@ -11,6 +11,13 @@
       #graphiql {
         height: 100vh;
       }
+
+      #status-bar {
+        background-color: #ccc;
+        font-family: monospace;
+        padding: 3px 10px;
+        font-size: x-small;
+      }
     </style>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/graphiql/0.12.0/graphiql.min.css" integrity="sha256-0mOcJX/1dHo5oqUmlFyTgF6lFtXx6gP30MANrmtcIgA=" crossorigin="anonymous" />
@@ -29,6 +36,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/graphiql/0.12.0/graphiql.min.js" integrity="sha256-kQDzpyqSwNpOt6vMmEn3dsR4wUbfWyf0XnxdxmyHzbc=" crossorigin="anonymous"></script>
   </head>
   <body>
+    <div id="status-bar"></div>
     <div id="graphiql">Loading...</div>
     <script>
 
@@ -131,6 +139,16 @@
         }),
         document.getElementById('graphiql')
       );
+    </script>
+
+    <script>
+      (function() {
+        var printConnectionInfo = (env) => {
+          document.getElementById("status-bar").innerHTML = `platformOS - ${env.MPKIT_URL}`;
+        };
+        fetch('/info', {})
+          .then(response => { response.json().then(printConnectionInfo, console.error) })
+      }());
     </script>
   </body>
 </html>
