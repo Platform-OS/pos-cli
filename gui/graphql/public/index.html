@@ -147,7 +147,9 @@
           document.getElementById("status-bar").innerHTML = `platformOS - ${env.MPKIT_URL}`;
         };
         fetch('/info', {})
-          .then(response => { response.json().then(printConnectionInfo, console.error) })
+          .then(response => response.json())
+          .then(printConnectionInfo)
+          .catch(console.error);
       }());
     </script>
   </body>
