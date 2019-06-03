@@ -50,7 +50,7 @@ program
     gateway
       .dataExportStart(exportInternalIds)
       .then(exportTask => {
-        waitForStatus(exportTask.id, gateway.dataExportStatus).then(exportTask => {
+        waitForStatus(() => gateway.dataExportStatus(exportTask.id)).then(exportTask => {
           shell.mkdir('-p', 'tmp');
           fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
           let data = transform(exportTask.data);
