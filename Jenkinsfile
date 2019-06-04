@@ -30,6 +30,15 @@ pipeline {
         }
       }
     }
+
+    stage('Build testcafe-pos-cli') {
+      when { branch 'master' }
+      steps {
+        build job: 'platformOS/toolbelt/master/', parameters: [
+          string(name: 'force', value: 'testcafe-pos-cli')
+        ], quietPeriod: 0
+      }
+    }
   }
   post {
     success {
