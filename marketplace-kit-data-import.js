@@ -37,7 +37,7 @@ const dataImport = async(filename) => {
     .dataImportStart(formData)
     .then((importTask) => {
       spinner.stopAndPersist().succeed('Data sent').start('Importing data');
-      waitForStatus(importTask.id, gateway.dataImportStatus).then(importTask => {
+      waitForStatus(() => gateway.dataImportStatus(importTask.id)).then(importTask => {
         spinner.stopAndPersist().succeed('Import done.');
       }).catch(error => {
         spinner.fail('Import failed');
