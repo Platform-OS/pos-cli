@@ -47,16 +47,14 @@ const formData = {
   'marketplace_builder[zip_file]': fs.createReadStream('./tmp/marketplace-release.zip')
 };
 
-const getDeploymentStatus = id => {
+const getDeploymentStatus = ({ id }) => {
   return new Promise((resolve, reject) => {
     (getStatus = () => {
       gateway.getStatus(id).then(response => {
         if (response.status === 'ready_for_import') {
           setTimeout(getStatus, 1500);
         } else if (response.status === 'error') {
-          const t1 = performance.now();
           ServerError.deploy(JSON.parse(response.error));
-          spinner.fail(`Deploy failed after ${duration(t0, t1)}`);
           reject();
         } else {
           resolve(response);
@@ -68,17 +66,14 @@ const getDeploymentStatus = id => {
 
 gateway
   .push(formData)
-  .then(response => {
-    getDeploymentStatus(response.id).then(() => {
-      const t1 = performance.now();
-      spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration(t0, t1)}`);
-    }).catch((error) => {
-      logger.Error(error.message);
-      process.exit(1);
-    });
+  .then(getDeploymentStatus)
+  .then(() => {
+    const t1 = performance.now();
+    spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration(t0, t1)}`);
   })
   .catch((error) => {
-    logger.Error(error.message);
-    spinner.stopAndPersist().fail('Deploy failed');
+    const t1 = performance.now();
+    logger.Error(error);
+    spinner.fail(`Deploy failed after ${duration(t0, t1)}`);
     process.exit(1);
   });
