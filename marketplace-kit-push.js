@@ -57,7 +57,7 @@ const getDeploymentStatus = ({ id }) => {
           ServerError.deploy(JSON.parse(response.error));
           reject();
         } else {
-          resolve(response);
+          resolve();
         }
       });
     })();

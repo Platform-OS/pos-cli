@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const APP_DIR = 'app';
+const MODULES_DIR = 'modules';
 
 const program = require('commander');
 const request = require('request');
@@ -51,7 +53,7 @@ const init = () => {
   createTemp();
   emptyTemp();
 
-  if (dirExists('marketplace_builder') || dirExists('modules')) {
+  if (dirExists(APP_DIR) || dirExists(MODULES_DIR)) {
     logger.Error('Diretory structure already exists. Operation aborted.');
   }
 

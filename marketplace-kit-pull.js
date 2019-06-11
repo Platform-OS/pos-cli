@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const APP_DIR = 'app';
+const MODULES_DIR = 'modules';
 
 const program = require('commander'),
   fs = require('fs'),
@@ -47,7 +49,7 @@ class Liquid {
   }
 
   get path() {
-    return `marketplace_builder/${this.type.path.base}/${this.source.name}.${this.type.path.ext}`;
+    return `${APP_DIR}/${this.type.path.base}/${this.source.name}.${this.type.path.ext}`;
   }
 
   get metadata() {
