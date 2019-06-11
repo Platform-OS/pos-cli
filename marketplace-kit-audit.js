@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+const APP_DIR = 'app';
+const LEGACY_APP_DIR = 'marketplace_builder';
+const MODULES_DIR = 'modules';
+
 const program = require('commander'),
   sh = require('shelljs'),
   rules = require('./lib/audit/rules'),
@@ -8,7 +12,7 @@ const program = require('commander'),
 program.version(version);
 
 const checkPath = ({ find, directory, message }) => {
-  const dirGlob = `{marketplace_builder,modules/**}/${directory}`;
+  const dirGlob = `{${APP_DIR},${LEGACY_APP_DIR},${MODULES_DIR}/**}/${directory}`;
 
   const matches = sh
     .grep('-l', find, dirGlob)

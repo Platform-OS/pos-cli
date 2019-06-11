@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+const APP_DIR = 'app';
+const LEGACY_APP_DIR = 'marketplace_builder';
+const MODULES_DIR = 'modules';
+
 const program = require('commander'),
   Gateway = require('./lib/proxy'),
   fs = require('fs'),
@@ -18,7 +22,14 @@ program
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
     const formData = { name: name };
-    const migrationsDir = 'marketplace_builder/migrations';
+
+    if (fs.existsSync(APP_DIR)) {
+      app_directory = APP_DIR;
+    } else {
+      console.log(`Falling back to legacy app-directory name. Please consinder renaming ${LEGACY_APP_DIR} to ${APP_DIR}`);
+      app_directory = LEGACY_APP_DIR;
+    }
+    const migrationsDir = `${app_directory}/migrations`;
 
     gateway.generateMigration(formData).then(body => {
       const path = `${migrationsDir}/${body['name']}.liquid`;

@@ -13,11 +13,15 @@ const program = require('commander'),
   settings = require('./lib/settings'),
   version = require('./package.json').version;
 
-const WATCH_DIRECTORIES = ['marketplace_builder', 'modules'];
+const APP_DIR = 'app';
+const LEGACY_APP_DIR = 'marketplace_builder';
+const MODULES_DIR = 'modules';
+
+const WATCH_DIRECTORIES = [APP_DIR, LEGACY_APP_DIR, MODULES_DIR];
 const getWatchDirectories = () => WATCH_DIRECTORIES.filter(fs.existsSync);
 const ext = filePath => filePath.split('.').pop();
 const filename = filePath => filePath.split(path.sep).pop();
-const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace('marketplace_builder/', '');
+const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace(`${APP_DIR}/`, '').replace(`${LEGACY_APP_DIR}/`, '');
 const isEmpty = filePath => fs.readFileSync(filePath).toString().trim().length === 0;
 const shouldBeSynced = (filePath, event) => {
   return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath) && isModuleFile(filePath);
@@ -72,7 +76,7 @@ const enqueue = filePath => {
 
 const getBody = (filePath, processTemplate) => {
   if (processTemplate) {
-    const templatePath = `modules/${filePath.split(path.sep)[1]}/template-values.json`;
+    const templatePath = `${MODULES_DIR}/${filePath.split(path.sep)[1]}/template-values.json`;
     const moduleTemplateData = templateData(templatePath);
     return templates.fillInTemplateValues(filePath, moduleTemplateData);
   } else {
@@ -122,7 +126,7 @@ gateway.ping().then(() => {
   const directories = getWatchDirectories();
 
   if (directories.length === 0) {
-    logger.Error('marketplace_builder or modules directory has to exist!');
+    logger.Error(`${APP_DIR} or modules directory has to exist!`);
   }
 
   logger.Info(`Enabling sync mode to: ${program.url}`);
