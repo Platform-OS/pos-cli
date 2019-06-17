@@ -64,7 +64,7 @@ const existingSettings = configFilePath => {
   return settings;
 };
 
-PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com';
+PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://partners.platform-os.com';
 
 program
   .version(version)

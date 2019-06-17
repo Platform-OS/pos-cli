@@ -16,7 +16,7 @@ let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 const tmpFileName = './tmp/data-imported.json';
 
-PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://portal.apps.near-me.com';
+PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://partners.platform-os.com';
 
 const logInvalidFile = (filename) => {
   return logger.Error(
