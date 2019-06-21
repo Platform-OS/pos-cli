@@ -5,7 +5,6 @@ const program = require('commander'),
   spawn = require('child_process').spawn,
   command = require('./lib/command'),
   logger = require('./lib/logger'),
-  validate = require('./lib/validators'),
   Gateway = require('./lib/proxy'),
   deployServiceClient = require('./lib/deployServiceClient'),
   version = require('./package.json').version;

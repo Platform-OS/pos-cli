@@ -5,7 +5,6 @@ const program = require('commander'),
   command = require('./lib/command'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   logger = require('./lib/logger'),
-  validate = require('./lib/validators'),
   version = require('./package.json').version;
 
 program

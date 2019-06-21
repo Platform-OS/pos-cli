@@ -15,7 +15,6 @@ const program = require('commander'),
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 const tmpFileName = './tmp/data-imported.json';
-
 PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://partners.platform-os.com';
 
 const logInvalidFile = (filename) => {
@@ -37,9 +36,10 @@ const dataImport = async(filename) => {
     .dataImportStart(formData)
     .then((importTask) => {
       spinner.stopAndPersist().succeed('Data sent').start('Importing data');
-      waitForStatus(() => gateway.dataImportStatus(importTask.id)).then(importTask => {
+      waitForStatus(() => gateway.dataImportStatus(importTask.id)).then(() => {
         spinner.stopAndPersist().succeed('Import done.');
       }).catch(error => {
+        logger.Debug(error);
         spinner.fail('Import failed');
       });
     })

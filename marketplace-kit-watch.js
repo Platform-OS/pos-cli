@@ -64,7 +64,7 @@ const isModuleFile = f => {
   return ['private', 'public'].includes(pathArray[2]);
 };
 
-CONCURRENCY = 3;
+const CONCURRENCY = 3;
 
 const queue = Queue((task, callback) => {
   pushFile(task.path).then(callback);

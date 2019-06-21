@@ -21,7 +21,7 @@ const transform = ({ users = { results: [] }, transactables = { results: [] }, m
   };
 };
 
-async function fetchFilesForData(data) {
+const fetchFilesForData = async(data) => {
   // TODO: user properties
   data.users = await Promise.all(data.users.map(async(user) => {
     user.profiles = await Promise.all(user.profiles.map(profile => fetchFiles(profile)));
@@ -63,6 +63,7 @@ program
             logger.Warn(e.message);
           });
         }).catch(error => {
+          logger.Debug(error);
           spinner.fail('Export failed');
         });
       })

@@ -15,6 +15,6 @@ const list = require('./lib/settings').listEnvironments();
 
 logger.Info('Available environments: ');
 
-for (id in list) {
+for (const id in list) {
   logger.Info(`- ${list[id]}`);
 }
