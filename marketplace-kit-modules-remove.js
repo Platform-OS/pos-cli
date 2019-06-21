@@ -2,8 +2,6 @@
 
 const program = require('commander'),
   Gateway = require('./lib/proxy'),
-  fs = require('fs'),
-  shell = require('shelljs'),
   logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   version = require('./package.json').version;
@@ -21,7 +19,7 @@ program
 
     gateway
       .removeModule(formData)
-      .then(body => {
+      .then(() => {
         logger.Success(`[Module Remove] Successfully removed module ${name}`);
       })
       .catch(error => logger.Error('Failed to remove the module ', error));

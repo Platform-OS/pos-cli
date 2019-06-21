@@ -5,7 +5,6 @@ const LEGACY_APP_DIR = 'marketplace_builder';
 const MODULES_DIR = 'modules';
 const program = require('commander'),
   fs = require('fs'),
-  paths = require('path'),
   shell = require('shelljs'),
   glob = require('glob'),
   archiver = require('archiver'),
@@ -114,6 +113,7 @@ program
   .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
   .parse(process.argv);
 
+let app_directory;
 if (fs.existsSync(APP_DIR)) {
   app_directory = APP_DIR;
 } else {

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 const APP_DIR = 'app';
 const MODULES_DIR = 'modules';
-
 const program = require('commander'),
   fs = require('fs'),
   logger = require('./lib/logger'),

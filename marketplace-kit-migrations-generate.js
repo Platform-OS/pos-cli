@@ -22,6 +22,7 @@ program
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
     const formData = { name: name };
+    let app_directory;
 
     if (fs.existsSync(APP_DIR)) {
       app_directory = APP_DIR;

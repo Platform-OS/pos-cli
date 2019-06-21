@@ -59,7 +59,9 @@ const existingSettings = configFilePath => {
 
   try {
     settings = JSON.parse(fs.readFileSync(configFilePath));
-  } catch (e) {}
+  } catch (e) {
+    logger.Debug(e);
+  }
 
   return settings;
 };

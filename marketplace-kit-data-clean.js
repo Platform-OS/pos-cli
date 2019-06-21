@@ -8,7 +8,7 @@ const program = require('commander'),
   version = require('./package.json').version;
 const confirmationText = 'CLEAN DATA';
 
-const clean = (gateway, confirmation) => {
+const clean = (gateway) => {
   logger.Info('Going to clean data');
   gateway
     .dataClean(confirmationText)
