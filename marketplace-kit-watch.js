@@ -21,7 +21,7 @@ const WATCH_DIRECTORIES = [APP_DIR, LEGACY_APP_DIR, MODULES_DIR];
 const getWatchDirectories = () => WATCH_DIRECTORIES.filter(fs.existsSync);
 const ext = filePath => filePath.split('.').pop();
 const filename = filePath => filePath.split(path.sep).pop();
-const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace(`${APP_DIR}/`, '').replace(`${LEGACY_APP_DIR}/`, '');
+const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace(new RegExp(`^${APP_DIR}/`), '').replace(new RegExp(`^${LEGACY_APP_DIR}/`), '');
 const isEmpty = filePath => fs.readFileSync(filePath).toString().trim().length === 0;
 const shouldBeSynced = (filePath, event) => {
   return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath) && isModuleFile(filePath);
