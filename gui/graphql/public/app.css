@@ -1,0 +1,17 @@
+body {
+  height: 100%;
+  margin: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+#graphiql {
+  height: calc(100vh - 1.5rem);
+}
+
+#status-bar {
+  background-color: #f7f7f7;
+  font-family: monospace;
+  padding: .25rem 1rem;
+  font-size: 1rem;
+}
