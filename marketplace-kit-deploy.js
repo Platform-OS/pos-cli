@@ -3,11 +3,13 @@
 const program = require('commander'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   spawn = require('child_process').spawn,
+  ora = require('ora'),
   command = require('./lib/command'),
   logger = require('./lib/logger'),
   validate = require('./lib/validators'),
   Gateway = require('./lib/proxy'),
   assets = require('./lib/assets'),
+  packAssets = require('./lib/assets/packAssets'),
   version = require('./package.json').version;
 
 const uploadArchive = (env, usingDeploymentService) => {
@@ -43,9 +45,12 @@ const uploadArchive = (env, usingDeploymentService) => {
 const deploy = async(env, authData, params) => {
   await uploadArchive(env, params.directAssetsUpload);
   if (params.directAssetsUpload){
-    const gateway = new Gateway(authData);
-    await assets.deployAssets(gateway);
-    logger.Success('Assets deployed to S3');
+    const assetsArchiveName = './tmp/assets.zip';
+    await packAssets(assetsArchiveName);
+    const spinner = ora({ text: 'Uploading assets', stream: process.stdout, spinner: 'bouncingBar' }).start();
+    await assets.deployAssets(new Gateway(authData));
+
+    spinner.stopAndPersist().succeed('Assets uploaded');
   }
 };
 
