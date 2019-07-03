@@ -73,6 +73,7 @@
   },
   "homepage": "https://github.com/mdyd-dev/marketplace-kit#readme",
   "devDependencies": {
+    "babel-eslint": "^10.0.2",
     "jest": "^24.0.0"
   }
 }
