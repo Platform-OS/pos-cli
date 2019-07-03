@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const express = require('express'),
+  compression = require('compression'),
   bodyParser = require('body-parser'),
   multer = require('multer'),
   upload = multer(),
@@ -17,6 +18,8 @@ const gateway = new Gateway({
 });
 
 app.use(bodyParser.json());
+app.use(compression());
+
 app.use('/gui/editor', express.static(__dirname + '/gui/editor/public'));
 app.use('/gui/graphql', express.static(__dirname + '/gui/graphql/public'));
 

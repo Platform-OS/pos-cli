@@ -1,6 +1,6 @@
 {
   "name": "@platform-os/marketplace-kit",
-  "version": "2.8.1",
+  "version": "2.8.2",
   "description": "Make changes in your marketplace on PlatformOS",
   "scripts": {
     "test": "jest --silent",
@@ -24,6 +24,7 @@
     "axios": "^0.18.0",
     "chalk": "^2.4.1",
     "commander": "^2.19.0",
+    "compression": "^1.7.4",
     "email-validator": "^2.0.4",
     "express": "^4.16.4",
     "extract-zip": "^1.6.7",
