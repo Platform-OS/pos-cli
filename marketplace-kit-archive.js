@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-const APP_DIR = 'app';
-const LEGACY_APP_DIR = 'marketplace_builder';
-const MODULES_DIR = 'modules';
 const program = require('commander'),
   fs = require('fs'),
   shell = require('shelljs'),
@@ -11,17 +8,17 @@ const program = require('commander'),
   templates = require('./lib/templates'),
   logger = require('./lib/logger'),
   settings = require('./lib/settings'),
-  version = require('./package.json').version;
+  version = require('./package.json').version,
+  dir = require('./lib/directories');
 
-const ALLOWED_DIRECTORIES = [APP_DIR, LEGACY_APP_DIR, MODULES_DIR];
-const availableDirectories = () => ALLOWED_DIRECTORIES.filter(fs.existsSync);
+const availableDirectories = () => dir.ALLOWED.filter(fs.existsSync);
 const isEmpty = dir => shell.ls(dir).length == 0;
 
 const addModulesToArchive = archive => {
-  if (!fs.existsSync(MODULES_DIR)) return Promise.resolve(true);
+  if (!fs.existsSync(dir.MODULES)) return Promise.resolve(true);
 
   return Promise.all(
-    glob.sync('*/', { cwd: MODULES_DIR }).map(
+    glob.sync('*/', { cwd: dir.MODULES }).map(
       module => ( addModuleToArchive(module, archive))
     )
   );
@@ -29,13 +26,13 @@ const addModulesToArchive = archive => {
 
 const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') => {
   return new Promise((resolve, reject) => {
-    glob(pattern, { cwd: `${MODULES_DIR}/${module}` }, (err, files) => {
+    glob(pattern, { cwd: `${dir.MODULES}/${module}` }, (err, files) => {
       if (err) throw reject(err);
       const moduleTemplateData = templateData(module);
 
       return Promise.all(
         files.map(f => {
-          const path = `${MODULES_DIR}/${module}/${f}`;
+          const path = `${dir.MODULES}/${module}/${f}`;
           return new Promise((resolve, reject) => {
             fs.lstat(path, (err, stat) => {
               if (!stat.isDirectory()) {
@@ -56,7 +53,7 @@ const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') =
 
 const makeArchive = (path, directory, withoutAssets) => {
   if (availableDirectories().length === 0) {
-    logger.Error(`At least one of ${ALLOWED_DIRECTORIES} directories is needed to deploy`, { hideTimestamp: true });
+    logger.Error(`At least one of ${dir.ALLOWED} directories is needed to deploy`, { hideTimestamp: true });
   }
 
   availableDirectories().map(dir => {
@@ -87,11 +84,11 @@ program
   .parse(process.argv);
 
 let app_directory;
-if (fs.existsSync(APP_DIR)) {
-  app_directory = APP_DIR;
+if (fs.existsSync(dir.APP)) {
+  app_directory = dir.APP;
 } else {
-  console.log(`Falling back to legacy app-directory name. Please consider renaming ${LEGACY_APP_DIR} to ${APP_DIR}`);
-  app_directory = LEGACY_APP_DIR;
+  console.log(`Falling back to legacy app-directory name. Please consider renaming ${dir.LEGACY_APP} to ${dir.APP}`);
+  app_directory = dir.LEGACY_APP;
 }
 
 makeArchive(program.target, app_directory, program.withoutAssets);

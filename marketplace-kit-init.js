@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-const APP_DIR = 'app';
-const MODULES_DIR = 'modules';
-
 const program = require('commander');
 const request = require('request');
 const fs = require('fs');
@@ -11,11 +8,14 @@ const extract = require('extract-zip');
 const logger = require('./lib/logger');
 const validate = require('./lib/validators');
 const version = require('./package.json').version;
+const dir = require('./lib/directories');
 
 const DEFAULT_REPO = 'https://github.com/mdyd-dev/directory-structure';
 const DEFAULT_BRANCH = 'master';
 
-const TMP_DIR = path.normalize(path.resolve(process.cwd(), '.tmp'));
+// TODO: Deprecate in favor of `npx degit` !
+
+const TMP_DIR = path.normalize(path.resolve(process.cwd(), dir.tmp));
 const TMP_PATH = path.normalize(path.resolve(TMP_DIR, 'directory-structure.zip'));
 
 const emptyTemp = () => rm('-rf', `${TMP_DIR}/*`);
@@ -53,7 +53,7 @@ const init = () => {
   createTemp();
   emptyTemp();
 
-  if (dirExists(APP_DIR) || dirExists(MODULES_DIR)) {
+  if (dirExists(dir.APP) || dirExists(dir.MODULES)) {
     logger.Error('Diretory structure already exists. Operation aborted.');
   }
 

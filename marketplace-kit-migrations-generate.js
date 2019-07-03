@@ -1,16 +1,13 @@
 #!/usr/bin/env node
 
-const APP_DIR = 'app';
-const LEGACY_APP_DIR = 'marketplace_builder';
-const MODULES_DIR = 'modules';
-
 const program = require('commander'),
   Gateway = require('./lib/proxy'),
   fs = require('fs'),
   shell = require('shelljs'),
   logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
-  version = require('./package.json').version;
+  version = require('./package.json').version,
+  dir = require('./lib/directories');
 
 program
   .version(version)
@@ -22,15 +19,9 @@ program
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
     const formData = { name: name };
-    let app_directory;
 
-    if (fs.existsSync(APP_DIR)) {
-      app_directory = APP_DIR;
-    } else {
-      console.log(`Falling back to legacy app-directory name. Please consider renaming ${LEGACY_APP_DIR} to ${APP_DIR}`);
-      app_directory = LEGACY_APP_DIR;
-    }
-    const migrationsDir = `${app_directory}/migrations`;
+    const appDirectory = fs.existsSync(dir.APP) ? dir.APP : dir.LEGACY_APP;
+    const migrationsDir = `${appDirectory}/migrations`;
 
     gateway.generateMigration(formData).then(body => {
       const path = `${migrationsDir}/${body['name']}.liquid`;
@@ -38,7 +29,7 @@ program
 
       fs.writeFileSync(path, body['body'], logger.Error);
 
-      logger.Success(`[Migration Generate] Successfully generated to: ${path}`);
+      logger.Success(`[Migration Generate] Saved to: ${path}`);
     });
   });
 
