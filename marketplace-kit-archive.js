@@ -90,7 +90,7 @@ let app_directory;
 if (fs.existsSync(APP_DIR)) {
   app_directory = APP_DIR;
 } else {
-  console.log(`Falling back to legacy app-directory name. Please consinder renaming ${LEGACY_APP_DIR} to ${APP_DIR}`);
+  console.log(`Falling back to legacy app-directory name. Please consider renaming ${LEGACY_APP_DIR} to ${APP_DIR}`);
   app_directory = LEGACY_APP_DIR;
 }
 
