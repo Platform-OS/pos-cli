@@ -1,4 +1,4 @@
-var sh = require('shelljs');
+var sh = require('@platform-os/shelljs');
 var silentState = sh.config.silent; // save old silent state
 var authEnvs = 'MPKIT_URL=http://example.com MPKIT_TOKEN=1234 MPKIT_EMAIL=foo@example.com';
 

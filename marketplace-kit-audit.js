@@ -2,8 +2,7 @@
 
 const program = require('commander'),
   chalk = require('chalk'),
-  sh = require('shelljs'),
-  ora = require('ora'),
+  sh = require('@platform-os/shelljs'),
   version = require('./package.json').version,
   dir = require('./lib/directories');
 
@@ -16,7 +15,7 @@ const rules = [...tags, ...filters, ...detailed];
 program.version(version);
 
 const getOffendingFiles = rule => {
-  const findGlob = `{${dir.APP},${dir.LEGACY_APP},${dir.MODULES}/**/{private,public}/**}/${rule.glob}`;
+  const findGlob = `{${dir.APP},${dir.LEGACY_APP},${dir.MODULES}/**}/${rule.glob}`;
 
   sh.config.silent = true;
 

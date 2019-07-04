@@ -2,7 +2,7 @@
 
 const program = require('commander'),
   fs = require('fs'),
-  shell = require('shelljs'),
+  shell = require('@platform-os/shelljs'),
   glob = require('glob'),
   prepareArchive = require('./lib/prepareArchive'),
   templates = require('./lib/templates'),
