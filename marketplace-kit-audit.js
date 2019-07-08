@@ -33,7 +33,7 @@ const printReport = report => {
   const filesFormatted = report.files.join('\n\t');
   const message = `${report.rule.message} \n\n\tAffected files:\n\t${filesFormatted}`;
 
-  console.log(`${chalk.yellow('[Audit] ')}${message} \n`);
+  console.log(`\n${chalk.yellow('[Audit] ')}${message} \n`);
 };
 
 const Audit = {
