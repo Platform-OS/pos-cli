@@ -13,8 +13,6 @@ const program = require('commander'),
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 
-PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://partners.platform-os.com';
-
 program
   .version(version)
   .arguments('[environment]', 'name of the environment. Example: staging')

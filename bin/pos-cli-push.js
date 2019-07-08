@@ -71,7 +71,7 @@ gateway
     const t1 = performance.now();
     spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration(t0, t1)}`);
   })
-  .catch((error) => {
+  .catch(error => {
     const t1 = performance.now();
     logger.Error(error);
     spinner.fail(`Deploy failed after ${duration(t0, t1)}`);

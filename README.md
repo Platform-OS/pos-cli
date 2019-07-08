@@ -1,8 +1,6 @@
 ## Overview
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/mdyd-dev/pos-cli.svg)](https://greenkeeper.io/)
-
-[pos-cli](https://github.com/mdyd-dev/pos-cli) is command line tool, which was developed to allow you to easily deploy your configuration files and assets to the PlatformOS. It expects you to follow a certain file structure in order to correctly communicate with the PlatformOS API. You do not have to use it, however it is highly recommended that you do. It is a CLI tool, hence you are expected to have basic knowledge in working with Terminal.
+[pos-cli](https://github.com/mdyd-dev/pos-cli) is command line tool, which was developed to allow you to easily deploy your configuration files and assets to the platformOS. It expects you to follow a certain file structure in order to correctly communicate with the PlatformOS API. You do not have to use it, however it is highly recommended that you do. It is a CLI tool, hence you are expected to have basic knowledge in working with Terminal.
 
 If you have any feature requests, feedback or problems please head over to the [issues page](https://github.com/mdyd-dev/pos-cli/issues) and let us know.
 
@@ -18,7 +16,7 @@ If your node is installed for all users you might need to use `sudo` to install 
 
     sudo npm install -g @platformos/pos-cli
 
-If you are using nvm or node installed on your account, you can omit that:
+If you are using nvm or have node installed on your account, you can omit that:
 
     npm install -g @platformos/pos-cli
 

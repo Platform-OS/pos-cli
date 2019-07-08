@@ -17,10 +17,24 @@ const program = require('commander'),
 const getWatchDirectories = () => dir.ALLOWED.filter(fs.existsSync);
 const ext = filePath => filePath.split('.').pop();
 const filename = filePath => filePath.split(path.sep).pop();
-const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace(new RegExp(`^${dir.APP}/`), '').replace(new RegExp(`^${dir.LEGACY_APP}/`), '');
-const isEmpty = filePath => fs.readFileSync(filePath).toString().trim().length === 0;
+const filePathUnixified = filePath =>
+  filePath
+    .replace(/\\/g, '/')
+    .replace(new RegExp(`^${dir.APP}/`), '')
+    .replace(new RegExp(`^${dir.LEGACY_APP}/`), '');
+const isEmpty = filePath =>
+  fs
+    .readFileSync(filePath)
+    .toString()
+    .trim().length === 0;
 const shouldBeSynced = (filePath, event) => {
-  return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath) && isModuleFile(filePath);
+  return (
+    fileUpdated(event) &&
+    extensionAllowed(filePath) &&
+    isNotHidden(filePath) &&
+    isNotEmptyYML(filePath) &&
+    isModuleFile(filePath)
+  );
 };
 
 const fileUpdated = event => event === 'update';
@@ -79,7 +93,7 @@ const getBody = (filePath, processTemplate) => {
   }
 };
 
-const templateData = (module) => {
+const templateData = module => {
   return settings.loadSettingsFileForModule(module);
 };
 

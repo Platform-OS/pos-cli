@@ -16,8 +16,6 @@ let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 const tmpFileName = './tmp/data-imported.json';
 
-PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://partners.platform-os.com';
-
 const logInvalidFile = filename => {
   return logger.Error(
     `Invalid format of ${filename}. Must be a valid json file. Check file using one of JSON validators online: https://jsonlint.com`

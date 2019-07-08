@@ -30,7 +30,6 @@ const info = (req, res) => {
 
 app.get('/info', info);
 
-
 // GRAPHQL
 const graphqlRouting = (req, res) => {
   gateway
