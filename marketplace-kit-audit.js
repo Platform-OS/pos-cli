@@ -1,35 +1,48 @@
 #!/usr/bin/env node
 
-const APP_DIR = 'app';
-const LEGACY_APP_DIR = 'marketplace_builder';
-const MODULES_DIR = 'modules';
-
 const program = require('commander'),
-  sh = require('shelljs'),
-  rules = require('./lib/audit/rules'),
-  version = require('./package.json').version;
+  chalk = require('chalk'),
+  sh = require('@platform-os/shelljs'),
+  version = require('./package.json').version,
+  dir = require('./lib/directories');
+
+const tags = require('./lib/audit/tags').getRules(),
+  filters = require('./lib/audit/filters').getRules(),
+  detailed = require('./lib/audit/detailed');
+
+const rules = [...tags, ...filters, ...detailed];
 
 program.version(version);
 
-const checkPath = ({ find, directory, message }) => {
-  const dirGlob = `{${APP_DIR},${LEGACY_APP_DIR},${MODULES_DIR}/**}/${directory}`;
+const getOffendingFiles = rule => {
+  const findGlob = `{${dir.APP},${dir.LEGACY_APP},${dir.MODULES}/**}/${rule.glob}`;
 
-  const matches = sh
-    .grep('-l', find, dirGlob)
+  sh.config.silent = true;
+
+  const files = sh
+    .grep('-l', rule.test, findGlob)
     .stdout.split('\n') // convert stdout to array of paths
     .filter(path => path) // filter out empty elements
-    .map(path => path.replace('/./', '/')); // shorten path a little bit
+    .map(path => path.replace('/./', '/')) // shorten path a little bit
+    .filter((value, index, self) => self.indexOf(value) === index); // unique only
 
-  if (matches.length === 0) {
-    return;
-  }
-  message(matches);
-  console.log('\n');
+  return files.length ? { rule, files } : null;
+};
+
+const printReport = report => {
+  const filesFormatted = report.files.join('\n\t');
+  const message = `${report.rule.message} \n\n\tAffected files:\n\t${filesFormatted}`;
+
+  console.log(`${chalk.yellow('[Audit] ')}${message} \n`);
 };
 
 const Audit = {
-  run: () => rules.map(checkPath),
-  runSingle: filePath => rules.map(options => checkPath({ ...options, directory: filePath }))
+  run: () => {
+    rules
+      .map(getOffendingFiles)
+      .filter(r => r)
+      .map(printReport);
+  }
 };
 
 Audit.run();

@@ -11,17 +11,13 @@ const program = require('commander'),
   watchFilesExtensions = require('./lib/watch-files-extensions'),
   templates = require('./lib/templates'),
   settings = require('./lib/settings'),
-  version = require('./package.json').version;
+  version = require('./package.json').version,
+  dir = require('./lib/directories');
 
-const APP_DIR = 'app';
-const LEGACY_APP_DIR = 'marketplace_builder';
-const MODULES_DIR = 'modules';
-
-const WATCH_DIRECTORIES = [APP_DIR, LEGACY_APP_DIR, MODULES_DIR];
-const getWatchDirectories = () => WATCH_DIRECTORIES.filter(fs.existsSync);
+const getWatchDirectories = () => dir.ALLOWED.filter(fs.existsSync);
 const ext = filePath => filePath.split('.').pop();
 const filename = filePath => filePath.split(path.sep).pop();
-const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace(new RegExp(`^${APP_DIR}/`), '').replace(new RegExp(`^${LEGACY_APP_DIR}/`), '');
+const filePathUnixified = filePath => filePath.replace(/\\/g, '/').replace(new RegExp(`^${dir.APP}/`), '').replace(new RegExp(`^${dir.LEGACY_APP}/`), '');
 const isEmpty = filePath => fs.readFileSync(filePath).toString().trim().length === 0;
 const shouldBeSynced = (filePath, event) => {
   return fileUpdated(event) && extensionAllowed(filePath) && isNotHidden(filePath) && isNotEmptyYML(filePath) && isModuleFile(filePath);
@@ -125,7 +121,7 @@ gateway.ping().then(() => {
   const directories = getWatchDirectories();
 
   if (directories.length === 0) {
-    logger.Error(`${APP_DIR} or modules directory has to exist!`);
+    logger.Error(`${dir.APP} or ${dir.MODULES} directory has to exist!`);
   }
 
   logger.Info(`Enabling sync mode to: ${program.url}`);

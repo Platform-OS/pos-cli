@@ -1,4 +1,4 @@
-var sh = require('shelljs');
+var sh = require('@platform-os/shelljs');
 var silentState = sh.config.silent; // save old silent state
 
 test('should return error for missing command on stdout', ()  => {

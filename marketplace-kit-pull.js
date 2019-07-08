@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-const APP_DIR = 'app';
-const MODULES_DIR = 'modules';
+
 const program = require('commander'),
   fs = require('fs'),
   logger = require('./lib/logger'),
   fetchAuthData = require('./lib/settings').fetchSettings,
   yaml = require('js-yaml'),
   version = require('./package.json').version,
+  dir = require('./lib/directories'),
   Gateway = require('./lib/proxy');
 
 program
@@ -48,7 +48,7 @@ class Liquid {
   }
 
   get path() {
-    return `${APP_DIR}/${this.type.path.base}/${this.source.name}.${this.type.path.ext}`;
+    return `${dir.APP}/${this.type.path.base}/${this.source.name}.${this.type.path.ext}`;
   }
 
   get metadata() {
