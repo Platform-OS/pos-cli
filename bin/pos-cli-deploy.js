@@ -63,14 +63,12 @@ const runAudit = () => {
 program
   .version(version)
   .arguments('[environment]', 'name of environment. Example: staging')
-  .option('-f --force', 'force update. Removes instance-admin lock')
   .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers. It should be faster. [experimental]')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action(async (environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
 
-    if (params.force) process.env.FORCE = params.force;
     if (params.partialDeploy) process.env.PARTIAL_DEPLOY = params.partialDeploy;
 
     const authData = fetchAuthData(environment, program);
