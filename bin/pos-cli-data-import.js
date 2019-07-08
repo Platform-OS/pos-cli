@@ -9,8 +9,7 @@ const program = require('commander'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   transform = require('../lib/data/uploadFiles'),
   isValidJSON = require('../lib/data/isValidJSON'),
-  waitForStatus = require('../lib/data/waitForStatus'),
-  version = require('../package.json').version;
+  waitForStatus = require('../lib/data/waitForStatus');
 
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
@@ -58,7 +57,6 @@ const dataImport = async filename => {
 };
 
 program
-  .version(version)
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <import-file-path>', 'path of import .json file', 'data.json')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

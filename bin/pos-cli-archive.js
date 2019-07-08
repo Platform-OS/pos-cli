@@ -8,7 +8,6 @@ const program = require('commander'),
   templates = require('../lib/templates'),
   logger = require('../lib/logger'),
   settings = require('../lib/settings'),
-  version = require('../package.json').version,
   dir = require('../lib/directories');
 
 const availableDirectories = () => dir.ALLOWED.filter(fs.existsSync);
@@ -74,7 +73,6 @@ const templateData = module => {
 };
 
 program
-  .version(version)
   .option('--without-assets', 'if present assets directory will be excluded')
   .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
   .parse(process.argv);

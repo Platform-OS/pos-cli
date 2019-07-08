@@ -14,7 +14,7 @@ updateNotifier({
 });
 
 program
-  .version(version)
+  .version(version, '-v, --version')
   .command('audit', 'check your code for deprecations, recommendations, errors')
   .command('data', 'export, import or clean data on instance')
   .command('deploy [environment]', 'deploy code to environment')

@@ -4,11 +4,9 @@ const program = require('commander'),
   spawn = require('child_process').spawn,
   command = require('../lib/command'),
   fetchAuthData = require('../lib/settings').fetchSettings,
-  logger = require('../lib/logger'),
-  version = require('../package.json').version;
+  logger = require('../lib/logger');
 
 program
-  .version(version)
   .arguments('[environment]', 'Name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {

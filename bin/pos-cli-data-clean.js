@@ -4,8 +4,8 @@ const program = require('commander'),
   prompts = require('prompts'),
   Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  version = require('../package.json').version;
+  fetchAuthData = require('../lib/settings').fetchSettings;
+
 const confirmationText = 'CLEAN DATA';
 
 const clean = gateway => {
@@ -38,7 +38,6 @@ const confirmCleanup = async (gateway, inlineConfirmation) => {
 };
 
 program
-  .version(version)
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('--auto-confirm', 'auto confirm instance clean without prompt')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

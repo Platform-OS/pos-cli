@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
-  version = require('../package.json').version;
+const program = require('commander');
 
-program
-  .version(version)
-  .command('serve [environment]', 'serve admin editor for files from <env>')
-  .parse(process.argv);
+program.command('serve [environment]', 'serve admin editor for files from <env>').parse(process.argv);
 
-if (!program.args.length) program.help();
+if (!program.args.length) {
+  program.help();
+}

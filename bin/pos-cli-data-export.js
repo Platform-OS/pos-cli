@@ -8,9 +8,7 @@ const program = require('commander'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   fetchFiles = require('../lib/data/fetchFiles'),
-  waitForStatus = require('../lib/data/waitForStatus'),
-  version = require('../package.json').version;
-
+  waitForStatus = require('../lib/data/waitForStatus');
 let gateway;
 const spinner = ora({ text: 'Exporting', stream: process.stdout, spinner: 'bouncingBar' });
 const transform = ({ users = { results: [] }, transactables = { results: [] }, models = { results: [] } }) => {
@@ -36,7 +34,6 @@ const fetchFilesForData = async data => {
 };
 
 program
-  .version(version)
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <export-file-path>', 'output for exported data', 'data.json')
   .option(

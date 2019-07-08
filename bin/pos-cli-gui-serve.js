@@ -4,11 +4,9 @@ const program = require('commander'),
   spawn = require('child_process').spawn,
   fetchAuthData = require('../lib/settings').fetchSettings,
   command = require('../lib/command'),
-  logger = require('../lib/logger'),
-  version = require('../package.json').version;
+  logger = require('../lib/logger');
 
 program
-  .version(version)
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .option('-p --port <port>', 'use PORT', '3333')

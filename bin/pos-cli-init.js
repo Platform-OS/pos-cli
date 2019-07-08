@@ -7,7 +7,6 @@ const { mkdir, mv, rm, pwd } = require('@platform-os/shelljs');
 const extract = require('extract-zip');
 const logger = require('../lib/logger');
 const validate = require('../lib/validators');
-const version = require('../package.json').version;
 const dir = require('../lib/directories');
 
 const DEFAULT_REPO = 'https://github.com/mdyd-dev/directory-structure';
@@ -61,7 +60,6 @@ const init = () => {
 };
 
 program
-  .version(version)
   .option('--url <url>', 'theme github repository url', DEFAULT_REPO)
   .option('--branch <branch>', 'branch where the theme is located', DEFAULT_BRANCH);
 
