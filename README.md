@@ -57,6 +57,18 @@ Example: `pos-cli deploy staging`
 
 Deploys all the changes. It is recommended to first deploy to `staging`, test, and only then trigger to production. Effectively, deploy creates a zip file containning all your files and sends it to API. It is then processed in the background. Each zip file is stored by us, in order to allow you to rollback in case something goes wrong.
 
+To skip audit during deploy, set environmental variable `CI` to `true`.
+
+### Code audit
+
+```
+pos-cli audit
+```
+
+Example: `pos-cli audit`
+
+Runs statical analysis on your current project directory.
+
 ### Listing environments
 
 If you forgot know what your environments are named or the url that is corresponding to any name, use:
@@ -90,7 +102,7 @@ Example: `pos-cli gui serve staging`
 
 #### GraphQL Browser
 
-To explore your instance database using graphql open [http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql) in your web browser.
+To explore your instance database using GraphQL open [http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql) in your web browser.
 
 In the right sidebar there is a schema documentation should you need it.
 
