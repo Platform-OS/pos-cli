@@ -52,17 +52,28 @@ const deploy = async (env, authData, params) => {
   }
 };
 
+const runAudit = () => {
+  return new Promise(resolve => {
+    logger.Info('Starting audit...');
+
+    sh.exec('FORCE_COLOR=true pos-cli audit', resolve); // Enable colors when running script via `npm`
+  });
+};
+
 program
   .version(version)
   .arguments('[environment]', 'name of environment. Example: staging')
-  .option('-f --force', 'force update. Removes instance-admin lock')
+  .option('-f --force', 'deprecated')
   .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers. It should be faster. [experimental]')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action(async (environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
 
-    if (params.force) process.env.FORCE = params.force;
+    if (params.force) {
+      logger.Warn('-f flag is deprecated and does not do anything.');
+    }
+
     if (params.partialDeploy) process.env.PARTIAL_DEPLOY = params.partialDeploy;
 
     const authData = fetchAuthData(environment, program);
@@ -74,13 +85,9 @@ program
       MARKETPLACE_ENV: environment
     });
 
+    // prettier-ignore
     Promise.all([
-      new Promise(resolve => {
-        logger.Info('Starting audit...');
-
-        // Workaround to have colors when running shell scripts via `npm`
-        sh.exec('FORCE_COLOR=true pos-cli audit', resolve);
-      }),
+      process.env.CI === "true" ? Promise.resolve() : runAudit(),
       deploy(env, authData, params)
     ])
       .then(() => process.exit(0))

@@ -9,7 +9,7 @@
   },
   "main": "./bin/pos-cli.js",
   "engines": {
-    "node": ">=8"
+    "node": ">=10"
   },
   "keywords": [
     "pos-cli",
