@@ -63,7 +63,7 @@ const runAudit = () => {
 program
   .version(version)
   .arguments('[environment]', 'name of environment. Example: staging')
-  .option('-f --force', 'depracated')
+  .option('-f --force', 'deprecated')
   .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers. It should be faster. [experimental]')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
@@ -87,7 +87,7 @@ program
 
     // prettier-ignore
     Promise.all([
-      process.env.CI ? Promise.resolve() : runAudit(),
+      process.env.CI === "true" ? Promise.resolve() : runAudit(),
       deploy(env, authData, params)
     ])
       .then(() => process.exit(0))
