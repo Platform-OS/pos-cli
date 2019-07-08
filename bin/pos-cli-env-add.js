@@ -5,7 +5,6 @@ const program = require('commander'),
   rl = require('readline'),
   logger = require('../lib/logger'),
   validate = require('../lib/validators'),
-  version = require('../package.json').version,
   Portal = require('../lib/portal');
 
 const checkParams = params => {
@@ -69,7 +68,6 @@ const existingSettings = configFilePath => {
 PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://partners.platform-os.com';
 
 program
-  .version(version)
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
   .option('--url <url>', 'marketplace url. Example: https://example.com')

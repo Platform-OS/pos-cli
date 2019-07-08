@@ -3,11 +3,9 @@
 const program = require('commander'),
   Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  version = require('../package.json').version;
+  fetchAuthData = require('../lib/settings').fetchSettings;
 
 program
-  .version(version)
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'name of the module. Example: admin_cms')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

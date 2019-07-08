@@ -6,11 +6,9 @@ const program = require('commander'),
   shell = require('@platform-os/shelljs'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
-  version = require('../package.json').version,
   dir = require('../lib/directories');
 
 program
-  .version(version)
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'base name of the migration. Example: cleanup_data')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

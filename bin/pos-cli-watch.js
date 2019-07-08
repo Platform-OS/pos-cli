@@ -11,7 +11,6 @@ const program = require('commander'),
   watchFilesExtensions = require('../lib/watch-files-extensions'),
   templates = require('../lib/templates'),
   settings = require('../lib/settings'),
-  version = require('../package.json').version,
   dir = require('../lib/directories');
 
 const getWatchDirectories = () => dir.ALLOWED.filter(fs.existsSync);
@@ -120,11 +119,9 @@ const checkParams = params => {
 };
 
 program
-  .version(version)
   .option('--email <email>', 'authentication token', process.env.MARKETPLACE_EMAIL)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
   .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL)
-  // .option('--files <files>', 'watch files', process.env.FILES || watchFilesExtensions)
   .parse(process.argv);
 
 checkParams(program);

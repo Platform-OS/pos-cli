@@ -8,8 +8,7 @@ const program = require('commander'),
   command = require('../lib/command'),
   logger = require('../lib/logger'),
   Gateway = require('../lib/proxy'),
-  assets = require('../lib/assets'),
-  version = require('../package.json').version;
+  assets = require('../lib/assets');
 
 const uploadArchive = (env, usingDeploymentService) => {
   const options = usingDeploymentService ? ['--without-assets'] : [];
@@ -61,7 +60,6 @@ const runAudit = () => {
 };
 
 program
-  .version(version)
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('-f --force', 'deprecated')
   .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers. It should be faster. [experimental]')

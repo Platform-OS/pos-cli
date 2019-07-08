@@ -7,8 +7,7 @@ const program = require('commander'),
   validate = require('../lib/validators'),
   Gateway = require('../lib/proxy'),
   ServerError = require('../lib/ServerError'),
-  logger = require('../lib/logger'),
-  version = require('../package.json').version;
+  logger = require('../lib/logger');
 
 const checkParams = params => {
   validate.existence({ argumentValue: params.token, argumentName: 'token', fail: program.help.bind(program) });
@@ -20,7 +19,6 @@ const checkParams = params => {
 };
 
 program
-  .version(version)
   .option('--email <email>', 'developer email', process.env.MARKETPLACE_EMAIL)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
   .option('--url <url>', 'application url', process.env.MARKETPLACE_URL);

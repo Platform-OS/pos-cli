@@ -5,12 +5,10 @@ const program = require('commander'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   yaml = require('js-yaml'),
-  version = require('../package.json').version,
   dir = require('../lib/directories'),
   Gateway = require('../lib/proxy');
 
 program
-  .version(version)
   .arguments('[environment]', 'Name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .option('-t --type <type>', 'item type - LiquidView', 'Page')

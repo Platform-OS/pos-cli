@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  logger = require('../lib/logger'),
-  version = require('../package.json').version;
+  logger = require('../lib/logger');
 
 program
-  .version(version)
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .parse(process.argv);
 

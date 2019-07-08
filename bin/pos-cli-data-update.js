@@ -7,14 +7,12 @@ const program = require('commander'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   transform = require('../lib/data/uploadFiles'),
-  isValidJSON = require('../lib/data/isValidJSON'),
-  version = require('../package.json').version;
+  isValidJSON = require('../lib/data/isValidJSON');
 
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 
 program
-  .version(version)
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <update-file-path>', 'path of update .json file', 'data.json')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

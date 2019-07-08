@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
-  version = require('../package.json').version;
+const program = require('commander');
 
 program
-  .version(version)
   .command('export [environment]', 'export instance data to a json file')
   .command('import [environment]', 'import instance data(from external source) from a json file')
   .command('update [environment]', 'update existing instance data from a json file')
