@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "2.8.3",
+  "version": "3.0.0",
   "description": "Manage your platformOS application",
   "scripts": {
     "test": "jest --silent",
