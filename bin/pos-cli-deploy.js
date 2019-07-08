@@ -52,6 +52,14 @@ const deploy = async (env, authData, params) => {
   }
 };
 
+const runAudit = () => {
+  return new Promise(resolve => {
+    logger.Info('Starting audit...');
+
+    sh.exec('FORCE_COLOR=true pos-cli audit', resolve); // Enable colors when running script via `npm`
+  });
+};
+
 program
   .version(version)
   .arguments('[environment]', 'name of environment. Example: staging')
@@ -74,13 +82,9 @@ program
       MARKETPLACE_ENV: environment
     });
 
+    // prettier-ignore
     Promise.all([
-      new Promise(resolve => {
-        logger.Info('Starting audit...');
-
-        // Workaround to have colors when running shell scripts via `npm`
-        sh.exec('FORCE_COLOR=true pos-cli audit', resolve);
-      }),
+      process.env.CI ? Promise.resolve() : runAudit(),
       deploy(env, authData, params)
     ])
       .then(() => process.exit(0))
