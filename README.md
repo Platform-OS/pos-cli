@@ -4,7 +4,7 @@
 
 If you have any feature requests, feedback or problems please head over to the [issues page](https://github.com/mdyd-dev/pos-cli/issues) and let us know.
 
-All commands should be run in the project root directory - i.e. one level above `marketplace_builder`, `app` or `modules` directory.
+All commands should be run in the project root directory - i.e. one level above `app` or `modules` directory.
 
 ### Requirements
 
@@ -56,16 +56,6 @@ pos-cli deploy [environment]
 Example: `pos-cli deploy staging`
 
 Deploys all the changes. It is recommended to first deploy to `staging`, test, and only then trigger to production. Effectively, deploy creates a zip file containning all your files and sends it to API. It is then processed in the background. Each zip file is stored by us, in order to allow you to rollback in case something goes wrong.
-
-### Deploying with force flag (`-f` or `--force`)
-
-Force flag is used to override changes made in instance admin. If you see `locked_by_admin` error and you still want to deploy, use `-f` flag.
-
-```
-pos-cli deploy [environment] -f
-```
-
-Example: `pos-cli deploy staging -f`
 
 ### Listing environments
 
