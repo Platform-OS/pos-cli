@@ -2,8 +2,8 @@
 
 const program = require('commander'),
   updateNotifier = require('update-notifier'),
-  pkg = require('./package.json'),
-  logger = require('./lib/logger'),
+  pkg = require('../package.json'),
+  logger = require('../lib/logger'),
   version = pkg.version;
 
 updateNotifier({
@@ -17,7 +17,8 @@ program
   .version(version)
   .command('audit', 'check your code for deprecations, recommendations, errors')
   .command('data', 'export, import or clean data on instance')
-  .command('deploy [environment]', 'deploy code to environment').alias('d')
+  .command('deploy [environment]', 'deploy code to environment')
+  .alias('d')
   .command('env', 'manage environments')
   .command('gui', 'gui for content editor, graphql')
   .command('init', 'initialize required directory structure')

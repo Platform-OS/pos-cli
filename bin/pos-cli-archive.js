@@ -4,12 +4,12 @@ const program = require('commander'),
   fs = require('fs'),
   shell = require('@platform-os/shelljs'),
   glob = require('glob'),
-  prepareArchive = require('./lib/prepareArchive'),
-  templates = require('./lib/templates'),
-  logger = require('./lib/logger'),
-  settings = require('./lib/settings'),
-  version = require('./package.json').version,
-  dir = require('./lib/directories');
+  prepareArchive = require('../lib/prepareArchive'),
+  templates = require('../lib/templates'),
+  logger = require('../lib/logger'),
+  settings = require('../lib/settings'),
+  version = require('../package.json').version,
+  dir = require('../lib/directories');
 
 const availableDirectories = () => dir.ALLOWED.filter(fs.existsSync);
 const isEmpty = dir => shell.ls(dir).length == 0;
@@ -17,11 +17,7 @@ const isEmpty = dir => shell.ls(dir).length == 0;
 const addModulesToArchive = archive => {
   if (!fs.existsSync(dir.MODULES)) return Promise.resolve(true);
 
-  return Promise.all(
-    glob.sync('*/', { cwd: dir.MODULES }).map(
-      module => ( addModuleToArchive(module, archive))
-    )
-  );
+  return Promise.all(glob.sync('*/', { cwd: dir.MODULES }).map(module => addModuleToArchive(module, archive)));
 };
 
 const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') => {
@@ -44,9 +40,7 @@ const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') =
             });
           });
         })
-      ).then(r => {
-        resolve();
-      });
+      ).then(r => resolve());
     });
   });
 };
@@ -58,8 +52,10 @@ const makeArchive = (path, directory, withoutAssets) => {
 
   availableDirectories().map(dir => {
     if (isEmpty(dir) && !withoutAssets) {
-      logger.Error(`${dir} can't be empty if the deploy is not partial - it would remove all the files from the instance`,
-                   { hideTimestamp: true });
+      logger.Error(
+        `${dir} can't be empty if the deploy is not partial - it would remove all the files from the instance`,
+        { hideTimestamp: true }
+      );
     }
   });
 
@@ -73,7 +69,7 @@ const makeArchive = (path, directory, withoutAssets) => {
   });
 };
 
-const templateData = (module) => {
+const templateData = module => {
   return settings.loadSettingsFileForModule(module);
 };
 

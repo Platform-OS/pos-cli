@@ -1,61 +1,59 @@
 ## Overview
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/mdyd-dev/marketplace-kit.svg)](https://greenkeeper.io/)
+[pos-cli](https://github.com/mdyd-dev/pos-cli) is command line tool, which was developed to allow you to easily deploy your configuration files and assets to the platformOS. It expects you to follow a certain file structure in order to correctly communicate with the PlatformOS API. You do not have to use it, however it is highly recommended that you do. It is a CLI tool, hence you are expected to have basic knowledge in working with Terminal.
 
-[Marketplace Kit](https://github.com/mdyd-dev/marketplace-kit) is command line tool, which was developed to allow you to easily deploy your configuration files and assets to the PlatformOS. It expects you to follow a certain file structure in order to correctly communicate with the PlatformOS API. You do not have to use it, however it is highly recommended that you do. It is a CLI tool, hence you are expected to have basic knowledge in working with Terminal.
+If you have any feature requests, feedback or problems please head over to the [issues page](https://github.com/mdyd-dev/pos-cli/issues) and let us know.
 
-If you have any feature requests, feedback or problems please head over to the [issues page](https://github.com/mdyd-dev/marketplace-kit/issues) and let us know.
-
-All commands should be run in the project root directory - i.e. one level above `marketplace_builder` directory.
+All commands should be run in the project root directory - i.e. one level above `marketplace_builder`, `app` or `modules` directory.
 
 ### Requirements
 
-marketplace-kit requires nodejs >= v8 to work properly. [Read more on how to install node on your platform](https://nodejs.org/en/download/).
+`pos-cli` requires nodejs >= v8 to work properly. [Read more on how to install node on your platform](https://nodejs.org/en/download/).
 
 ## Installation and update
 
 If your node is installed for all users you might need to use `sudo` to install npm packages globally:
 
-    sudo npm install -g @platform-os/marketplace-kit
+    sudo npm install -g @platformos/pos-cli
 
-If you are using nvm or node installed on your account, you can omit that:
+If you are using nvm or have node installed on your account, you can omit that:
 
-    npm install -g @platform-os/marketplace-kit
+    npm install -g @platformos/pos-cli
 
 ## Usage
 
 ### Adding environments and authenticating
 
 Authentication is done with your **Partner Portal** account credentials.
-See this [guide](https://documentation.platform-os.com/get-started/partner-portal/inviting-new-user-to-partner-portal) if you don't have Partner Portal account yet.
+See this [guide](https://documentation.platformos.com/get-started/partner-portal/inviting-new-user-to-partner-portal) if you don't have Partner Portal account yet.
 
 To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
 
 ```
-marketplace-kit env add [environment] --email <your email> --url <your marketplace url>
+pos-cli env add [environment] --email <your email> --url <your application url>
 ```
 
-Example: `marketplace-kit env add staging --email myemail@example.com --url https://example.com`
+Example: `pos-cli env add staging --email myemail@example.com --url https://example.com`
 
 Configuration for environments lays down in `.marketplace-kit` file.
 
 ### Syncing changes
 
 ```
-marketplace-kit sync [environment]
+pos-cli sync [environment]
 ```
 
-Example: `marketplace-kit sync staging`
+Example: `pos-cli sync staging`
 
-Enables sync mode - immediately pushes changes made to filesystem to the proper environment. It feels like working on localhost. For obvious reason, it is dangerous to use on production, on a live marketplace - it is recommended to use it only for staging.
+Enables sync mode - immediately pushes changes made to filesystem to the proper environment. It feels like working on localhost. For obvious reason, it is dangerous to use on production, on a live application - it is recommended to use it only for staging.
 
 ### Deploying changes
 
 ```
-marketplace-kit deploy [environment]
+pos-cli deploy [environment]
 ```
 
-Example: `marketplace-kit deploy staging`
+Example: `pos-cli deploy staging`
 
 Deploys all the changes. It is recommended to first deploy to `staging`, test, and only then trigger to production. Effectively, deploy creates a zip file containning all your files and sends it to API. It is then processed in the background. Each zip file is stored by us, in order to allow you to rollback in case something goes wrong.
 
@@ -64,17 +62,17 @@ Deploys all the changes. It is recommended to first deploy to `staging`, test, a
 Force flag is used to override changes made in instance admin. If you see `locked_by_admin` error and you still want to deploy, use `-f` flag.
 
 ```
-marketplace-kit deploy [environment] -f
+pos-cli deploy [environment] -f
 ```
 
-Example: `marketplace-kit deploy staging -f`
+Example: `pos-cli deploy staging -f`
 
 ### Listing environments
 
 If you forgot know what your environments are named or the url that is corresponding to any name, use:
 
 ```
-marketplace-kit env list
+pos-cli env list
 ```
 
 ### Initializing required directory structure
@@ -82,7 +80,7 @@ marketplace-kit env list
 If you need to create new project from scratch you can init directory structure using:
 
 ```
-marketplace-kit init
+pos-cli init
 ```
 
 It will download directory structure from official repository and extract it in your current directory.
@@ -95,10 +93,10 @@ If you have any feedback for directory structure go to [github](https://github.c
 To start http server locally that will serve GUI use:
 
 ```
-marketplace-kit gui serve [environment]
+pos-cli gui serve [environment]
 ```
 
-Example: `marketplace-kit gui serve staging`
+Example: `pos-cli gui serve staging`
 
 #### GraphQL Browser
 

@@ -2,13 +2,13 @@
 
 const program = require('commander'),
   prompts = require('prompts'),
-  Gateway = require('./lib/proxy'),
-  logger = require('./lib/logger'),
-  fetchAuthData = require('./lib/settings').fetchSettings,
-  version = require('./package.json').version;
+  Gateway = require('../lib/proxy'),
+  logger = require('../lib/logger'),
+  fetchAuthData = require('../lib/settings').fetchSettings,
+  version = require('../package.json').version;
 const confirmationText = 'CLEAN DATA';
 
-const clean = (gateway) => {
+const clean = gateway => {
   logger.Info('Going to clean data');
   gateway
     .dataClean(confirmationText)
@@ -16,14 +16,14 @@ const clean = (gateway) => {
     .catch({ statusCode: 404 }, () => logger.Error('[404] Data clean is not supported by the server'));
 };
 
-const promptConfirmation = async(confirmationText) => {
+const promptConfirmation = async confirmationText => {
   const message = `If you still want to continue please type: '${confirmationText}' `;
 
   const response = await prompts({ type: 'text', name: 'confirmation', message: message });
   return response.confirmation;
 };
 
-const confirmCleanup = async(gateway, inlineConfirmation) => {
+const confirmCleanup = async (gateway, inlineConfirmation) => {
   logger.Warn('');
   logger.Warn(`WARNING!!! You are going to REMOVE your data from instance: ${gateway.url}`);
   logger.Warn('There is no comming back.');

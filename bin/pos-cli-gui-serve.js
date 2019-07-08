@@ -2,10 +2,10 @@
 
 const program = require('commander'),
   spawn = require('child_process').spawn,
-  fetchAuthData = require('./lib/settings').fetchSettings,
-  command = require('./lib/command'),
-  logger = require('./lib/logger'),
-  version = require('./package.json').version;
+  fetchAuthData = require('../lib/settings').fetchSettings,
+  command = require('../lib/command'),
+  logger = require('../lib/logger'),
+  version = require('../package.json').version;
 
 program
   .version(version)
@@ -23,7 +23,7 @@ program
       PORT: params.port
     });
 
-    const server = spawn(command('marketplace-kit-server'), [], { stdio: 'inherit' });
+    const server = spawn(command('pos-cli-server'), [], { stdio: 'inherit' });
 
     server.on('close', code => {
       if (code === 1) {

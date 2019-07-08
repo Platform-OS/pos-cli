@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  Gateway = require('./lib/proxy'),
+  Gateway = require('../lib/proxy'),
   fs = require('fs'),
   shell = require('@platform-os/shelljs'),
-  logger = require('./lib/logger'),
-  fetchAuthData = require('./lib/settings').fetchSettings,
-  version = require('./package.json').version,
-  dir = require('./lib/directories');
+  logger = require('../lib/logger'),
+  fetchAuthData = require('../lib/settings').fetchSettings,
+  version = require('../package.json').version,
+  dir = require('../lib/directories');
 
 program
   .version(version)

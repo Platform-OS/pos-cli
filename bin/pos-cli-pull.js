@@ -2,12 +2,12 @@
 
 const program = require('commander'),
   fs = require('fs'),
-  logger = require('./lib/logger'),
-  fetchAuthData = require('./lib/settings').fetchSettings,
+  logger = require('../lib/logger'),
+  fetchAuthData = require('../lib/settings').fetchSettings,
   yaml = require('js-yaml'),
-  version = require('./package.json').version,
-  dir = require('./lib/directories'),
-  Gateway = require('./lib/proxy');
+  version = require('../package.json').version,
+  dir = require('../lib/directories'),
+  Gateway = require('../lib/proxy');
 
 program
   .version(version)

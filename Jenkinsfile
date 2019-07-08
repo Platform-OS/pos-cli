@@ -1,6 +1,6 @@
 @Library('pipeline-utils')_
 
-def name = 'marketplace-kit'
+def name = 'pos-cli'
 
 pipeline {
   agent any
@@ -11,10 +11,10 @@ pipeline {
 
   stages {
     stage('Test') {
-      agent { docker { image "node:10-alpine"; args '-u root' } }
+      agent { docker { image "node:12-alpine"; args '-u root' } }
 
       steps {
-        sh 'npm install'
+        sh 'npm ci'
         sh 'npm run test'
       }
     }
