@@ -1,4 +1,4 @@
-## Expected behavior 
+## Expected behavior
 
 
 ## Actual behavior
@@ -7,10 +7,8 @@
 ## Steps to reproduce the problem
 
 
-## Version:
+## Version
 
-### Marketplace Kit
-
-### NodeJs
-
-### Operating System
+* pos-cli:
+* node:
+* os:

@@ -1,19 +1,19 @@
 {
-  "name": "@platform-os/marketplace-kit",
+  "name": "@platformos/pos-cli",
   "version": "2.8.3",
-  "description": "Make changes in your marketplace on PlatformOS",
+  "description": "Manage your platformOS application",
   "scripts": {
     "test": "jest --silent",
     "postinstall": "node ./scripts/check-node-version.js",
     "build-assets": "npx webpack-cli gui/editor/src/index.js -o gui/editor/public/app.js --mode=production"
   },
-  "main": "./marketplace-kit.js",
+  "main": "./bin/pos-cli.js",
   "engines": {
     "node": ">=8"
   },
   "keywords": [
-    "marketplace-kit",
-    "platform os",
+    "pos-cli",
+    "platformos",
     "pOS"
   ],
   "dependencies": {
@@ -48,30 +48,30 @@
   },
   "preferGlobal": true,
   "bin": {
-    "marketplace-kit": "./marketplace-kit.js",
-    "marketplace-kit-archive": "./marketplace-kit-archive.js",
-    "marketplace-kit-audit": "./marketplace-kit-audit.js",
-    "marketplace-kit-deploy": "./marketplace-kit-deploy.js",
-    "marketplace-kit-env": "./marketplace-kit-env.js",
-    "marketplace-kit-env-add": "./marketplace-kit-env-add.js",
-    "marketplace-kit-env-list": "./marketplace-kit-env-list.js",
-    "marketplace-kit-gui": "./marketplace-kit-gui.js",
-    "marketplace-kit-gui-serve": "./marketplace-kit-gui-serve.js",
-    "marketplace-kit-init": "./marketplace-kit-init.js",
-    "marketplace-kit-logs": "./marketplace-kit-logs.js",
-    "marketplace-kit-push": "./marketplace-kit-push.js",
-    "marketplace-kit-migrations": "./marketplace-kit-migrations.js",
-    "marketplace-kit-modules": "./marketplace-kit-modules.js",
-    "marketplace-kit-server": "./marketplace-kit-server.js",
-    "marketplace-kit-sync": "./marketplace-kit-sync.js",
-    "marketplace-kit-watch": "./marketplace-kit-watch.js"
+    "pos-cli": "./bin/pos-cli.js",
+    "pos-cli-archive": "./bin/pos-cli-archive.js",
+    "pos-cli-audit": "./bin/pos-cli-audit.js",
+    "pos-cli-deploy": "./bin/pos-cli-deploy.js",
+    "pos-cli-env": "./bin/pos-cli-env.js",
+    "pos-cli-env-add": "./bin/pos-cli-env-add.js",
+    "pos-cli-env-list": "./bin/pos-cli-env-list.js",
+    "pos-cli-gui": "./bin/pos-cli-gui.js",
+    "pos-cli-gui-serve": "./bin/pos-cli-gui-serve.js",
+    "pos-cli-init": "./bin/pos-cli-init.js",
+    "pos-cli-logs": "./bin/pos-cli-logs.js",
+    "pos-cli-push": "./bin/pos-cli-push.js",
+    "pos-cli-migrations": "./bin/pos-cli-migrations.js",
+    "pos-cli-modules": "./bin/pos-cli-modules.js",
+    "pos-cli-server": "./bin/pos-cli-server.js",
+    "pos-cli-sync": "./bin/pos-cli-sync.js",
+    "pos-cli-watch": "./bin/pos-cli-watch.js"
   },
-  "repository": "mdyd-dev/marketplace-kit",
+  "repository": "mdyd-dev/pos-cli",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/mdyd-dev/marketplace-kit/issues"
+    "url": "https://github.com/mdyd-dev/pos-cli/issues"
   },
-  "homepage": "https://github.com/mdyd-dev/marketplace-kit#readme",
+  "homepage": "https://github.com/mdyd-dev/pos-cli#readme",
   "devDependencies": {
     "babel-eslint": "^10.0.2",
     "jest": "^24.0.0"

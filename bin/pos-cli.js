@@ -2,8 +2,8 @@
 
 const program = require('commander'),
   updateNotifier = require('update-notifier'),
-  pkg = require('./package.json'),
-  logger = require('./lib/logger'),
+  pkg = require('../package.json'),
+  logger = require('../lib/logger'),
   version = pkg.version;
 
 updateNotifier({

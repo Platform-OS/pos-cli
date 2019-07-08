@@ -5,8 +5,8 @@ const express = require('express'),
   bodyParser = require('body-parser'),
   multer = require('multer'),
   upload = multer(),
-  Gateway = require('./lib/proxy'),
-  logger = require('./lib/logger');
+  Gateway = require('../lib/proxy'),
+  logger = require('../lib/logger');
 
 const port = process.env.PORT || 3333;
 const app = express();

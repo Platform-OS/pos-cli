@@ -4,11 +4,11 @@ const program = require('commander'),
   fs = require('fs'),
   { performance } = require('perf_hooks'),
   ora = require('ora'),
-  validate = require('./lib/validators'),
-  Gateway = require('./lib/proxy'),
-  ServerError = require('./lib/ServerError'),
-  logger = require('./lib/logger'),
-  version = require('./package.json').version;
+  validate = require('../lib/validators'),
+  Gateway = require('../lib/proxy'),
+  ServerError = require('../lib/ServerError'),
+  logger = require('../lib/logger'),
+  version = require('../package.json').version;
 
 const checkParams = params => {
   validate.existence({ argumentValue: params.token, argumentName: 'token', fail: program.help.bind(program) });
@@ -23,7 +23,7 @@ program
   .version(version)
   .option('--email <email>', 'developer email', process.env.MARKETPLACE_EMAIL)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
-  .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL);
+  .option('--url <url>', 'application url', process.env.MARKETPLACE_URL);
 
 program.parse(process.argv);
 

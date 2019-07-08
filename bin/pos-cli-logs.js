@@ -2,10 +2,10 @@
 
 const program = require('commander'),
   EventEmitter = require('events'),
-  fetchAuthData = require('./lib/settings').fetchSettings,
+  fetchAuthData = require('../lib/settings').fetchSettings,
   notifier = require('node-notifier'),
-  logger = require('./lib/logger'),
-  Gateway = require('./lib/proxy');
+  logger = require('../lib/logger'),
+  Gateway = require('../lib/proxy');
 
 class LogStream extends EventEmitter {
   constructor(authData) {

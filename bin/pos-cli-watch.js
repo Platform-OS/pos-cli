@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  Gateway = require('./lib/proxy'),
+  Gateway = require('../lib/proxy'),
   fs = require('fs'),
   path = require('path'),
   watch = require('node-watch'),
   Queue = require('async/queue'),
-  logger = require('./lib/logger'),
-  validate = require('./lib/validators'),
-  watchFilesExtensions = require('./lib/watch-files-extensions'),
-  templates = require('./lib/templates'),
-  settings = require('./lib/settings'),
-  version = require('./package.json').version,
-  dir = require('./lib/directories');
+  logger = require('../lib/logger'),
+  validate = require('../lib/validators'),
+  watchFilesExtensions = require('../lib/watch-files-extensions'),
+  templates = require('../lib/templates'),
+  settings = require('../lib/settings'),
+  version = require('../package.json').version,
+  dir = require('../lib/directories');
 
 const getWatchDirectories = () => dir.ALLOWED.filter(fs.existsSync);
 const ext = filePath => filePath.split('.').pop();

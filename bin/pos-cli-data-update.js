@@ -3,12 +3,12 @@
 const program = require('commander'),
   fs = require('fs'),
   ora = require('ora'),
-  Gateway = require('./lib/proxy'),
-  logger = require('./lib/logger'),
-  fetchAuthData = require('./lib/settings').fetchSettings,
-  transform = require('./lib/data/uploadFiles'),
-  isValidJSON = require('./lib/data/isValidJSON'),
-  version = require('./package.json').version;
+  Gateway = require('../lib/proxy'),
+  logger = require('../lib/logger'),
+  fetchAuthData = require('../lib/settings').fetchSettings,
+  transform = require('../lib/data/uploadFiles'),
+  isValidJSON = require('../lib/data/isValidJSON'),
+  version = require('../package.json').version;
 
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
@@ -41,25 +41,21 @@ For example: https://jsonlint.com`
     }
 
     spinner.start();
-    transform(JSON.parse(data)).then(transformedData => {
-      const tmpFileName = './tmp/data-updated.json';
-      fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
-      const formData = { 'update[data]': fs.createReadStream(tmpFileName) };
-      gateway
-        .dataUpdate(formData)
-        .then(() => {
-          spinner
-            .stopAndPersist()
-            .succeed('Import scheduled. Check marketplace-kit logs for info when it is done.');
+    transform(JSON.parse(data))
+      .then(transformedData => {
+        const tmpFileName = './tmp/data-updated.json';
+        fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
+        const formData = { 'update[data]': fs.createReadStream(tmpFileName) };
+        gateway.dataUpdate(formData).then(() => {
+          spinner.stopAndPersist().succeed('Import scheduled. Check pos-cli logs for info when it is done.');
         });
-    })
+      })
       .catch({ statusCode: 404 }, () => {
         spinner.fail('Import failed');
         logger.Error('[404] Data update is not supported by the server');
       })
       .catch(e => {
         spinner.fail('Import failed');
-        logger.Error(e);
         logger.Error(e.message);
       });
   });

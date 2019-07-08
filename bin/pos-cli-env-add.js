@@ -3,10 +3,10 @@
 const program = require('commander'),
   fs = require('fs'),
   rl = require('readline'),
-  logger = require('./lib/logger'),
-  validate = require('./lib/validators'),
-  version = require('./package.json').version,
-  Portal = require('./lib/portal');
+  logger = require('../lib/logger'),
+  validate = require('../lib/validators'),
+  version = require('../package.json').version,
+  Portal = require('../lib/portal');
 
 const checkParams = params => {
   validate.existence({ argumentValue: params.email, argumentName: 'email', fail: program.help.bind(program) });
@@ -73,7 +73,7 @@ program
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
   .option('--url <url>', 'marketplace url. Example: https://example.com')
-  .option('--token <token>', 'if you have a token you can add it directly to mpkit configution without connecting to portal')
+  .option('--token <token>', 'if you have a token you can add it directly to pos-cli configuration without connecting to portal')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;

@@ -1,5 +1,4 @@
-# marketplace-kit
-
+# pos-cli
 
 ## Versioning
 
@@ -10,7 +9,11 @@ When using [`npm version`](https://docs.npmjs.com/cli/version) command please ke
 ## Publish
 
     npm version patch
-    
-    git push --tags
-       
+
     npm publish
+
+## Push to git
+
+    git push --tags
+
+    git push

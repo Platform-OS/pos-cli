@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  logger = require('./lib/logger'),
-  version = require('./package.json').version;
+  logger = require('../lib/logger'),
+  version = require('../package.json').version;
 
 program
   .version(version)
@@ -11,7 +11,7 @@ program
 
 process.env.CONFIG_FILE_PATH = program.configFile;
 
-const list = require('./lib/settings').listEnvironments();
+const list = require('../lib/settings').listEnvironments();
 
 logger.Info('Available environments: ');
 

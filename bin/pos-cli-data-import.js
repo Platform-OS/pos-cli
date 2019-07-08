@@ -4,26 +4,27 @@ const program = require('commander'),
   fs = require('fs'),
   ora = require('ora'),
   shell = require('@platform-os/shelljs'),
-  Gateway = require('./lib/proxy'),
-  logger = require('./lib/logger'),
-  fetchAuthData = require('./lib/settings').fetchSettings,
-  transform = require('./lib/data/uploadFiles'),
-  isValidJSON = require('./lib/data/isValidJSON'),
-  waitForStatus = require('./lib/data/waitForStatus'),
-  version = require('./package.json').version;
+  Gateway = require('../lib/proxy'),
+  logger = require('../lib/logger'),
+  fetchAuthData = require('../lib/settings').fetchSettings,
+  transform = require('../lib/data/uploadFiles'),
+  isValidJSON = require('../lib/data/isValidJSON'),
+  waitForStatus = require('../lib/data/waitForStatus'),
+  version = require('../package.json').version;
 
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 const tmpFileName = './tmp/data-imported.json';
+
 PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://partners.platform-os.com';
 
-const logInvalidFile = (filename) => {
+const logInvalidFile = filename => {
   return logger.Error(
     `Invalid format of ${filename}. Must be a valid json file. Check file using one of JSON validators online: https://jsonlint.com`
   );
 };
 
-const dataImport = async(filename) => {
+const dataImport = async filename => {
   const data = fs.readFileSync(filename, 'utf8');
   if (!isValidJSON(data)) return logInvalidFile(filename);
 
@@ -34,14 +35,19 @@ const dataImport = async(filename) => {
   const formData = { 'import[data]': fs.createReadStream(tmpFileName) };
   gateway
     .dataImportStart(formData)
-    .then((importTask) => {
-      spinner.stopAndPersist().succeed('Data sent').start('Importing data');
-      waitForStatus(() => gateway.dataImportStatus(importTask.id)).then(() => {
-        spinner.stopAndPersist().succeed('Import done.');
-      }).catch(error => {
-        logger.Debug(error);
-        spinner.fail('Import failed');
-      });
+    .then(importTask => {
+      spinner
+        .stopAndPersist()
+        .succeed('Data sent')
+        .start('Importing data');
+      waitForStatus(() => gateway.dataImportStatus(importTask.id))
+        .then(() => {
+          spinner.stopAndPersist().succeed('Import done.');
+        })
+        .catch(error => {
+          logger.Debug(error);
+          spinner.fail('Import failed');
+        });
     })
     .catch({ statusCode: 404 }, () => {
       spinner.fail('Import failed');

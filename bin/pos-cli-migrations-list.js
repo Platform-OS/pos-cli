@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  Gateway = require('./lib/proxy'),
-  logger = require('./lib/logger'),
-  fetchAuthData = require('./lib/settings').fetchSettings,
-  version = require('./package.json').version;
+  Gateway = require('../lib/proxy'),
+  logger = require('../lib/logger'),
+  fetchAuthData = require('../lib/settings').fetchSettings,
+  version = require('../package.json').version;
 
 const logMigration = migration => {
   const errorsMsg = migration.error_messages ? `- Errors: (${migration.error_messages})` : '';

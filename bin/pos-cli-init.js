@@ -5,10 +5,10 @@ const fs = require('fs');
 const path = require('path');
 const { mkdir, mv, rm, pwd } = require('@platform-os/shelljs');
 const extract = require('extract-zip');
-const logger = require('./lib/logger');
-const validate = require('./lib/validators');
-const version = require('./package.json').version;
-const dir = require('./lib/directories');
+const logger = require('../lib/logger');
+const validate = require('../lib/validators');
+const version = require('../package.json').version;
+const dir = require('../lib/directories');
 
 const DEFAULT_REPO = 'https://github.com/mdyd-dev/directory-structure';
 const DEFAULT_BRANCH = 'master';

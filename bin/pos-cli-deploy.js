@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  fetchAuthData = require('./lib/settings').fetchSettings,
+  fetchAuthData = require('../lib/settings').fetchSettings,
   spawn = require('child_process').spawn,
   ora = require('ora'),
   sh = require('@platform-os/shelljs'),
-  command = require('./lib/command'),
-  logger = require('./lib/logger'),
-  Gateway = require('./lib/proxy'),
-  assets = require('./lib/assets'),
-  version = require('./package.json').version;
+  command = require('../lib/command'),
+  logger = require('../lib/logger'),
+  Gateway = require('../lib/proxy'),
+  assets = require('../lib/assets'),
+  version = require('../package.json').version;
 
 const uploadArchive = (env, usingDeploymentService) => {
   const options = usingDeploymentService ? ['--without-assets'] : [];
   return new Promise((resolve, reject) => {
-    const archive = spawn(command('marketplace-kit-archive'), options, {
+    const archive = spawn(command('pos-cli-archive'), options, {
       stdio: 'inherit'
     });
 
@@ -24,7 +24,7 @@ const uploadArchive = (env, usingDeploymentService) => {
         reject();
       }
 
-      const push = spawn(command('marketplace-kit-push'), [], {
+      const push = spawn(command('pos-cli-push'), [], {
         stdio: 'inherit',
         env: env
       });
@@ -76,13 +76,10 @@ program
 
     Promise.all([
       new Promise(resolve => {
-        // Workaround to have colors when running shell scripts via `npm`
         logger.Info('Starting audit...');
 
-        sh.exec('FORCE_COLOR=true marketplace-kit audit', () => {
-          logger.Info('Audit done.');
-          resolve();
-        });
+        // Workaround to have colors when running shell scripts via `npm`
+        sh.exec('FORCE_COLOR=true pos-cli audit', resolve);
       }),
       deploy(env, authData, params)
     ])
