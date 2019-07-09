@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const path = require('path');
+
 const express = require('express'),
   compression = require('compression'),
   bodyParser = require('body-parser'),
@@ -20,8 +22,9 @@ const gateway = new Gateway({
 app.use(bodyParser.json());
 app.use(compression());
 
-app.use('/gui/editor', express.static(__dirname + '/gui/editor/public'));
-app.use('/gui/graphql', express.static(__dirname + '/gui/graphql/public'));
+const staticPath = path.resolve(__dirname, '..', 'gui', 'graphql', 'public');
+app.use('/gui/editor', express.static(staticPath));
+app.use('/gui/graphql', express.static(staticPath));
 
 // INFO
 const info = (req, res) => {
