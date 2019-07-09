@@ -22,9 +22,8 @@ const gateway = new Gateway({
 app.use(bodyParser.json());
 app.use(compression());
 
-const staticPath = path.resolve(__dirname, '..', 'gui', 'graphql', 'public');
-app.use('/gui/editor', express.static(staticPath));
-app.use('/gui/graphql', express.static(staticPath));
+app.use('/gui/editor', express.static(path.resolve(__dirname, '..', 'gui', 'editor', 'public')));
+app.use('/gui/graphql', express.static(path.resolve(__dirname, '..', 'gui', 'graphql', 'public')));
 
 // INFO
 const info = (req, res) => {
