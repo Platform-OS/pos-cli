@@ -942,6 +942,11 @@
         "supports-color": "^5.3.0"
       }
     },
+    "chownr": {
+      "version": "1.1.2",
+      "resolved": "https://registry.npmjs.org/chownr/-/chownr-1.1.2.tgz",
+      "integrity": "sha512-GkfeAQh+QNy3wquu9oIZr6SS5x7wGdSgNQvD10X3r+AZr1Oys22HW8kAmDMvNg2+Dm0TeGaEuO8gFwdBXxwO8A=="
+    },
     "ci-info": {
       "version": "1.1.3",
       "resolved": "https://registry.npmjs.org/ci-info/-/ci-info-1.1.3.tgz",
@@ -1362,6 +1367,18 @@
             "kind-of": "^6.0.2"
           }
         }
+      }
+    },
+    "degit": {
+      "version": "2.1.3",
+      "resolved": "https://registry.npmjs.org/degit/-/degit-2.1.3.tgz",
+      "integrity": "sha512-/An4FFyxq7yody1DMeFeftv+YmyZ7ESYEwtGtkbe3ovZpoEhIV2gy7+2z7dc8UqqC0b1AHJwfWj2nPnDhiTtuQ==",
+      "requires": {
+        "chalk": "^2.0.1",
+        "home-or-tmp": "^3.0.0",
+        "mri": "^1.1.0",
+        "sander": "^0.6.0",
+        "tar": "^4.0.2"
       }
     },
     "delayed-stream": {
@@ -2067,6 +2084,14 @@
       "version": "1.0.0",
       "resolved": "https://registry.npmjs.org/fs-constants/-/fs-constants-1.0.0.tgz",
       "integrity": "sha512-y6OAwoSIf7FyjMIv94u+b5rdheZEjzR63GTyZJm5qh4Bi+2YgwLCcI/fPFZkL5PSixOt6ZNKm+w+Hfp/Bciwow=="
+    },
+    "fs-minipass": {
+      "version": "1.2.6",
+      "resolved": "https://registry.npmjs.org/fs-minipass/-/fs-minipass-1.2.6.tgz",
+      "integrity": "sha512-crhvyXcMejjv3Z5d2Fa9sf5xLYVCF5O1c71QxbVnbLsmYMBEvDAftewesN/HhY03YRoA7zOMxjNGrF5svGaaeQ==",
+      "requires": {
+        "minipass": "^2.2.1"
+      }
     },
     "fs.realpath": {
       "version": "1.0.0",
@@ -2882,6 +2907,11 @@
           }
         }
       }
+    },
+    "home-or-tmp": {
+      "version": "3.0.0",
+      "resolved": "https://registry.npmjs.org/home-or-tmp/-/home-or-tmp-3.0.0.tgz",
+      "integrity": "sha1-V6j+JM8zzdUkhgoVgh3cJchmcfs="
     },
     "hosted-git-info": {
       "version": "2.7.1",
@@ -4366,6 +4396,35 @@
       "resolved": "https://registry.npmjs.org/minimist/-/minimist-0.0.8.tgz",
       "integrity": "sha1-hX/Kv8M5fSYluCKCYuhqp6ARsF0="
     },
+    "minipass": {
+      "version": "2.3.5",
+      "resolved": "https://registry.npmjs.org/minipass/-/minipass-2.3.5.tgz",
+      "integrity": "sha512-Gi1W4k059gyRbyVUZQ4mEqLm0YIUiGYfvxhF6SIlk3ui1WVxMTGfGdQ2SInh3PDrRTVvPKgULkpJtT4RH10+VA==",
+      "requires": {
+        "safe-buffer": "^5.1.2",
+        "yallist": "^3.0.0"
+      },
+      "dependencies": {
+        "safe-buffer": {
+          "version": "5.2.0",
+          "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.0.tgz",
+          "integrity": "sha512-fZEwUGbVl7kouZs1jCdMLdt95hdIv0ZeHg6L7qPeciMZhZ+/gdesW4wgTARkrFWEpspjEATAzUGPG8N2jJiwbg=="
+        },
+        "yallist": {
+          "version": "3.0.3",
+          "resolved": "https://registry.npmjs.org/yallist/-/yallist-3.0.3.tgz",
+          "integrity": "sha512-S+Zk8DEWE6oKpV+vI3qWkaK+jSbIK86pCwe2IF/xwIpQ8jEuxpw9NyaGjmp9+BoJv5FV2piqCDcoCtStppiq2A=="
+        }
+      }
+    },
+    "minizlib": {
+      "version": "1.2.1",
+      "resolved": "https://registry.npmjs.org/minizlib/-/minizlib-1.2.1.tgz",
+      "integrity": "sha512-7+4oTUOWKg7AuL3vloEWekXY2/D20cevzsrNT2kGWm+39J9hGTCBv8VI5Pm5lXZ/o3/mdR4f8rflAPhnQb8mPA==",
+      "requires": {
+        "minipass": "^2.2.1"
+      }
+    },
     "mixin-deep": {
       "version": "1.3.1",
       "resolved": "https://registry.npmjs.org/mixin-deep/-/mixin-deep-1.3.1.tgz",
@@ -4392,6 +4451,11 @@
       "requires": {
         "minimist": "0.0.8"
       }
+    },
+    "mri": {
+      "version": "1.1.4",
+      "resolved": "https://registry.npmjs.org/mri/-/mri-1.1.4.tgz",
+      "integrity": "sha512-6y7IjGPm8AzlvoUrwAaw1tLnUBudaS3752vcd8JtrpGGQn+rXIe63LFVHm/YMwtqAuh+LJPCFdlLYPWM1nYn6w=="
     },
     "ms": {
       "version": "2.0.0",
@@ -5284,7 +5348,6 @@
       "version": "2.6.3",
       "resolved": "https://registry.npmjs.org/rimraf/-/rimraf-2.6.3.tgz",
       "integrity": "sha512-mwqeW5XsA2qAejG46gYdENaxXjx9onRNCfn7L0duuP4hCuTIi/QO7PDK07KJfp1d+izWPrzEJDcSqBa0OZQriA==",
-      "dev": true,
       "requires": {
         "glob": "^7.1.3"
       },
@@ -5293,7 +5356,6 @@
           "version": "7.1.3",
           "resolved": "https://registry.npmjs.org/glob/-/glob-7.1.3.tgz",
           "integrity": "sha512-vcfuiIxogLV4DlGBHIUOwI0IbrJ8HWPc4MU7HzviGeNho/UJDfi6B5p3sHeWIQ0KGIU0Jpxi5ZHxemQfLkkAwQ==",
-          "dev": true,
           "requires": {
             "fs.realpath": "^1.0.0",
             "inflight": "^1.0.4",
@@ -5333,6 +5395,16 @@
       "version": "2.1.2",
       "resolved": "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz",
       "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg=="
+    },
+    "sander": {
+      "version": "0.6.0",
+      "resolved": "https://registry.npmjs.org/sander/-/sander-0.6.0.tgz",
+      "integrity": "sha1-rxYkzX+2362Y6+9WUxn5IAeNqSU=",
+      "requires": {
+        "graceful-fs": "^4.1.3",
+        "mkdirp": "^0.5.1",
+        "rimraf": "^2.5.2"
+      }
     },
     "sane": {
       "version": "3.1.0",
@@ -5878,6 +5950,32 @@
       "resolved": "https://registry.npmjs.org/symbol-tree/-/symbol-tree-3.2.2.tgz",
       "integrity": "sha1-rifbOPZgp64uHDt9G8KQgZuFGeY=",
       "dev": true
+    },
+    "tar": {
+      "version": "4.4.10",
+      "resolved": "https://registry.npmjs.org/tar/-/tar-4.4.10.tgz",
+      "integrity": "sha512-g2SVs5QIxvo6OLp0GudTqEf05maawKUxXru104iaayWA09551tFCTI8f1Asb4lPfkBr91k07iL4c11XO3/b0tA==",
+      "requires": {
+        "chownr": "^1.1.1",
+        "fs-minipass": "^1.2.5",
+        "minipass": "^2.3.5",
+        "minizlib": "^1.2.1",
+        "mkdirp": "^0.5.0",
+        "safe-buffer": "^5.1.2",
+        "yallist": "^3.0.3"
+      },
+      "dependencies": {
+        "safe-buffer": {
+          "version": "5.2.0",
+          "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.0.tgz",
+          "integrity": "sha512-fZEwUGbVl7kouZs1jCdMLdt95hdIv0ZeHg6L7qPeciMZhZ+/gdesW4wgTARkrFWEpspjEATAzUGPG8N2jJiwbg=="
+        },
+        "yallist": {
+          "version": "3.0.3",
+          "resolved": "https://registry.npmjs.org/yallist/-/yallist-3.0.3.tgz",
+          "integrity": "sha512-S+Zk8DEWE6oKpV+vI3qWkaK+jSbIK86pCwe2IF/xwIpQ8jEuxpw9NyaGjmp9+BoJv5FV2piqCDcoCtStppiq2A=="
+        }
+      }
     },
     "tar-stream": {
       "version": "1.6.1",
