@@ -82,13 +82,15 @@ pos-cli env list
 If you need to create new project from scratch you can init directory structure using:
 
 ```
-pos-cli init
+pos-cli init --url mdyd-dev/directory-structure --branch master
 ```
 
-It will download directory structure from official repository and extract it in your current directory.
+Default url: `mdyd-dev/directory-structure`
+Default branch: `master`
 
-We will try to keep it up to date and also keep it as useful as possible.
-If you have any feedback for directory structure go to [github](https://github.com/mdyd-dev/directory-structure) and create an issue.
+Init command supports all formats supported by [degit](https://github.com/Rich-Harris/degit), as it is used as an engine underneath.
+
+It will download directory structure from official repository and extract it in your current directory.
 
 ### Graphical interface
 
