@@ -120,3 +120,11 @@ test('should run help on sync', ()  => {
   expect(command.stdout).toEqual(expect.stringContaining('Usage: pos-cli-sync [options] [environment]'));
   sh.config.silent = silentState;
 });
+
+test('should run help on init', ()  => {
+  sh.config.silent = true;
+  let command = sh.exec('./bin/pos-cli.js init --help');
+  expect(command.code).toEqual(0);
+  expect(command.stdout).toEqual(expect.stringContaining('Usage: pos-cli-init [options]'));
+  sh.config.silent = silentState;
+});

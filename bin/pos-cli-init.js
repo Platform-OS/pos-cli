@@ -14,7 +14,7 @@ const DEFAULT_BRANCH = 'master';
 
 // TODO: Deprecate in favor of `npx degit` !
 
-const TMP_DIR = path.normalize(path.resolve(process.cwd(), dir.tmp));
+const TMP_DIR = path.normalize(path.resolve(process.cwd(), dir.TMP));
 const TMP_PATH = path.normalize(path.resolve(TMP_DIR, 'directory-structure.zip'));
 
 const emptyTemp = () => rm('-rf', `${TMP_DIR}/*`);
