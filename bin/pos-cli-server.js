@@ -2,13 +2,14 @@
 
 const path = require('path');
 
+const Gateway = require('../lib/proxy'),
+  logger = require('../lib/logger');
+
 const express = require('express'),
   compression = require('compression'),
   bodyParser = require('body-parser'),
   multer = require('multer'),
-  upload = multer(),
-  Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger');
+  upload = multer();
 
 const port = process.env.PORT || 3333;
 const app = express();
@@ -60,13 +61,20 @@ app.put(
   }
 );
 
-app.listen(port, err => {
-  if (err) {
-    logger.Error(`Something wrong happened when trying to run Express server: ${err}`);
-  }
-
-  logger.Debug(`Server is listening on ${port}`);
-  logger.Success(`Connected to ${process.env.MARKETPLACE_URL}`);
-  logger.Success(`Resources Editor: http://localhost:${port}/gui/editor`);
-  logger.Success(`GraphQL Browser: http://localhost:${port}/gui/graphql`);
-});
+app
+  .listen(port, function() {
+    logger.Debug(`Server is listening on ${port}`);
+    logger.Success(`Connected to ${process.env.MARKETPLACE_URL}`);
+    logger.Success(`Resources Editor: http://localhost:${port}/gui/editor`);
+    logger.Success(`GraphQL Browser: http://localhost:${port}/gui/graphql`);
+  })
+  .on('error', err => {
+    if (err.errno === 'EADDRINUSE') {
+      logger.Error(`Port ${port} is already in use.`, { exit: false });
+      logger.Print('\n');
+      logger.Warn('Please use -p <port> to run server on a different port.\n');
+      logger.Warn('Example: pos-cli gui serve staging -p 31337');
+    } else {
+      logger.Error(`Something wrong happened when trying to run Express server: ${err}`);
+    }
+  });
