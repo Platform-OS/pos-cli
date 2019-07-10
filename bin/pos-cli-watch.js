@@ -1,83 +1,30 @@
 #!/usr/bin/env node
 
+const fs = require('fs'),
+  path = require('path');
+
 const program = require('commander'),
-  Gateway = require('../lib/proxy'),
-  fs = require('fs'),
-  path = require('path'),
   watch = require('node-watch'),
-  Queue = require('async/queue'),
+  Queue = require('async/queue');
+
+const Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
   validate = require('../lib/validators'),
-  watchFilesExtensions = require('../lib/watch-files-extensions'),
   templates = require('../lib/templates'),
   settings = require('../lib/settings'),
   dir = require('../lib/directories');
 
-const getWatchDirectories = () => dir.ALLOWED.filter(fs.existsSync);
-const ext = filePath => filePath.split('.').pop();
-const filename = filePath => filePath.split(path.sep).pop();
+const shouldBeSynced = require('../lib/shouldBeSynced');
+
 const filePathUnixified = filePath =>
   filePath
     .replace(/\\/g, '/')
     .replace(new RegExp(`^${dir.APP}/`), '')
     .replace(new RegExp(`^${dir.LEGACY_APP}/`), '');
-const isEmpty = filePath =>
-  fs
-    .readFileSync(filePath)
-    .toString()
-    .trim().length === 0;
-const shouldBeSynced = (filePath, event) => {
-  return (
-    fileUpdated(event) &&
-    extensionAllowed(filePath) &&
-    isNotHidden(filePath) &&
-    isNotEmptyYML(filePath) &&
-    isModuleFile(filePath)
-  );
-};
-
-const fileUpdated = event => event === 'update';
-
-const extensionAllowed = filePath => {
-  const allowed = watchFilesExtensions.includes(ext(filePath));
-  if (!allowed) {
-    logger.Debug(`[Sync] Not syncing, not allowed file extension: ${filePath}`);
-  }
-  return allowed;
-};
-
-const isNotHidden = filePath => {
-  const isHidden = filename(filePath).startsWith('.');
-
-  if (isHidden) {
-    logger.Warn(`[Sync] Not syncing hidden file: ${filePath}`);
-  }
-  return !isHidden;
-};
-
-const isNotEmptyYML = filePath => {
-  if (ext(filePath) === 'yml' && isEmpty(filePath)) {
-    logger.Warn(`[Sync] Not syncing empty YML file: ${filePath}`);
-    return false;
-  }
-
-  return true;
-};
-
-// Mdule files outside public or private folders are not synced
-const isModuleFile = f => {
-  let pathArray = f.split(path.sep);
-  if ('modules' != pathArray[0]) {
-    return true;
-  }
-  return ['private', 'public'].includes(pathArray[2]);
-};
-
-const CONCURRENCY = 3;
 
 const queue = Queue((task, callback) => {
   pushFile(task.path).then(callback);
-}, CONCURRENCY);
+}, program.concurrency);
 
 const enqueue = filePath => {
   queue.push({ path: filePath }, () => {});
@@ -121,7 +68,8 @@ const checkParams = params => {
 program
   .option('--email <email>', 'authentication token', process.env.MARKETPLACE_EMAIL)
   .option('--token <token>', 'authentication token', process.env.MARKETPLACE_TOKEN)
-  .option('--url <url>', 'marketplace url', process.env.MARKETPLACE_URL)
+  .option('--url <url>', 'application url', process.env.MARKETPLACE_URL)
+  .option('-c --concurrency <number>', 'maximum concurrent connections to the server', process.env.CONCURRENCY)
   .parse(process.argv);
 
 checkParams(program);
@@ -129,13 +77,13 @@ checkParams(program);
 const gateway = new Gateway(program);
 
 gateway.ping().then(() => {
-  const directories = getWatchDirectories();
+  const directories = dir.toWatch();
 
   if (directories.length === 0) {
     logger.Error(`${dir.APP} or ${dir.MODULES} directory has to exist!`);
   }
 
-  logger.Info(`Enabling sync mode to: ${program.url}`);
+  logger.Info(`Running sync mode to: ${program.url}`);
 
   watch(directories, { recursive: true }, (event, filePath) => {
     shouldBeSynced(filePath, event) && enqueue(filePath);
