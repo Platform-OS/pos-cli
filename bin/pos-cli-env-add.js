@@ -65,8 +65,6 @@ const existingSettings = configFilePath => {
   return settings;
 };
 
-PARTNER_PORTAL_HOST = process.env.PARTNER_PORTAL_HOST || 'https://partners.platform-os.com';
-
 program
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
@@ -88,12 +86,12 @@ program
 
     logger.Info(
       `Please make sure that you have a permission to deploy. \n
-      You can verify it here: ${PARTNER_PORTAL_HOST}/me/permissions`,
+      You can verify it here: ${Portal.HOST}/me/permissions`,
       { hideTimestamp: true }
     );
 
     getPassword().then(password => {
-      logger.Info(`Asking ${PARTNER_PORTAL_HOST} for access token...`);
+      logger.Info(`Asking ${Portal.HOST} for access token...`);
 
       Portal.login(params.email, password)
         .then(response => {
