@@ -1,7 +1,8 @@
 # Changelog
 
-## 3.0.7
-* Added --concurrency (-c) option to `pos-cli sync`
+## 3.0.7 July 11, 2019
+* Fixed `--direct-assets-upload` in `pos-cli deploy`
+* Added `--concurrency` (`-c`) option to `pos-cli sync`
 
 ## 3.0.6 July 9, 2019
 * Migrated `pos-cli init` implementation to use `degit`

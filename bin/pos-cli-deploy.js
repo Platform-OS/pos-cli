@@ -53,7 +53,7 @@ const deploy = async (env, authData, params) => {
 
 const runAudit = () => {
   return new Promise(resolve => {
-    logger.Info('Starting audit...');
+    logger.Info('Analyzing code...');
 
     sh.exec('FORCE_COLOR=true pos-cli audit', resolve); // Enable colors when running script via `npm`
   });
