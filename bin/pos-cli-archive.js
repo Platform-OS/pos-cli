@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
+
 const program = require('commander'),
-  fs = require('fs'),
   shell = require('@platform-os/shelljs'),
-  glob = require('glob'),
-  prepareArchive = require('../lib/prepareArchive'),
-  templates = require('../lib/templates'),
+  glob = require('glob');
+
+const templates = require('../lib/templates'),
   logger = require('../lib/logger'),
   settings = require('../lib/settings'),
   dir = require('../lib/directories');
+
+const prepareArchive = require('../lib/prepareArchive');
 
 const availableDirectories = () => dir.ALLOWED.filter(fs.existsSync);
 const isEmpty = dir => shell.ls(dir).length == 0;
@@ -23,7 +26,7 @@ const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') =
   return new Promise((resolve, reject) => {
     glob(pattern, { cwd: `${dir.MODULES}/${module}` }, (err, files) => {
       if (err) throw reject(err);
-      const moduleTemplateData = templateData(module);
+      const moduleTemplateData = settings.loadSettingsFileForModule(module);
 
       return Promise.all(
         files.map(f => {
@@ -58,9 +61,13 @@ const makeArchive = (path, directory, withoutAssets) => {
     }
   });
 
-  const releaseArchive = prepareArchive(path);
-  let options = { cwd: directory };
-  if (withoutAssets) options.ignore = ['assets/**'];
+  const releaseArchive = prepareArchive(path, !program.withoutAssets);
+
+  const options = {
+    cwd: directory,
+    ignore: withoutAssets ? ['assets/**'] : []
+  };
+
   releaseArchive.glob('**/*', options, { prefix: directory });
 
   addModulesToArchive(releaseArchive).then(r => {
@@ -68,21 +75,21 @@ const makeArchive = (path, directory, withoutAssets) => {
   });
 };
 
-const templateData = module => {
-  return settings.loadSettingsFileForModule(module);
-};
-
 program
   .option('--without-assets', 'if present assets directory will be excluded')
   .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
   .parse(process.argv);
 
-let app_directory;
-if (fs.existsSync(dir.APP)) {
-  app_directory = dir.APP;
-} else {
-  console.log(`Falling back to legacy app-directory name. Please consider renaming ${dir.LEGACY_APP} to ${dir.APP}`);
-  app_directory = dir.LEGACY_APP;
+let appDirectory = dir.APP;
+
+if (!fs.existsSync(dir.APP) && !fs.existsSync(dir.LEGACY_APP)) {
+  logger.Error('Could not find app directory.');
 }
 
-makeArchive(program.target, app_directory, program.withoutAssets);
+if (fs.existsSync(dir.LEGACY_APP)) {
+  logger.Debug(`${dir.APP} not found, but ${dir.LEGACY_APP} is present. Setting ${dir.LEGACY_APP} as app dir.`);
+  logger.Warn(`Falling back to legacy app-directory name. Please consider renaming ${dir.LEGACY_APP} to ${dir.APP}`);
+  appDirectory = dir.LEGACY_APP;
+}
+
+makeArchive(program.target, appDirectory, program.withoutAssets);

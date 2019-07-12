@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
+const fs = require('fs'),
+  { performance } = require('perf_hooks');
+
 const program = require('commander'),
-  fs = require('fs'),
-  { performance } = require('perf_hooks'),
-  ora = require('ora'),
-  validate = require('../lib/validators'),
+  ora = require('ora');
+
+const validate = require('../lib/validators'),
   Gateway = require('../lib/proxy'),
   ServerError = require('../lib/ServerError'),
   logger = require('../lib/logger');
@@ -12,6 +14,7 @@ const program = require('commander'),
 const checkParams = params => {
   validate.existence({ argumentValue: params.token, argumentName: 'token', fail: program.help.bind(program) });
   validate.existence({ argumentValue: params.url, argumentName: 'url', fail: program.help.bind(program) });
+  validate.existence({ argumentValue: params.email, argumentName: 'email', fail: program.help.bind(program) });
 
   if (params.url.slice(-1) != '/') {
     params.url = params.url + '/';
@@ -35,7 +38,11 @@ const duration = (t0, t1) => {
 
 const t0 = performance.now();
 
-const spinner = ora({ text: `Deploying to: ${program.url}`, stream: process.stdout, spinner: 'bouncingBar' }).start();
+const DIRECT = process.env.DIRECT_ASSETS_UPLOAD === 'true';
+
+const msg = program => (DIRECT ? `Deploying resources to: ${program.url}` : `Deploying to: ${program.url}`);
+
+const spinner = ora({ text: msg(program), stream: process.stdout, spinner: 'bouncingBar' }).start();
 
 const gateway = new Gateway(program);
 
@@ -66,7 +73,9 @@ gateway
   .then(getDeploymentStatus)
   .then(() => {
     const t1 = performance.now();
-    spinner.stopAndPersist().succeed(`Deploy succeeded after ${duration(t0, t1)}`);
+    if (!DIRECT) {
+      spinner.succeed(`Deploy succeeded after ${duration(t0, t1)}`);
+    }
   })
   .catch(error => {
     const t1 = performance.now();

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
-  chalk = require('chalk'),
-  sh = require('@platform-os/shelljs'),
-  dir = require('../lib/directories');
+const chalk = require('chalk'),
+  sh = require('@platform-os/shelljs');
+
+const dir = require('../lib/directories');
 
 const tags = require('../lib/audit/tags').getRules(),
   filters = require('../lib/audit/filters').getRules(),
