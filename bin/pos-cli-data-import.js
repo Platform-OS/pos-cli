@@ -57,6 +57,7 @@ const dataImport = async filename => {
 };
 
 program
+  .name('pos-cli data import')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <import-file-path>', 'path of import .json file', 'data.json')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

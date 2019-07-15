@@ -6,6 +6,7 @@ const program = require('commander'),
   fetchAuthData = require('../lib/settings').fetchSettings;
 
 program
+  .name('pos-cli modules remove')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'name of the module. Example: admin_cms')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

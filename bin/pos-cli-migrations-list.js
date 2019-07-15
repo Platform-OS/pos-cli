@@ -11,6 +11,7 @@ const logMigration = migration => {
 };
 
 program
+  .name('pos-cli migrations list')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {

@@ -9,6 +9,7 @@ const program = require('commander'),
   Gateway = require('../lib/proxy');
 
 program
+  .name('pos-cli pull')
   .arguments('[environment]', 'Name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .option('-t --type <type>', 'item type - LiquidView', 'Page')

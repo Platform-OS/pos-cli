@@ -9,6 +9,7 @@ const program = require('commander'),
   dir = require('../lib/directories');
 
 program
+  .name('pos-cli migrations generate')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'base name of the migration. Example: cleanup_data')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

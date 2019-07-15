@@ -4,6 +4,7 @@ const program = require('commander'),
   logger = require('../lib/logger');
 
 program
+  .name('pos-cli env list')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .parse(process.argv);
 

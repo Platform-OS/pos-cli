@@ -3,6 +3,7 @@
 const program = require('commander');
 
 program
+  .name('pos-cli data')
   .command('export [environment]', 'export instance data to a json file')
   .command('import [environment]', 'import instance data(from external source) from a json file')
   .command('update [environment]', 'update existing instance data from a json file')

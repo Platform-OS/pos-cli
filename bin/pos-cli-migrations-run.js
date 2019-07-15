@@ -6,6 +6,7 @@ const program = require('commander'),
   fetchAuthData = require('../lib/settings').fetchSettings;
 
 program
+  .name('pos-cli migrations run')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<timestamp>', 'timestamp the migration. Example: 20180701182602')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
