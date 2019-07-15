@@ -30,7 +30,7 @@ See this [guide](https://documentation.platformos.com/get-started/partner-portal
 To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
 
 ```
-pos-cli env add [environment] --email <your email> --url <your application url>
+pos-cli env add <environment> --email <your email> --url <your application url>
 ```
 
 Example: `pos-cli env add staging --email myemail@example.com --url https://example.com`
@@ -40,7 +40,7 @@ Configuration for environments lays down in `.marketplace-kit` file.
 ### Syncing changes
 
 ```
-pos-cli sync [environment]
+pos-cli sync <environment>
 ```
 
 Example: `pos-cli sync staging`
@@ -50,7 +50,7 @@ Enables sync mode - immediately pushes changes made to filesystem to the proper 
 ### Deploying changes
 
 ```
-pos-cli deploy [environment]
+pos-cli deploy <environment>
 ```
 
 Example: `pos-cli deploy staging`
@@ -67,7 +67,17 @@ pos-cli audit
 
 Example: `pos-cli audit`
 
-Runs statical analysis on your current project directory.
+Runs statical analysis on file in your current application directory.
+
+### Reading logs
+
+Errors and logs that you or the system logs for you can be accessed via `logs` command. Read more [how to create logs](https://documentation.platformos.com/api-reference/liquid/platformos-tags#log).
+
+```
+pos-cli logs <environment>
+```
+
+From now on as long as your `logs` command is running, logs will aprear here. Errors will trigger system notification if your operating system is supporting them.
 
 ### Listing environments
 
@@ -77,7 +87,7 @@ If you forgot know what your environments are named or the url that is correspon
 pos-cli env list
 ```
 
-### Initializing required directory structure
+### Initializing directory structure
 
 If you need to create new project from scratch you can init directory structure using:
 
@@ -90,14 +100,115 @@ Default branch: `master`
 
 Init command supports all formats supported by [degit](https://github.com/Rich-Harris/degit), as it is used as an engine underneath.
 
-It will download directory structure from official repository and extract it in your current directory.
+It will download directory structure from given git repository and extract it in your current directory.
+
+### Modules
+
+#### List
+
+Lists all the installed modules via Partners Portal on a given environment.
+This command will not list modules that are deployed by you via `modules/` directory.
+
+```
+pos-cli modules list <environment>
+```
+
+#### Remove
+
+Removes a module from your application.
+
+```
+pos-cli modules remove <environment> <module name>
+```
+
+### Migrations
+
+Migrations are files that contain liquid code (including graphql) that you want to run and have trace of what exactly has been run.
+
+This is very helpful if you want to execute the same code on multiple environments, after code has been deployed. For example: seeding initial data.
+
+Read more about migrations in our documentation:
+
+* https://documentation.platformos.com/tutorials/migrations/migrating-data
+* https://documentation.platformos.com/use-cases/e-commerce/seeding-configuration-data
+
+#### List
+
+Lists migrations deployed to the server and their current status.
+
+```
+pos-cli migrations list <environment> <name>
+```
+
+#### Generate 
+
+Generates new migration with the name you provided. It will be prepended with a timestamp so if you create more than one, they will be run in the order you intended.
+
+Migrations are run automatically on deploy.
+
+```
+pos-cli migrations generate <environment> <name>
+```
+
+#### Run
+
+You can run migration manually using `run` command. You must first sync the migration file to the environment.
+
+Name of the migration is the filename without extension, or just the timestamp.
+
+```
+pos-cli migrations run <environment> <name>
+```
+
+Example:
+
+```
+pos-cli migrations run staging 20190715132951_update_admin_password
+```
+
+### Data
+
+#### Export
+
+Exports data from the environment to a given file in form of JSON.
+
+Read more about exporting data with CLI, REST API and GraphQL [in our documentation](https://documentation.platformos.com/tutorials/data-import-export/export).
+
+```
+pos-cli data export staging --path=data.json 
+```
+
+#### Import
+
+Imports data from a given JSON file with proper data structure.
+
+Read more about importing data with CLI, REST API and GraphQL [in our documentation](https://documentation.platformos.com/tutorials/data-import-export/import).
+
+
+```
+pos-cli data import staging --path=data.json 
+```
+
+#### Clean (only staging)
+
+Cleans data on an instance. Keep in mind that this is only removing rows of data, not the structure definition.
+
+For example, if you have model schema `car` and there are 10 entries of type `car`, those will be deleted, but the model schema `car` will remain intact.
+
+This is useful for testing your imports/exports or resetting your database to pristine state between tests.
+
+**This operation is irreversible**. You will be asked twice by `pos-cli` if you are sure you want to do it.
+
+```
+pos-cli data clean staging
+```
 
 ### Graphical interface
 
 To start http server locally that will serve GUI use:
 
 ```
-pos-cli gui serve [environment]
+pos-cli gui serve <environment>
 ```
 
 Example: `pos-cli gui serve staging`
