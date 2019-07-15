@@ -1,78 +1,35 @@
 #!/usr/bin/env node
-
 const program = require('commander'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  spawn = require('child_process').spawn,
-  ora = require('ora'),
-  sh = require('@platform-os/shelljs'),
-  command = require('../lib/command'),
-  logger = require('../lib/logger'),
-  Gateway = require('../lib/proxy'),
-  assets = require('../lib/assets');
+  sh = require('@platform-os/shelljs');
 
-const uploadArchive = (env, usingDeploymentService) => {
-  const options = usingDeploymentService ? ['--without-assets'] : [];
-  return new Promise((resolve, reject) => {
-    const archive = spawn(command('pos-cli-archive'), options, {
-      stdio: 'inherit'
-    });
+const fetchAuthData = require('../lib/settings').fetchSettings,
+  logger = require('../lib/logger');
 
-    archive.on('close', code => {
-      if (code === 1) {
-        logger.Error('Deploy failed.');
-        reject();
-      }
-
-      const push = spawn(command('pos-cli-push'), [], {
-        stdio: 'inherit',
-        env: env
-      });
-
-      push.on('close', exitCode => {
-        if (exitCode === 1) {
-          logger.Error('Deploy failed.');
-          reject(false);
-        } else if (exitCode === 0) {
-          resolve(true);
-        }
-      });
-    });
-  });
-};
-
-const deploy = async (env, authData, params) => {
-  await uploadArchive(env, params.directAssetsUpload);
-  if (params.directAssetsUpload) {
-    const spinner = ora({ text: 'Uploading assets', stream: process.stdout, spinner: 'bouncingBar' }).start();
-
-    await assets.deployAssets(new Gateway(authData));
-
-    spinner.stopAndPersist().succeed('Assets uploaded');
-  }
-};
+const deployStrategy = require('../lib/deploy/strategy');
 
 const runAudit = () => {
-  return new Promise(resolve => {
-    logger.Info('Analyzing code...');
+  if (process.env.CI == true) {
+    return;
+  }
 
-    sh.exec('FORCE_COLOR=true pos-cli audit', resolve); // Enable colors when running script via `npm`
-  });
+  logger.Info('Analyzing code...');
+  sh.exec('FORCE_COLOR=true pos-cli audit'); // FORCE to enable colors when running script via `npm`
 };
 
 program
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('-f --force', 'deprecated')
-  .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers. It should be faster. [experimental]')
+  .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers. [experimental]')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action(async (environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;
 
+    const strategy = params.directAssetsUpload ? 'directAssetsUpload' : 'default';
+
     if (params.force) {
       logger.Warn('-f flag is deprecated and does not do anything.');
     }
-
-    if (params.partialDeploy) process.env.PARTIAL_DEPLOY = params.partialDeploy;
 
     const authData = fetchAuthData(environment, program);
 
@@ -80,16 +37,15 @@ program
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url,
-      MARKETPLACE_ENV: environment
+      MARKETPLACE_ENV: environment,
+      CI: process.env.CI === 'true',
+      // TODO: Get rid off global system env, make it normal argument to function.
+      PARTIAL_DEPLOY: params.partialDeploy,
+      DIRECT_ASSETS_UPLOAD: params.directAssetsUpload
     });
 
-    // prettier-ignore
-    Promise.all([
-      process.env.CI === "true" ? Promise.resolve() : runAudit(),
-      deploy(env, authData, params)
-    ])
-      .then(() => process.exit(0))
-      .catch(() => process.exit(1));
+    runAudit();
+    deployStrategy.run({ strategy, opts: { env, authData, params } });
   });
 
 program.parse(process.argv);

@@ -46,7 +46,7 @@ program
     process.env.CONFIG_FILE_PATH = params.configFile;
     const filename = params.path;
     const exportInternalIds = params.exportInternalIds;
-    const authData = fetchAuthData(environment, program, program);
+    const authData = fetchAuthData(environment, program);
     gateway = new Gateway(authData);
     spinner.start();
     gateway

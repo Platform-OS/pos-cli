@@ -17,15 +17,15 @@ program
   .version(version, '-v, --version')
   .command('audit', 'check your code for deprecations, recommendations, errors')
   .command('data', 'export, import or clean data on instance')
-  .command('deploy [environment]', 'deploy code to environment')
+  .command('deploy <environment>', 'deploy code to environment')
   .alias('d')
   .command('env', 'manage environments')
   .command('gui', 'gui for content editor, graphql')
   .command('init', 'initialize required directory structure')
-  .command('logs [environment]', 'attach to environment log streams')
+  .command('logs <environment>', 'attach to environment log streams')
   .command('migrations', 'generate or run a migration')
   .command('modules', 'manage modules')
-  .command('sync [environment]', 'update environment on file change')
+  .command('sync <environment>', 'update environment on file change')
   .parse(process.argv);
 
 const commandList = Object.keys(program._execs);
