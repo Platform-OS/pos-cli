@@ -93,7 +93,7 @@ program
     getPassword().then(password => {
       logger.Info(`Asking ${Portal.HOST} for access token...`);
 
-      Portal.login(params.email, password)
+      Portal.login(params.email, password, params.url)
         .then(response => {
           const token = response[0].token;
 
