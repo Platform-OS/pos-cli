@@ -6,6 +6,7 @@ const program = require('commander'),
   fetchAuthData = require('../lib/settings').fetchSettings;
 
 program
+  .name('pos-cli modules list')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {

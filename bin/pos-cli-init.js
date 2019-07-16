@@ -6,6 +6,7 @@ const program = require('commander'),
 const logger = require('../lib/logger');
 
 program
+  .name('pos-cli init')
   .option('--url <url>', 'theme github repository url')
   .option('--branch <branch>', 'branch where the theme is located')
   .action(async params => {

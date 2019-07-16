@@ -66,6 +66,7 @@ const existingSettings = configFilePath => {
 };
 
 program
+  .name('pos-cli env add')
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
   .option('--url <url>', 'marketplace url. Example: https://example.com')

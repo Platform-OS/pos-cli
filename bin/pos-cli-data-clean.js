@@ -38,6 +38,7 @@ const confirmCleanup = async (gateway, inlineConfirmation) => {
 };
 
 program
+  .name('pos-cli data clean')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('--auto-confirm', 'auto confirm instance clean without prompt')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')

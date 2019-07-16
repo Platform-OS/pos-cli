@@ -34,6 +34,7 @@ const fetchFilesForData = async data => {
 };
 
 program
+  .name('pos-cli data export')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <export-file-path>', 'output for exported data', 'data.json')
   .option(

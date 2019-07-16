@@ -9,6 +9,7 @@ const program = require('commander'),
 const DEFAULT_CONCURRENCY = 3;
 
 program
+  .name('pos-cli sync')
   .arguments('[environment]', 'Name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .option('--concurrency <number>', 'maximum concurrent connections to the server', DEFAULT_CONCURRENCY)

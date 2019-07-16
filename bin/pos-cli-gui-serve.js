@@ -7,6 +7,7 @@ const program = require('commander'),
   logger = require('../lib/logger');
 
 program
+  .name('pos-cli gui serve')
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .option('-p --port <port>', 'use PORT', '3333')

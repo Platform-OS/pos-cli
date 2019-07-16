@@ -2,7 +2,10 @@
 
 const program = require('commander');
 
-program.command('serve [environment]', 'serve admin editor for files from <env>').parse(process.argv);
+program
+  .name('pos-cli gui')
+  .command('serve [environment]', 'serve admin editor for files from given environment')
+  .parse(process.argv);
 
 if (!program.args.length) {
   program.help();
