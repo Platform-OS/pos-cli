@@ -1,7 +1,8 @@
 # Changelog
 
-## 3.0.8
+## 3.0.8 July 16, 2019
 * Improved messaging when using `--direct-assets-upload` in `pos-cli deploy`.
+* Improved help message when command is not found or argument is missing.
 
 ## 3.0.7 July 11, 2019
 * Fixed `--direct-assets-upload` in `pos-cli deploy`.
