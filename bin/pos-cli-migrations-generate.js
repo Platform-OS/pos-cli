@@ -12,9 +12,7 @@ program
   .name('pos-cli migrations generate')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'base name of the migration. Example: cleanup_data')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .action((environment, name, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
+  .action((environment, name) => {
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
     const formData = { name: name };

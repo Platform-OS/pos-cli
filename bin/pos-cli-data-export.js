@@ -42,9 +42,7 @@ program
     'use normal object `id` instead of `external_id` in exported json data',
     'false'
   )
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
     const filename = params.path;
     const exportInternalIds = params.exportInternalIds;
     const authData = fetchAuthData(environment, program);

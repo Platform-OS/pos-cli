@@ -35,7 +35,7 @@ pos-cli env add <environment> --email <your email> --url <your application url>
 
 Example: `pos-cli env add staging --email myemail@example.com --url https://example.com`
 
-Configuration for environments lays down in `.marketplace-kit` file.
+Configuration for environments lays down in `.pos` file.
 
 ### Syncing changes
 
@@ -140,7 +140,7 @@ Lists migrations deployed to the server and their current status.
 pos-cli migrations list <environment> <name>
 ```
 
-#### Generate 
+#### Generate
 
 Generates new migration with the name you provided. It will be prepended with a timestamp so if you create more than one, they will be run in the order you intended.
 
@@ -175,7 +175,7 @@ Exports data from the environment to a given file in form of JSON.
 Read more about exporting data with CLI, REST API and GraphQL [in our documentation](https://documentation.platformos.com/tutorials/data-import-export/export).
 
 ```
-pos-cli data export staging --path=data.json 
+pos-cli data export staging --path=data.json
 ```
 
 #### Import
@@ -186,7 +186,7 @@ Read more about importing data with CLI, REST API and GraphQL [in our documentat
 
 
 ```
-pos-cli data import staging --path=data.json 
+pos-cli data import staging --path=data.json
 ```
 
 #### Clean (only staging)

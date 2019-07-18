@@ -13,9 +13,7 @@ const logMigration = migration => {
 program
   .name('pos-cli migrations list')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .action((environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
+  .action(environment => {
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
 

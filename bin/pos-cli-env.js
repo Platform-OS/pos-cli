@@ -10,7 +10,3 @@ program
   )
   .command('list', 'list all environments')
   .parse(process.argv);
-
-if (!program.args.length) {
-  program.help();
-}

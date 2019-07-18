@@ -9,9 +9,7 @@ program
   .name('pos-cli migrations run')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<timestamp>', 'timestamp the migration. Example: 20180701182602')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .action((environment, timestamp, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
+  .action((environment, timestamp) => {
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
     const formData = { timestamp: timestamp };

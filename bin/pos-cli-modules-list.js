@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
+const program = require('commander');
+
+const files = require('../lib/files'),
   Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings;
@@ -8,9 +10,7 @@ const program = require('commander'),
 program
   .name('pos-cli modules list')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .action((environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
+  .action(environment => {
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
 

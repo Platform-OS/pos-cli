@@ -49,10 +49,8 @@ const isError = msg => msg.error_type.match(/error/gi);
 program
   .name('pos-cli logs')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .option('--interval <interval>', 'time to wait between updates in ms', 3000)
-  .action((environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
+  .action(environment => {
     process.env.INTERVAL = program.interval;
 
     const authData = fetchAuthData(environment, program);

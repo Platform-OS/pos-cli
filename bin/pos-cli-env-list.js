@@ -1,19 +1,14 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
+const program = require('commander');
+
+const list = require('../lib/settings').listEnvironments(),
   logger = require('../lib/logger');
 
-program
-  .name('pos-cli env list')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
-  .parse(process.argv);
-
-process.env.CONFIG_FILE_PATH = program.configFile;
-
-const list = require('../lib/settings').listEnvironments();
+program.name('pos-cli env list').parse(process.argv);
 
 logger.Info('Available environments: ');
 
 for (const id in list) {
-  logger.Info(`- ${list[id]}`);
+  logger.Info(`- ${list[id]}`, { hideTimestamp: true });
 }
