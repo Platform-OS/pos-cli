@@ -4,14 +4,15 @@ const program = require('commander'),
   spawn = require('child_process').spawn,
   command = require('../lib/command'),
   fetchAuthData = require('../lib/settings').fetchSettings,
-  logger = require('../lib/logger');
+  logger = require('../lib/logger'),
+  files = require('../lib/files');
 
 const DEFAULT_CONCURRENCY = 3;
 
 program
   .name('pos-cli sync')
   .arguments('[environment]', 'Name of environment. Example: staging')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
+  .option('-c --config-file <config-file>', 'config file path', files.CONFIG)
   .option('--concurrency <number>', 'maximum concurrent connections to the server', DEFAULT_CONCURRENCY)
   .action((environment, params) => {
     process.env.CONFIG_FILE_PATH = params.configFile;

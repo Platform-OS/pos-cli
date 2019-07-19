@@ -33,7 +33,6 @@ const confirmCleanup = async (gateway, inlineConfirmation) => {
     clean(gateway);
   } else {
     logger.Error('Wrong confirmation. Closed without cleaning instance data.');
-    process.exit(1);
   }
 };
 
@@ -41,9 +40,7 @@ program
   .name('pos-cli data clean')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('--auto-confirm', 'auto confirm instance clean without prompt')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
     const gateway = new Gateway(fetchAuthData(environment, program));
 
     confirmCleanup(gateway, params.autoConfirm);

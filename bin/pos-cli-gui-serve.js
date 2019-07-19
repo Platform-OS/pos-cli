@@ -9,10 +9,8 @@ const program = require('commander'),
 program
   .name('pos-cli gui serve')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .option('-p --port <port>', 'use PORT', '3333')
   .action((environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(environment, program);
 
     Object.assign(process.env, {

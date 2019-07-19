@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.0
+* 💥 BREAKING 💥 Removed `--config-file` option from all commands. `CONFIG_FILE_PATH` environment variable is working as previously.
+* Renamed `.marketplace-kit` file to `.pos`. To not break existing processes, `pos-cli` is looking for `.marketplace-kit` as well. This fallback will be removed in the next major version release.
+
 ## 3.0.8 July 16, 2019
 * Improved messaging when using `--direct-assets-upload` in `pos-cli deploy`.
 * Improved help message when command is not found or argument is missing.

@@ -5,19 +5,8 @@ const program = require('commander'),
   rl = require('readline'),
   logger = require('../lib/logger'),
   validate = require('../lib/validators'),
+  files = require('../lib/files'),
   Portal = require('../lib/portal');
-
-const checkParams = params => {
-  validate.existence({ argumentValue: params.email, argumentName: 'email', fail: program.help.bind(program) });
-  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: program.help.bind(program) });
-  validate.email(params.email);
-
-  if (params.url.slice(-1) != '/') {
-    params.url = params.url + '/';
-  }
-
-  validate.url(params.url);
-};
 
 // turn to promise
 const getPassword = () => {
@@ -37,6 +26,8 @@ const getPassword = () => {
 };
 
 const storeEnvironment = settings => {
+  logger.Debug(`[storeEnvironment] ${JSON.stringify(settings, null, 2)}`);
+
   const environmentSettings = {
     [settings.endpoint]: {
       url: settings.url,
@@ -44,25 +35,25 @@ const storeEnvironment = settings => {
       email: settings.email
     }
   };
-  saveFile(Object.assign({}, existingSettings(process.env.CONFIG_FILE_PATH), environmentSettings));
+
+  const configPath = files.getConfigPath();
+  logger.Debug(`[storeEnvironment] Current config path: ${configPath}`);
+
+  const newSettings = Object.assign({}, files.getConfig(), environmentSettings);
+  fs.writeFileSync(configPath, JSON.stringify(newSettings, null, 2));
 };
 
-const saveFile = settings => {
-  fs.writeFileSync(process.env.CONFIG_FILE_PATH, JSON.stringify(settings, null, 2), err => {
-    if (err) throw err;
-  });
-};
+const checkParams = params => {
+  validate.existence({ argumentValue: params.email, argumentName: 'email', fail: program.help.bind(program) });
+  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: program.help.bind(program) });
+  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: program.help.bind(program) });
+  validate.email(params.email);
 
-const existingSettings = configFilePath => {
-  let settings = {};
-
-  try {
-    settings = JSON.parse(fs.readFileSync(configFilePath));
-  } catch (e) {
-    logger.Debug(e);
+  if (params.url.slice(-1) != '/') {
+    params.url = params.url + '/';
   }
 
-  return settings;
+  validate.url(params.url);
 };
 
 program
@@ -74,11 +65,10 @@ program
     '--token <token>',
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
     checkParams(params);
     const settings = { url: params.url, endpoint: environment, email: params.email };
+
     if (params.token) {
       storeEnvironment(Object.assign(settings, { token: params.token }));
       logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
@@ -103,10 +93,10 @@ program
             logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
           }
         })
-        .catch(() => logger.Error('Response from server invalid, token is missing.'));
+        .catch(e => {
+          logger.Error('Response from server invalid, token is missing.');
+        });
     });
   });
 
 program.parse(process.argv);
-
-validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: program.help.bind(program) });

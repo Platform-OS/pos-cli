@@ -60,9 +60,7 @@ program
   .name('pos-cli data import')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <import-file-path>', 'path of import .json file', 'data.json')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action((environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
     const filename = params.path;
     const authData = fetchAuthData(environment, program);
     Object.assign(process.env, {

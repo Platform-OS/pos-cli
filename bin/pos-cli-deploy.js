@@ -22,10 +22,7 @@ program
   .option('-f --force', 'deprecated')
   .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers. [experimental]')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
-  .option('-c --config-file <config-file>', 'config file path', '.marketplace-kit')
   .action(async (environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
-
     const strategy = params.directAssetsUpload ? 'directAssetsUpload' : 'default';
 
     if (params.force) {
