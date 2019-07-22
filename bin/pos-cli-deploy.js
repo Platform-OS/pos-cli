@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const program = require('commander'),
-  sh = require('@platform-os/shelljs');
+  sh = require('shelljs');
 
 const fetchAuthData = require('../lib/settings').fetchSettings,
   logger = require('../lib/logger');
