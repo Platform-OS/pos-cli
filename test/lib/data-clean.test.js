@@ -1,4 +1,4 @@
-var sh = require('@platform-os/shelljs');
+var sh = require('shelljs');
 var authEnvs = 'MPKIT_URL=http://example.com MPKIT_TOKEN=1234 MPKIT_EMAIL=foo@example.com';
 
 test('should show message when wrong confirmation passed inline', () => {

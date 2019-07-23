@@ -1,44 +1,41 @@
 #!/usr/bin/env node
 
-const chalk = require('chalk'),
-  sh = require('@platform-os/shelljs');
+const chalk = require('chalk');
 
-const dir = require('../lib/directories');
+const logger = require('../lib/logger');
 
-const tags = require('../lib/audit/tags').getRules(),
-  filters = require('../lib/audit/filters').getRules(),
+const tags = require('../lib/audit/tags'),
+  filters = require('../lib/audit/filters'),
   detailed = require('../lib/audit/detailed');
 
-const rules = [...tags, ...filters, ...detailed];
+const printReport = results => {
+  for (let ruleName in results) {
+    const result = results[ruleName];
 
-const getOffendingFiles = rule => {
-  const findGlob = `{${dir.APP},${dir.LEGACY_APP},${dir.MODULES}/**}/${rule.glob}`;
+    const filesFormatted = result.files.join('\n\t');
+    const message = `${result.message} \nAffected files:\n\t${filesFormatted}`;
 
-  sh.config.silent = true;
-
-  const files = sh
-    .grep('-l', rule.test, findGlob)
-    .stdout.split('\n') // convert stdout to array of paths
-    .filter(path => path) // filter out empty elements
-    .map(path => path.replace('/./', '/')) // shorten path a little bit
-    .filter((value, index, self) => self.indexOf(value) === index); // unique only
-
-  return files.length ? { rule, files } : null;
-};
-
-const printReport = report => {
-  const filesFormatted = report.files.join('\n\t');
-  const message = `${report.rule.message} \n\n\tAffected files:\n\t${filesFormatted}`;
-
-  console.log(`\n${chalk.yellow('[Audit] ')}${message} \n`);
+    console.log(`\n${chalk.yellow(message)}\n\n`);
+  }
 };
 
 const Audit = {
-  run: () => {
-    rules
-      .map(getOffendingFiles)
-      .filter(r => r)
-      .map(printReport);
+  run: async () => {
+    Promise.all([tags.audit(), filters.audit(), detailed.audit()]).then(([tags, filters, detailed]) => {
+      printReport(tags);
+      printReport(filters);
+      printReport(detailed);
+
+
+      try {
+        const offences = [...Object.keys(tags), ...Object.keys(filters), ...Object.keys(detailed)].length;
+        logger.Info(`Audit found ${offences} offence${offences > 1 ? 's' : ''}.`, { hideTimestamp: true });
+        logger.Info('Our documentation site: https://documentation.platformos.com', { hideTimestamp: true });
+      } catch (error) {
+        logger.Success('Audit found 0 offences.');
+      }
+
+    });
   }
 };
 

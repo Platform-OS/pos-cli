@@ -3,7 +3,7 @@
 const fs = require('fs');
 
 const program = require('commander'),
-  shell = require('@platform-os/shelljs'),
+  shell = require('shelljs'),
   glob = require('glob');
 
 const templates = require('../lib/templates'),

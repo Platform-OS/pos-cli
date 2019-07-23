@@ -3,7 +3,7 @@
 const program = require('commander'),
   Gateway = require('../lib/proxy'),
   fs = require('fs'),
-  shell = require('@platform-os/shelljs'),
+  shell = require('shelljs'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   dir = require('../lib/directories');

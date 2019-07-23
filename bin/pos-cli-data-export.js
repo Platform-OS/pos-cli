@@ -3,7 +3,7 @@
 const program = require('commander'),
   fs = require('fs'),
   ora = require('ora'),
-  shell = require('@platform-os/shelljs'),
+  shell = require('shelljs'),
   Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
