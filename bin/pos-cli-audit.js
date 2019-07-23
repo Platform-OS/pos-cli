@@ -9,7 +9,7 @@ const tags = require('../lib/audit/tags'),
   detailed = require('../lib/audit/detailed');
 
 const printReport = results => {
-  for (ruleName in results) {
+  for (let ruleName in results) {
     const result = results[ruleName];
 
     const filesFormatted = result.files.join('\n\t');
@@ -22,13 +22,19 @@ const printReport = results => {
 const Audit = {
   run: async () => {
     Promise.all([tags.audit(), filters.audit(), detailed.audit()]).then(([tags, filters, detailed]) => {
-      if (tags) { printReport(tags); }
-      if (filters) { printReport(filters); }
-      if (detailed) { printReport(detailed); }
+      printReport(tags);
+      printReport(filters);
+      printReport(detailed);
 
-      if (tags || filters || detailed) {
-        logger.Success('Visit https://documentation.platformos.com for more information.', { hideTimestamp: true });
+
+      try {
+        const offences = [...Object.keys(tags), ...Object.keys(filters), ...Object.keys(detailed)].length;
+        logger.Info(`Audit found ${offences} offence${offences > 1 ? 's' : ''}.`, { hideTimestamp: true });
+        logger.Info('Our documentation site: https://documentation.platformos.com', { hideTimestamp: true });
+      } catch (error) {
+        logger.Success('Audit found 0 offences.');
       }
+
     });
   }
 };
