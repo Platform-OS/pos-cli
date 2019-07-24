@@ -1,7 +1,9 @@
 # Changelog
 
 ## 4.0.1
-* Updated all npm dependencies.
+
+* Updated all npm dependencies
+* Fixed partial deploy (`-p`) and tightened checks for app and module directories
 * Fixed deploy on windows.
 * Fixed E2BIG error when server error/log is very big. 
 
