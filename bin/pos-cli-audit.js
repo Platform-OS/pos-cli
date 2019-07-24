@@ -26,15 +26,10 @@ const Audit = {
       printReport(filters);
       printReport(detailed);
 
-
       try {
         const offences = [...Object.keys(tags), ...Object.keys(filters), ...Object.keys(detailed)].length;
-        logger.Info(`Audit found ${offences} offence${offences > 1 ? 's' : ''}.`, { hideTimestamp: true });
-        logger.Info('Our documentation site: https://documentation.platformos.com', { hideTimestamp: true });
-      } catch (error) {
-        logger.Success('Audit found 0 offences.');
-      }
-
+        logger.Info(`Audit found ${offences} offence${offences === 1 ? '' : 's'}.`, { hideTimestamp: true });
+      } catch (e) {}
     });
   }
 };

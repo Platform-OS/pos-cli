@@ -13,7 +13,6 @@ const templates = require('../lib/templates'),
 
 const prepareArchive = require('../lib/prepareArchive');
 
-const availableDirectories = () => dir.ALLOWED.filter(fs.existsSync);
 const isEmpty = dir => shell.ls(dir).length == 0;
 
 const addModulesToArchive = archive => {
@@ -47,19 +46,34 @@ const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') =
   });
 };
 
+program
+  .option('--without-assets', 'if present assets directory will be excluded')
+  .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
+  .parse(process.argv);
+
+let appDirectory = dir.APP;
+
+if (dir.toWatch().length === 0) {
+  logger.Error(`Could not find any directory to deploy. Looked for ${dir.APP}, ${dir.LEGACY_APP} and ${dir.MODULES}`);
+}
+
+if (!fs.existsSync(dir.APP) && fs.existsSync(dir.LEGACY_APP)) {
+  logger.Debug(`${dir.APP} not found, but ${dir.LEGACY_APP} is present. Setting ${dir.LEGACY_APP} as app dir.`);
+  logger.Warn(`Falling back to legacy app directory name. Please consider renaming ${dir.LEGACY_APP} to ${dir.APP}`);
+  appDirectory = dir.LEGACY_APP;
+}
+
 const makeArchive = (path, directory, withoutAssets) => {
-  if (availableDirectories().length === 0) {
-    logger.Error(`At least one of ${dir.ALLOWED} directories is needed to deploy`, { hideTimestamp: true });
+  if (dir.available().length === 0) {
+    logger.Error(`At least one of ${dir.ALLOWED.join(', ')} directories is needed to deploy`, { hideTimestamp: true });
   }
 
-  availableDirectories().map(dir => {
-    if (isEmpty(dir) && !withoutAssets) {
-      logger.Error(
-        `${dir} can't be empty if the deploy is not partial - it would remove all the files from the instance`,
-        { hideTimestamp: true }
-      );
-    }
-  });
+  if (isEmpty(dir.currentApp()) && !withoutAssets) {
+    logger.Error(
+      `${dir.currentApp()} can't be empty if the deploy is not partial - it would remove all the files from the instance`,
+      { hideTimestamp: true }
+    );
+  }
 
   const releaseArchive = prepareArchive(path, !program.withoutAssets);
 
@@ -70,26 +84,7 @@ const makeArchive = (path, directory, withoutAssets) => {
 
   releaseArchive.glob('**/*', options, { prefix: directory });
 
-  addModulesToArchive(releaseArchive).then(r => {
-    releaseArchive.finalize();
-  });
+  addModulesToArchive(releaseArchive).then(releaseArchive.finalize()).catch(logger.Debug);
 };
-
-program
-  .option('--without-assets', 'if present assets directory will be excluded')
-  .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
-  .parse(process.argv);
-
-let appDirectory = dir.APP;
-
-if (!fs.existsSync(dir.APP) && !fs.existsSync(dir.LEGACY_APP)) {
-  logger.Error('Could not find app directory.');
-}
-
-if (fs.existsSync(dir.LEGACY_APP)) {
-  logger.Debug(`${dir.APP} not found, but ${dir.LEGACY_APP} is present. Setting ${dir.LEGACY_APP} as app dir.`);
-  logger.Warn(`Falling back to legacy app-directory name. Please consider renaming ${dir.LEGACY_APP} to ${dir.APP}`);
-  appDirectory = dir.LEGACY_APP;
-}
 
 makeArchive(program.target, appDirectory, program.withoutAssets);
