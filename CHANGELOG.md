@@ -2,6 +2,7 @@
 
 ## 4.0.1
 * Updated all npm dependencies
+* Fixed deploy on windows
 
 ## 4.0.0 July 22, 2019
 * 💥 BREAKING 💥 Removed `--config-file` option from all commands. `CONFIG_FILE_PATH` environment variable is working as previously.
