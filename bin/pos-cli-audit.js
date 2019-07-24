@@ -29,7 +29,9 @@ const Audit = {
       try {
         const offences = [...Object.keys(tags), ...Object.keys(filters), ...Object.keys(detailed)].length;
         logger.Info(`Audit found ${offences} offence${offences === 1 ? '' : 's'}.`, { hideTimestamp: true });
-      } catch (e) {}
+      } catch (e) {
+        logger.Debug(e.message);
+      }
     });
   }
 };
