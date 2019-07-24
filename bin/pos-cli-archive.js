@@ -84,7 +84,11 @@ const makeArchive = (path, directory, withoutAssets) => {
 
   releaseArchive.glob('**/*', options, { prefix: directory });
 
-  addModulesToArchive(releaseArchive).then(releaseArchive.finalize()).catch(logger.Debug);
+  addModulesToArchive(releaseArchive)
+    .then(() => {
+      releaseArchive.finalize();
+    })
+    .catch(e => logger.Debug(e));
 };
 
 makeArchive(program.target, appDirectory, program.withoutAssets);
