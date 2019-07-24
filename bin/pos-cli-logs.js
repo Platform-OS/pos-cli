@@ -73,7 +73,7 @@ program
       }
 
       if (isError(msg)) {
-        notifier.notify({ title: msg.error_type, message: msg.message });
+        notifier.notify({ title: msg.error_type, message: msg.message.slice(0, 100) });
       }
     });
 
