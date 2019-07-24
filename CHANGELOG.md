@@ -13,6 +13,7 @@
 * Fixed partial deploy (`-p`) and tightened checks for app and module directories.
 * Fixed deploy on windows.
 * Fixed E2BIG error when server error/log is very big. 
+* Added platformOS logo to sync/logs errors notifications on OS other than macOS.
 
 ## 4.0.0 July 22, 2019
 * 💥 BREAKING 💥 Removed `--config-file` option from all commands. `CONFIG_FILE_PATH` environment variable is working as previously.
