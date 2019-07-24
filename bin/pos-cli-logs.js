@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
+const EventEmitter = require('events');
+
 const program = require('commander'),
-  EventEmitter = require('events'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  notifier = require('node-notifier'),
+  notifier = require('node-notifier');
+
+const fetchAuthData = require('../lib/settings').fetchSettings,
   logger = require('../lib/logger'),
   Gateway = require('../lib/proxy');
 

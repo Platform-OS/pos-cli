@@ -17,7 +17,7 @@
     "pOS"
   ],
   "dependencies": {
-    "shelljs": "^0.8.3",
+    "@sentry/node": "^5.5.0",
     "archiver": "^3.0.3",
     "archiver-promise": "^1.0.0",
     "array-flatten": "^2.1.2",
@@ -42,6 +42,7 @@
     "request": "^2.88.0",
     "request-promise": "^4.2.4",
     "semver": "^6.2.0",
+    "shelljs": "^0.8.3",
     "socket.io-client": "^2.2.0",
     "tiny-glob": "^0.2.6",
     "update-notifier": "^3.0.1",

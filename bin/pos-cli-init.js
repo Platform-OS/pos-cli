@@ -3,7 +3,8 @@
 const program = require('commander'),
   degit = require('degit');
 
-const logger = require('../lib/logger');
+const logger = require('../lib/logger'),
+  report = require('../lib/logger/report');
 
 program
   .name('pos-cli init')
@@ -13,12 +14,14 @@ program
     const url = params.url || 'mdyd-dev/directory-structure';
     const branch = params.branch ? `#${params.branch}` : '';
 
-    await degit(`${url}${branch}`, { force: true, cache: false, verbose: false })
+    await degit(`${url}${branch}`, { force: false, cache: false, verbose: false })
       .clone('.')
       .then(() => {
+        report.message('Init');
         logger.Success('Directory structure sucessfully created.');
       })
       .catch(error => {
+        report.error(error);
         logger.Error(`Cloning failed. Reason: ${error.message}`);
       });
   });
