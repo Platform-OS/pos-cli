@@ -79,7 +79,7 @@ program
         notifier.notify({
           title: msg.error_type,
           message: msg.message.slice(0, 100),
-          icon: path.resolve(__dirname, 'lib/pos-logo.png')
+          icon: path.resolve(__dirname, '../lib/pos-logo.png')
         });
       }
     });
