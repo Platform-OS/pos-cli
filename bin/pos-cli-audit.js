@@ -2,7 +2,8 @@
 
 const chalk = require('chalk');
 
-const logger = require('../lib/logger');
+const logger = require('../lib/logger'),
+  report = require('../lib/logger/report');
 
 const tags = require('../lib/audit/tags'),
   filters = require('../lib/audit/filters'),
@@ -29,6 +30,7 @@ const Audit = {
       try {
         const offences = [...Object.keys(tags), ...Object.keys(filters), ...Object.keys(detailed)].length;
         logger.Info(`Audit found ${offences} offence${offences === 1 ? '' : 's'}.`, { hideTimestamp: true });
+        report.message('Audit', { extras: [{ key: 'auditOffences', value: offences }] });
       } catch (e) {
         logger.Debug(e.message);
       }

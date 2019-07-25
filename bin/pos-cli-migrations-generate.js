@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
+
 const program = require('commander'),
-  Gateway = require('../lib/proxy'),
-  fs = require('fs'),
-  shell = require('shelljs'),
+  shell = require('shelljs');
+
+const Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
+  report = require('../lib/logger/report'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   dir = require('../lib/directories');
 
@@ -26,6 +29,7 @@ program
 
       fs.writeFileSync(path, body['body'], logger.Error);
 
+      report.message('Migrations run');
       logger.Success(`[Migration Generate] Saved to: ${path}`);
     });
   });
