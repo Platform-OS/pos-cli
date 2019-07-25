@@ -4,6 +4,7 @@
 * Init is now not overriding files in current directory.
 * Added sentry.
 * Improved displaying server errors.
+* Added platformOS logo to sync/logs errors notifications on OS other than macOS.
 
 ## 4.0.2 24 July, 2019
 * Hotfixed deploy with modules

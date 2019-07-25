@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const EventEmitter = require('events');
+const EventEmitter = require('events'),
+  path = require('path');
 
 const program = require('commander'),
   notifier = require('node-notifier');
@@ -75,7 +76,11 @@ program
       }
 
       if (isError(msg)) {
-        notifier.notify({ title: msg.error_type, message: msg.message.slice(0, 100) });
+        notifier.notify({
+          title: msg.error_type,
+          message: msg.message.slice(0, 100),
+          icon: path.resolve(__dirname, '../lib/pos-logo.png')
+        });
       }
     });
 
