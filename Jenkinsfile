@@ -7,7 +7,6 @@ pipeline {
 
   environment {
     PROJECT_NAME = "${env.BRANCH_NAME}-${env.GIT_COMMIT[0..5]}-${env.BUILD_ID}"
-    CI = true
   }
 
   stages {
