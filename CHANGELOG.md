@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.0.3
+## 4.0.3 25 July, 2019
 * Init is now not overriding files in current directory.
 * Added sentry.
 * Improved displaying server errors.
