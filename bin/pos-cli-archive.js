@@ -48,7 +48,7 @@ const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') =
 
 program
   .option('--without-assets', 'if present assets directory will be excluded')
-  .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/marketplace-release.zip')
+  .option('--target <target>', 'path to archive', process.env.TARGET || './tmp/release.zip')
   .parse(process.argv);
 
 let appDirectory = dir.APP;
