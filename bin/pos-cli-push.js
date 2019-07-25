@@ -48,7 +48,7 @@ const gateway = new Gateway(program);
 
 const formData = {
   'marketplace_builder[partial_deploy]': process.env.PARTIAL_DEPLOY || 'false',
-  'marketplace_builder[zip_file]': fs.createReadStream('./tmp/marketplace-release.zip')
+  'marketplace_builder[zip_file]': fs.createReadStream('./tmp/release.zip')
 };
 
 const getDeploymentStatus = ({ id }) => {
