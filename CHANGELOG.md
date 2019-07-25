@@ -5,6 +5,7 @@
 * Fixed audit bug where files deeply nested were not checked.
 * Added more useful information when JSON file is invalid (ie. your main config).
 * `pos-cli sync` will not stop if `template-values.json` is invalid JSON.
+* Improved error handling for templates exception.
 
 ## 4.0.3 25 July, 2019
 * Init is now not overriding files in current directory.
