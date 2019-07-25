@@ -3,6 +3,7 @@
 ## 4.0.3
 * Init is now not overriding files in current directory.
 * Added sentry.
+* Improved displaying server errors.
 
 ## 4.0.2 24 July, 2019
 * Hotfixed deploy with modules
