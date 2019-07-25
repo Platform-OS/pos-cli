@@ -8,8 +8,8 @@ const program = require('commander'),
 
 const validate = require('../lib/validators'),
   Gateway = require('../lib/proxy'),
-  ServerError = require('../lib/ServerError'),
-  logger = require('../lib/logger');
+  logger = require('../lib/logger'),
+  ServerError = require('../lib/ServerError');
 
 const checkParams = params => {
   validate.existence({ argumentValue: params.token, argumentName: 'token', fail: program.help.bind(program) });
@@ -76,10 +76,4 @@ gateway
     if (!DIRECT) {
       spinner.succeed(`Deploy succeeded after ${duration(t0, t1)}`);
     }
-  })
-  .catch(error => {
-    const t1 = performance.now();
-    logger.Error(error);
-    spinner.fail(`Deploy failed after ${duration(t0, t1)}`);
-    process.exit(1);
-  });
+  }).catch(logger.Debug);
