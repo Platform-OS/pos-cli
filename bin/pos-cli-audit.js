@@ -14,9 +14,7 @@ const printReport = results => {
     const result = results[ruleName];
 
     const filesFormatted = result.files.join('\n\t');
-    const message = `${result.message} \nAffected files:\n\t${filesFormatted}`;
-
-    console.log(`\n${chalk.yellow(message)}\n\n`);
+    console.log(`\n${chalk.yellow(result.message)} \nAffected files:\n\t${filesFormatted}`);
   }
 };
 
@@ -29,7 +27,8 @@ const Audit = {
 
       try {
         const offences = [...Object.keys(tags), ...Object.keys(filters), ...Object.keys(detailed)].length;
-        logger.Info(`Audit found ${offences} offence${offences === 1 ? '' : 's'}.`, { hideTimestamp: true });
+        console.log('\n');
+        logger.Warn(`[Audit] ${offences} rule${offences === 1 ? '' : 's'} detected issues. `, { hideTimestamp: true });
         report.message('Audit', { extras: [{ key: 'auditOffences', value: offences }] });
       } catch (e) {
         logger.Debug(e.message);

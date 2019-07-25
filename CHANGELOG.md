@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.4
+* Added audit rule for unnecessary brackets after field name.
+* Fixed audit bug where files deeply nested were not checked.
+
 ## 4.0.3 25 July, 2019
 * Init is now not overriding files in current directory.
 * Added sentry.
