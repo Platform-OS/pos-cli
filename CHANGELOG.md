@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.0.4
+## 4.0.4 26 July, 2019
 * Added audit rule for unnecessary brackets after field name.
 * Fixed audit bug where files deeply nested were not checked.
 * Added more useful information when JSON file is invalid (ie. your main config).

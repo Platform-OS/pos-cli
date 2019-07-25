@@ -5,7 +5,8 @@
   "scripts": {
     "test": "jest --silent",
     "postinstall": "node ./scripts/check-node-version.js",
-    "build-assets": "npx webpack-cli gui/editor/src/index.js -o gui/editor/public/app.js --mode=production"
+    "build-assets": "npx webpack-cli gui/editor/src/index.js -o gui/editor/public/app.js --mode=production",
+    "prepublish": "npm test"
   },
   "main": "./bin/pos-cli.js",
   "engines": {
