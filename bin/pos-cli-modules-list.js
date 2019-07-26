@@ -2,8 +2,7 @@
 
 const program = require('commander');
 
-const files = require('../lib/files'),
-  Gateway = require('../lib/proxy'),
+const Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings;
 
@@ -15,13 +14,15 @@ program
     const gateway = new Gateway(authData);
 
     gateway.listModules().then(response => {
-      if (response.data.length === 0) {
+      if (!response.data || response.data.length === 0) {
         logger.Info('There are no installed modules');
       } else {
         logger.Info('Installed modules:');
-        response.data.map(logger.Info);
+        response.data.map(module => {
+          logger.Info(`\t- ${module}`, { hideTimestamp: true });
+        });
       }
-    });
+    }).catch(logger.Debug);
   });
 
 program.parse(process.argv);

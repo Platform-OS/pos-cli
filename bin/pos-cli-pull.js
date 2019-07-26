@@ -6,16 +6,13 @@ const program = require('commander'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   yaml = require('js-yaml'),
   dir = require('../lib/directories'),
-  files = require('../lib/files'),
   Gateway = require('../lib/proxy');
 
 program
   .name('pos-cli pull')
   .arguments('[environment]', 'Name of environment. Example: staging')
-  .option('-c --config-file <config-file>', 'config file path', files.CONFIG)
   .option('-t --type <type>', 'item type - LiquidView', 'Page')
   .action((environment, params) => {
-    process.env.CONFIG_FILE_PATH = params.configFile;
     const authData = fetchAuthData(environment, program);
     const itemsQuery = `{ items: cms_items(type: ${params.type}) { results { type name: resource_name data }}}`;
     const typesQuery = '{ itemTypes: cms_discovery { results { name  path  fields  }}}';
