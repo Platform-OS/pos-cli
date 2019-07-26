@@ -8,7 +8,7 @@ const fetchAuthData = require('../lib/settings').fetchSettings,
 const deployStrategy = require('../lib/deploy/strategy');
 
 const runAudit = () => {
-  if (process.env.CI == true) {
+  if (process.env.CI == 'true') {
     return;
   }
 
