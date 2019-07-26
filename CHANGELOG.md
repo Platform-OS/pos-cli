@@ -5,6 +5,7 @@
 * Fix CI environment variable support in audit.
 * Censored token in `DEBUG=true` mode to prevent accidental leaks. 
 * Improved error message when there is syntax error in config file.
+* Improved server error handling and messages.
 
 ## 4.0.4 26 July, 2019
 * Added audit rule for unnecessary brackets after field name.
