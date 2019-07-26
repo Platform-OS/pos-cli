@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.0.5
+* Improved performance of repetitive http requests (sync, logs, deploy status etc.) by using keepAlive.
+
 ## 4.0.4 26 July, 2019
 * Added audit rule for unnecessary brackets after field name.
 * Fixed audit bug where files deeply nested were not checked.
