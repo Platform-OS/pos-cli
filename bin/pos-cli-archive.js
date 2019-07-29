@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const program = require('commander'),
   shell = require('shelljs'),
-  glob = require('glob');
+  glob = require('tiny-glob');
 
 const templates = require('../lib/templates'),
   logger = require('../lib/logger'),
@@ -15,16 +15,19 @@ const prepareArchive = require('../lib/prepareArchive');
 
 const isEmpty = dir => shell.ls(dir).length == 0;
 
-const addModulesToArchive = archive => {
-  if (!fs.existsSync(dir.MODULES)) return Promise.resolve(true);
+const addModulesToArchive = async archive => {
+  if (!fs.existsSync(dir.MODULES)) {
+    return Promise.resolve(true);
+  }
 
-  return Promise.all(glob.sync('*/', { cwd: dir.MODULES }).map(module => addModuleToArchive(module, archive)));
+  const modules = await glob('./*', { cwd: dir.MODULES });
+  return Promise.all(modules.map(module => addModuleToArchive(module, archive)));
 };
 
-const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') => {
+// https://github.com/terkelg/tiny-glob/issues/28 - a little bit sad.
+const addModuleToArchive = (module, archive, pattern = '**/{private,public}/**') => {
   return new Promise((resolve, reject) => {
-    glob(pattern, { cwd: `${dir.MODULES}/${module}` }, (err, files) => {
-      if (err) throw reject(err);
+    glob(pattern, { cwd: `${dir.MODULES}/${module}`, filesOnly: true }).then(files => {
       const moduleTemplateData = settings.loadSettingsFileForModule(module);
 
       return Promise.all(
@@ -33,7 +36,8 @@ const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') =
           return new Promise((resolve, reject) => {
             fs.lstat(path, (err, stat) => {
               if (!stat.isDirectory()) {
-                archive.append(templates.fillInTemplateValues(path, moduleTemplateData), {
+                const filledTemplate = templates.fillInTemplateValues(path, moduleTemplateData);
+                archive.append(filledTemplate, {
                   name: path
                 });
               }
@@ -41,7 +45,9 @@ const addModuleToArchive = (module, archive, pattern = '?(public|private)/**') =
             });
           });
         })
-      ).then(r => resolve());
+      ).then(() => resolve());
+    }).catch(e => {
+      logger.Debug(e);
     });
   });
 };
@@ -88,7 +94,7 @@ const makeArchive = (path, directory, withoutAssets) => {
     .then(() => {
       releaseArchive.finalize();
     })
-    .catch(e => logger.Debug(e));
+    .catch(logger.Debug);
 };
 
 makeArchive(program.target, appDirectory, program.withoutAssets);
