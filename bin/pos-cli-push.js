@@ -55,15 +55,15 @@ const getDeploymentStatus = ({ id }) => {
   return new Promise((resolve, reject) => {
     (getStatus = () => {
       gateway.getStatus(id).then(response => {
-        if (response.status === 'ready_for_import') {
+        if (response && response.status === 'ready_for_import') {
           setTimeout(getStatus, 1500);
-        } else if (response.status === 'error') {
+        } else if (response && response.status === 'error') {
           ServerError.deploy(JSON.parse(response.error));
           reject();
         } else {
           resolve();
         }
-      });
+      }).catch(e => logger.Debug(e));
     })();
   });
 };
