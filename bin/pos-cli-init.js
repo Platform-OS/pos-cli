@@ -17,11 +17,11 @@ program
     await degit(`${url}${branch}`, { force: false, cache: false, verbose: false })
       .clone('.')
       .then(() => {
-        report('Init');
+        report('Init', { extras: [{ key: 'status', value: 'Success' }] });
         logger.Success('Directory structure sucessfully created.');
       })
       .catch(error => {
-        report(error);
+        report('Init', { extras: [{ key: 'status', value: 'Error' }, { key: 'trace', value: error }] });
         logger.Error(`Cloning failed. Reason: ${error.message}`);
       });
   });

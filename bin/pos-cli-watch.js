@@ -57,6 +57,8 @@ const pushFile = syncedFilePath => {
     }
 
     logger.Success(`[Sync] ${filePath} - done`);
+  }).catch(e => {
+    logger.Debug(e);
   });
 };
 
