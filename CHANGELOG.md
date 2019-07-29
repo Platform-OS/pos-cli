@@ -1,12 +1,15 @@
 # Changelog
 
-## 4.0.5
+## 4.0.5 30 July, 2019
 * Improved performance of repetitive http requests (sync, logs, deploy status etc.) by using keepAlive.
 * Fix CI environment variable support in audit.
 * Censored token in `DEBUG=true` mode to prevent accidental leaks. 
 * Improved error message when there is syntax error in config file.
 * Improved server error handling and messages.
-* Switched from `glob` to `tiny-glob` for performance reasons.
+* Switched from `glob` to `tiny-glob`.
+* Switched from `node-watch` to `chokidar`.
+* `pos-cli sync` is syncing newly created files.
+* `pos-cli sync` is syncing `template-values.json` files inside module directory. 
 
 ## 4.0.4 26 July, 2019
 * Added audit rule for unnecessary brackets after field name.
