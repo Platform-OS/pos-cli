@@ -6,6 +6,7 @@
 * Censored token in `DEBUG=true` mode to prevent accidental leaks. 
 * Improved error message when there is syntax error in config file.
 * Improved server error handling and messages.
+* Switched from `glob` to `tiny-glob` for performance reasons.
 
 ## 4.0.4 26 July, 2019
 * Added audit rule for unnecessary brackets after field name.
