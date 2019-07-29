@@ -4,7 +4,7 @@ const fs = require('fs'),
   path = require('path');
 
 const program = require('commander'),
-  watch = require('node-watch'),
+  chokidar = require('chokidar'),
   Queue = require('async/queue');
 
 const Gateway = require('../lib/proxy'),
@@ -51,15 +51,18 @@ const pushFile = syncedFilePath => {
     marketplace_builder_file_body: getBody(syncedFilePath, filePath.startsWith('modules'))
   };
 
-  return gateway.sync(formData).then(body => {
-    if (body && body.refresh_index) {
-      logger.Warn('WARNING: Data schema was updated. It will take a while for the change to be applied.');
-    }
+  return gateway
+    .sync(formData)
+    .then(body => {
+      if (body && body.refresh_index) {
+        logger.Warn('[Sync] WARNING: Data schema was updated. It will take a while for the change to be applied.');
+      }
 
-    logger.Success(`[Sync] ${filePath} - done`);
-  }).catch(e => {
-    logger.Debug(e);
-  });
+      logger.Success(`[Sync] Synced: ${filePath}`);
+    })
+    .catch(e => {
+      logger.Debug(e);
+    });
 };
 
 const checkParams = params => {
@@ -85,9 +88,12 @@ gateway.ping().then(() => {
     logger.Error(`${dir.APP} or ${dir.MODULES} directory has to exist!`);
   }
 
-  logger.Info(`Running sync mode to: ${program.url}`);
+  chokidar
+    .watch(directories, {
+      ignoreInitial: true
+    })
+    .on('change', fp => shouldBeSynced(fp) && enqueue(fp))
+    .on('add', fp => shouldBeSynced(fp) && enqueue(fp));
 
-  watch(directories, { recursive: true }, (event, filePath) => {
-    shouldBeSynced(filePath, event) && enqueue(filePath);
-  });
+  logger.Info(`Synchronizing changes to: ${program.url}`);
 });
