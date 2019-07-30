@@ -29,7 +29,7 @@ class LogStream extends EventEmitter {
       if (!logs) {
         return false;
       }
-      
+
       for (let k in logs) {
         let row = logs[k];
 
@@ -52,7 +52,7 @@ const storage = {
   exists: key => storage.logs.hasOwnProperty(key)
 };
 
-const isError = msg => msg.error_type.match(/error/gi);
+const isError = msg => /error/.test(msg.error_type);
 
 program
   .name('pos-cli logs')
