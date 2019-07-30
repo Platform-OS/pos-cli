@@ -19,12 +19,17 @@ class LogStream extends EventEmitter {
 
   start() {
     const t = this;
-    setInterval(() => t.fetchData(), process.env.INTERVAL);
-    logger.Info('Live logging is starting. \n');
+    setInterval(() => t.fetchData(), program.interval);
+    logger.Info('Live logging is started.');
   }
 
   fetchData() {
-    this.gateway.logs({ lastId: storage.lastId }).then(({ logs }) => {
+    this.gateway.logs({ lastId: storage.lastId }).then(response => {
+      const logs = response.logs;
+      if (!logs) {
+        return false;
+      }
+      
       for (let k in logs) {
         let row = logs[k];
 
@@ -54,33 +59,27 @@ program
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--interval <interval>', 'time to wait between updates in ms', 3000)
   .action(environment => {
-    process.env.INTERVAL = program.interval;
-
     const authData = fetchAuthData(environment, program);
     const stream = new LogStream(authData);
 
-    stream.on('message', msg => {
-      if (!msg.message) {
-        return false;
+    stream.on('message', ({ created_at, error_type, message }) => {
+      if (!message) {
+        return;
       }
 
+      const text = `[${created_at.replace('T', ' ')}] - ${error_type}: ${message.replace(/\n$/, '')}`;
       const options = { exit: false, hideTimestamp: true };
-      const text = `[${msg.created_at.replace('T', ' ')}] - ${msg.error_type}: ${msg.message.replace(/\n$/, '')}`;
 
-      isError(msg) ? logger.Error(text, options) : logger.Info(text, options);
-    });
-
-    stream.on('message', msg => {
-      if (!msg.message) {
-        return false;
-      }
-
-      if (isError(msg)) {
+      if (isError(message)) {
         notifier.notify({
-          title: msg.error_type,
-          message: msg.message.slice(0, 100),
+          title: error_type,
+          message: message.slice(0, 100),
           icon: path.resolve(__dirname, '../lib/pos-logo.png')
         });
+
+        logger.Error(text, options);
+      } else {
+        logger.Info(text, options);
       }
     });
 
