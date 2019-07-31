@@ -1,8 +1,16 @@
 # Changelog
 
-## 4.0.5 30 July, 2019
+## 4.1.2
+* Fixed some server errors not showing up in `pos-cli deploy`.
+* Fixed `--direct-assets-upload` modules assets deploy
+
+
+## 4.1.1 30 July, 2019
+* Fixed cut off messages in notifier.
+
+## 4.1.0 30 July, 2019
 * Improved performance of repetitive http requests (sync, logs, deploy status etc.) by using keepAlive.
-* Fix CI environment variable support in audit.
+* Fixed CI environment variable support in audit.
 * Censored token in `DEBUG=true` mode to prevent accidental leaks. 
 * Improved error message when there is syntax error in config file.
 * Improved server error handling and messages.
