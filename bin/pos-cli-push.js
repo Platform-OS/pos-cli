@@ -8,7 +8,6 @@ const program = require('commander'),
 
 const validate = require('../lib/validators'),
   Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger'),
   ServerError = require('../lib/ServerError');
 
 const checkParams = params => {
@@ -58,12 +57,11 @@ const getDeploymentStatus = ({ id }) => {
         if (response && response.status === 'ready_for_import') {
           setTimeout(getStatus, 1500);
         } else if (response && response.status === 'error') {
-          ServerError.deploy(JSON.parse(response.error));
-          reject();
+          ServerError.deploy(response);
         } else {
           resolve();
         }
-      }).catch(e => logger.Debug(e));
+      });
     })();
   });
 };
@@ -76,4 +74,4 @@ gateway
     if (!DIRECT) {
       spinner.succeed(`Deploy succeeded after ${duration(t0, t1)}`);
     }
-  }).catch(logger.Debug);
+  });
