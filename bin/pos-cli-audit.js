@@ -29,7 +29,6 @@ const Audit = {
         const offences = [...Object.keys(tags), ...Object.keys(filters), ...Object.keys(detailed)].length;
         console.log('\n');
         logger.Warn(`[Audit] ${offences} rule${offences === 1 ? '' : 's'} detected issues. `, { hideTimestamp: true });
-        report('Audit', { extras: [{ key: 'auditOffences', value: offences }] });
       } catch (e) {
         logger.Debug(e.message);
       }
