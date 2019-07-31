@@ -1,6 +1,9 @@
 # Changelog
 
-## 4.1.2
+## 4.1.3
+* Do not use colors when `CI=true`
+
+## 4.1.2 31 July 2019
 * Fixed some server errors not showing up in `pos-cli deploy`.
 * Fixed `--direct-assets-upload` modules assets deploy
 
