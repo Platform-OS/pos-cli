@@ -71,7 +71,7 @@
     "pos-cli-watch": "./bin/pos-cli-watch.js"
   },
   "repository": "mdyd-dev/pos-cli",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/mdyd-dev/pos-cli/issues"
   },
