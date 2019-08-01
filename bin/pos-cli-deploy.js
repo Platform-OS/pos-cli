@@ -12,9 +12,6 @@ const runAudit = () => {
     return;
   }
 
-  logger.Info('Analyzing code...');
-
-  // FORCE_COLORS causes enables colors when running script via `npm`
   const env = Object.assign({}, process.env, { FORCE_COLOR: true });
   sh.exec('pos-cli audit', { env });
 };

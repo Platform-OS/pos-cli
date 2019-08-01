@@ -2,11 +2,12 @@
 
 ## 4.1.3
 * Do not use colors when `CI=true`
+* Added 413 `Entity too large` server error support.
+* Added MIT License.
 
 ## 4.1.2 31 July 2019
 * Fixed some server errors not showing up in `pos-cli deploy`.
 * Fixed `--direct-assets-upload` modules assets deploy
-
 
 ## 4.1.1 30 July, 2019
 * Fixed cut off messages in notifier.
