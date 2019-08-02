@@ -8,7 +8,12 @@
     "postinstall": "node ./scripts/check-node-version.js",
     "build-assets": "npx webpack-cli gui/editor/src/index.js -o gui/editor/public/app.js --mode=production"
   },
-  "files": ["lib", "bin", "gui", "scripts"],
+  "files": [
+    "lib",
+    "bin",
+    "gui",
+    "scripts"
+  ],
   "main": "./bin/pos-cli.js",
   "engines": {
     "node": ">=10"
@@ -78,7 +83,6 @@
   },
   "homepage": "https://github.com/mdyd-dev/pos-cli#readme",
   "devDependencies": {
-    "execa": "^2.0.3",
     "jest": "^24.8.0"
   }
 }
