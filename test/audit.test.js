@@ -1,30 +1,29 @@
-const execa = require('execa');
+const util = require('util');
+const execp = util.promisify(require('child_process').execFile);
 
 const fixtures = `${process.cwd()}/test/fixtures/audit`;
 const cwd = name => `${fixtures}/${name}`;
 const bin = `${process.cwd()}/bin/pos-cli-audit.js`;
 
-const run = async fixtureName => execa.command(bin, { cwd: cwd(fixtureName) });
+const run = async fixtureName => execp(bin, { cwd: cwd(fixtureName) });
 
 test('Reports no errors with empty directory', async () => {
-  const { stdout, exitCode } = await run('empty');
-
-  expect(exitCode).toBe(0);
+  const { stdout } = await run('empty');
   expect(stdout).toMatch('[Audit] 0 rules detected issues.');
 });
 
 describe('Audit - app directory', () => {
   test('Reports 1 error in app', async () => {
-    const { stdout, exitCode } = await run('oneError');
-    expect(exitCode).toBe(0);
+    const { stdout } = await run('oneError');
+
     expect(stdout).toMatch('[Audit] 1 rule detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('app/views/pages/error.liquid');
   });
 
   test('Reports 2 different errors in one file', async () => {
-    const { stdout, exitCode } = await run('twoErrors');
-    expect(exitCode).toBe(0);
+    const { stdout } = await run('twoErrors');
+
     expect(stdout).toMatch('[Audit] 2 rules detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('[DEPRECATED TAG] query_graph');
@@ -32,8 +31,8 @@ describe('Audit - app directory', () => {
   });
 
   test('Reports 3 different errors in two files', async () => {
-    const { stdout, exitCode } = await run('threeErrors');
-    expect(exitCode).toBe(0);
+    const { stdout } = await run('threeErrors');
+
     expect(stdout).toMatch('[Audit] 3 rules detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('[DEPRECATED TAG] query_graph');
@@ -44,8 +43,8 @@ describe('Audit - app directory', () => {
 
 describe('Audit - marketplace_builder directory', () => {
   test('Reports 3 different errors in two files', async () => {
-    const { stdout, exitCode } = await run('threeErrors_mpb');
-    expect(exitCode).toBe(0);
+    const { stdout } = await run('threeErrors_mpb');
+
     expect(stdout).toMatch('[Audit] 3 rules detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('[DEPRECATED TAG] query_graph');
@@ -57,8 +56,8 @@ describe('Audit - marketplace_builder directory', () => {
 describe('Audit - modules directory', () => {
 
   test('Reports errors for modules files', async () => {
-    const { stdout, exitCode } = await run('modules');
-    expect(exitCode).toBe(0);
+    const { stdout } = await run('modules');
+
     expect(stdout).toMatch('[Audit] 3 rules detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('[DEPRECATED TAG] query_graph');
