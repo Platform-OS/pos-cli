@@ -7,6 +7,8 @@ pipeline {
 
   environment {
     PROJECT_NAME = "${env.BRANCH_NAME}-${env.GIT_COMMIT[0..5]}-${env.BUILD_ID}"
+    MPKIT_TOKEN = credentials('POS_TOKEN')
+    MPKIT_EMAIL = "darek+ci@near-me.com"
     MPKIT_URL = "https://qa-17263.staging.oregon.platform-os.com"
   }
 
