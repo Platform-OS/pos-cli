@@ -2,6 +2,7 @@
 
 ## 4.1.3
 * Do not use colors when `CI=true`
+* Do not use notifier when `CI=true`
 * Added 413 `Entity too large` server error support.
 * Added MIT License.
 
