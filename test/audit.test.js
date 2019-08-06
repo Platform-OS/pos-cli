@@ -1,11 +1,9 @@
-const util = require('util');
-const execp = util.promisify(require('child_process').execFile);
+const exec = require('./utils/exec');
+const cliPath = require('./utils/cliPath');
 
-const fixtures = `${process.cwd()}/test/fixtures/audit`;
-const cwd = name => `${fixtures}/${name}`;
-const bin = `${process.cwd()}/bin/pos-cli-audit.js`;
+const cwd = name => `${process.cwd()}/test/fixtures/audit/${name}`;
 
-const run = async fixtureName => execp(bin, { cwd: cwd(fixtureName) });
+const run = fixtureName => exec(`${cliPath} audit`, { cwd: cwd(fixtureName) });
 
 test('Reports no errors with empty directory', async () => {
   const { stdout } = await run('empty');

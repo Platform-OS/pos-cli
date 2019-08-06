@@ -1,14 +1,22 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const logger = require('../lib/logger'),
+  files = require('../lib/files');
 
-const list = require('../lib/settings').listEnvironments(),
-  logger = require('../lib/logger');
+const listEnvironments = () => {
+  const settings = Object(files.getConfig());
+  const list = Object.keys(settings);
 
-program.name('pos-cli env list').parse(process.argv);
+  if (list.length) {
+    logger.Info('Available environments: ');
+    for (const id in list) {
+      const env = list[id];
+      logger.Info(`- [${env}] ${settings[env].url}`, { hideTimestamp: true });
+    }
+  } else {
+    logger.Error('No environments registered yet, please see pos-cli env add');
+  }
+};
 
-logger.Info('Available environments: ');
+listEnvironments();
 
-for (const id in list) {
-  logger.Info(`- ${list[id]}`, { hideTimestamp: true });
-}

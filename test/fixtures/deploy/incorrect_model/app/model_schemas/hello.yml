@@ -1,0 +1,4 @@
+name: model_name
+properties:
+- name: attr
+  type: foo
