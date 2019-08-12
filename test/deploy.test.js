@@ -69,4 +69,3 @@ describe('Server errors', () => {
     }
   });
 });
-

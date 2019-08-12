@@ -1,7 +1,7 @@
 const exec = require('../utils/exec');
 const cliPath = require('../utils/cliPath');
 
-const env = Object.assign(process.env, { CI: true });
+const env = { CI: true };
 const run = async args => exec(`${cliPath} ${args}`, { env });
 
 test('should return error for missing command on stdout', async () => {
