@@ -57,7 +57,7 @@ const getDeploymentStatus = ({ id }) => {
         if (response && response.status === 'ready_for_import') {
           setTimeout(getStatus, 1500);
         } else if (response && response.status === 'error') {
-          ServerError.deploy(response);
+          ServerError.unprocessableEntity(response);
         } else {
           resolve();
         }

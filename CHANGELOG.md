@@ -1,10 +1,12 @@
 # Changelog
 
-## 4.1.3
+## 4.1.3 12 August 2019
 * Do not use colors when `CI=true`
 * Do not use notifier when `CI=true`
 * Added 413 `Entity too large` server error support.
 * Added MIT License.
+* Improved displaying errors.
+* Added `--force` option to `pos-cli init` 
 
 ## 4.1.2 31 July 2019
 * Fixed some server errors not showing up in `pos-cli deploy`.

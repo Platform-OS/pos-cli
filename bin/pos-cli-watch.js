@@ -58,10 +58,9 @@ const pushFile = syncedFilePath => {
         logger.Warn('[Sync] WARNING: Data schema was updated. It will take a while for the change to be applied.');
       }
 
-      logger.Success(`[Sync] Synced: ${filePath}`);
-    })
-    .catch(e => {
-      logger.Debug(e);
+      if (body) {
+        logger.Success(`[Sync] Synced: ${filePath}`);
+      }
     });
 };
 

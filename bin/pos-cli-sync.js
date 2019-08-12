@@ -3,8 +3,7 @@
 const program = require('commander'),
   spawn = require('child_process').spawn,
   command = require('../lib/command'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  logger = require('../lib/logger');
+  fetchAuthData = require('../lib/settings').fetchSettings;
 
 const DEFAULT_CONCURRENCY = 3;
 
@@ -20,13 +19,8 @@ program
       MARKETPLACE_URL: authData.url,
       CONCURRENCY: process.env.CONCURRENCY || params.concurrency
     });
-    const p = spawn(command('pos-cli-watch'), [], { stdio: 'inherit', env: env });
 
-    p.on('close', code => {
-      if (code === 1) logger.Error('Sync failed.', { exit: false });
-    });
-
-    p.on('error', logger.Error);
+    spawn(command('pos-cli-watch'), [], { stdio: 'inherit', env });
   });
 
 program.parse(process.argv);
