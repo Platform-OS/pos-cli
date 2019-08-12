@@ -8,13 +8,14 @@ const logger = require('../lib/logger'),
 
 program
   .name('pos-cli init')
-  .option('--url <url>', 'theme github repository url')
-  .option('--branch <branch>', 'branch where the theme is located')
+  .option('--url <url>', 'structure source repository url (github, bitbucket, gitlab). \nRead more on accepted formats: https://github.com/Rich-Harris/degit#usage \n')
+  .option('--branch <branch>', 'branch where the structure is located')
+  .option('--force', 'override contents of the directory if there is any', false)
   .action(async params => {
     const url = params.url || 'mdyd-dev/directory-structure';
     const branch = params.branch ? `#${params.branch}` : '';
 
-    await degit(`${url}${branch}`, { force: false, cache: false, verbose: false })
+    await degit(`${url}${branch}`, { force: params.force, cache: false, verbose: false })
       .clone('.')
       .then(() => {
         report('Init', { extras: [{ key: 'status', value: 'Success' }] });

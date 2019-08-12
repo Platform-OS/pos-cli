@@ -20,7 +20,7 @@ class LogStream extends EventEmitter {
   start() {
     const t = this;
     setInterval(() => t.fetchData(), program.interval);
-    logger.Info('Live logging is started.');
+    logger.Info('Starting live logging...');
   }
 
   fetchData() {
