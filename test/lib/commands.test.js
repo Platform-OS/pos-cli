@@ -1,8 +1,15 @@
 const exec = require('../utils/exec');
 const cliPath = require('../utils/cliPath');
 
-const env = {};
-const run = async args => exec(`${cliPath} ${args}`, { env });
+const getEnvs = () => {
+  const env = Object.assign({}, process.env);
+  delete env.MPKIT_URL;
+  delete env.MPKIT_EMAIL;
+  delete env.MPKIT_TOKEN;
+  delete env.MPKIT_PASSWORD;
+  return env;
+};
+const run = async args => exec(`${cliPath} ${args}`, { env: getEnvs() });
 
 test('should return error for missing command on stdout', async () => {
   let { stderr } = await run('missing');
