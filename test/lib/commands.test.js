@@ -2,7 +2,7 @@ const exec = require('../utils/exec');
 const cliPath = require('../utils/cliPath');
 
 const getEnvs = () => {
-  const env = Object.assign({}, process.env);
+  const env = Object.assign({}, process.env, { CI: true });
   delete env.MPKIT_URL;
   delete env.MPKIT_EMAIL;
   delete env.MPKIT_TOKEN;
