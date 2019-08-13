@@ -6,6 +6,7 @@ const fetchAuthData = require('../lib/settings').fetchSettings,
   logger = require('../lib/logger');
 
 const deployStrategy = require('../lib/deploy/strategy');
+const binPath = `${__dirname}`;
 
 const runAudit = () => {
   if (process.env.CI == 'true') {
@@ -13,7 +14,7 @@ const runAudit = () => {
   }
 
   const env = Object.assign({}, process.env, { FORCE_COLOR: true });
-  sh.exec('pos-cli audit', { env });
+  sh.exec(`${binPath}/pos-cli.js audit`, { env });
 };
 
 program
