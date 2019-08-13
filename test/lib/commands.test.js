@@ -1,7 +1,8 @@
 const exec = require('../utils/exec');
 const cliPath = require('../utils/cliPath');
 
-const run = async args => exec(`${cliPath} ${args}`, {});
+const env = { CI: true };
+const run = async args => exec(`${cliPath} ${args}`, { env });
 
 test('should return error for missing command on stdout', async () => {
   let { stderr } = await run('missing');
