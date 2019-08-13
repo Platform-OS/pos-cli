@@ -7,6 +7,7 @@ const program = require('commander'),
   ora = require('ora');
 
 const validate = require('../lib/validators'),
+  report = require('../lib/logger/report'),
   Gateway = require('../lib/proxy'),
   ServerError = require('../lib/ServerError');
 
@@ -51,7 +52,7 @@ const formData = {
 };
 
 const getDeploymentStatus = ({ id }) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(resolve => {
     (getStatus = () => {
       gateway.getStatus(id).then(response => {
         if (response && response.status === 'ready_for_import') {
@@ -61,6 +62,8 @@ const getDeploymentStatus = ({ id }) => {
         } else {
           resolve();
         }
+      }).catch(error => {
+        report('getStatus', { extras: [{ key: 'status', value: 'Error' }, { key: 'trace', value: error }] });
       });
     })();
   });
