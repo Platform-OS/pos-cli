@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.1.5-rc 15 August 2019
+* Fix syncing module files on win32 + PowerShell
+
 ## 4.1.4 14 August 2019
 * Handle deploy errors better
 
