@@ -44,7 +44,7 @@ describe('Server errors', () => {
     } catch(e) {
       expect(`${e}`).toMatch('views/pages/hello.liquid');
       expect(`${e}`).toMatch('contains invalid YAML');
-      expect(`${e}`).toMatch("could not find expected ':' while scanning a simple key at line 3 column 1");
+      expect(`${e}`).toMatch("could not find expected ':' at line 3");
       expect(`${e}`).toMatch('Deploy failed. Server did not accept release file.');
     }
   });
