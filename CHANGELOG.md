@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.1.5 15 August 2019
+## 4.1.7 15 August 2019
 * Fix syncing module files on win32 + PowerShell
 
 ## 4.1.4 14 August 2019
