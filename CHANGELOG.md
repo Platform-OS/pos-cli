@@ -1,10 +1,10 @@
 # Changelog
 
+## 4.1.8
+* Handle deploy errors better
+
 ## 4.1.7 15 August 2019
 * Fix syncing module files on win32 + PowerShell
-
-## 4.1.4 14 August 2019
-* Handle deploy errors better
 
 ## 4.1.3 12 August 2019
 * Do not use colors when `CI=true`

@@ -25,7 +25,7 @@ class LogStream extends EventEmitter {
 
   fetchData() {
     this.gateway.logs({ lastId: storage.lastId }).then(response => {
-      const logs = response.logs;
+      const logs = response && response.logs;
       if (!logs) {
         return false;
       }
