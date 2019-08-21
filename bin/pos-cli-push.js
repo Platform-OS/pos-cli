@@ -65,7 +65,7 @@ const getDeploymentStatus = ({ id }) => {
           resolve();
         }
       }).catch(error => {
-        report('getStatus', { extras: [{ key: 'status', value: 'Error' }, { key: 'trace', value: error }] });
+        logger.Debug(`${error}`);
       });
     })();
   });

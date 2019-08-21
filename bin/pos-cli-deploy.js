@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const path = require('path');
+
 const program = require('commander'),
   sh = require('shelljs');
 
@@ -14,7 +16,7 @@ const runAudit = () => {
   }
 
   const env = Object.assign({}, process.env, { FORCE_COLOR: true });
-  sh.exec(`${binPath}/pos-cli.js audit`, { env });
+  sh.exec(`${binPath}${path.sep}pos-cli.js audit`, { env });
 };
 
 program
