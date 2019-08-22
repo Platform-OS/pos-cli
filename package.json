@@ -59,7 +59,6 @@
   "preferGlobal": true,
   "bin": {
     "pos-cli": "./bin/pos-cli.js",
-    "pos-cli-archive": "./bin/pos-cli-archive.js",
     "pos-cli-audit": "./bin/pos-cli-audit.js",
     "pos-cli-deploy": "./bin/pos-cli-deploy.js",
     "pos-cli-env": "./bin/pos-cli-env.js",
@@ -69,12 +68,9 @@
     "pos-cli-gui-serve": "./bin/pos-cli-gui-serve.js",
     "pos-cli-init": "./bin/pos-cli-init.js",
     "pos-cli-logs": "./bin/pos-cli-logs.js",
-    "pos-cli-push": "./bin/pos-cli-push.js",
     "pos-cli-migrations": "./bin/pos-cli-migrations.js",
     "pos-cli-modules": "./bin/pos-cli-modules.js",
-    "pos-cli-server": "./bin/pos-cli-server.js",
-    "pos-cli-sync": "./bin/pos-cli-sync.js",
-    "pos-cli-watch": "./bin/pos-cli-watch.js"
+    "pos-cli-sync": "./bin/pos-cli-sync.js"
   },
   "repository": "mdyd-dev/pos-cli",
   "license": "MIT",

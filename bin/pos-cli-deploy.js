@@ -1,22 +1,17 @@
 #!/usr/bin/env node
-const sep = require('path').sep;
+const program = require('commander');
 
-const program = require('commander'),
-  sh = require('shelljs');
-
-const fetchAuthData = require('../lib/settings').fetchSettings,
-  logger = require('../lib/logger');
-
+const fetchAuthData = require('../lib/settings').fetchSettings;
+const logger = require('../lib/logger');
 const deployStrategy = require('../lib/deploy/strategy');
-const binPath = `${__dirname}`;
+const audit = require('../lib/audit');
 
-const runAudit = () => {
+const runAudit = async () => {
   if (process.env.CI == 'true') {
     return;
   }
 
-  const env = Object.assign({}, process.env, { FORCE_COLOR: true });
-  sh.exec(`${binPath}${sep}pos-cli.js audit`, { env });
+  await audit.run();
 };
 
 program
@@ -26,14 +21,10 @@ program
   .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers. [experimental]')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
   .action(async (environment, params) => {
+    if (params.force) logger.Warn('-f flag is deprecated and does not do anything.');
+
     const strategy = params.directAssetsUpload ? 'directAssetsUpload' : 'default';
-
-    if (params.force) {
-      logger.Warn('-f flag is deprecated and does not do anything.');
-    }
-
     const authData = fetchAuthData(environment, program);
-
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
@@ -45,7 +36,7 @@ program
       DIRECT_ASSETS_UPLOAD: params.directAssetsUpload
     });
 
-    runAudit();
+    await runAudit();
     deployStrategy.run({ strategy, opts: { env, authData, params } });
   });
 

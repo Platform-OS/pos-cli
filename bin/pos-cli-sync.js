@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  spawn = require('child_process').spawn,
-  command = require('../lib/command'),
+  watch = require('../lib/watch'),
   fetchAuthData = require('../lib/settings').fetchSettings;
 
 const DEFAULT_CONCURRENCY = 3;
@@ -20,7 +19,7 @@ program
       CONCURRENCY: process.env.CONCURRENCY || params.concurrency
     });
 
-    spawn(command('pos-cli-watch'), [], { stdio: 'inherit', env });
+    watch.start(env);
   });
 
 program.parse(process.argv);

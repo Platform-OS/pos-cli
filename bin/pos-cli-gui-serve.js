@@ -1,16 +1,15 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  spawn = require('child_process').spawn,
   fetchAuthData = require('../lib/settings').fetchSettings,
-  command = require('../lib/command'),
+  server = require('../lib/server');
   logger = require('../lib/logger');
 
 program
   .name('pos-cli gui serve')
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('-p --port <port>', 'use PORT', '3333')
-  .action((environment, params) => {
+  .action(async (environment, params) => {
     const authData = fetchAuthData(environment, program);
 
     Object.assign(process.env, {
@@ -20,13 +19,11 @@ program
       PORT: params.port
     });
 
-    const server = spawn(command('pos-cli-server'), [], { stdio: 'inherit' });
-
-    server.on('close', code => {
-      if (code === 1) {
-        logger.Error('✖ Failed.');
-      }
-    });
+    try{
+      await server.start(process.env);
+    } catch(e) {
+      logger.Error('✖ Failed.');
+    };
   });
 
 program.parse(process.argv);
