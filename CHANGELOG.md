@@ -1,10 +1,13 @@
 # Changelog
 
+## 4.1.10 
+* Improved error handling when migration doesn't exist on the server
+
 ## 4.1.9 22 August 2019
-* Fix paths to all binaries required in `pos-cli deploy` win32 + PowerShell
+* Fixed paths to all binaries required in `pos-cli deploy` win32 + PowerShell
 
 ## 4.1.8 21 August 2019
-* Fix spawning audit command in `pos-cli deploy` win32 + PowerShell
+* Fixed spawning audit command in `pos-cli deploy` win32 + PowerShell
 * Handle deploy errors better
 
 ## 4.1.7 15 August 2019
