@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.1.9 22 August 2019
+* Fix paths to all binaries required in `pos-cli deploy` win32 + PowerShell
+
 ## 4.1.8 21 August 2019
 * Fix spawning audit command in `pos-cli deploy` win32 + PowerShell
 * Handle deploy errors better
