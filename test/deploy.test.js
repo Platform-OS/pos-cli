@@ -2,10 +2,11 @@
 
 const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
+const path = require('path');
 
 require('dotenv').config();
 
-const cwd = name => `${process.cwd()}/test/fixtures/deploy/${name}`;
+const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
 
 const run = fixtureName => exec(`${cliPath} deploy`, { cwd: cwd(fixtureName), env: process.env });
 
