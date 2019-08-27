@@ -12,12 +12,11 @@ const run = fixtureName => exec(`${cliPath} deploy`, { cwd: cwd(fixtureName), en
 jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
 
 describe('Happy path', () => {
-  test('App directory + modules + skips audit', async () => {
+  test('App directory + modules', async () => {
     const { stdout } = await run('correct');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('Deploy succeeded after');
-    expect(stdout).not.toMatch('[Audit]');
   });
 
   test('Legacy directory', async () => {
