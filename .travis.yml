@@ -2,3 +2,5 @@ os: windows
 language: node_js
 node_js:
 - 10.16.3
+env:
+- MPKIT_URL="https://qa-17263.staging.oregon.platform-os.com"
