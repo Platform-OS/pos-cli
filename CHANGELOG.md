@@ -1,7 +1,8 @@
 # Changelog
 
-## 4.1.10 
+## 4.1.10  27 August 2019
 * Improved error handling when migration doesn't exist on the server
+* Added support for Windows
 
 ## 4.1.9 22 August 2019
 * Fixed paths to all binaries required in `pos-cli deploy` win32 + PowerShell
