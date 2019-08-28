@@ -1,7 +1,7 @@
 const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
-
-const cwd = name => `${process.cwd()}/test/fixtures/audit/${name}`;
+const path = require('path');
+const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'audit', name);
 
 const run = fixtureName => exec(`${cliPath} audit`, { cwd: cwd(fixtureName) });
 
@@ -16,7 +16,7 @@ describe('Audit - app directory', () => {
 
     expect(stdout).toMatch('[Audit] 1 rule detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
-    expect(stdout).toMatch('app/views/pages/error.liquid');
+    expect(stdout).toMatch(path.join('app', 'views', 'pages', 'error.liquid'));
   });
 
   test('Reports 2 different errors in one file', async () => {
@@ -25,7 +25,7 @@ describe('Audit - app directory', () => {
     expect(stdout).toMatch('[Audit] 2 rules detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('[DEPRECATED TAG] query_graph');
-    expect(stdout).toMatch('app/views/pages/error.liquid');
+    expect(stdout).toMatch(path.join('app', 'views', 'pages', 'error.liquid'));
   });
 
   test('Reports 3 different errors in two files', async () => {
@@ -34,8 +34,8 @@ describe('Audit - app directory', () => {
     expect(stdout).toMatch('[Audit] 3 rules detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('[DEPRECATED TAG] query_graph');
-    expect(stdout).toMatch('app/views/pages/error.liquid');
-    expect(stdout).toMatch('app/views/pages/error2.liquid');
+    expect(stdout).toMatch(path.join('app', 'views', 'pages', 'error.liquid'));
+    expect(stdout).toMatch(path.join('app', 'views', 'pages', 'error2.liquid'));
   });
 });
 
@@ -46,8 +46,8 @@ describe('Audit - marketplace_builder directory', () => {
     expect(stdout).toMatch('[Audit] 3 rules detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('[DEPRECATED TAG] query_graph');
-    expect(stdout).toMatch('marketplace_builder/views/pages/error.liquid');
-    expect(stdout).toMatch('marketplace_builder/views/pages/error2.liquid');
+    expect(stdout).toMatch(path.join('marketplace_builder', 'views', 'pages', 'error.liquid'));
+    expect(stdout).toMatch(path.join('marketplace_builder', 'views', 'pages', 'error2.liquid'));
   });
 });
 
@@ -59,10 +59,9 @@ describe('Audit - modules directory', () => {
     expect(stdout).toMatch('[Audit] 3 rules detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('[DEPRECATED TAG] query_graph');
-    expect(stdout).toMatch('modules/first/public/views/pages/error.liquid');
-    expect(stdout).toMatch('modules/first/public/views/pages/error2.liquid');
-    expect(stdout).toMatch('modules/second/private/views/pages/error.liquid');
-    expect(stdout).toMatch('modules/second/private/views/pages/error2.liquid');
+    expect(stdout).toMatch(path.join('modules', 'first', 'public', 'views', 'pages', 'error.liquid'));
+    expect(stdout).toMatch(path.join('modules', 'first', 'public', 'views', 'pages', 'error2.liquid'));
+    expect(stdout).toMatch(path.join('modules', 'second', 'private', 'views', 'pages', 'error.liquid'));
+    expect(stdout).toMatch(path.join('modules', 'second', 'private', 'views', 'pages', 'error2.liquid'));
   });
-
 });
