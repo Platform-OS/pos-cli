@@ -63,9 +63,7 @@ program
     const stream = new LogStream(authData);
 
     stream.on('message', ({ created_at, error_type, message }) => {
-      if (!message) {
-        return;
-      }
+      if (message == null) message = '';
 
       const text = `[${created_at.replace('T', ' ')}] - ${error_type}: ${message.replace(/\n$/, '')}`;
       const options = { exit: false, hideTimestamp: true };
