@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.1.12 27 September 2019
+* Revert commander.js version to ^2
+
 ## 4.1.10  27 August 2019
 * Improved error handling when migration doesn't exist on the server
 * Added support for Windows
