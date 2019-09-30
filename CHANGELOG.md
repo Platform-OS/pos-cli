@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.14 30 September 2019
+* Send false in `partialDeploy` when deploying module
+
+## 4.1.13 30 September 2019
+* Add safety check for conflicting commanderjs instances
+
 ## 4.1.12 27 September 2019
 * Revert commander.js version to ^2
 
