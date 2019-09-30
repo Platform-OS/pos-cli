@@ -32,7 +32,7 @@ program
       MARKETPLACE_ENV: environment,
       CI: process.env.CI === 'true',
       // TODO: Get rid off global system env, make it normal argument to function.
-      PARTIAL_DEPLOY: params.partialDeploy,
+      PARTIAL_DEPLOY: !!params.partialDeploy,
       DIRECT_ASSETS_UPLOAD: params.directAssetsUpload
     });
 
