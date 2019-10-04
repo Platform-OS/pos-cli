@@ -42,11 +42,8 @@ test('should run help on data export', async () => {
 });
 
 test('should run env list', async () => {
-  try {
-    await run('env list');
-  } catch (e) {
-    expect(`${e}`).toMatch('No environments registered yet, please see pos-cli env add');
-  }
+  const { stderr } = await run('env list');
+  expect(stderr).toMatch('No environments registered yet, please see pos-cli env add');
 });
 
 test('should run help on env add', async () => {
