@@ -26,7 +26,7 @@ const promptConfirmation = async confirmationText => {
 const confirmCleanup = async (gateway, inlineConfirmation) => {
   logger.Warn('');
   logger.Warn(`WARNING!!! You are going to REMOVE your data from instance: ${gateway.url}`);
-  logger.Warn('There is no comming back.');
+  logger.Warn('There is no coming back.');
   logger.Warn('');
   const confirmed = inlineConfirmation || (await promptConfirmation(confirmationText)) == confirmationText;
   if (confirmed) {

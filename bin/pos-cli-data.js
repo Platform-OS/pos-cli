@@ -9,6 +9,7 @@ program
   .command('update [environment]', 'update existing instance data from a json file')
   .command(
     'clean [environment]',
-    'remove all stored data in users, models, etc. Execute with caution there is not comming back.'
+    'remove all stored data in users, models, etc. Execute with caution there is not coming back.'
   )
   .parse(process.argv);
+
