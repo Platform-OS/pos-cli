@@ -31,10 +31,7 @@ program
   .alias('s')
   .parse(process.argv);
 
-if (program._execs instanceof Set)
-  var commandList = Array.from(program._execs);
-else
-  var commandList = Object.keys(program._execs);
+const commandList = Object.keys(program._execs);
 
 if (!commandList.includes(program.args[0])) {
   logger.Error(`unknown command: ${program.args[0]}`, { exit: false });
