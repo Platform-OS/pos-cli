@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "4.1.15",
+  "version": "4.1.16",
   "description": "Manage your platformOS application",
   "scripts": {
     "test": "jest --silent",
@@ -56,7 +56,7 @@
     "uuid": "^3.3.3",
     "valid-url": "^1.0.9"
   },
-  "bundledDependencies":[
+  "bundledDependencies": [
     "@sentry/node",
     "archiver",
     "archiver-promise",
