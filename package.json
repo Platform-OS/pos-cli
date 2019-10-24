@@ -38,6 +38,7 @@
     "email-validator": "^2.0.4",
     "express": "^4.17.1",
     "extract-zip": "^1.6.7",
+    "ignore": "^5.1.4",
     "js-yaml": "^3.13.1",
     "mime": "^2.4.4",
     "multer": "^1.4.2",
@@ -114,6 +115,7 @@
   "devDependencies": {
     "babel-eslint": "^10.0.3",
     "dotenv": "^8.1.0",
+    "eslint": "^6.5.1",
     "jest": "^24.9.0"
   }
 }
