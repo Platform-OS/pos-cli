@@ -1,0 +1,5 @@
+foo
+bar
+
+# empty line above and this comment should be ignored
+baz
