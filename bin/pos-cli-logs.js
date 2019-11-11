@@ -24,7 +24,7 @@ class LogStream extends EventEmitter {
   }
 
   fetchData() {
-    this.gateway.logs({ lastId: storage.lastId }).then(response => {
+    this.gateway.logs({lastId: storage.lastId}).then(response => {
       const logs = response && response.logs;
       if (!logs) {
         return false;
@@ -33,6 +33,7 @@ class LogStream extends EventEmitter {
       for (let k in logs) {
         let row = logs[k];
 
+        if (!!program.filter && program.filter != row.error_type) continue;
         if (!storage.exists(row.id)) {
           storage.add(row);
           this.emit('message', row);
@@ -49,7 +50,7 @@ const storage = {
     storage.logs[item.id] = item;
     storage.lastId = item.id;
   },
-  exists: key => storage.logs.hasOwnProperty(key)
+  exists: key => storage.logs.hasOwnProperty(key),
 };
 
 const isError = msg => /error/.test(msg.error_type);
@@ -58,21 +59,25 @@ program
   .name('pos-cli logs')
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--interval <interval>', 'time to wait between updates in ms', 3000)
+  .option('--filter <log type>', 'display only logs of given type')
   .action(environment => {
     const authData = fetchAuthData(environment, program);
     const stream = new LogStream(authData);
 
-    stream.on('message', ({ created_at, error_type, message }) => {
+    stream.on('message', ({created_at, error_type, message}) => {
       if (message == null) message = '';
 
-      const text = `[${created_at.replace('T', ' ')}] - ${error_type}: ${message.replace(/\n$/, '')}`;
-      const options = { exit: false, hideTimestamp: true };
+      const text = `[${created_at.replace(
+        'T',
+        ' ',
+      )}] - ${error_type}: ${message.replace(/\n$/, '')}`;
+      const options = {exit: false, hideTimestamp: true};
 
       if (isError(message)) {
         notifier.notify({
           title: error_type,
           message: message.slice(0, 100),
-          icon: path.resolve(__dirname, '../lib/pos-logo.png')
+          icon: path.resolve(__dirname, '../lib/pos-logo.png'),
         });
 
         logger.Error(text, options);
