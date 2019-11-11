@@ -3,8 +3,8 @@
   "version": "4.1.17",
   "description": "Manage your platformOS application",
   "scripts": {
-    "test": "jest --silent",
-    "test-watch": "jest --watchAll",
+    "test": "jest --runInBand",
+    "test-watch": "jest --watchAll --runInBand",
     "postinstall": "node ./scripts/check-node-version.js",
     "build-assets": "npx webpack-cli gui/editor/src/index.js -o gui/editor/public/app.js --mode=production"
   },
