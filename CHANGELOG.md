@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.1.17 4 November 2019
+* Add support for `.posignore` file
+* Do not include modules assets using `pos-cli deploy` with `--direct-assets-upload` flag 
+* Fix packing and uploading assets when using `pos-cli deploy` with `--direct-assets-upload` flag
+
+## 4.1.16 16 October 2019
+* Fix error when there is no environments to list using `pos-cli env list`
+* Fix spelling issue in `pos-cli data clean` message
+
+## 4.1.15 1 October 2019
+* Use `bundledDependencies` to prevent conflicts with globally installed npm packages  
+
 ## 4.1.14 30 September 2019
 * Send false in `partialDeploy` when deploying module
 
