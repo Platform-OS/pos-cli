@@ -5,9 +5,7 @@ module.exports = (cmd, opts) =>
     // const dirOutput = opts && opts.cwd ? `\nDIR: ${opts.cwd}` : '';
     // console.log(`Running command...\nCMD: ${cmd}${dirOutput}`);
     exec(cmd, opts, (err, stdout, stderr) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve({ stdout, stderr });
+      let code = err ? err.code : 0;
+      return resolve({ stdout, stderr, code });
     });
   });

@@ -22,5 +22,6 @@ program
 program.parse(process.argv);
 
 if (!program.args.length) {
-  program.help();
+  program.outputHelp();
+  process.exit(1);
 }

@@ -12,23 +12,28 @@ const getEnvs = () => {
 const run = async args => exec(`${cliPath} ${args}`, { env: getEnvs() });
 
 test('should return error for missing command on stdout', async () => {
-  let { stderr } = await run('missing');
+  let { stderr, code } = await run('missing');
   expect(stderr).toMatch('unknown command: missing');
+  expect(code).toEqual(1);
 });
 
 test('should show help on stdout', async () => {
-  const { stdout } = await run('help');
+  const { stdout, code } = await run('help');
   expect(stdout).toMatch('Usage: pos-cli [options] [command]');
+  expect(code).toEqual(0);
 });
 
 test('should run help on deploy', async () => {
-  const { stdout } = await run('deploy');
+  const { stdout, stderr, code } = await run('deploy');
   expect(stdout).toMatch('Usage: pos-cli deploy [options] [environment]');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]`');
+  expect(code).toEqual(1);
 });
 
 test('should run help on data import', async () => {
-  const { stdout } = await run('data import');
+  const { stdout, code } = await run('data import');
   expect(stdout).toMatch('Usage: pos-cli data import [options] [environment]');
+  expect(code).toEqual(1);
 });
 
 test('should run help on data update', async () => {
@@ -37,57 +42,68 @@ test('should run help on data update', async () => {
 });
 
 test('should run help on data export', async () => {
-  const { stdout } = await run('data export');
+  const { stdout, code } = await run('data export');
   expect(stdout).toMatch('Usage: pos-cli data export [options] [environment]');
+  expect(code).toEqual(1);
 });
 
 test('should run env list', async () => {
-  const { stderr } = await run('env list');
+  const { stderr, code } = await run('env list');
   expect(stderr).toMatch('No environments registered yet, please see pos-cli env add');
+  expect(code).toEqual(0);
 });
 
 test('should run help on env add', async () => {
-  const { stdout } = await run('env add');
+  const { stdout, code } = await run('env add');
   expect(stdout).toMatch('Usage: pos-cli env add [options] [environment]');
+  expect(code).toEqual(1);
 });
 
 test('should run help on gui serve', async () => {
-  const { stdout } = await run('gui serve');
+  const { stdout, code } = await run('gui serve');
   expect(stdout).toMatch('Usage: pos-cli gui serve [options] [environment]');
+  expect(code).toEqual(1);
 });
 
 test('should run help on logs', async () => {
-  const { stdout } = await run('logs');
+  const { stdout, code } = await run('logs');
   expect(stdout).toMatch('Usage: pos-cli logs [options] [environment]');
+  expect(code).toEqual(1);
 });
 
 test('should run help on migrations run', async () => {
-  const { stdout } = await run('migrations run');
+  const { stdout, code } = await run('migrations run');
   expect(stdout).toMatch('Usage: pos-cli migrations run [options] [environment]');
+  expect(code).toEqual(1);
 });
 
 test('should run help on migrations list', async () => {
-  const { stdout } = await run('migrations list');
+  const { stdout, code } = await run('migrations list');
   expect(stdout).toMatch('Usage: pos-cli migrations list [options] [environment]');
+  expect(code).toEqual(1);
 });
 
 test('should run help on modules list', async () => {
-  const { stdout } = await run('modules list');
+  const { stdout, code } = await run('modules list');
   expect(stdout).toMatch('Usage: pos-cli modules list [options] [environment]');
+  expect(code).toEqual(1);
 });
 
 // TODO: Implement
 test.skip('should run help on modules remove', async () => {
-  const { stdout } = await run('modules remove');
+  const { stdout, code } = await run('modules remove');
   expect(stdout).toMatch('Usage: pos-cli modules remove [environment] <name>');
+  expect(code).toEqual(1);
 });
 
 test('should run help on sync', async () => {
-  const { stdout } = await run('sync');
+  const { stdout, code } = await run('sync');
   expect(stdout).toMatch('Usage: pos-cli sync [options] [environment]');
+  expect(code).toEqual(1);
 });
 
 test('should run help on init', async () => {
-  const { stdout } = await run('init --help');
+  const { stdout, code } = await run('init --help');
   expect(stdout).toMatch('Usage: pos-cli init [options]');
+  expect(code).toEqual(0);
 });

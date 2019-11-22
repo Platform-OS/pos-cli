@@ -43,10 +43,15 @@ const storeEnvironment = settings => {
   fs.writeFileSync(configPath, JSON.stringify(newSettings, null, 2));
 };
 
+const help = () => {
+  program.outputHelp();
+  process.exit(1);
+}
+
 const checkParams = params => {
-  validate.existence({ argumentValue: params.email, argumentName: 'email', fail: program.help.bind(program) });
-  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: program.help.bind(program) });
-  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: program.help.bind(program) });
+  validate.existence({ argumentValue: params.email, argumentName: 'email', fail: help });
+  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: help });
+  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: help });
   validate.email(params.email);
 
   if (params.url.slice(-1) != '/') {
