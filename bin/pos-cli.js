@@ -34,9 +34,8 @@ program
 const commandList = Object.keys(program._execs);
 
 if (!commandList.includes(program.args[0])) {
-  logger.Error(`unknown command: ${program.args[0]}`, { exit: false });
-  program.help();
-  process.exit(1);
+  program.outputHelp();
+  logger.Error(`unknown command: ${program.args[0]}`);
 }
 
 if (!program.args.length) program.help();
