@@ -1,9 +1,6 @@
 /* global React, ReactDOM, GraphiQL */
-
-// Parse the search string to get url parameters.
 var search = window.location.search;
 var parameters = {};
-
 search
   .substr(1)
   .split('&')
@@ -14,17 +11,12 @@ search
     }
   });
 
-// if variables was provided, try to format it.
 if (parameters.variables) {
   try {
     parameters.variables = JSON.stringify(JSON.parse(parameters.variables), null, 2);
-  } catch (e) {
-    console.error(e);
-  }
+  } catch (e) {}
 }
 
-// When the query and variables string is edited, update the URL bar so
-// that it can be easily shared
 function onEditQuery(newQuery) {
   parameters.query = newQuery;
   updateURL();
@@ -41,12 +33,17 @@ function onEditOperationName(newOperationName) {
 }
 
 function updateURL() {
-  let newSearch = Object.keys(parameters)
-    .filter(key => Boolean(parameters[key]))
-    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(parameters[key])}`)
-    .join('&');
-
-  history.replaceState(null, null, `?${newSearch}`);
+  var newSearch =
+    '?' +
+    Object.keys(parameters)
+      .filter(function(key) {
+        return Boolean(parameters[key]);
+      })
+      .map(function(key) {
+        return encodeURIComponent(key) + '=' + encodeURIComponent(parameters[key]);
+      })
+      .join('&');
+  history.replaceState(null, null, newSearch);
 }
 
 function graphQLFetcher(graphQLParams) {
@@ -59,15 +56,15 @@ function graphQLFetcher(graphQLParams) {
     body: JSON.stringify(graphQLParams),
     credentials: 'include'
   })
-    .then(response => response.text())
-    .then(responseBody => {
+    .then(function(response) {
+      return response.text();
+    })
+    .then(function(responseBody) {
       try {
         return JSON.parse(responseBody);
-      } catch (e) {
-        console.error(e);
+      } catch (error) {
+        return responseBody;
       }
-
-      return responseBody;
     });
 }
 
@@ -79,12 +76,12 @@ ReactDOM.render(
     operationName: parameters.operationName,
     onEditQuery: onEditQuery,
     onEditVariables: onEditVariables,
+    defaultVariableEditorOpen: true,
     onEditOperationName: onEditOperationName
   }),
-  window['graphiql']
+  document.getElementById('graphiql')
 );
 
-// Top bar connection info
 let printConnectionInfo = env => {
   window['status-bar'].textContent = `platformOS - ${env.MPKIT_URL}`;
 };

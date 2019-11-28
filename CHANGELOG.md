@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.1.18
+* Upgrade GraphiQL to 0.17.0
+
 ## 4.1.17 4 November 2019
 * Add support for `.posignore` file
 * Do not include modules assets using `pos-cli deploy` with `--direct-assets-upload` flag 
