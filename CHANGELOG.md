@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.1.18
+## 4.1.18 29 November 2019
 * Upgrade GraphiQL to 0.17.0
 
 ## 4.1.17 4 November 2019
