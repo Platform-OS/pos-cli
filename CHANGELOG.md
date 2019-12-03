@@ -1,4 +1,6 @@
 # Changelog
+## 4.1.19
+* Fixed git submodules in modules/ 
 
 ## 4.1.18 29 November 2019
 * Upgrade GraphiQL to 0.17.0
