@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.1.19 5 December 2019
+* .zip files are now correctly synced
+
 ## 4.1.18 29 November 2019
 * Upgrade GraphiQL to 0.17.0
 
