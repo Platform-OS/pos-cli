@@ -31,7 +31,11 @@ class LogStream extends EventEmitter {
       }
 
       for (let k in logs) {
-        let row = logs[k];
+        const row = logs[k];
+        const filter = !!program.filter && program.filter.toLowerCase();
+        const errorType = row.error_type.toLowerCase();
+
+        if (filter !== errorType) continue;
 
         if (!storage.exists(row.id)) {
           storage.add(row);
@@ -58,6 +62,7 @@ program
   .name('pos-cli logs')
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--interval <interval>', 'time to wait between updates in ms', 3000)
+  .option('--filter <log type>', 'display only logs of given type, example: error')
   .action(environment => {
     const authData = fetchAuthData(environment, program);
     const stream = new LogStream(authData);

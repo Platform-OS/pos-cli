@@ -79,6 +79,18 @@ pos-cli logs <environment>
 
 From now on as long as your `logs` command is running, logs will aprear here. Errors will trigger system notification if your operating system is supporting them.
 
+You can filter logs by type using `--filter` argument.
+
+```
+pos-cli logs <environment> --filter type
+```
+
+Example:
+
+```
+pos-cli logs staging --filter debug
+```
+
 ### Listing environments
 
 If you forgot know what your environments are named or the url that is corresponding to any name, use:
