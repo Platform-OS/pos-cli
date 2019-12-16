@@ -32,10 +32,10 @@ class LogStream extends EventEmitter {
 
       for (let k in logs) {
         const row = logs[k];
-        const filter = !!program.filter && program.filter.toLowerCase();
+        const filter =  program.filter.toLowerCase();
         const errorType = row.error_type.toLowerCase();
 
-        if (filter !== errorType) continue;
+        if (!!program.filter && filter !== errorType) continue;
 
         if (!storage.exists(row.id)) {
           storage.add(row);
