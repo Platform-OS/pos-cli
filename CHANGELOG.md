@@ -1,9 +1,8 @@
 # Changelog
-## 4.1.19
-* Fixed git submodules in modules/ 
 
 ## 4.1.20
 * Add filter to `pos-cli logs` that allows to display only given log type
+* Fixed git submodules in modules/ 
 
 ## 4.1.19 5 December 2019
 * .zip files are now correctly synced
