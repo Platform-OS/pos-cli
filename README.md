@@ -234,3 +234,12 @@ In the right sidebar there is a schema documentation should you need it.
 #### Resources editor
 
 To list, edit and create resources open [http://localhost:3333/gui/editor](http://localhost:3333/gui/) in your web browser.
+
+
+## Development
+
+`pos-cli gui serve` (graphiql) has its own build process. You will find it in `gui/editor/graphql`.
+
+To develop install dependencies (`npm ci`) and start development mode (`npm start`).
+
+After your work is done, build production assets (`npm run build`) and commit changes to repository.
