@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.1.20 19 December 2019
+## 4.2.1 19 December 2019
 * Add filter to `pos-cli logs` that allows to display only given log type
 * Fixed git submodules in modules/ 
 * Add graphiql explorer to `pos-cli gui serve`
