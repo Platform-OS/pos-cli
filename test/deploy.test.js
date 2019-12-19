@@ -2,6 +2,8 @@
 
 const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
+const extract = require('extract-zip');
+const fs = require('fs');
 const path = require('path');
 
 require('dotenv').config();
@@ -9,6 +11,16 @@ require('dotenv').config();
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
 
 const run = fixtureName => exec(`${cliPath} deploy`, { cwd: cwd(fixtureName), env: process.env });
+
+const extractZip = (source, options = {}) => {
+  const promise = new Promise(function(resolve, reject) {
+    extract(source, options, function(err) {
+      if (err) reject(err)
+      resolve()
+    })
+  })
+  return promise
+};
 
 jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
 
@@ -18,6 +30,11 @@ describe('Happy path', () => {
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('Deploy succeeded after');
+
+    const deployDir = cwd('correct');
+    await extractZip(`${deployDir}/tmp/release.zip`, {dir: `${deployDir}/tmp/release`});
+    const nestedPartial = fs.readFileSync(`${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`, 'utf8');
+    expect(nestedPartial).toMatch('dir/subdir/foo');
   });
 
   test('Legacy directory', async () => {
