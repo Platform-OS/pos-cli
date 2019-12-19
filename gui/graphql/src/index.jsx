@@ -6,10 +6,12 @@ import GraphiQLExplorer from "graphiql-explorer";
 import "graphiql/graphiql.css";
 
 let printConnectionInfo = env => {
-  document.querySelector('#status-bar').textContent = `platformOS - ${env.MPKIT_URL}`;
+  document.querySelector(
+    "#status-bar"
+  ).textContent = `platformOS - ${env.MPKIT_URL}`;
 };
 
-fetch('/info')
+fetch("/info")
   .then(response => response.json())
   .then(printConnectionInfo)
   .catch(console.error);
@@ -42,6 +44,12 @@ const DEFAULT_QUERY = `query GetModel {
       id
       model_schema_name
     }
+  }
+}
+
+mutation CreateSession {
+  user_session_create(email: "test@example.com", password: "s3cretp@ssw0rd1337") {
+    id
   }
 }`;
 
@@ -80,13 +88,13 @@ class App extends Component {
           schema={schema}
           query={query}
           onEdit={this._handleEditQuery}
-          onRunOperation={operationName =>
-            this._graphiql.handleRunQuery(operationName)
-          }
           explorerIsOpen={this.state.explorerIsOpen}
           onToggleExplorer={this._handleToggleExplorer}
         />
         <GraphiQL
+          ref={n => {
+            this.editor = n;
+          }}
           fetcher={fetcher}
           schema={schema}
           query={query}
@@ -95,17 +103,17 @@ class App extends Component {
         >
           <GraphiQL.Toolbar>
             <GraphiQL.Button
-              onClick={() => this._graphiql.handlePrettifyQuery()}
+              onClick={() => this.editor.handlePrettifyQuery()}
+              title="Prettify Query (Shift-Ctrl-P)"
               label="Prettify"
-              title="Prettify Query"
             />
             <GraphiQL.Button
-              onClick={() => this._graphiql.handleToggleHistory()}
-              label="History"
+              onClick={() => this.editor.handleToggleHistory()}
               title="Show History"
+              label="History"
             />
             <GraphiQL.Button
-              onClick={this._handleToggleExplorer}
+              onClick={() => this._handleToggleExplorer()}
               label="Explorer"
               title="Toggle Explorer"
             />
