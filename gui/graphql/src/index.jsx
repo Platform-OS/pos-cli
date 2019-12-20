@@ -53,6 +53,19 @@ mutation CreateSession {
   }
 }`;
 
+
+const cleanSchema = schema => {
+  const types = schema.__schema.types.map(type => {
+    if (type.fields) {
+      type.fields = type.fields.filter(field => !field.isDeprecated);
+    }
+
+    return type;
+  });
+
+  return { ...schema, types };
+};
+
 class App extends Component {
   constructor(props) {
     super(props);
@@ -69,16 +82,17 @@ class App extends Component {
       query: getIntrospectionQuery()
     }).then(result => {
       this.setState({ schema: buildClientSchema(result.data) });
+      this.setState({ cleanSchema: buildClientSchema(cleanSchema(result.data)) });
     });
   }
 
   _getInitialQuery = () => {
-    return localStorage.getItem('query') || DEFAULT_QUERY;
-  }
+    return localStorage.getItem("query") || DEFAULT_QUERY;
+  };
 
   _handleEditQuery = query => {
     this.setState({ query });
-    localStorage.setItem('query', query);
+    localStorage.setItem("query", query);
   };
 
   _handleToggleExplorer = () => {
@@ -86,11 +100,11 @@ class App extends Component {
   };
 
   render() {
-    const { query, schema } = this.state;
+    const { query, schema, cleanSchema } = this.state;
     return (
       <div className="graphiql-container">
         <GraphiQLExplorer
-          schema={schema}
+          schema={cleanSchema}
           query={query}
           onEdit={this._handleEditQuery}
           explorerIsOpen={this.state.explorerIsOpen}
