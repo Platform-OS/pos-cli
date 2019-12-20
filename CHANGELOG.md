@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.2.3 20 December 2019
+* Keep last used query in localStorage 
+
 ## 4.2.2 19 December 2019
 * Fix prettify and history features in `pos-cli gui serve`
 

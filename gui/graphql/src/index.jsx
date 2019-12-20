@@ -59,7 +59,7 @@ class App extends Component {
     this._graphiql = GraphiQL;
     this.state = {
       schema: null,
-      query: DEFAULT_QUERY,
+      query: this._getInitialQuery(),
       explorerIsOpen: true
     };
   }
@@ -72,8 +72,13 @@ class App extends Component {
     });
   }
 
+  _getInitialQuery = () => {
+    return localStorage.getItem('query') || DEFAULT_QUERY;
+  }
+
   _handleEditQuery = query => {
     this.setState({ query });
+    localStorage.setItem('query', query);
   };
 
   _handleToggleExplorer = () => {
