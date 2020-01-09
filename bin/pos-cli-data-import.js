@@ -21,7 +21,7 @@ const logInvalidFile = filename => {
   );
 };
 
-const dataImport = async filename => {
+const dataImport = async (filename, rawIds) => {
   const data = fs.readFileSync(filename, 'utf8');
   if (!isValidJSON(data)) return logInvalidFile(filename);
 
@@ -30,6 +30,7 @@ const dataImport = async filename => {
   shell.mkdir('-p', './tmp');
   fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
   const formData = { 'import[data]': fs.createReadStream(tmpFileName) };
+  formData['raw_ids'] = rawIds;
   gateway
     .dataImportStart(formData)
     .then(importTask => {
@@ -60,8 +61,10 @@ program
   .name('pos-cli data import')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <import-file-path>', 'path of import .json file', 'data.json')
+  .option('--raw-ids <raw-ids>', 'do not remap ids after import', 'false')
   .action((environment, params) => {
     const filename = params.path;
+    const rawIds = params.rawIds;
     const authData = fetchAuthData(environment, program);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
@@ -69,7 +72,7 @@ program
     });
 
     gateway = new Gateway(authData);
-    dataImport(filename);
+    dataImport(filename, rawIds);
   });
 
 program.parse(process.argv);
