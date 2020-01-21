@@ -17,7 +17,7 @@ program
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
 
-    gateway.listMigrations().then(response => response.migrations.reverse().map(logMigration));
+    gateway.listMigrations().then(response => response.migrations.map(logMigration));
   });
 
 program.parse(process.argv);
