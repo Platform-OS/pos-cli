@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 const EventEmitter = require('events'),
-  path = require('path');
+  path = require('path'),
+  url = require('url');
 
 const program = require('commander'),
   notifier = require('node-notifier');
@@ -63,11 +64,12 @@ program
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--interval <interval>', 'time to wait between updates in ms', 3000)
   .option('--filter <log type>', 'display only logs of given type, example: error')
+  .option('--quiet', 'show only log message, without context')
   .action(environment => {
     const authData = fetchAuthData(environment, program);
     const stream = new LogStream(authData);
 
-    stream.on('message', ({ created_at, error_type, message }) => {
+    stream.on('message', ({ created_at, error_type, message, data }) => {
       if (message == null) message = '';
 
       const text = `[${created_at.replace('T', ' ')}] - ${error_type}: ${message.replace(/\n$/, '')}`;
@@ -83,6 +85,19 @@ program
         logger.Error(text, options);
       } else {
         logger.Info(text, options);
+        if (!program.quiet) {
+          let parts  = [];
+          if (data['url']) {
+            requestUrl = url.parse(`https://${data['url']}`);
+            let line = `path: ${requestUrl.pathname}`;
+            if (requestUrl.search) line += `${requestUrl.search}`;
+            parts.push(line);
+          }
+          if (data['page']) parts.push(`page: ${data['page']}`);
+          if (data['partial']) parts.push(`partial: ${data['partial']}`);
+          if (data['user'] && data['user']['email']) parts.push(`email: ${data['user']['email']}`);
+          if (parts.length > 0) logger.Quiet(parts.join(' '), options);
+        }
       }
     });
 
