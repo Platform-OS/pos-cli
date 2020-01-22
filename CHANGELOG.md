@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.4 XX January 2020
+* `pos-cli logs` now prints info about request path and partial when available
+* `pos-cli migrations list` list migrations in order of execution
+
 ## 4.2.3 20 December 2019
 * `pos-cli gui serve` now remembers last used query between page reloads 
 * `pos-cli gui serve` GraphiQL explorer will not show deprecated queries/mutations
