@@ -86,16 +86,16 @@ program
       } else {
         logger.Info(text, options);
         if (!program.quiet) {
-          let parts  = [];
-          if (data['url']) {
-            requestUrl = url.parse(`https://${data['url']}`);
+          let parts = [];
+          if (data.url) {
+            requestUrl = url.parse(`https://${data.url}`);
             let line = `path: ${requestUrl.pathname}`;
             if (requestUrl.search) line += `${requestUrl.search}`;
             parts.push(line);
           }
-          if (data['page']) parts.push(`page: ${data['page']}`);
-          if (data['partial']) parts.push(`partial: ${data['partial']}`);
-          if (data['user'] && data['user']['email']) parts.push(`email: ${data['user']['email']}`);
+          if (data.page) parts.push(`page: ${data.page}`);
+          if (data.partial) parts.push(`partial: ${data.partial}`);
+          if (data.user && data.user.email) parts.push(`email: ${data.user..email.}`);
           if (parts.length > 0) logger.Quiet(parts.join(' '), options);
         }
       }
