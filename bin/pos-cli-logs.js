@@ -95,7 +95,7 @@ program
           }
           if (data.page) parts.push(`page: ${data.page}`);
           if (data.partial) parts.push(`partial: ${data.partial}`);
-          if (data.user && data.user.email) parts.push(`email: ${data.user..email.}`);
+          if (data.user && data.user.email) parts.push(`email: ${data.user.email}`);
           if (parts.length > 0) logger.Quiet(parts.join(' '), options);
         }
       }
