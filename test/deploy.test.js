@@ -10,7 +10,7 @@ require('dotenv').config();
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
 
-const run = fixtureName => exec(`${cliPath} deploy`, { cwd: cwd(fixtureName), env: process.env });
+const run = (fixtureName, options) => exec(`${cliPath} deploy ${options}`, { cwd: cwd(fixtureName), env: process.env });
 
 const extractZip = (source, options = {}) => {
   const promise = new Promise(function(resolve, reject) {
@@ -43,6 +43,51 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded after');
   });
 
+  test('correct with direct upload', async () => {
+    const { stdout, stderr } = await run('correct', '-d');
+
+    expect(stdout).toMatch(process.env.MPKIT_URL);
+    expect(stdout).toMatch('There are no assets to deploy, skipping.');
+    expect(stdout).toMatch('Deploy succeeded');
+
+    const deployDir = cwd('correct');
+    await extractZip(`${deployDir}/tmp/release.zip`, {dir: `${deployDir}/tmp/release`});
+    const nestedPartial = fs.readFileSync(`${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`, 'utf8');
+    expect(nestedPartial).toMatch('dir/subdir/foo');
+  });
+
+  test('correct with assets with direct upload', async () => {
+    const { stdout, stderr } = await run('correct_with_assets', '-d');
+
+    expect(stdout).toMatch(process.env.MPKIT_URL);
+    expect(stdout).toMatch('Assets uploaded to S3.');
+    expect(stdout).toMatch('Waiting for assets to be propagated to CDN');
+    expect(stdout).toMatch('Deploy succeeded');
+
+    const deployDir = cwd('correct_with_assets');
+    await extractZip(`${deployDir}/tmp/release.zip`, {dir: `${deployDir}/tmp/release`});
+    const nestedPartial = fs.readFileSync(`${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`, 'utf8');
+    expect(nestedPartial).toMatch('dir/subdir/foo');
+
+    await extractZip(`${deployDir}/tmp/assets.zip`, {dir: `${deployDir}/tmp/release_assets`});
+    expect(fs.existsSync(`${deployDir}/tmp/release_assets/foo.js`)).toBeTruthy();
+    expect(fs.existsSync(`${deployDir}/tmp/release_assets/modules/testModule/bar.js`)).toBeTruthy();
+  });
+
+  test('only assets', async () => {
+    const { stdout, stderr } = await run('correct_only_assets');
+    expect(stdout).not.toMatch('There are no files in release file, skipping.');
+    expect(stdout).toMatch(process.env.MPKIT_URL);
+    expect(stdout).toMatch('Deploy succeeded after');
+  });
+
+  test('only assets with direct upload', async () => {
+    const { stdout, stderr } = await run('correct_only_assets', '-d');
+    expect(stdout).toMatch('There are no files in release file, skipping.');
+    expect(stdout).toMatch('Assets uploaded to S3.');
+    expect(stdout).toMatch('Waiting for assets to be propagated to CDN');
+    expect(stdout).toMatch('Deploy finished');
+  });
 });
 
 describe('Server errors', () => {
