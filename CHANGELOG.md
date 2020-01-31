@@ -1,8 +1,9 @@
 # Changelog
 
-## 4.2.4 XX January 2020
+## 4.2.4-beta.0 31 January 2020
 * `pos-cli logs` now prints info about request path and partial when available
 * `pos-cli migrations list` list migrations in order of execution
+* Fixed `pos-cli deploy` command with `-d` option for direct assets upload
 
 ## 4.2.3 20 December 2019
 * `pos-cli gui serve` now remembers last used query between page reloads 
