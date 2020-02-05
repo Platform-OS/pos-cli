@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.2.4-beta.0 31 January 2020
+## 4.2.4 5 February 2020
 * `pos-cli logs` now prints info about request path and partial when available
 * `pos-cli migrations list` list migrations in order of execution
 * Fixed `pos-cli deploy` command with `-d` option for direct assets upload
