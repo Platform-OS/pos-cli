@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.2.5-beta.0 February 2020
+* Added `--direct-assets-upload` option to `pos-cli sync`command for faster
+  assets syncing 
+
 ## 4.2.4 5 February 2020
 * `pos-cli logs` now prints info about request path and partial when available
 * `pos-cli migrations list` list migrations in order of execution
