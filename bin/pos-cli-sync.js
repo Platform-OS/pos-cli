@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
+  deployStrategy = require('../lib/deploy/strategy'),
   watch = require('../lib/watch'),
   fetchAuthData = require('../lib/settings').fetchSettings;
 
@@ -20,7 +21,10 @@ program
       CONCURRENCY: process.env.CONCURRENCY || params.concurrency
     });
 
-    watch.start(env, params.directAssetsUpload);
+    const strategy = 'default';
+    deployStrategy.run({ strategy, opts: { env, authData, params } }).then(() => {
+      watch.start(env, params.directAssetsUpload);
+    });
   });
 
 program.parse(process.argv);
