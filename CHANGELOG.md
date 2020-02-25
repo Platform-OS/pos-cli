@@ -1,9 +1,7 @@
 # Changelog
 
-## 4.2.5 February 2020
+## 4.2.5 25 February 2020
 * Added `mp3`, `mp4`, `webm` and `ogg`, extensions to `pos-cli sync` watch list
-
-## 4.2.5-beta.0 6 February 2020
 * Added `--direct-assets-upload` (`-d`) option to `pos-cli sync` command for faster
   assets syncing 
 
