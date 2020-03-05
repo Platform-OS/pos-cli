@@ -19,6 +19,7 @@ program
   .command('audit', 'check your code for deprecations, recommendations, errors')
   .command('env', 'manage environments')
   .command('data', 'export, import or clean data on instance')
+  .command('app', 'export the /app directory from the instance')
   .command('deploy <environment>', 'deploy code to environment')
   .alias('d')
   .command('gui', 'gui for content editor, graphql')
