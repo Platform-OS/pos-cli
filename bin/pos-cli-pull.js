@@ -23,7 +23,7 @@ const downloadFile = (url, fileName) => {
 }
 
 program
-  .name('pos-cli data export')
+  .name('pos-cli pull')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <export-file-path>', 'output for exported data', 'app.zip')
   .action((environment, params) => {
