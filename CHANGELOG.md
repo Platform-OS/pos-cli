@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.3.0
+* `pos-cli sync` is now deleting files, if file was removed while sync running
+
 ## 4.2.5 25 February 2020
 * Added `mp3`, `mp4`, `webm` and `ogg`, extensions to `pos-cli sync` watch list
 * Added `--direct-assets-upload` (`-d`) option to `pos-cli sync` command for faster
