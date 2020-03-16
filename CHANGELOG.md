@@ -1,7 +1,9 @@
 # Changelog
 
 ## 4.3.0
+* `pos-cli pull` command has been added. It pulls compressed resources (pages, notifications, forms, graphql files etc.) from the `<environment>`. Use `pos-cli pull --help` to read help.
 * `pos-cli sync` is now deleting files, if file was removed while sync running
+* `pos-cli audit` is now warning about wrong file types in some directories
 
 ## 4.2.5 25 February 2020
 * Added `mp3`, `mp4`, `webm` and `ogg`, extensions to `pos-cli sync` watch list
