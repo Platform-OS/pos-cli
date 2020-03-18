@@ -1,26 +1,13 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  fs = require('fs'),
   ora = require('ora'),
-  https = require('https'),
   Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
+  downloadFile = require('../lib/downloadFile'),
   waitForStatus = require('../lib/data/waitForStatus');
 const spinner = ora({ text: 'Exporting', stream: process.stdout, spinner: 'bouncingBar' });
-
-const downloadFile = (url, fileName) => {
-  return new Promise((resolve, reject) => {
-    let file = fs.createWriteStream(fileName).on('close', () => resolve());
-    https.get(url, response => {
-      response.pipe(file);
-      file.on('finish', () => {
-        file.close(resolve);
-      }).on('error', reject);
-    });
-  });
-}
 
 program
   .name('pos-cli pull')
