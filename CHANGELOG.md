@@ -1,6 +1,9 @@
 # Changelog
 
-## 4.3.0
+## 4.4.0 
+* Added `pos-cli modules pull` command.
+
+## 4.3.0 18 March 2020
 * `pos-cli pull` command has been added. It pulls compressed resources (pages, notifications, forms, graphql files etc.) from the `<environment>`. Use `pos-cli pull --help` to read help.
 * `pos-cli sync` is now deleting files, if file was removed while sync running
 * `pos-cli audit` is now warning about wrong file types in some directories
