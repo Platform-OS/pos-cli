@@ -2,6 +2,7 @@
 
 ## 4.4.0 - 
 * Added `pos-cli modules pull <environment> <module name>` command. It works similar to `pos-cli pull`, but pulls only given module files. Use `pos-cli modules pull --help` to read help
+* Improve messaging of wrong file types
 
 ## 4.3.0 - 18 March 2020
 * `pos-cli pull` command has been added. It pulls compressed resources (pages, notifications, forms, graphql files etc.) from given environment. It pulls only files from `app/` directory. Use `pos-cli pull --help` to read help
