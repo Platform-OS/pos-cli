@@ -11,10 +11,10 @@ const spinner = ora({ text: 'Exporting', stream: process.stdout, spinner: 'bounc
 
 program
   .name('pos-cli modules pull')
-  .arguments('[module]', 'module name to pull')
   .arguments('[environment]', 'name of the environment. Example: staging')
+  .arguments('[module]', 'module name to pull')
   .option('-p --path <export-file-path>', 'output for exported data', 'modules.zip')
-  .action((module, environment, params) => {
+  .action((environment, module, params) => {
     const filename = params.path;
     const authData = fetchAuthData(environment, program);
     let gateway = new Gateway(authData);
