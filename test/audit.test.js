@@ -56,12 +56,16 @@ describe('Audit - modules directory', () => {
   test('Reports errors for modules files', async () => {
     const { stdout } = await run('modules');
 
-    expect(stdout).toMatch('[Audit] 3 rules detected issues.');
+    expect(stdout).toMatch('[Audit] 4 rules detected issues.');
     expect(stdout).toMatch('enable_profiler: true');
     expect(stdout).toMatch('[DEPRECATED TAG] query_graph');
     expect(stdout).toMatch(path.join('modules', 'first', 'public', 'views', 'pages', 'error.liquid'));
     expect(stdout).toMatch(path.join('modules', 'first', 'public', 'views', 'pages', 'error2.liquid'));
     expect(stdout).toMatch(path.join('modules', 'second', 'private', 'views', 'pages', 'error.liquid'));
     expect(stdout).toMatch(path.join('modules', 'second', 'private', 'views', 'pages', 'error2.liquid'));
+
+    expect(stdout).toMatch('Only .graphql files should be in graphql directory');
+    expect(stdout).toMatch(path.join('modules', 'first', 'public', 'graphql', 'test.liquid'));
+    expect(stdout).not.toMatch(path.join('modules', 'graphql', 'public', 'views', 'pages', 'home.liquid'));
   });
 });
