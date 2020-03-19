@@ -13,7 +13,7 @@ program
   .name('pos-cli modules pull')
   .arguments('[module]', 'module name to pull')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-p --path <export-file-path>', 'output for exported data', 'app.zip')
+  .option('-p --path <export-file-path>', 'output for exported data', 'modules.zip')
   .action((module, environment, params) => {
     const filename = params.path;
     const authData = fetchAuthData(environment, program);
