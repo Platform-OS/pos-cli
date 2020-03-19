@@ -10,16 +10,17 @@ const program = require('commander'),
 const spinner = ora({ text: 'Exporting', stream: process.stdout, spinner: 'bouncingBar' });
 
 program
-  .name('pos-cli pull')
+  .name('pos-cli modules pull')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-p --path <export-file-path>', 'output for exported data', 'app.zip')
-  .action((environment, params) => {
+  .arguments('[module]', 'module name to pull')
+  .option('-p --path <export-file-path>', 'output for exported data', 'modules.zip')
+  .action((environment, module, params) => {
     const filename = params.path;
     const authData = fetchAuthData(environment, program);
     let gateway = new Gateway(authData);
     spinner.start();
     gateway
-      .appExportStart()
+      .appExportStart({ module_name: module })
       .then(exportTask => {
         waitForStatus(() => gateway.appExportStatus(exportTask.id))
           .then(exportTask => downloadFile(exportTask.zip_file.url, filename))
