@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.4.5 -
+* Added `--open` (`-o`) flag to `pos-cli gui serve` and `pos-cli sync`. It opens respectively GraphiQL and instance in default browser when ready
+
 ## 4.4.0 - 20 March 2020
 * Added `pos-cli modules pull <environment> <module name>` command. It works similar to `pos-cli pull`, but pulls only given module files. Use `pos-cli modules pull --help` to read help
 * Improve messaging of wrong file types

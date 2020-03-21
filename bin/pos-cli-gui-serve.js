@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 
 const program = require('commander'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  server = require('../lib/server');
+  open = require('open');
+
+const fetchAuthData = require('../lib/settings').fetchSettings,
+  server = require('../lib/server'),
   logger = require('../lib/logger');
 
 program
   .name('pos-cli gui serve')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .option('-p --port <port>', 'use PORT', '3333')
+  .option('-p, --port <port>', 'use PORT', '3333')
+  .option('-o, --open', 'when ready, open default browser with graphiql')
   .action(async (environment, params) => {
     const authData = fetchAuthData(environment, program);
 
@@ -19,11 +22,12 @@ program
       PORT: params.port
     });
 
-    try{
+    try {
       await server.start(process.env);
-    } catch(e) {
+      await open(`http://localhost:${params.port}/gui/graphql`);
+    } catch (e) {
       logger.Error('✖ Failed.');
-    };
+    }
   });
 
 program.parse(process.argv);

@@ -2,7 +2,9 @@
 
 const program = require('commander'),
   watch = require('../lib/watch'),
-  fetchAuthData = require('../lib/settings').fetchSettings;
+  open = require('open');
+
+const fetchAuthData = require('../lib/settings').fetchSettings;
 
 const DEFAULT_CONCURRENCY = 3;
 
@@ -10,8 +12,9 @@ program
   .name('pos-cli sync')
   .arguments('[environment]', 'Name of environment. Example: staging')
   .option('--concurrency <number>', 'maximum concurrent connections to the server', DEFAULT_CONCURRENCY)
-  .option('-d --direct-assets-upload', 'Uploads assets straight to S3 servers. [experimental]')
-  .action((environment, params) => {
+  .option('-d, --direct-assets-upload', 'Uploads assets straight to S3 servers. [experimental]')
+  .option('-o, --open', 'when ready, open default browser with instance')
+  .action(async (environment, params) => {
     const authData = fetchAuthData(environment, program);
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
@@ -21,6 +24,7 @@ program
     });
 
     watch.start(env, params.directAssetsUpload);
+    await open(`${authData.url}`);
   });
 
 program.parse(process.argv);
