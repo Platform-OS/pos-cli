@@ -24,7 +24,10 @@ program
 
     try {
       await server.start(process.env);
-      await open(`http://localhost:${params.port}/gui/graphql`);
+
+      if (params.open) {
+        await open(`http://localhost:${params.port}/gui/graphql`);
+      }
     } catch (e) {
       logger.Error('✖ Failed.');
     }

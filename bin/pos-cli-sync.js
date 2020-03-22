@@ -24,7 +24,10 @@ program
     });
 
     watch.start(env, params.directAssetsUpload);
-    await open(`${authData.url}`);
+
+    if (params.open) {
+      await open(`${authData.url}`);
+    }
   });
 
 program.parse(process.argv);
