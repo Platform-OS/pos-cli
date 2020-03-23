@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.4.5 -
+## 4.4.5 - 23 March 2020
 * Added `--open` (`-o`) flag to `pos-cli gui serve` and `pos-cli sync`. It opens respectively GraphiQL and instance in default browser when ready
 * Fixed windows audit for invalid file paths
 
