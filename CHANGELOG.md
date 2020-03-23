@@ -1,9 +1,8 @@
 # Changelog
 
-## 4.4.5 - 23 March 2020
+## 4.4.4 - 23 March 2020
 * Added `--open` (`-o`) flag to `pos-cli gui serve` and `pos-cli sync`. It opens respectively GraphiQL and instance in default browser when ready
 * Fixed windows audit for invalid file paths
-
 
 ## 4.4.0 - 20 March 2020
 * Added `pos-cli modules pull <environment> <module name>` command. It works similar to `pos-cli pull`, but pulls only given module files. Use `pos-cli modules pull --help` to read help
