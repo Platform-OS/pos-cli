@@ -47,19 +47,27 @@ describe('Happy path', () => {
   });
 
   test('delete synced file', async () => {
+    const dir = 'model_schemas';
+    const fileName = `${dir}/test.yml`;
+    const validYML = `name: test
+properties:
+  - name: list_id
+    type: string
+`;
+
     const steps = async (child) => {
+      exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
       await sleep(2000); //wait for sync to start
-      exec('echo "x" >> app/views/pages/test.liquid', { cwd: cwd('correct_with_assets') });
-      await sleep(2000); //wait for syncing the file
-      exec('rm app/views/pages/test.liquid', { cwd: cwd('correct_with_assets') });
-      await sleep(2000); //wait for deleting the file
+      exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
+      await sleep(8000); //wait for syncing the file
+      exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
+      await sleep(8000); //wait for deleting the file
       child.kill();
     }
-    const { stdout, stderr } = await run('correct_with_assets', null, steps);
+    const { stdout } = await run('correct_with_assets', null, steps);
 
-    expect(stderr).toMatch('');
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch('[Sync] Synced: views/pages/test.liquid');
-    expect(stdout).toMatch('[Sync] Deleted: views/pages/test.liquid');
+    expect(stdout).toMatch(`[Sync] Synced: ${fileName}`);
+    expect(stdout).toMatch(`[Sync] Deleted: ${fileName}`);
   });
 });
