@@ -1,6 +1,9 @@
 # Changelog
 
-## 4.4.6 - 26 March 2020
+## 4.4.8 - 26 March 2020
+* `pos-cli audit` will not report filenames with characters `+ ( )` as invalid
+
+## 4.4.7 - 26 March 2020
 * Fix regression in `sync` not syncing anymore after couple files synced
 
 ## 4.4.6 - 26 March 2020
