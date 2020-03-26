@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.4.6 - 25 March 2020
+## 4.4.6 - 26 March 2020
 * Fix regression when no `--livereload` was used in `sync`
 
 ## 4.4.5 - 25 March 2020
