@@ -1,6 +1,9 @@
 # Changelog
 
-## 4.4.5 -
+## 4.4.6 - 25 March 2020
+* Fix regression when no `--livereload` was used in `sync`
+
+## 4.4.5 - 25 March 2020
 * Added `--livereload` (`-o`) flag to `pos-cli sync` which starts livereload server to refresh browsers automatically on file change. Requires installed livereload browser extension to work
 
 ## 4.4.4 - 23 March 2020
