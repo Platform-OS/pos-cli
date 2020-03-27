@@ -23,7 +23,7 @@ describe('Happy path', () => {
     const { stdout } = await run('correct');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch('Deploy succeeded after');
+    expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
     await extract(`${deployDir}/tmp/release.zip`, { dir: `${deployDir}/tmp/release` });
@@ -37,7 +37,7 @@ describe('Happy path', () => {
   test('Legacy directory', async () => {
     const { stdout } = await run('correct_mpbuilder');
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch('Deploy succeeded after');
+    expect(stdout).toMatch('Deploy succeeded');
   });
 
   test('correct with direct upload', async () => {
@@ -77,19 +77,19 @@ describe('Happy path', () => {
     expect(fs.existsSync(`${deployDir}/tmp/release_assets/modules/testModule/bar.js`)).toBeTruthy();
   });
 
-  test('only assets', async () => {
-    const { stdout, stderr } = await run('correct_only_assets');
+  test('only assets with old upload', async () => {
+    const { stdout, stderr } = await run('correct_only_assets', '-o');
     expect(stdout).not.toMatch('There are no files in release file, skipping.');
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch('Deploy succeeded after');
+    expect(stdout).toMatch('Deploy succeeded');
   });
 
-  test('only assets with direct upload', async () => {
-    const { stdout, stderr } = await run('correct_only_assets', '-d');
+  test('only assets', async () => {
+    const { stdout, stderr } = await run('correct_only_assets');
     expect(stdout).toMatch('There are no files in release file, skipping.');
     expect(stdout).toMatch('Assets uploaded to S3.');
     expect(stdout).toMatch('Waiting for assets to be propagated to CDN');
-    expect(stdout).toMatch('Deploy finished');
+    expect(stdout).toMatch('Deploy succeeded');
   });
 });
 
