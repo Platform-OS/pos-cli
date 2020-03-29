@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.4.9 -
+* Fix `pos-cli deploy -d` assets manifest creation on Windows 
+* Make `--force` default in `pos-cli init`
+
 ## 4.4.8 - 26 March 2020
 * `pos-cli audit` will not report filenames with characters `+ ( )` as invalid
 
