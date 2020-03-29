@@ -25,7 +25,7 @@
     "pOS"
   ],
   "dependencies": {
-    "@sentry/node": "^5.15.0",
+    "@sentry/node": "^5.15.4",
     "archiver": "^3.1.1",
     "archiver-promise": "^1.0.0",
     "async": "^3.2.0",
@@ -37,7 +37,7 @@
     "degit": "^2.8.0",
     "email-validator": "^2.0.4",
     "express": "^4.17.1",
-    "extract-zip": "^1.6.7",
+    "extract-zip": "^2.0.0",
     "fast-glob": "^3.2.2",
     "ignore": "^5.1.4",
     "js-yaml": "^3.13.1",
@@ -92,6 +92,6 @@
   "homepage": "https://github.com/mdyd-dev/pos-cli#readme",
   "devDependencies": {
     "dotenv": "^8.2.0",
-    "jest": "^25.1.0"
+    "jest": "^25.2.3"
   }
 }
