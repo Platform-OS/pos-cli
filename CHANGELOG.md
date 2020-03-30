@@ -1,17 +1,18 @@
 # Changelog
 
 ## 4.4.9 -
-* Fix `pos-cli deploy -d` assets manifest creation on Windows 
-* Make `--force` default in `pos-cli init`
+* Fixed `pos-cli deploy -d` assets manifest creation on Windows 
+* `pos-cli init` is now using `--force` by default
+* Fixed `pos-cli audit` for graphql audit when checking multiline tag
 
 ## 4.4.8 - 26 March 2020
 * `pos-cli audit` will not report filenames with characters `+ ( )` as invalid
 
 ## 4.4.7 - 26 March 2020
-* Fix regression in `sync` not syncing anymore after couple files synced
+* Fixed regression in `sync` not syncing anymore after couple files synced
 
 ## 4.4.6 - 26 March 2020
-* Fix regression when no `--livereload` was used in `sync`
+* Fixed regression when no `--livereload` was used in `sync`
 
 ## 4.4.5 - 25 March 2020
 * Added `--livereload` (`-o`) flag to `pos-cli sync` which starts livereload server to refresh browsers automatically on file change. Requires installed livereload browser extension to work
