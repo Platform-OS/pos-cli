@@ -12,7 +12,7 @@ const clean = gateway => {
   logger.Info('Going to clean data');
   gateway
     .dataClean(confirmationText)
-    .then(() => logger.Success('Instance data cleaned.'))
+    .then(() => logger.Success('Instance data scheduled to be clean.'))
     .catch({ statusCode: 404 }, () => logger.Error('[404] Data clean is not supported by the server'));
 };
 
