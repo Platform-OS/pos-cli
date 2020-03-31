@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.4.9 -
+## 4.4.9 - 31 March 2020
 * Fixed `pos-cli deploy -d` assets manifest creation on Windows 
 * `pos-cli init` is now using `--force` by default
 * Fixed `pos-cli audit` for graphql audit when checking multiline tag
