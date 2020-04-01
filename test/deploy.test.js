@@ -60,8 +60,6 @@ describe('Happy path', () => {
     const { stdout, stderr } = await run('correct_with_assets', '-d');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch('Assets uploaded to S3.');
-    expect(stdout).toMatch('Waiting for assets to be propagated to CDN');
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct_with_assets');
@@ -87,8 +85,6 @@ describe('Happy path', () => {
   test('only assets', async () => {
     const { stdout, stderr } = await run('correct_only_assets');
     expect(stdout).toMatch('There are no files in release file, skipping.');
-    expect(stdout).toMatch('Assets uploaded to S3.');
-    expect(stdout).toMatch('Waiting for assets to be propagated to CDN');
     expect(stdout).toMatch('Deploy succeeded');
   });
 });
