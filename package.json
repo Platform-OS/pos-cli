@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "4.4.9",
+  "version": "4.4.10",
   "description": "Manage your platformOS application",
   "scripts": {
     "prepack": "rm -rf gui/graphql/node_modules",
