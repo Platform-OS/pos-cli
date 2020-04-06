@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.4.10 -
+* Fixed `pos-cli audit` - now auditing files only in `app` and `modules` directories
+
 ## 4.4.9 - 31 March 2020
 * Fixed `pos-cli deploy -d` assets manifest creation on Windows 
 * `pos-cli init` is now using `--force` by default
