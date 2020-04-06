@@ -2,6 +2,7 @@
 
 ## 4.4.10 -
 * Fixed `pos-cli audit` - now auditing files only in `app` and `modules` directories
+* Added `@` and `%` to valid `pos-cli sync` characters
 
 ## 4.4.9 - 31 March 2020
 * Fixed `pos-cli deploy -d` assets manifest creation on Windows 
