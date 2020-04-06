@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.4.10 -
+## 4.4.10 - 6 April 2020
 * Fixed `pos-cli audit` - now auditing files only in `app` and `modules` directories
 * Added `@` and `%` to valid `pos-cli sync` characters
 
