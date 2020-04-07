@@ -45,7 +45,7 @@ program
   .name('pos-cli data clean')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('--auto-confirm', 'auto confirm instance clean without prompt')
-  .option('--include-schema', 'also remove database schema')
+  .option('-i, --include-schema', 'also remove database schema')
   .action((environment, params) => {
     const gateway = new Gateway(fetchAuthData(environment, program));
 
