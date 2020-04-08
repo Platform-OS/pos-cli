@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.4.11 - 8 April 2020
+* Improved errors when you use wrong url
+* Added `--include-schema` to `pos-cli data clean` which will remove pages, schemas, graphqls from instance
+
 ## 4.4.10 - 6 April 2020
 * Fixed `pos-cli audit` - now auditing files only in `app` and `modules` directories
 * Added `@` and `%` to valid `pos-cli sync` characters
