@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.5.0@beta - 8 April 2020
+* `pos-cli deploy` will directly upload assets to s3 by default
+
 ## 4.4.11 - 8 April 2020
 * Improved errors when you use wrong url
 * Added `--include-schema` to `pos-cli data clean` which will remove pages, schemas, graphqls from instance
