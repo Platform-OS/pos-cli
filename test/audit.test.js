@@ -69,3 +69,15 @@ describe('Audit - modules directory', () => {
     expect(stdout).not.toMatch(path.join('modules', 'graphql', 'public', 'views', 'pages', 'home.liquid'));
   });
 });
+
+describe('Audit - orphaned includes', () => {
+  test('Reports errors for 2 not included partials', async () => {
+    const { stdout } = await run('orphanedIncludes');
+
+    expect(stdout).toMatch('[Audit] 1 rule detected issues.')
+    expect(stdout).toMatch(path.join('app', 'views', 'partials', 'not_included_partial.liquid'));
+    expect(stdout).toMatch(path.join('modules', 'test', 'private', 'views', 'partials', 'not_included_partial.liquid'));
+    expect(stdout).not.toMatch('/included_partial.liquid');
+  })
+
+});
