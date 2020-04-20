@@ -1,11 +1,12 @@
 # Changelog
 
 ## 4.5.0@beta - 8 April 2020
-* `pos-cli deploy` will directly upload assets to s3 by default
+* `pos-cli deploy` will directly upload assets to S3 by default
 
 ## 4.4.11 - 8 April 2020
-* Improved errors when you use wrong url
-* Added `--include-schema` to `pos-cli data clean` which will remove pages, schemas, graphqls from instance
+* Improved error message environment URL is not recognized, or there is no internet connection
+* Added `--include-schema` (`-i`) to `pos-cli data clean`. It will additionally remove all admin resources pages, schemas, graphql queries, notifications. It will not clear instance constants or anything set up in Partner Portal
+
 
 ## 4.4.10 - 6 April 2020
 * Fixed `pos-cli audit` - now auditing files only in `app` and `modules` directories
