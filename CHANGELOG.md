@@ -3,6 +3,9 @@
 ## 4.5.0@beta - 8 April 2020
 * `pos-cli deploy` will directly upload assets to S3 by default
 
+## 4.x.x - 2020
+* Added `-c` alias for `--concurrency` in `pos-cli sync`
+
 ## 4.4.11 - 8 April 2020
 * Improved error message environment URL is not recognized, or there is no internet connection
 * Added `--include-schema` (`-i`) to `pos-cli data clean`. It will additionally remove all admin resources pages, schemas, graphql queries, notifications. It will not clear instance constants or anything set up in Partner Portal
