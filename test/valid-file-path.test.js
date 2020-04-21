@@ -6,7 +6,8 @@ describe('Linux - Correct', () => {
     'modules/admin/foo_bar/test--__23~123.html.liquid',
     'modules/admin cms/foo bar/test (Screenshot)%20@.liquid',
     'a/foo/test+99.zip',
-    "modules/homepage/public/assets/images/blog/second-half-2016/Beginner's-Running-Shoes.jpg"
+    "modules/homepage/public/assets/images/blog/second-half-2016/Beginner's-Running-Shoes.jpg",
+    'modules/homepage/public/assets/images/blog/2017/Training for Long Distance Swimming & Triathlons.jpg'
   ];
 
   correct.forEach(p => {
@@ -18,7 +19,6 @@ describe('Linux - Correct', () => {
 
 describe('Linux - Incorrect', () => {
   const incorrect = [
-    "a/foo/test'.zip",
     'a/foo/test".zip',
     'a/foo/test*.zip',
     'a/foo/test#.zip',
@@ -52,7 +52,6 @@ describe('Windows - Correct', () => {
 
 describe('Windows - Incorrect', () => {
   const incorrect = [
-    "a\\foo\\test'.zip",
     'a\\foo\\test".zip',
     'a\\foo\\test*.zip',
     'a\\foo\\test#.zip',
