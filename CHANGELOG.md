@@ -3,7 +3,8 @@
 ## 4.5.0@beta - 8 April 2020
 * `pos-cli deploy` will directly upload assets to S3 by default
 
-## 4.x.x - 2020
+## 4.4.12 - 2020
+* Added `'` and `&` as valid filename characters
 * Added `-c` alias for `--concurrency` in `pos-cli sync`
 
 ## 4.4.11 - 8 April 2020
