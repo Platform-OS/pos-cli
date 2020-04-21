@@ -25,7 +25,7 @@ class LogStream extends EventEmitter {
   }
 
   fetchData() {
-    this.gateway.logs({ lastId: storage.lastId }).then(response => {
+    this.gateway.logs({ lastId: storage.lastId }).then((response) => {
       const logs = response && response.logs;
       if (!logs) {
         return false;
@@ -50,14 +50,14 @@ class LogStream extends EventEmitter {
 const storage = {
   logs: {},
   lastId: 0,
-  add: item => {
+  add: (item) => {
     storage.logs[item.id] = item;
     storage.lastId = item.id;
   },
-  exists: key => storage.logs.hasOwnProperty(key)
+  exists: (key) => storage.logs.hasOwnProperty(key),
 };
 
-const isError = msg => /error/.test(msg.error_type);
+const isError = (msg) => /error/.test(msg.error_type);
 
 program
   .name('pos-cli logs')
@@ -65,7 +65,7 @@ program
   .option('--interval <interval>', 'time to wait between updates in ms', 3000)
   .option('--filter <log type>', 'display only logs of given type, example: error')
   .option('--quiet', 'show only log message, without context')
-  .action(environment => {
+  .action((environment) => {
     const authData = fetchAuthData(environment, program);
     const stream = new LogStream(authData);
 
@@ -79,7 +79,8 @@ program
         notifier.notify({
           title: error_type,
           message: message.slice(0, 100),
-          icon: path.resolve(__dirname, '../lib/pos-logo.png')
+          icon: path.resolve(__dirname, '../lib/pos-logo.png'),
+          'app-name': 'pos-cli',
         });
 
         logger.Error(text, options);
