@@ -50,16 +50,16 @@
     "mustache": "^4.0.1",
     "node-notifier": "^6.0.0",
     "open": "^7.0.3",
-    "ora": "^4.0.3",
+    "ora": "^4.0.4",
     "prompts": "^2.3.2",
     "readdirp": "^3.4.0",
     "request": "^2.88.2",
     "request-promise": "^4.2.5",
-    "semver": "^7.1.3",
+    "semver": "^7.3.2",
     "shelljs": "^0.8.3",
     "socket.io-client": "^2.3.0",
     "update-notifier": "^4.1.0",
-    "uuid": "^7.0.2",
+    "uuid": "^7.0.3",
     "valid-url": "^1.0.9"
   },
   "bundledDependencies": [
@@ -91,6 +91,6 @@
   "homepage": "https://github.com/mdyd-dev/pos-cli#readme",
   "devDependencies": {
     "dotenv": "^8.2.0",
-    "jest": "^25.2.3"
+    "jest": "^25.4.0"
   }
 }
