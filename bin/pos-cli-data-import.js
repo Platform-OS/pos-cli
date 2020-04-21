@@ -9,7 +9,8 @@ const program = require('commander'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   transform = require('../lib/data/uploadFiles'),
   isValidJSON = require('../lib/data/isValidJSON'),
-  waitForStatus = require('../lib/data/waitForStatus');
+  waitForStatus = require('../lib/data/waitForStatus'),
+  path = require('path');
 
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
@@ -22,14 +23,20 @@ const logInvalidFile = filename => {
 };
 
 const dataImport = async (filename, rawIds) => {
-  const data = fs.readFileSync(filename, 'utf8');
-  if (!isValidJSON(data)) return logInvalidFile(filename);
-
   spinner.start();
-  const transformedData = await transform(JSON.parse(data));
-  shell.mkdir('-p', './tmp');
-  fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
-  const formData = { 'import[data]': fs.createReadStream(tmpFileName) };
+
+  let formData = {};
+  if (path.extname(filename) === '.zip') {
+    formData = { 'zip_file': fs.createReadStream(filename) };
+  } else {
+    const data = fs.readFileSync(filename, 'utf8');
+    if (!isValidJSON(data)) return logInvalidFile(filename);
+    const transformedData = await transform(JSON.parse(data));
+    shell.mkdir('-p', './tmp');
+    fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
+    formData = { 'import[data]': fs.createReadStream(tmpFileName) };
+  }
+
   formData['raw_ids'] = rawIds;
   gateway
     .dataImportStart(formData)
@@ -60,7 +67,7 @@ const dataImport = async (filename, rawIds) => {
 program
   .name('pos-cli data import')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-p --path <import-file-path>', 'path of import .json file', 'data.json')
+  .option('-p --path <import-file-path>', 'path of import .json or .zip file', 'data.json, data.zip')
   .option('--raw-ids <raw-ids>', 'do not remap ids after import', 'false')
   .action((environment, params) => {
     const filename = params.path;
