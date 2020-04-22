@@ -24,9 +24,10 @@ const logInvalidFile = filename => {
 
 const dataImport = async (filename, rawIds) => {
   spinner.start();
+  const isZipFile = path.extname(filename) === '.zip';
 
   let formData = {};
-  if (path.extname(filename) === '.zip') {
+  if (isZipFile) {
     formData = { 'zip_file': fs.createReadStream(filename) };
   } else {
     const data = fs.readFileSync(filename, 'utf8');
@@ -45,7 +46,7 @@ const dataImport = async (filename, rawIds) => {
         .stopAndPersist()
         .succeed('Data sent')
         .start('Importing data');
-      waitForStatus(() => gateway.dataImportStatus(importTask.id))
+      waitForStatus(() => gateway.dataImportStatus(importTask.id, isZipFile))
         .then(() => {
           spinner.stopAndPersist().succeed('Import done.');
         })
