@@ -12,7 +12,7 @@ const DEFAULT_CONCURRENCY = 3;
 program
   .name('pos-cli sync')
   .arguments('[environment]', 'Name of environment. Example: staging')
-  .option('--concurrency <number>', 'Maximum concurrent connections to the server', DEFAULT_CONCURRENCY)
+  .option('-c, --concurrency <number>', 'Maximum concurrent connections to the server', DEFAULT_CONCURRENCY)
   .option('-d, --direct-assets-upload', 'Uploads assets straight to S3 servers [experimental]')
   .option('-o, --open', 'When ready, open default browser with instance')
   .option('-l, --livereload', 'Use livereload')

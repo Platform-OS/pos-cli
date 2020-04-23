@@ -1,5 +1,21 @@
 # Changelog
 
+## 4.5.0@beta - 8 April 2020
+* `pos-cli deploy` will directly upload assets to S3 by default
+
+## 4.4.12 - 2020
+* Added `'` and `&` as valid filename characters
+* Added `-c` alias for `--concurrency` in `pos-cli sync`
+
+## 4.4.11 - 8 April 2020
+* Improved error message environment URL is not recognized, or there is no internet connection
+* Added `--include-schema` (`-i`) to `pos-cli data clean`. It will additionally remove all admin resources pages, schemas, graphql queries, notifications. It will not clear instance constants or anything set up in Partner Portal
+
+
+## 4.4.10 - 6 April 2020
+* Fixed `pos-cli audit` - now auditing files only in `app` and `modules` directories
+* Added `@` and `%` to valid `pos-cli sync` characters
+
 ## 4.4.9 - 31 March 2020
 * Fixed `pos-cli deploy -d` assets manifest creation on Windows 
 * `pos-cli init` is now using `--force` by default
