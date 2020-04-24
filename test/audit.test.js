@@ -74,10 +74,16 @@ describe('Audit - orphaned includes', () => {
   test('Reports errors for 2 not included partials', async () => {
     const { stdout } = await run('orphanedIncludes');
 
-    expect(stdout).toMatch('[Audit] 1 rule detected issues.')
+    expect(stdout).toMatch('[Audit] 1 rule detected issues.');
     expect(stdout).toMatch(path.join('app', 'views', 'partials', 'not_included_partial.liquid'));
     expect(stdout).toMatch(path.join('modules', 'test', 'private', 'views', 'partials', 'not_included_partial.liquid'));
     expect(stdout).not.toMatch('/included_partial.liquid');
-  })
+  });
 
+  test('Drops out on variable include', async () => {
+    const { stdout } = await run('orphanedIncludes_variable');
+
+    expect(stdout).toMatch('Found partial included using a variable');
+    expect(stdout).toMatch('[Audit] 0 rules detected issues.');
+  });
 });
