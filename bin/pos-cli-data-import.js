@@ -31,11 +31,16 @@ const dataImport = async (filename, rawIds) => {
 
   let formData = {};
   if (isZipFile) {
-    const tmpFilename = 'data-import-' + crypto.randomBytes(32).toString('hex');
-    const { uploadUrl, accessUrl } = await presignUrl(tmpFilename, filename);
-
-    await uploadFile(filename, uploadUrl);
-    formData = { 'zip_file_url': accessUrl };
+    const uploadedFilename = 'data-import-' + crypto.randomBytes(32).toString('hex');
+    try {
+      const { uploadUrl, accessUrl } = await presignUrl(uploadedFilename, filename);
+      await uploadFile(filename, uploadUrl);
+      formData = { 'zip_file_url': accessUrl };
+    } catch (error) {
+      logger.Debug(error);
+      spinner.fail('Import failed');
+      logger.Error('Unable to upload archive file');
+    }
   } else {
     const data = fs.readFileSync(filename, 'utf8');
     if (!isValidJSON(data)) return logInvalidFile(filename);
