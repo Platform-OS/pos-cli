@@ -4,13 +4,16 @@ const program = require('commander'),
   fs = require('fs'),
   ora = require('ora'),
   shell = require('shelljs'),
+  path = require('path'),
+  crypto = require('crypto'),
   Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   transform = require('../lib/data/uploadFiles'),
   isValidJSON = require('../lib/data/isValidJSON'),
   waitForStatus = require('../lib/data/waitForStatus'),
-  path = require('path');
+  uploadFile = require('../lib/s3UploadFile').uploadFile,
+  presignUrl = require('../lib/presignUrl').presignUrl;
 
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
@@ -28,7 +31,11 @@ const dataImport = async (filename, rawIds) => {
 
   let formData = {};
   if (isZipFile) {
-    formData = { 'zip_file': fs.createReadStream(filename) };
+    const tmpFilename = 'data-import-' + crypto.randomBytes(32).toString('hex');
+    const { uploadUrl, accessUrl } = await presignUrl(tmpFilename, filename);
+
+    await uploadFile(filename, uploadUrl);
+    formData = { 'zip_file_url': accessUrl };
   } else {
     const data = fs.readFileSync(filename, 'utf8');
     if (!isValidJSON(data)) return logInvalidFile(filename);
