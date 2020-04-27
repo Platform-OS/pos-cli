@@ -44,7 +44,7 @@ describe('Happy path', () => {
     const { stdout, stderr } = await run('correct', '-d');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch('There are no assets to deploy, skipping.');
+    expect(stderr).toMatch('There are no assets to deploy, skipping.');
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
@@ -84,7 +84,7 @@ describe('Happy path', () => {
 
   test('only assets', async () => {
     const { stdout, stderr } = await run('correct_only_assets');
-    expect(stdout).toMatch('There are no files in release file, skipping.');
+    expect(stderr).toMatch('There are no files in release file, skipping.');
     expect(stdout).toMatch('Deploy succeeded');
   });
 });
