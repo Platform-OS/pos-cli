@@ -52,6 +52,30 @@ program
 
     const isZipFile = path.extname(filename) === '.zip';
 
+    const exportFinished = () => {
+      spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
+    };
+
+    const handleZipFileExport = (exportTask, filename) => {
+      downloadFile(exportTask.zip_file_url, filename).then(exportFinished);
+    };
+
+    const handleJsonFileExport = (exportTask, filename) => {
+      shell.mkdir('-p', 'tmp');
+      fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
+      let data = transform(exportTask.data);
+      spinner.succeed('Downloading files');
+      fetchFilesForData(data)
+        .then(data => {
+          fs.writeFileSync(filename, JSON.stringify(data));
+          exportFinished();
+        })
+        .catch(e => {
+          logger.Warn('export error');
+          logger.Warn(e.message);
+        });
+    };
+
     spinner.start();
     gateway
       .dataExportStart(exportInternalIds, isZipFile)
@@ -59,23 +83,9 @@ program
         waitForStatus(() => gateway.dataExportStatus(exportTask.id, isZipFile))
           .then(exportTask => {
             if (isZipFile) {
-              downloadFile(exportTask.zip_file_url, filename).then(() => {
-                spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
-              });
+              handleZipFileExport(exportTask, filename);
             } else {
-              shell.mkdir('-p', 'tmp');
-              fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
-              let data = transform(exportTask.data);
-              spinner.succeed('Downloading files');
-              fetchFilesForData(data)
-                .then(data => {
-                  fs.writeFileSync(filename, JSON.stringify(data));
-                  spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
-                })
-                .catch(e => {
-                  logger.Warn('export error');
-                  logger.Warn(e.message);
-                });
+              handleJsonFileExport(exportTask, filename);
             }
           })
           .catch(error => {
