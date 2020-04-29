@@ -38,7 +38,7 @@ const fetchFilesForData = async data => {
 program
   .name('pos-cli data export')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-p --path <export-file-path>', 'output for exported data', 'data.json, data.zip')
+  .option('-p --path <export-file-path>', 'output for exported data. Example: data.json, data.zip', 'data.json')
   .option(
     '-e --export-internal-ids <export-internal-ids>',
     'use normal object `id` instead of `external_id` in exported json data',

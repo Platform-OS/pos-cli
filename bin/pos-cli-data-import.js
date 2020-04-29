@@ -80,7 +80,7 @@ const dataImport = async (filename, rawIds) => {
 program
   .name('pos-cli data import')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-p --path <import-file-path>', 'path of import .json or .zip file', 'data.json, data.zip')
+  .option('-p --path <import-file-path>', 'path of import .json or .zip file. Example: data.json, data.zip', 'data.json')
   .option('--raw-ids <raw-ids>', 'do not remap ids after import', 'false')
   .action((environment, params) => {
     const filename = params.path;
