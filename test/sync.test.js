@@ -4,6 +4,8 @@ const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
 const path = require('path');
 
+const stepTimeout = 6000;
+
 require('dotenv').config();
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
@@ -21,12 +23,12 @@ jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
 describe('Happy path', () => {
   test('sync assets', async () => {
     const steps = async (child) => {
-      await sleep(2000); //wait for sync to start
+      await sleep(stepTimeout); //wait for sync to start
       exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
-      await sleep(2000); //wait for syncing the file
+      await sleep(stepTimeout); //wait for syncing the file
       child.kill();
     }
-    const {stdout} = await run('correct_with_assets', null, steps);
+    const { stdout } = await run('correct_with_assets', null, steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('[Sync] Synced: assets/bar.js');
@@ -34,12 +36,12 @@ describe('Happy path', () => {
 
   test('sync with direct assets upload', async () => {
     const steps = async (child) => {
-      await sleep(2000); //wait for sync to start
+      await sleep(stepTimeout); //wait for sync to start
       exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
-      await sleep(2000); //wait for syncing the file
+      await sleep(stepTimeout); //wait for syncing the file
       child.kill();
     }
-    const {stdout, stderr} = await run('correct_with_assets', '-d', steps);
+    const { stdout, stderr } = await run('correct_with_assets', '-d', steps);
 
     expect(stderr).toMatch('');
     expect(stdout).toMatch(process.env.MPKIT_URL);
@@ -57,11 +59,11 @@ properties:
 
     const steps = async (child) => {
       exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
-      await sleep(2000); //wait for sync to start
+      await sleep(stepTimeout); //wait for sync to start
       exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
-      await sleep(8000); //wait for syncing the file
+      await sleep(stepTimeout); //wait for syncing the file
       exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
-      await sleep(8000); //wait for deleting the file
+      await sleep(stepTimeout); //wait for deleting the file
       child.kill();
     }
     const { stdout } = await run('correct_with_assets', null, steps);
