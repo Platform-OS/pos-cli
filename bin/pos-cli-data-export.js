@@ -2,7 +2,6 @@
 
 const program = require('commander'),
   fs = require('fs'),
-  path = require('path'),
   ora = require('ora'),
   shell = require('shelljs'),
   Gateway = require('../lib/proxy'),
@@ -44,13 +43,14 @@ program
     'use normal object `id` instead of `external_id` in exported json data',
     'false'
   )
+  .option('-z --zip', 'export to zip archive', 'false')
   .action((environment, params) => {
     const filename = params.path;
     const exportInternalIds = params.exportInternalIds;
+    const isZipFile = params.zip;
     const authData = fetchAuthData(environment, program);
     gateway = new Gateway(authData);
 
-    const isZipFile = path.extname(filename) === '.zip';
 
     const exportFinished = () => {
       spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);

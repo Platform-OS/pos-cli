@@ -4,7 +4,6 @@ const program = require('commander'),
   fs = require('fs'),
   ora = require('ora'),
   shell = require('shelljs'),
-  path = require('path'),
   crypto = require('crypto'),
   Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),
@@ -21,13 +20,15 @@ const tmpFileName = './tmp/data-imported.json';
 
 const logInvalidFile = filename => {
   return logger.Error(
-    `Invalid format of ${filename}. Must be a valid json file. Check file using one of JSON validators online: https://jsonlint.com`
+    `
+Invalid format of ${filename}. Must be a valid json file. Check file using one of JSON validators online: https://jsonlint.com .
+Do you want to import a zip file? Use --zip.
+    `
   );
 };
 
-const dataImport = async (filename, rawIds) => {
+const dataImport = async (filename, rawIds, isZipFile) => {
   spinner.start();
-  const isZipFile = path.extname(filename) === '.zip';
 
   let formData = {};
   if (isZipFile) {
@@ -82,9 +83,11 @@ program
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <import-file-path>', 'path of import .json or .zip file. Example: data.json, data.zip', 'data.json')
   .option('--raw-ids <raw-ids>', 'do not remap ids after import', 'false')
+  .option('-z --zip', 'import from zip archive', 'false')
   .action((environment, params) => {
     const filename = params.path;
     const rawIds = params.rawIds;
+    const zip = params.zip;
     const authData = fetchAuthData(environment, program);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
@@ -92,7 +95,7 @@ program
     });
 
     gateway = new Gateway(authData);
-    dataImport(filename, rawIds);
+    dataImport(filename, rawIds, zip);
   });
 
 program.parse(process.argv);
