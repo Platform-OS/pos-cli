@@ -8,7 +8,8 @@ const program = require('commander'),
   logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   fetchFiles = require('../lib/data/fetchFiles'),
-  waitForStatus = require('../lib/data/waitForStatus');
+  waitForStatus = require('../lib/data/waitForStatus'),
+  downloadFile = require('../lib/downloadFile');
 let gateway;
 const spinner = ora({ text: 'Exporting', stream: process.stdout, spinner: 'bouncingBar' });
 const transform = ({ users = { results: [] }, transactables = { results: [] }, models = { results: [] } }) => {
@@ -36,36 +37,56 @@ const fetchFilesForData = async data => {
 program
   .name('pos-cli data export')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-p --path <export-file-path>', 'output for exported data', 'data.json')
+  .option('-p --path <export-file-path>', 'output for exported data. Example: data.json, data.zip', 'data.json')
   .option(
     '-e --export-internal-ids <export-internal-ids>',
     'use normal object `id` instead of `external_id` in exported json data',
     'false'
   )
+  .option('-z --zip', 'export to zip archive', 'false')
   .action((environment, params) => {
     const filename = params.path;
     const exportInternalIds = params.exportInternalIds;
+    const isZipFile = params.zip;
     const authData = fetchAuthData(environment, program);
     gateway = new Gateway(authData);
+
+
+    const exportFinished = () => {
+      spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
+    };
+
+    const handleZipFileExport = (exportTask, filename) => {
+      downloadFile(exportTask.zip_file_url, filename).then(exportFinished);
+    };
+
+    const handleJsonFileExport = (exportTask, filename) => {
+      shell.mkdir('-p', 'tmp');
+      fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
+      let data = transform(exportTask.data);
+      spinner.succeed('Downloading files');
+      fetchFilesForData(data)
+        .then(data => {
+          fs.writeFileSync(filename, JSON.stringify(data));
+          exportFinished();
+        })
+        .catch(e => {
+          logger.Warn('export error');
+          logger.Warn(e.message);
+        });
+    };
+
     spinner.start();
     gateway
-      .dataExportStart(exportInternalIds)
+      .dataExportStart(exportInternalIds, isZipFile)
       .then(exportTask => {
-        waitForStatus(() => gateway.dataExportStatus(exportTask.id))
+        waitForStatus(() => gateway.dataExportStatus(exportTask.id, isZipFile))
           .then(exportTask => {
-            shell.mkdir('-p', 'tmp');
-            fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
-            let data = transform(exportTask.data);
-            spinner.succeed('Downloading files');
-            fetchFilesForData(data)
-              .then(data => {
-                fs.writeFileSync(filename, JSON.stringify(data));
-                spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
-              })
-              .catch(e => {
-                logger.Warn('export error');
-                logger.Warn(e.message);
-              });
+            if (isZipFile) {
+              handleZipFileExport(exportTask, filename);
+            } else {
+              handleJsonFileExport(exportTask, filename);
+            }
           })
           .catch(error => {
             logger.Debug(error);
