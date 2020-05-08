@@ -44,7 +44,6 @@ describe('Happy path', () => {
     const { stdout, stderr } = await run('correct', '-d');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stderr).toMatch('There are no assets to deploy, skipping.');
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
