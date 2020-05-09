@@ -11,7 +11,7 @@
   <div class="container">
     <h3>Input</h3>
     <form action="/api/liquid">
-      <textarea name="body" autofocus></textarea>
+      <textarea name="content" autofocus></textarea>
       <br>
       <input type="submit" value="Execute">
     </form>
@@ -30,7 +30,8 @@
       console.log(t.value);
       fetch('/api/liquid', {
         method: 'POST',
-        body: JSON.stringify({ "liquid_body": t.value })
+        body: JSON.stringify({ "content": t.value }),
+        headers: {'Content-Type': 'application/json'}
       })
         .then(response => response.json())
         .then((data) => {
