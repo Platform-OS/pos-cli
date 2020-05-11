@@ -58,7 +58,7 @@ const dataImport = async (filename, rawIds, isZipFile) => {
       spinner
         .stopAndPersist()
         .succeed('Data sent')
-        .start('Importing data');
+        .start(`Importing ${filename}`);
       waitForStatus(() => gateway.dataImportStatus(importTask.id, isZipFile))
         .then(() => {
           spinner.stopAndPersist().succeed('Import done.');
@@ -93,6 +93,10 @@ program
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url
     });
+
+    if (!fs.existsSync(filename)) {
+      logger.Error(`File not found: ${filename}`);
+    }
 
     gateway = new Gateway(authData);
     dataImport(filename, rawIds, zip);
