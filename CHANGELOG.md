@@ -1,5 +1,5 @@
 # Changelog
-## 4.4.14 - May 2020
+## 4.4.14 - 25 May 2020
 * Added liquid evaluator page in `pos-cli gui serve`
 
 ## 4.4.13 - 11 May 2020
