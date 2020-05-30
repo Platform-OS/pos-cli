@@ -78,6 +78,7 @@ describe('Audit - orphaned includes', () => {
     expect(stdout).toMatch(path.join('app', 'views', 'partials', 'not_included_partial.liquid'));
     expect(stdout).toMatch(path.join('modules', 'test', 'private', 'views', 'partials', 'not_included_partial.liquid'));
     expect(stdout).not.toMatch('/included_partial.liquid');
+    expect(stdout).not.toMatch(path.join('app', 'views', 'partials', 'shared', 'head.liquid'));
   });
 
   test('Drops out on variable include', async () => {

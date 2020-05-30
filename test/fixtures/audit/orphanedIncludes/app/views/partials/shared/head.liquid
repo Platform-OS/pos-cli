@@ -1,0 +1,10 @@
+{% assign project_name = "PlatformOS Examples" %}
+{% capture meta_title %}{{ context.page.metadata.description }}{% endcapture %}
+
+{% if context.page.metadata and context.page.metadata.description %}
+  {% capture title %}{{ context.page.metadata.description }} | {{ project_name }}{% endcapture %}
+{% else %}
+  {% capture title %}{{ project_name }}{% endcapture %}
+{% endif %}
+
+<title>{{ title }}</title>
