@@ -158,6 +158,63 @@ Removes a module from your application.
 pos-cli modules remove [environment] <module name>
 ```
 
+##### module templates
+
+Templates provide automatic processing for easier module configuration. For example, upon installing a module, it is possible to specify URIs under which pages will be available after the module has been installed. This works both in sync and deploy mode.
+
+Markup is the commonly used ERB/EJS stye: `<%=` `=%>` there is no logic supported, the only available filter is `&` which will unescape the value provided by the user (by default they are all escaped).
+
+Values for variables have to be provided in the root module directory `template-values.json`, but the location of the configuration file can be set using the `TEMPLATE_VALUES_FILE_PATH` variable.
+
+For example by executing `TEMPLATE_VALUES_FILE_PATH=templates/values.json pos-cli deploy staging` file `templates/values.json` will be used as values for templates.
+
+Directory structure with `template-values.json`:
+
+```shell
+modules
+└──admincms
+    ├── template-values.json
+    ├── private
+    │   └── graphql
+    │       ├── get_models.graphql
+    │       └── get_pages.graphql
+    └── public
+        └── views
+            └── pages
+                └── admin.liquid
+```
+
+**Example**
+
+A page with this code:
+
+```yaml
+---
+slug: <%= &desired_location =%>
+---
+
+This is using templates <%= what =%> !
+```
+
+And a `template-values.json`
+
+```json
+{
+  "desired_location": "index",
+  "what": "magic"
+}
+```
+
+will turn into this during deploy/sync:
+
+```yaml
+---
+slug: index
+---
+
+This is using templates magic !
+```
+
 ### Migrations
 
 Migrations are files that contain liquid code (including graphql) that you want to run and have trace of what exactly has been run.
@@ -268,6 +325,7 @@ pos-cli gui serve [environment] -o
 #### Liquid evaluator
 
 To open a page where you can experiment with liquid and evaluate it on your instance, open [http://localhost:3333/gui/liquid](http://localhost:3333/gui/liquid) in your browser.
+
 
 ## Development
 
