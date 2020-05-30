@@ -30,7 +30,7 @@ See this [guide](https://documentation.platformos.com/get-started/partner-portal
 To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
 
 ```
-pos-cli env add <environment> --email <your email> --url <your application url>
+pos-cli env add [environment] --email [your email] --url [your application url]
 ```
 
 Example: `pos-cli env add staging --email myemail@example.com --url https://example.com`
@@ -40,17 +40,42 @@ Configuration for environments lays down in `.pos` file.
 ### Syncing changes
 
 ```
-pos-cli sync <environment>
+pos-cli sync [environment]
 ```
 
 Example: `pos-cli sync staging`
 
 Enables sync mode - immediately pushes changes made to filesystem to the proper environment. It feels like working on localhost. For obvious reason, it is dangerous to use on production, on a live application - it is recommended to use it only for staging.
 
+#### Livereloading changes
+
+Add `--livereload` (`-l`) to your sync command to run livereload server in the background.
+You need to install livereload browser extension for it to refresh your browser on file changes.
+
+```
+pos-cli sync [environment] -l
+```
+
+#### Automatically opening browser
+
+If you add `--open` (`-o`) to the sync command, it will open your instance in default browser.  
+
+```
+pos-cli sync [environment] -o
+```
+
+#### Concurrency
+
+By default `sync` command is using 3 concurrent connections to our server when syncing resources and assets. You can adjust it for your connection. 
+
+```
+pos-cli sync [environment] -c 10
+```
+
 ### Deploying changes
 
 ```
-pos-cli deploy <environment>
+pos-cli deploy [environment]
 ```
 
 Example: `pos-cli deploy staging`
@@ -74,7 +99,7 @@ Runs statical analysis on file in your current application directory.
 Errors and logs that you or the system logs for you can be accessed via `logs` command. Read more [how to create logs](https://documentation.platformos.com/api-reference/liquid/platformos-tags#log).
 
 ```
-pos-cli logs <environment>
+pos-cli logs [environment]
 ```
 
 From now on as long as your `logs` command is running, logs will aprear here. Errors will trigger system notification if your operating system is supporting them.
@@ -82,7 +107,7 @@ From now on as long as your `logs` command is running, logs will aprear here. Er
 You can filter logs by type using `--filter` argument.
 
 ```
-pos-cli logs <environment> --filter type
+pos-cli logs [environment] --filter type
 ```
 
 Example:
@@ -122,7 +147,7 @@ Lists all the installed modules via Partners Portal on a given environment.
 This command will not list modules that are deployed by you via `modules/` directory.
 
 ```
-pos-cli modules list <environment>
+pos-cli modules list [environment]
 ```
 
 #### Remove
@@ -130,7 +155,7 @@ pos-cli modules list <environment>
 Removes a module from your application.
 
 ```
-pos-cli modules remove <environment> <module name>
+pos-cli modules remove [environment] <module name>
 ```
 
 ### Migrations
@@ -149,7 +174,7 @@ Read more about migrations in our documentation:
 Lists migrations deployed to the server and their current status.
 
 ```
-pos-cli migrations list <environment> <name>
+pos-cli migrations list [environment] [name]
 ```
 
 #### Generate
@@ -159,7 +184,7 @@ Generates new migration with the name you provided. It will be prepended with a 
 Migrations are run automatically on deploy.
 
 ```
-pos-cli migrations generate <environment> <name>
+pos-cli migrations generate [environment] [name]
 ```
 
 #### Run
@@ -169,7 +194,7 @@ You can run migration manually using `run` command. You must first sync the migr
 Name of the migration is the filename without extension, or just the timestamp.
 
 ```
-pos-cli migrations run <environment> <name>
+pos-cli migrations run [environment] [name]
 ```
 
 Example:
@@ -220,7 +245,7 @@ pos-cli data clean staging
 To start http server locally that will serve GUI use:
 
 ```
-pos-cli gui serve <environment>
+pos-cli gui serve [environment]
 ```
 
 Example: `pos-cli gui serve staging`
@@ -230,6 +255,19 @@ Example: `pos-cli gui serve staging`
 To explore your instance database using GraphQL open [http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql) in your web browser.
 
 In the right sidebar there is a schema documentation should you need it.
+
+
+#### Opening GraphiQL automatically 
+
+If you want to open GraphiQL as soon as `gui serve` is running, add `--open` (`-o`) as your argument.
+
+```
+pos-cli gui serve [environment] -o
+```
+
+#### Liquid evaluator
+
+To open a page where you can experiment with liquid and evaluate it on your instance, open [http://localhost:3333/gui/liquid](http://localhost:3333/gui/liquid) in your browser.
 
 ## Development
 
