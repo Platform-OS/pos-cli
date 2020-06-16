@@ -212,7 +212,7 @@ will turn into this during deploy/sync:
 slug: index
 ---
 
-This is using templates magic !
+This is using templates magic!
 ```
 
 ### Migrations
@@ -223,7 +223,7 @@ This is very helpful if you want to execute the same code on multiple environmen
 
 Read more about migrations in our documentation:
 
-* https://documentation.platformos.com/tutorials/migrations/migrating-data
+* https://documentation.platformos.com/developer-guide/data-import-export/migrating-data
 * https://documentation.platformos.com/use-cases/e-commerce/seeding-configuration-data
 
 #### List
@@ -266,7 +266,7 @@ pos-cli migrations run staging 20190715132951_update_admin_password
 
 Exports data from the environment to a given file in form of JSON.
 
-Read more about exporting data with CLI, REST API and GraphQL [in our documentation](https://documentation.platformos.com/tutorials/data-import-export/export).
+Read more about exporting data with CLI, REST API and GraphQL [in our documentation](https://documentation.platformos.com/developer-guide/data-import-export/export).
 
 ```
 pos-cli data export staging --path=data.json
@@ -276,7 +276,7 @@ pos-cli data export staging --path=data.json
 
 Imports data from a given JSON file with proper data structure.
 
-Read more about importing data with CLI, REST API and GraphQL [in our documentation](https://documentation.platformos.com/tutorials/data-import-export/import).
+Read more about importing data with CLI, REST API and GraphQL [in our documentation](https://documentation.platformos.com/developer-guide/data-import-export/import).
 
 
 ```
