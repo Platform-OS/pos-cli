@@ -1,10 +1,10 @@
 ## Overview
 
-[pos-cli](https://github.com/mdyd-dev/pos-cli) is command line tool, which was developed to allow you to easily deploy your configuration files and assets to the platformOS. It expects you to follow a certain file structure in order to correctly communicate with the PlatformOS API. You do not have to use it, however it is highly recommended that you do. It is a CLI tool, hence you are expected to have basic knowledge in working with Terminal.
+[pos-cli](https://github.com/mdyd-dev/pos-cli) is a command line tool developed to allow you to easily deploy your configuration files and assets to platformOS. It expects you to follow a certain file structure to correctly communicate with the platformOS API. You do not have to use it, however, it is highly recommended that you do. It is a CLI tool, hence you are expected to have basic knowledge in working with a command line interface like Terminal. 
 
-If you have any feature requests, feedback or problems please head over to the [issues page](https://github.com/mdyd-dev/pos-cli/issues) and let us know.
+If you have any feature requests, feedback, or problems, please head over to the [issues page](https://github.com/mdyd-dev/pos-cli/issues) and let us know.
 
-All commands should be run in the project root directory - i.e. one level above `app` or `modules` directory.
+Run all commands in the project root directory - one level above the `app` or `modules` directory.
 
 ### Requirements
 
@@ -24,8 +24,8 @@ If you are using nvm or have node installed on your account, you can omit that:
 
 ### Adding environments and authenticating
 
-Authentication is done with your **Partner Portal** account credentials.
-See this [guide](https://documentation.platformos.com/get-started/partner-portal/inviting-new-user-to-partner-portal) if you don't have Partner Portal account yet.
+For authentication, you'll need your **Partner Portal** account credentials.
+See this [guide](https://documentation.platformos.com/get-started/partner-portal/inviting-new-user-to-partner-portal) if you don't have a Partner Portal account yet.
 
 To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
 
@@ -35,7 +35,7 @@ pos-cli env add [environment] --email [your email] --url [your application url]
 
 Example: `pos-cli env add staging --email myemail@example.com --url https://example.com`
 
-Configuration for environments lays down in `.pos` file.
+Configuration for environments is in the `.pos` file.
 
 ### Syncing changes
 
@@ -45,20 +45,20 @@ pos-cli sync [environment]
 
 Example: `pos-cli sync staging`
 
-Enables sync mode - immediately pushes changes made to filesystem to the proper environment. It feels like working on localhost. For obvious reason, it is dangerous to use on production, on a live application - it is recommended to use it only for staging.
+Enables sync mode - immediately pushes changes made to the file system to the proper environment. It feels like working on localhost. Because changes are immediate, it is dangerous to use sync on production, on a live application - it is recommended to use it only for staging.
 
 #### Livereloading changes
 
-Add `--livereload` (`-l`) to your sync command to run livereload server in the background.
-You need to install livereload browser extension for it to refresh your browser on file changes.
+Add `--livereload` (`-l`) to your sync command to run the [LiveReload](http://livereload.com) server in the background.
+You need to install the LiveReload browser extension for it to refresh your browser on file changes.
 
 ```
 pos-cli sync [environment] -l
 ```
 
-#### Automatically opening browser
+#### Automatically opening the browser
 
-If you add `--open` (`-o`) to the sync command, it will open your instance in default browser.  
+If you add `--open` (`-o`) to the sync command, it will open your Instance in the default browser.  
 
 ```
 pos-cli sync [environment] -o
@@ -66,7 +66,7 @@ pos-cli sync [environment] -o
 
 #### Concurrency
 
-By default `sync` command is using 3 concurrent connections to our server when syncing resources and assets. You can adjust it for your connection. 
+By default, the `sync` command uses 3 concurrent connections to our server when syncing resources and assets. You can adjust it for your connection. 
 
 ```
 pos-cli sync [environment] -c 10
@@ -80,9 +80,9 @@ pos-cli deploy [environment]
 
 Example: `pos-cli deploy staging`
 
-Deploys all the changes. It is recommended to first deploy to `staging`, test, and only then trigger to production. Effectively, deploy creates a zip file containning all your files and sends it to API. It is then processed in the background. Each zip file is stored by us, in order to allow you to rollback in case something goes wrong.
+Deploys all changes. It is recommended to first deploy to `staging`, test, and only then trigger a deploy to production. Effectively, deploy creates a zip file containing all your files and sends it to the API. It is then processed in the background. We store each zip file to allow you to roll back in case something goes wrong.
 
-To skip audit during deploy, set environmental variable `CI` to `true`.
+To skip the audit during deploy, set the environmental variable `CI` to `true`.
 
 ### Code audit
 
@@ -92,19 +92,19 @@ pos-cli audit
 
 Example: `pos-cli audit`
 
-Runs statical analysis on file in your current application directory.
+Runs statical analysis on files in your current application directory.
 
 ### Reading logs
 
-Errors and logs that you or the system logs for you can be accessed via `logs` command. Read more [how to create logs](https://documentation.platformos.com/api-reference/liquid/platformos-tags#log).
+Access errors and logs that you or the system logs for you using the `logs` command. Read more on [how to create logs](https://documentation.platformos.com/api-reference/liquid/platformos-tags#log).
 
 ```
 pos-cli logs [environment]
 ```
 
-From now on as long as your `logs` command is running, logs will aprear here. Errors will trigger system notification if your operating system is supporting them.
+From now on, as long as your `logs` command is running, logs will appear here. Errors will trigger system notifications if your operating system supports them.
 
-You can filter logs by type using `--filter` argument.
+You can filter logs by type using the `--filter` argument.
 
 ```
 pos-cli logs [environment] --filter type
@@ -118,33 +118,33 @@ pos-cli logs staging --filter debug
 
 ### Listing environments
 
-If you forgot know what your environments are named or the url that is corresponding to any name, use:
+If you forgot what your environments are called or the URL that corresponds to any name, use:
 
 ```
 pos-cli env list
 ```
 
-### Initializing directory structure
+### Initializing the directory structure
 
-If you need to create new project from scratch you can init directory structure using:
+If you need to create a new project from scratch you can initialize the directory structure using:
 
 ```
 pos-cli init --url mdyd-dev/directory-structure --branch master
 ```
 
-Default url: `mdyd-dev/directory-structure`
+Default URL: `mdyd-dev/directory-structure`
 Default branch: `master`
 
-Init command supports all formats supported by [degit](https://github.com/Rich-Harris/degit), as it is used as an engine underneath.
+The `init` command supports all formats supported by [degit](https://github.com/Rich-Harris/degit), as it is used as an engine underneath.
 
-It will download directory structure from given git repository and extract it in your current directory.
+It downloads the directory structure from a given git repository and extracts it in your current directory.
 
 ### Modules
 
 #### List
 
-Lists all the installed modules via Partners Portal on a given environment.
-This command will not list modules that are deployed by you via `modules/` directory.
+Lists all modules installed through the Partners Portal on a given environment.
+This command will not list modules that you deployed via the `modules/` directory.
 
 ```
 pos-cli modules list [environment]
@@ -164,9 +164,9 @@ Templates provide automatic processing for easier module configuration. For exam
 
 Markup is the commonly used ERB/EJS stye: `<%=` `=%>` there is no logic supported, the only available filter is `&` which will unescape the value provided by the user (by default they are all escaped).
 
-Values for variables have to be provided in the root module directory `template-values.json`, but the location of the configuration file can be set using the `TEMPLATE_VALUES_FILE_PATH` variable.
+Values for variables have to be provided in the root module directory `template-values.json`, but you can set the location of the configuration file using the `TEMPLATE_VALUES_FILE_PATH` variable.
 
-For example by executing `TEMPLATE_VALUES_FILE_PATH=templates/values.json pos-cli deploy staging` file `templates/values.json` will be used as values for templates.
+For example, by executing `TEMPLATE_VALUES_FILE_PATH=templates/values.json pos-cli deploy staging` the `templates/values.json` file will be used as values for templates.
 
 Directory structure with `template-values.json`:
 
@@ -186,7 +186,7 @@ modules
 
 **Example**
 
-A page with this code:
+A page with this code
 
 ```yaml
 ---
@@ -196,7 +196,7 @@ slug: <%= &desired_location =%>
 This is using templates <%= what =%> !
 ```
 
-And a `template-values.json`
+and a `template-values.json`
 
 ```json
 {
@@ -217,9 +217,9 @@ This is using templates magic!
 
 ### Migrations
 
-Migrations are files that contain liquid code (including graphql) that you want to run and have trace of what exactly has been run.
+Migrations are files that contain Liquid code (including GraphQL) that you want to run and have a trace of what exactly has been run.
 
-This is very helpful if you want to execute the same code on multiple environments, after code has been deployed. For example: seeding initial data.
+This is very helpful if you want to execute the same code on multiple environments after the code has been deployed. For example, seeding initial data.
 
 Read more about migrations in our documentation:
 
@@ -238,7 +238,7 @@ pos-cli migrations list [environment] [name]
 
 Generates new migration with the name you provided. It will be prepended with a timestamp so if you create more than one, they will be run in the order you intended.
 
-Migrations are run automatically on deploy.
+Migrations run automatically on deploy.
 
 ```
 pos-cli migrations generate [environment] [name]
@@ -246,9 +246,9 @@ pos-cli migrations generate [environment] [name]
 
 #### Run
 
-You can run migration manually using `run` command. You must first sync the migration file to the environment.
+You can run a migration manually using the `run` command. You must first sync the migration file to the environment.
 
-Name of the migration is the filename without extension, or just the timestamp.
+The name of the migration is the filename without the extension, or just the timestamp.
 
 ```
 pos-cli migrations run [environment] [name]
@@ -264,9 +264,9 @@ pos-cli migrations run staging 20190715132951_update_admin_password
 
 #### Export
 
-Exports data from the environment to a given file in form of JSON.
+Exports data from the environment to a given file in JSON format.
 
-Read more about exporting data with CLI, REST API and GraphQL [in our documentation](https://documentation.platformos.com/developer-guide/data-import-export/export).
+Read more about [exporting data with the CLI, REST API and GraphQL](https://documentation.platformos.com/developer-guide/data-import-export/export) in our documentation.
 
 ```
 pos-cli data export staging --path=data.json
@@ -276,8 +276,7 @@ pos-cli data export staging --path=data.json
 
 Imports data from a given JSON file with proper data structure.
 
-Read more about importing data with CLI, REST API and GraphQL [in our documentation](https://documentation.platformos.com/developer-guide/data-import-export/import).
-
+Read more about [importing data with the CLI, REST API and GraphQL](https://documentation.platformos.com/developer-guide/data-import-export/import) in our documentation.
 
 ```
 pos-cli data import staging --path=data.json
@@ -285,13 +284,13 @@ pos-cli data import staging --path=data.json
 
 #### Clean (only staging)
 
-Cleans data on an instance. Keep in mind that this is only removing rows of data, not the structure definition.
+Cleans data on an Instance. Keep in mind that this only removes rows of data, not the structure definition.
 
-For example, if you have model schema `car` and there are 10 entries of type `car`, those will be deleted, but the model schema `car` will remain intact.
+For example, if you have a model schema `car` and there are 10 entries of type `car`, those will be deleted, but the model schema `car` will remain intact.
 
-This is useful for testing your imports/exports or resetting your database to pristine state between tests.
+This is useful for testing your imports/exports or resetting your database to a pristine state between tests.
 
-**This operation is irreversible**. You will be asked twice by `pos-cli` if you are sure you want to do it.
+**This operation is irreversible**. `pos-cli` will ask you twice if you are sure you want to do it.
 
 ```
 pos-cli data clean staging
@@ -299,7 +298,7 @@ pos-cli data clean staging
 
 ### Graphical interface
 
-To start http server locally that will serve GUI use:
+To start the http server locally that will serve the GUI use:
 
 ```
 pos-cli gui serve [environment]
@@ -309,7 +308,7 @@ Example: `pos-cli gui serve staging`
 
 #### GraphiQL Browser
 
-To explore your instance database using GraphQL open [http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql) in your web browser.
+To explore your Instance database using GraphQL open [http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql) in your web browser.
 
 In the right sidebar there is a schema documentation should you need it.
 
@@ -324,13 +323,13 @@ pos-cli gui serve [environment] -o
 
 #### Liquid evaluator
 
-To open a page where you can experiment with liquid and evaluate it on your instance, open [http://localhost:3333/gui/liquid](http://localhost:3333/gui/liquid) in your browser.
+To open a page where you can experiment with Liquid and evaluate it on your Instance, open [http://localhost:3333/gui/liquid](http://localhost:3333/gui/liquid) in your browser.
 
 
 ## Development
 
 `pos-cli gui serve` (graphiql) has its own build process. You will find it in `gui/editor/graphql`.
 
-To develop install dependencies (`npm ci`) and start development mode (`npm start`).
+Develop install dependencies (`npm ci`) and start development mode (`npm start`).
 
-After your work is done, build production assets (`npm run build`) and commit changes to repository.
+After your work is done, build production assets (`npm run build`) and commit changes to the repository.
