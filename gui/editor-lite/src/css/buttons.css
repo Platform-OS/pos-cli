@@ -1,0 +1,39 @@
+.button {
+  @apply flex px-6 py-2 text-lg text-white bg-blue-500 rounded;
+}
+
+.button:focus {
+  @apply outline-none;
+}
+
+.button:hover {
+  @apply bg-blue-600;
+}
+
+.danger {
+  @apply text-red-800 bg-transparent border border-red-800;
+}
+
+.danger:hover {
+  @apply text-white bg-transparent bg-red-800;
+}
+
+.secondary {
+  @apply text-blue-500 bg-transparent border border-blue-500;
+}
+
+.secondary:hover {
+  @apply text-blue-800 bg-transparent border-blue-800;
+}
+
+.link {
+  @apply text-blue-500 bg-transparent;
+}
+
+.link:hover {
+  @apply text-blue-800 underline bg-transparent;
+}
+
+.active {
+  @apply font-bold;
+}
