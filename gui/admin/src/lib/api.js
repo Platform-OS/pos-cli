@@ -40,7 +40,7 @@ const graph = (body) => {
     .then((res) => {
       if (res.errors) {
         const err = res.errors[0].message;
-        return notifier.danger(`Error: ${err}`, 10000);
+        return notifier.danger(`Error: ${err}`, 5000);
       }
 
       return res && res.data;

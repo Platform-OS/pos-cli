@@ -11,24 +11,24 @@
   "author": "platformOS",
   "license": "MIT",
   "devDependencies": {
-    "@babel/core": "^7.10.2",
-    "@babel/plugin-proposal-class-properties": "^7.10.1",
+    "@babel/core": "^7.10.5",
+    "@babel/plugin-proposal-class-properties": "^7.10.4",
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",
-    "@babel/preset-env": "^7.10.2",
-    "@babel/preset-react": "^7.10.1",
+    "@babel/preset-env": "^7.10.4",
+    "@babel/preset-react": "^7.10.4",
     "babel-loader": "^8.1.0",
     "babel-plugin-syntax-async-functions": "^6.13.0",
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-regenerator": "^6.26.0",
-    "css-loader": "^3.5.3",
+    "css-loader": "^3.6.0",
     "graphiql-explorer": "^0.6.2",
     "style-loader": "^1.2.1",
     "webpack": "^4.43.0",
-    "webpack-cli": "^3.3.11"
+    "webpack-cli": "^3.3.12"
   },
   "dependencies": {
-    "graphiql": "^0.17.5",
-    "graphql": "^15.1.0",
+    "graphiql": "^1.0.3",
+    "graphql": "^15.3.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1"
   }
