@@ -10,12 +10,13 @@
   let showNewForm = false;
 
   export let schemaId;
+  export let schemaName;
   export let props;
 
   let newProps = {};
 
   const handleSubmit = () => {
-    api.createModel(schemaId, newProps).then(data => {
+    api.createModel(schemaName, newProps).then(data => {
       if (data) {
         modelsStore.refreshModels(schemaId);
         data && notifier.success("Model created.");

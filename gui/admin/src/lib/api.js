@@ -140,12 +140,12 @@ export default {
 
     return graph({ query });
   },
-  createModel(name, props) {
+  createModel(schemaName, props) {
     const properties = getPropsString(props);
 
     const query = `mutation {
       model_create(model: {
-        model_schema_name: "${name}",
+        model_schema_name: "${schemaName}",
         properties: [${properties}]
       }) {
         id

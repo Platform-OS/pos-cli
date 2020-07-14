@@ -81,7 +81,7 @@
   </div>
 
   <div class="w-full">
-    <NewModel {props} name={schemaName}/>
+    <NewModel {props} {schemaName}/>
   </div>
 
   <div class="w-full">
