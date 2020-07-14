@@ -5,7 +5,6 @@
   "scripts": {
     "build:admin": "npm ci --prefix gui/admin && npm run build --prefix gui/admin",
     "build:graphql": "npm ci --prefix gui/graphql && npm run build --prefix gui/graphql",
-    "prepack": "rm -rf gui/graphql/node_modules",
     "test": "jest --runInBand",
     "test-watch": "jest --watchAll --runInBand",
     "postinstall": "node ./scripts/check-node-version.js",
