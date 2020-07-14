@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.4.18 - 14 July 2020
+* Update GraphiQL to 1.x
+
 ## 4.4.16 - 14 July 2020
 * Added platformOS Admin reached on [localhost:3333](http://localhost:3333) after running `pos-cli gui serve`
 * Changed `-o` in `pos-cli gui serve` to open Admin instead of GraphiQL
