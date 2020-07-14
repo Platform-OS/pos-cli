@@ -1,4 +1,8 @@
 # Changelog
+
+## 4.4.15 - July 2020
+* Added platformOS Admin reached on [localhost:3333](http://localhost:3333) after running `pos-cli gui serve`
+
 ## 4.4.14 - 25 May 2020
 * Added liquid evaluator page in `pos-cli gui serve`
 

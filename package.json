@@ -13,6 +13,8 @@
     "lib",
     "bin",
     "gui",
+    "!gui/graphql/node_modules",
+    "!gui/admin/node_modules",
     "scripts"
   ],
   "main": "./bin/pos-cli.js",
