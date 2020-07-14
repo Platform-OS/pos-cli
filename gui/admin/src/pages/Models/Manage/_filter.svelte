@@ -11,7 +11,7 @@
   export let props;
   export let schemaId;
 
-  let showFilters = true;
+  let showFilters = false;
   let selectedOperation = '';
   let selectedProperty = '';
 
@@ -22,6 +22,7 @@
 
     filtersStore.set(filters);
     modelsStore.refreshModels(schemaId);
+    notifier.info("Refreshing models...");
   }
 
   const getPropType = (props, name) => {
@@ -41,13 +42,13 @@
   }
 
   const getHint = op => {
-    if (op === 'range') return '{ gt: "10", lt: "20" }';
-    if (op === 'value_in' || op === 'not_value_in') return '[10, 20, 30]';
-    if (op === 'ends_with' || op === 'not-ends-with') return '"corolla"';
-    if (op === 'starts_with' || op === 'not-starts-with') return '"toyota"';
+    if (op === 'range') return '{ gt: "10", lt: "20" } - remember about JSON format';
+    if (op === 'value_in' || op === 'not_value_in') return '[10, 20, 30] - remember about square brackets';
+    if (op === 'ends_with' || op === 'not-ends-with') return '"corolla" - remember about quotes';
+    if (op === 'starts_with' || op === 'not-starts-with') return '"toyota" - remember about quotes';
     if (op === 'exists' || op === 'not-starts-with') return 'true';
 
-    return '"toyota"';
+    return '"toyota" - remember about quotes';
   }
 
 </script>
