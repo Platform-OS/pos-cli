@@ -3,12 +3,11 @@
   "version": "4.4.19",
   "description": "Manage your platformOS application",
   "scripts": {
-    "build:admin": "npm ci --prefix gui/admin && npm run build --prefix gui/admin",
-    "build:graphql": "npm ci --prefix gui/graphql && npm run build --prefix gui/graphql",
+    "build:admin": "npm ci -C gui/admin && npm run build -C gui/admin",
+    "build:graphql": "npm ci -C gui/graphql && npm run build -C gui/graphql",
     "test": "jest --runInBand",
     "test-watch": "jest --watchAll --runInBand",
-    "postinstall": "node ./scripts/check-node-version.js",
-    "build-assets": "npx webpack-cli gui/editor/src/index.js -o gui/editor/public/app.js --mode=production"
+    "postinstall": "node ./scripts/check-node-version.js"
   },
   "files": [
     "lib",
