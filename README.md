@@ -296,7 +296,7 @@ This is useful for testing your imports/exports or resetting your database to a 
 pos-cli data clean staging
 ```
 
-### Graphical interface
+### Admin - Graphical interface
 
 To start the http server locally that will serve the GUI use:
 
@@ -306,20 +306,21 @@ pos-cli gui serve [environment]
 
 Example: `pos-cli gui serve staging`
 
+To open platformOS Admin go to [http://localhost:3333](http://localhost:3333)
+
+#### Opening Admin automatically 
+
+If you want to open platformOS Admin as soon as `gui serve` is running, add `--open` (`-o`) as your argument.
+
+```
+pos-cli gui serve [environment] -o
+```
+
 #### GraphiQL Browser
 
 To explore your Instance database using GraphQL open [http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql) in your web browser.
 
 In the right sidebar there is a schema documentation should you need it.
-
-
-#### Opening GraphiQL automatically 
-
-If you want to open GraphiQL as soon as `gui serve` is running, add `--open` (`-o`) as your argument.
-
-```
-pos-cli gui serve [environment] -o
-```
 
 #### Liquid evaluator
 
