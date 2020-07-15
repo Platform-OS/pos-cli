@@ -42,13 +42,13 @@
   }
 
   const getHint = op => {
-    if (op === 'range') return '{ gt: "10", lt: "20" } - remember about JSON format';
-    if (op === 'value_in' || op === 'not_value_in') return '[10, 20, 30] - remember about square brackets';
-    if (op === 'ends_with' || op === 'not-ends-with') return '"corolla" - remember about quotes';
-    if (op === 'starts_with' || op === 'not-starts-with') return '"toyota" - remember about quotes';
-    if (op === 'exists' || op === 'not-starts-with') return 'true';
+    if (op === 'range') return '{ gt: "10", lt: "20" } - remember about JSON format and double quotes';
+    if (op === 'value_in' || op === 'not_value_in') return '[10, "platformOS", 30] - remember about square brackets and double quotes';
+    if (op === 'ends_with' || op === 'not-ends-with') return '"platformOS" - remember about double quotes';
+    if (op === 'starts_with' || op === 'not-starts-with') return '"platformOS" - remember about double quotes';
+    if (op === 'exists' || op === 'not-starts-with') return 'true - booleans are NOT inside quotes';
 
-    return '"toyota" - remember about quotes';
+    return '"platformOS" - remember about double quotes';
   }
 
 </script>
@@ -79,7 +79,7 @@
       <option value="exists">exists</option>
       <option value="not_contains">not contains</option>
 
-      {#if selectedProperty.attribute_type === 'string'}
+      {#if selectedProperty.attribute_type === 'string' || selectedProperty.attribute_type === 'text'}
         <option value="ends_with">ends with</option>
         <option value="starts_with">starts with</option>
         <option value="not_ends_with">not ends with</option>

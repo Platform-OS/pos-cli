@@ -7,6 +7,7 @@
   export let name;
   export let value = "";
 
+  // TODO: Rewrite to store?
   const propagateUpdate = e => {
     const data = {
       id,
@@ -26,11 +27,19 @@
 <label class="block w-10/12">
   <span class="w-full">{name}</span>
   <br>
-  <input
-    class="w-10/12 mr-2 form-input"
-    type="text"
-    {value}
-    {name}
-    on:input={propagateUpdate}
-  />
+  {#if attribute_type === 'text'}
+    <textarea class="w-10/12 mr-2 form-input"
+      value="{JSON.stringify(value)}"
+      {name}
+      on:input={propagateUpdate}
+      rows="3"
+    />
+  {:else}
+    <input class="w-10/12 mr-2 form-input"
+      type="text"
+      value="{JSON.stringify(value)}"
+      {name}
+      on:input={propagateUpdate}
+    />
+  {/if}
 </label>

@@ -77,7 +77,7 @@
 
 <div class="flex flex-wrap mb-6">
   <div class="w-1/2">
-    <h1 class="text-5xl">{schemaName}</h1>
+    <h1 class="text-4xl">{schemaName}</h1>
   </div>
 
   <div class="w-full">
