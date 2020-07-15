@@ -1,12 +1,14 @@
 # Changelog
 
-## 4.4.20 - 15 July 2020 - Admin improvements
+## 4.4.21 - 15 July 2020 - Admin improvements
 * Correctly display arrays in fields
 * Show `text` fields as textarea
 * Fix updating `text` fields
 * Add string filters to text fields
 * Correctly display values in quotes, square brackets, etc. in edit view
-* Improve example hints
+* Improve example hints for filtering
+* Improve placeholders for new records
+* Improve placeholder for editing records
 
 ## 4.4.18 - 14 July 2020
 * Update GraphiQL to 1.x
