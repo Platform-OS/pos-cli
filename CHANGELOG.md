@@ -9,6 +9,7 @@
 * Improve example hints for filtering
 * Improve placeholders for new records
 * Improve placeholder for editing records
+* Improve displaying of text, array and upload fields
 
 ## 4.4.18 - 14 July 2020
 * Update GraphiQL to 1.x

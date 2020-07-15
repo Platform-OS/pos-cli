@@ -22,25 +22,21 @@
 
     dispatch("formChanged", data);
   }
-
-  const getValue = val => {
-    return val ? JSON.stringify(val) : '';
-  }
 </script>
 
 <label class="block w-10/12">
   <span class="w-full">{name}</span>
   <br>
-  {#if attribute_type === 'text'}
-    <textarea class="w-10/12 mr-2 form-input" rows="3"
-      value="{getValue(value)}"
+  {#if attribute_type === 'text' || attribute_type === 'upload' || attribute_type === 'array'}
+    <textarea class="w-full mr-2 form-input" rows="3"
+      value="{JSON.stringify(value, null, 2)}"
       placeholder={attribute_type}
       {name}
       on:input={propagateUpdate}
     />
   {:else}
-    <input class="w-10/12 mr-2 form-input" type="text"
-      value="{getValue(value)}"
+    <input class="w-full mr-2 form-input" type="text"
+      value="{JSON.stringify(value)}"
       placeholder={attribute_type}
       {name}
       on:input={propagateUpdate}

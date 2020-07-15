@@ -6,5 +6,6 @@ export default {
   float: 'value_float',
   integer: 'value_int',
   string: 'value',
-  text: 'value'
+  text: 'value',
+  upload: 'value',
 };
