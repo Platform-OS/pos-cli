@@ -1,3 +1,4 @@
+import { onMount } from "svelte";
 import { writable } from 'svelte/store';
 import api from "@/lib/api";
 
@@ -11,10 +12,10 @@ const createStore = () => {
     addModel: (model) => {
       return update(models => [...models, model]);
     },
-    refreshModels: (schemaId) => {
+    refreshModels: (schemaId, page = 1) => {
       return Promise.all([
-        api.getModels({ schemaId }),
-        api.getModels({ schemaId, deleted: true })
+        api.getModels({ schemaId, page }),
+        api.getModels({ schemaId, deleted: true, page })
       ]).then((results) => {
         set([...results[0], ...results[1]]);
       });

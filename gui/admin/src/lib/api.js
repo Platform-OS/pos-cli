@@ -1,6 +1,7 @@
 import { NotificationDisplay, notifier } from '@beyonk/svelte-notifications';
 import { get } from 'svelte/store';
 import filtersStore from '../pages/Models/Manage/_filters-store';
+import pageStore from "../pages/Models/Manage/_page-store";
 
 import typeMap from './_typemap';
 
@@ -69,7 +70,7 @@ export default {
 
     return graph({ query }).then((data) => data.admin_model_schemas.results);
   },
-  getModels({ schemaId, id, deleted = false }) {
+  getModels({ schemaId, id, page = 1, deleted = false }) {
     const f = get(filtersStore);
     let propertyFilter = '';
     if (f.property && f.operation && f.type) {
@@ -81,6 +82,7 @@ export default {
     const schemaIdFilter = schemaId ? `model_schema_id: { value: ${schemaId} }` : '';
     const query = `query {
       models(
+        page: ${page}
         per_page: 20,
         sort: { created_at: { order: DESC } },
         filter: {
@@ -90,6 +92,7 @@ export default {
           ${propertyFilter}
         }
       ) {
+        total_pages
         results {
           id
           created_at
@@ -100,7 +103,13 @@ export default {
       }
     }`;
 
-    return graph({ query }).then((data) => data.models.results);
+    return graph({ query }).then((data) => {
+      if (data && data.models) {
+        pageStore.setPaginationData({ total_pages: data.models.total_pages });
+      }
+
+      return data.models.results
+    });
   },
   updateModel({ id, props }) {
     const properties = getPropsString(props);

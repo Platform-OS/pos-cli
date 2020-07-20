@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, setContext, getContext } from "svelte";
   import { ready, url, params } from "@sveltech/routify";
   import { slide, fade } from "svelte/transition";
 
@@ -10,20 +10,20 @@
   import api from "@/lib/api";
 
   import modelsStore from "./_models-store";
+  import pageStore from "./_page-store";
 
   import InputField from "@/_components/InputField.svelte";
   import NewModel from "./_new.svelte";
   import Filter from "./_filter.svelte";
+  import Pagination from "./_pagination.svelte";
 
   const schemaId = $params.id;
   let schemaName;
 
-  let show = 'all';
+  let show = 'nondeleted';
 
   let data = [];
-  $: if (show === 'all') {
-    data = $modelsStore.sort((a, b) => +a.id < +b.id);
-  } else if (show === 'nondeleted') {
+  $: if (show === 'nondeleted') {
     data = $modelsStore.filter(m => !m.deleted_at);
   } else {
     data = $modelsStore.filter(m => m.deleted_at);
@@ -32,6 +32,7 @@
   let props = [];
 
   onMount(() => {
+    pageStore.setSchemaId(schemaId);
     modelsStore.refreshModels(schemaId);
 
     api.getModelSchemas(schemaId).then(schema => {
@@ -89,16 +90,12 @@
   </div>
 
   <div class="flex w-full">
-    <button type="button" class="button secondary" class:active="{show === 'all'}" on:click="{() => show = 'all'}">
-      Show all
-    </button>
-
-    <button type="button" class="mx-4 button secondary" class:active="{show === 'nondeleted'}" on:click="{() => show = 'nondeleted'}">
-      Show only non-deleted
+    <button type="button" class="mr-4 button secondary" class:active="{show === 'nondeleted'}" on:click="{() => show = 'nondeleted'}">
+      Show non-deleted
     </button>
 
     <button type="button" class="button secondary" class:active="{show === 'deleted'}" on:click="{() => show = 'deleted'}">
-      Show only deleted
+      Show deleted
     </button>
   </div>
 </div>
@@ -152,3 +149,5 @@
     </article>
   {/each}
 </section>
+
+<Pagination />
