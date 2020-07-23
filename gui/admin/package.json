@@ -8,7 +8,8 @@
     "serve": "spassr --serve-spa --serve-ssr",
     "export": "routify export",
     "rollup": "rollup -cw",
-    "routify": "routify -D"
+    "routify": "routify -D",
+    "test": "testcafe 'firefox:headless --no-sandbox' tests"
   },
   "devDependencies": {
     "@beyonk/svelte-notifications": "^2.0.3",
@@ -16,6 +17,7 @@
     "@rollup/plugin-commonjs": "^14.0.0",
     "@rollup/plugin-node-resolve": "^8.4.0",
     "@tailwindcss/custom-forms": "^0.2.1",
+    "@sveltech/routify": "^1.9.2",
     "autoprefixer": "^9.8.5",
     "concurrently": "^5.2.0",
     "cross-env": "^7.0.2",
@@ -31,11 +33,11 @@
     "rollup-plugin-svelte": "^5.2.3",
     "rollup-plugin-terser": "^6.1.0",
     "spassr": "^1.1.2",
-    "tailwindcss": "^1.5.1"
+    "tailwindcss": "^1.5.1",
+    "testcafe": "^1.8.8",
+    "svelte": "^3.24.0"
   },
   "dependencies": {
-    "@sveltech/routify": "^1.9.2",
-    "date-fns": "^2.14.0",
-    "svelte": "^3.24.0"
+    "date-fns": "^2.14.0"
   }
 }
