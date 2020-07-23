@@ -26,6 +26,8 @@ function createConfig({ output, inlineDynamicImports, plugins = [] }) {
     input: `src/main.js`,
     output: {
       name: 'app',
+      assetFileNames: '[name].[extname]',
+      chunkFileNames: '[name].js',
       ...output,
     },
     plugins: [

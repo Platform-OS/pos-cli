@@ -20,6 +20,7 @@
       if (data) {
         modelsStore.refreshModels(schemaId);
         data && notifier.success("Model created.");
+        showNewForm = false;
       }
     });
   }
