@@ -36,7 +36,7 @@
     />
   {:else}
     <input class="w-full mr-2 form-input" type="text"
-      value="{JSON.stringify(value)}"
+      value="{value ? JSON.stringify(value) : ''}"
       placeholder={attribute_type}
       {name}
       on:input={propagateUpdate}

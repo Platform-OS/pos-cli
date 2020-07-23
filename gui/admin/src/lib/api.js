@@ -13,9 +13,8 @@ const getPropsString = (props) => {
       const { name, value, attribute_type } = props[prop];
 
       const updateType = typeMap[attribute_type];
-      const val = attribute_type === 'string' ? `"${value}"` : value;
 
-      return `{ name: "${name}", ${updateType}: ${val}}`;
+      return `{ name: "${name}", ${updateType}: ${value}}`;
     })
     .join('\n');
 };
@@ -113,6 +112,7 @@ export default {
   },
   updateModel({ id, props }) {
     const properties = getPropsString(props);
+
     const query = `
       mutation {
         model_update(
