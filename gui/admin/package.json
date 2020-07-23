@@ -9,7 +9,7 @@
     "export": "routify export",
     "rollup": "rollup -cw",
     "routify": "routify -D",
-    "test": "testcafe 'chrome' tests/Models.js --live"
+    "test": "testcafe 'chrome' tests/Models.js -L"
   },
   "devDependencies": {
     "@beyonk/svelte-notifications": "^2.0.3",

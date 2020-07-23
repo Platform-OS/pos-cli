@@ -107,7 +107,7 @@
 
     <div class="flex w-full mt-4">
       <button class="button">Filter</button>
-      <button type="button" class="ml-4 button link" on:click={() => filtersStore.reset()}>Cancel</button>
+      <button type="button" class="ml-4 button link" on:click={() => { filtersStore.reset(); showFilters = false; }}>Cancel</button>
     </div>
   </form>
 {/if}
