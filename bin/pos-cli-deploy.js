@@ -37,7 +37,7 @@ program
       DIRECT_ASSETS_UPLOAD: !params.oldAssetsUpload
     });
 
-    await runAudit();
+    // await runAudit();
     deployStrategy.run({ strategy, opts: { env, authData, params } });
   });
 
