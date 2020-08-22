@@ -1,4 +1,7 @@
 module.exports = {
+  future: {
+    removeDeprecatedGapUtilities: true,
+  },
   purge: {
     mode: 'all',
     content: ['./src/pages/**/*.svelte'],

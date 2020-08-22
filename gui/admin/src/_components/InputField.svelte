@@ -24,7 +24,7 @@
   }
 </script>
 
-<label class="block w-10/12">
+<label class="block w-10/12" for="attr_type">
   <span class="w-full">{name}</span>
   <br>
   {#if attribute_type === 'text' || attribute_type === 'upload' || attribute_type === 'array'}
@@ -32,6 +32,7 @@
       value="{JSON.stringify(value, null, 2)}"
       placeholder={attribute_type}
       {name}
+      id="attr_type"
       on:input={propagateUpdate}
     />
   {:else}
@@ -39,6 +40,7 @@
       value="{value ? JSON.stringify(value) : ''}"
       placeholder={attribute_type}
       {name}
+      id="attr_type"
       on:input={propagateUpdate}
     />
   {/if}
