@@ -10,7 +10,8 @@ const logger = require('../lib/logger'),
 const repos = {
   empty: 'mdyd-dev/directory-structure',
   'Hello world': 'mdyd-dev/hello-world',
-  'Todo app': 'mdyd-dev/todo-app.git',
+  'Todo app': 'mdyd-dev/todo-app',
+  'Product Marketplace Template': 'mdyd-dev/product-marketplace-template'
 };
 
 function createStructure(url, branch) {
