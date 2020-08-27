@@ -42,6 +42,7 @@
     "extract-zip": "^2.0.1",
     "fast-glob": "^3.2.4",
     "ignore": "^5.1.8",
+    "inquirer": "^7.3.3",
     "js-yaml": "^3.14.0",
     "livereload": "^0.9.1",
     "lodash.clonedeep": "^4.5.0",
