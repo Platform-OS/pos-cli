@@ -45,7 +45,7 @@ program
     'structure source repository url (github, bitbucket, gitlab). \nRead more on accepted formats: https://github.com/Rich-Harris/degit#usage \n'
   )
   .option('--branch <branch>', 'branch where the structure is located')
-  .option('--wizard', 'Start repo wizzard')
+  .option('--wizard', 'Start repo wizard')
   .action(async (params) => {
     if (params.wizard) {
       inquirer
