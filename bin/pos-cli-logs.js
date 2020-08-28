@@ -64,7 +64,7 @@ program
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--interval <interval>', 'time to wait between updates in ms', 3000)
   .option('--filter <log type>', 'display only logs of given type, example: error')
-  .option('--quiet', 'show only log message, without context')
+  .option('-q, --quiet', 'show only log message, without context')
   .action((environment) => {
     const authData = fetchAuthData(environment, program);
     const stream = new LogStream(authData);

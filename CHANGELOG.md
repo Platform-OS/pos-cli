@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.4.22 - Init wizard
+* Added `--wizard` (-w) to `pos-cli init` with choice between different templates 
+
 ## 4.4.21 - 15 July 2020 - Admin improvements
 * Correctly display arrays in fields
 * Show `text` fields as textarea
