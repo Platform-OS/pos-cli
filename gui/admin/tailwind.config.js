@@ -1,11 +1,4 @@
 module.exports = {
-  future: {
-    removeDeprecatedGapUtilities: true,
-  },
-  purge: {
-    mode: 'all',
-    content: ['./src/pages/**/*.svelte'],
-  },
   theme: {
     screens: {
       'md': '1024px',
@@ -17,31 +10,11 @@ module.exports = {
       padding: '0'
     },
   },
-  corePlugins: {
-    gridTemplateColumns: false,
-    gridColumn: false,
-    gridColumnStart: false,
-    gridColumnEnd: false,
-    gridTemplateRows: false,
-    gridRow: false,
-    gridRowStart: false,
-    gridRowEnd: false,
-    gap: false,
-    transform: false,
-    transformOrigin: false,
-    scale: false,
-    rotate: false,
-    translate: false,
-    skew: false,
-    transitionProperty: false,
-    transitionTimingFunction: false,
-    transitionDuration: false,
-    transitionDelay: false,
-    appearance: false,
-    backgroundAttachment: false,
-    backgroundPosition: false,
-    backgroundRepeat: false,
-    backgroundSize: false,
-  },
   plugins: [require('@tailwindcss/custom-forms')],
+  future: {
+    removeDeprecatedGapUtilities: true,
+    purgeLayersByDefault: true,
+    defaultLineHeights: true,
+    standardFontWeights: true
+  }
 };

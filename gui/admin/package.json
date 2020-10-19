@@ -35,7 +35,7 @@
     "rollup-plugin-terser": "^7.0.2",
     "spassr": "^1.1.2",
     "svelte": "^3.24.1",
-    "tailwindcss": "^1.8.5",
+    "tailwindcss": "^1.9.4",
     "testcafe": "^1.9.2"
   },
   "dependencies": {
