@@ -2,7 +2,7 @@
   import { url } from "@sveltech/routify";
 </script>
 
-<section class="text-gray-700 body-font">
+<section class="text-gray-700 ">
   <div class="container flex flex-wrap py-8 mx-auto">
     <div class="flex flex-wrap w-full -m-4">
       <div class="p-4 lg:w-1/2 md:w-full">
@@ -32,7 +32,7 @@
 
 <hr>
 
-<section class="text-gray-700 body-font">
+<section class="text-gray-700 ">
   <div class="container flex flex-wrap py-8 mx-auto">
     <div class="flex flex-wrap w-full -m-4">
       <div class="p-4 lg:w-1/2 md:w-full">

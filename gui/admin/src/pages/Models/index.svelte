@@ -6,42 +6,43 @@
   const getModelSchemas = async () => await api.getModelSchemas();
 
   const getProps = props => {
-    const list = props
+    const items = props
       .map(prop => {
-        return `<p class="flex items-center mb-2 text-gray-600">${prop.name} (${prop.attribute_type})</p>`;
+        return `<li>${prop.name} (${prop.attribute_type})</li>`;
       })
       .join("");
+
+    const list = `
+      <ul class="grid grid-cols-2 gap-2 text-sm list-disc list-inside">
+        ${items}
+      </ul>
+    `;
 
     return list;
   };
 </script>
 
-<h1 class="text-5xl">Models</h1>
+<h1 class="mb-2 text-5xl">Models</h1>
+<p>Choose schema that you want to see models for.</p>
 
-<section class="overflow-hidden text-gray-700 body-font">
-  <div class="container py-12">
-    <div class="flex flex-wrap">
+<section class="overflow-hidden">
+  <div class="container py-8">
+    <div class="grid gap-5 lg:grid-cols-3 md:grid-cols-2">
 
       {#await getModelSchemas()}
         <p>Loading...</p>
       {:then data}
         {#each data as { id, name, properties } (id)}
           <a
-            class="w-full pr-6 xl:w-1/3 md:w-1/2"
+            class=""
             href={$url('../Manage/:id', { id })}>
             <div
-              class="relative flex flex-col h-full p-6 overflow-hidden border-2 border-gray-300 rounded-lg hover:bg-gray-200">
-              <h2 class="mb-1 text-sm font-medium tracking-widest title-font">
-                schema name
-              </h2>
+              class="relative flex flex-col h-full p-5 bg-gray-200 border border-gray-400 hover:bg-gray-300 hover:shadow-md">
               <h1
-                class="pb-4 mb-4 text-2xl leading-none text-gray-900 border-b border-gray-400">
+                class="pb-2 mb-2 text-2xl leading-relaxed">
                 {name}
               </h1>
 
-              <h2 class="mb-4 text-sm font-medium tracking-widest title-font">
-                Properties
-              </h2>
               {@html getProps(properties)}
             </div>
           </a>

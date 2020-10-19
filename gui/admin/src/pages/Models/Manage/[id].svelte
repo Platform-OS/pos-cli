@@ -100,7 +100,7 @@
   </div>
 </div>
 
-<section class="flex flex-wrap text-gray-700 body-font">
+<section class="flex flex-wrap text-gray-700 ">
   {#each data as { id, created_at, updated_at, deleted_at, properties }, i (id)}
     <article class="flex flex-wrap w-full mb-6" transition:slide>
       <div class="w-full">

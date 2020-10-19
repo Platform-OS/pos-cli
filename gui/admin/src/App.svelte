@@ -3,6 +3,6 @@
   import { routes } from "@sveltech/routify/tmp/routes";
 </script>
 
-<div class="container">
+<div class="container text-gray-700">
   <Router {routes} />
 </div>
