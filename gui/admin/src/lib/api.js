@@ -1,7 +1,7 @@
 import { NotificationDisplay, notifier } from '@beyonk/svelte-notifications';
 import { get } from 'svelte/store';
 import filtersStore from '../pages/Models/Manage/_filters-store';
-import pageStore from "../pages/Models/Manage/_page-store";
+import pageStore from '../pages/Models/Manage/_page-store';
 
 import typeMap from './_typemap';
 
@@ -19,7 +19,7 @@ const getPropsString = (props) => {
     .join('\n');
 };
 
-const getPropertiesFilter = f => {
+const getPropertiesFilter = (f) => {
   const filterString = `
     properties: [{
       name: "${f.property}"
@@ -28,7 +28,7 @@ const getPropertiesFilter = f => {
   `;
 
   return filterString;
-}
+};
 
 const graph = (body) => {
   return fetch('/api/graph', {
@@ -42,6 +42,8 @@ const graph = (body) => {
         const err = res.errors[0].message;
         return notifier.danger(`Error: ${err}`, 5000);
       }
+
+      console.log(res)
 
       return res && res.data;
     });
@@ -107,7 +109,7 @@ export default {
         pageStore.setPaginationData({ total_pages: data.models.total_pages });
       }
 
-      return data.models.results
+      return data.models.results;
     });
   },
   updateModel({ id, props }) {
@@ -158,6 +160,30 @@ export default {
         properties: [${properties}]
       }) {
         id
+      }
+    }`;
+
+    return graph({ query });
+  },
+  getUsers({ email = "", fn = "", ln = "" }) {
+    console.log('getusers')
+    const query = `query getUsers {
+      users(per_page: 20,
+        page: 1,
+        filter: {
+          email: { contains: ${email} },
+          first_name: { contains: ${fn} },
+          last_name: { contains: ${ln} }
+        }
+      ) {
+        results {
+          id
+          email
+          deleted_at
+          created_at
+          first_name
+          last_name
+        }
       }
     }`;
 

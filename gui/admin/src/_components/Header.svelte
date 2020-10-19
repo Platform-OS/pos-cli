@@ -11,6 +11,9 @@
       <a class="mr-5 text-lg text-blue-700 hover:underline" href={$url('../Models/index')}>
         Models
       </a>
+      <a class="mr-5 text-lg text-blue-700 hover:underline" href={$url('../Users/index')}>
+        Users
+      </a>
     </nav>
   </div>
 </header>

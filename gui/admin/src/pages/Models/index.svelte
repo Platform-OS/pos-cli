@@ -1,6 +1,5 @@
 <script>
   import api from "@/lib/api";
-  import { onMount } from "svelte";
   import { url } from "@sveltech/routify";
 
   const getModelSchemas = async () => await api.getModelSchemas();
