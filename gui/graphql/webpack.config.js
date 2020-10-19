@@ -1,28 +1,34 @@
 const path = require('path');
-
-const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+const webpack = require('webpack');
 
 module.exports = {
-  mode: mode,
-  entry: { main: './src/index.jsx' },
+  mode: process.env.NODE_ENV || 'development',
   output: {
-    filename: '[name].js',
-    path: path.resolve('public')
+    path: path.resolve('public'),
   },
   resolve: {
-    extensions: ['.mjs', '.jsx', '.js', '.css']
+    extensions: ['.mjs', '.jsx', '.js', '.css'],
+    fallback: { assert: require.resolve('assert/') },
   },
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env': {
+        NODE_ENV: JSON.stringify(process.env.NODE_ENV),
+      },
+    }),
+  ],
   module: {
     rules: [
       {
         exclude: /node_modules/,
         test: /\.jsx?$/,
-        loader: 'babel-loader?cacheDirectory'
+        loader: 'babel-loader',
+        options: { cacheDirectory: true },
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader']
-      }
-    ]
-  }
+        use: ['style-loader', 'css-loader'],
+      },
+    ],
+  },
 };
