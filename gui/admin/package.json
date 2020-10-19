@@ -2,6 +2,7 @@
   "name": "svelte-app",
   "version": "1.0.0",
   "scripts": {
+    "start": "run-p routify rollup",
     "dev": "run-p routify rollup",
     "dev-dynamic": "cross-env BUNDLING=dynamic npm run dev",
     "build": "npm run routify -- -b && rollup -c",

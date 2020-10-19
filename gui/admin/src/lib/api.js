@@ -43,8 +43,6 @@ const graph = (body) => {
         return notifier.danger(`Error: ${err}`, 5000);
       }
 
-      console.log(res)
-
       return res && res.data;
     });
 };
@@ -165,15 +163,14 @@ export default {
 
     return graph({ query });
   },
-  getUsers({ email = "", fn = "", ln = "" }) {
-    console.log('getusers')
+  getUsers(email = "", fn = "", ln = "") {
     const query = `query getUsers {
       users(per_page: 20,
         page: 1,
         filter: {
-          email: { contains: ${email} },
-          first_name: { contains: ${fn} },
-          last_name: { contains: ${ln} }
+          email: { contains: "${email}" },
+          first_name: { contains: "${fn}" },
+          last_name: { contains: "${ln}" }
         }
       ) {
         results {
@@ -183,6 +180,9 @@ export default {
           created_at
           first_name
           last_name
+          external_id
+          jwt_token
+          temporary_token
         }
       }
     }`;

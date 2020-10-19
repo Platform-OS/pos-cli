@@ -4,11 +4,10 @@
   import { NotificationDisplay } from '@beyonk/svelte-notifications';
 </script>
 
-
 <Header />
+<NotificationDisplay />
 
 <slot />
 
 <Footer />
 
-<NotificationDisplay />

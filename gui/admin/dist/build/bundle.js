@@ -4049,6 +4049,59 @@ var app = (function () {
               "path": "/Users/index",
               "id": "_Users_index",
               "component": () => Promise.resolve().then(function () { return index$2; }).then(m => m.default)
+            },
+            {
+              "isFile": false,
+              "isDir": true,
+              "file": "Manage",
+              "filepath": "/Users/Manage",
+              "name": "Manage",
+              "ext": "",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/Manage",
+              "children": [
+                {
+                  "isFile": true,
+                  "isDir": false,
+                  "file": "_layout.svelte",
+                  "filepath": "/Users/Manage/_layout.svelte",
+                  "name": "_layout",
+                  "ext": "svelte",
+                  "badExt": false,
+                  "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/Manage/_layout.svelte",
+                  "importPath": "../../../../src/pages/Users/Manage/_layout.svelte",
+                  "isLayout": true,
+                  "isReset": false,
+                  "isIndex": false,
+                  "isFallback": false,
+                  "isPage": false,
+                  "ownMeta": {},
+                  "meta": {
+                    "preload": false,
+                    "prerender": true,
+                    "precache-order": false,
+                    "precache-proximity": true,
+                    "recursive": true
+                  },
+                  "path": "/Users/Manage",
+                  "id": "_Users_Manage__layout",
+                  "component": () => Promise.resolve().then(function () { return _layout$3; }).then(m => m.default)
+                }
+              ],
+              "isLayout": false,
+              "isReset": false,
+              "isIndex": false,
+              "isFallback": false,
+              "isPage": false,
+              "ownMeta": {},
+              "meta": {
+                "preload": false,
+                "prerender": true,
+                "precache-order": false,
+                "precache-proximity": true,
+                "recursive": true
+              },
+              "path": "/Users/Manage"
             }
           ],
           "isLayout": false,
@@ -5024,48 +5077,48 @@ var app = (function () {
     function create_fragment$8(ctx) {
     	let header;
     	let t0;
-    	let t1;
-    	let footer;
-    	let t2;
     	let notificationdisplay;
+    	let t1;
+    	let t2;
+    	let footer;
     	let current;
     	header = new Header({ $$inline: true });
+    	notificationdisplay = new Notifications({ $$inline: true });
     	const default_slot_template = /*$$slots*/ ctx[1].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[0], null);
     	footer = new Footer({ $$inline: true });
-    	notificationdisplay = new Notifications({ $$inline: true });
 
     	const block = {
     		c: function create() {
     			create_component(header.$$.fragment);
     			t0 = space();
-    			if (default_slot) default_slot.c();
-    			t1 = space();
-    			create_component(footer.$$.fragment);
-    			t2 = space();
     			create_component(notificationdisplay.$$.fragment);
+    			t1 = space();
+    			if (default_slot) default_slot.c();
+    			t2 = space();
+    			create_component(footer.$$.fragment);
     		},
     		l: function claim(nodes) {
     			claim_component(header.$$.fragment, nodes);
     			t0 = claim_space(nodes);
-    			if (default_slot) default_slot.l(nodes);
-    			t1 = claim_space(nodes);
-    			claim_component(footer.$$.fragment, nodes);
-    			t2 = claim_space(nodes);
     			claim_component(notificationdisplay.$$.fragment, nodes);
+    			t1 = claim_space(nodes);
+    			if (default_slot) default_slot.l(nodes);
+    			t2 = claim_space(nodes);
+    			claim_component(footer.$$.fragment, nodes);
     		},
     		m: function mount(target, anchor) {
     			mount_component(header, target, anchor);
     			insert_dev(target, t0, anchor);
+    			mount_component(notificationdisplay, target, anchor);
+    			insert_dev(target, t1, anchor);
 
     			if (default_slot) {
     				default_slot.m(target, anchor);
     			}
 
-    			insert_dev(target, t1, anchor);
-    			mount_component(footer, target, anchor);
     			insert_dev(target, t2, anchor);
-    			mount_component(notificationdisplay, target, anchor);
+    			mount_component(footer, target, anchor);
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
@@ -5078,26 +5131,26 @@ var app = (function () {
     		i: function intro(local) {
     			if (current) return;
     			transition_in(header.$$.fragment, local);
+    			transition_in(notificationdisplay.$$.fragment, local);
     			transition_in(default_slot, local);
     			transition_in(footer.$$.fragment, local);
-    			transition_in(notificationdisplay.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
     			transition_out(header.$$.fragment, local);
+    			transition_out(notificationdisplay.$$.fragment, local);
     			transition_out(default_slot, local);
     			transition_out(footer.$$.fragment, local);
-    			transition_out(notificationdisplay.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
     			destroy_component(header, detaching);
     			if (detaching) detach_dev(t0);
-    			if (default_slot) default_slot.d(detaching);
-    			if (detaching) detach_dev(t1);
-    			destroy_component(footer, detaching);
-    			if (detaching) detach_dev(t2);
     			destroy_component(notificationdisplay, detaching);
+    			if (detaching) detach_dev(t1);
+    			if (default_slot) default_slot.d(detaching);
+    			if (detaching) detach_dev(t2);
+    			destroy_component(footer, detaching);
     		}
     	};
 
@@ -6149,8 +6202,6 @@ var app = (function () {
             return danger(`Error: ${err}`, 5000);
           }
 
-          console.log(res);
-
           return res && res.data;
         });
     };
@@ -6271,15 +6322,14 @@ var app = (function () {
 
         return graph({ query });
       },
-      getUsers({ email = "", fn = "", ln = "" }) {
-        console.log('getusers');
+      getUsers(email = "", fn = "", ln = "") {
         const query = `query getUsers {
       users(per_page: 20,
         page: 1,
         filter: {
-          email: { contains: ${email} },
-          first_name: { contains: ${fn} },
-          last_name: { contains: ${ln} }
+          email: { contains: "${email}" },
+          first_name: { contains: "${fn}" },
+          last_name: { contains: "${ln}" }
         }
       ) {
         results {
@@ -6289,6 +6339,9 @@ var app = (function () {
           created_at
           first_name
           last_name
+          external_id
+          jwt_token
+          temporary_token
         }
       }
     }`;
@@ -12697,7 +12750,21 @@ var app = (function () {
     /* src/pages/Users/index.svelte generated by Svelte v3.24.1 */
     const file$f = "src/pages/Users/index.svelte";
 
-    // (1:0) <script>   import api from "@/lib/api";   // import { url }
+    function get_each_context$7(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[3] = list[i].id;
+    	child_ctx[4] = list[i].email;
+    	child_ctx[5] = list[i].deleted_at;
+    	child_ctx[6] = list[i].created_at;
+    	child_ctx[7] = list[i].first_name;
+    	child_ctx[8] = list[i].last_name;
+    	child_ctx[9] = list[i].external_id;
+    	child_ctx[10] = list[i].jwt_token;
+    	child_ctx[11] = list[i].temporary_token;
+    	return child_ctx;
+    }
+
+    // (1:0) <script>   import api from "@/lib/api";   import { url }
     function create_catch_block$1(ctx) {
     	const block = {
     		c: noop,
@@ -12711,31 +12778,65 @@ var app = (function () {
     		block,
     		id: create_catch_block$1.name,
     		type: "catch",
-    		source: "(1:0) <script>   import api from \\\"@/lib/api\\\";   // import { url }",
+    		source: "(1:0) <script>   import api from \\\"@/lib/api\\\";   import { url }",
     		ctx
     	});
 
     	return block;
     }
 
-    // (17:6) {:then data}
+    // (21:6) {:then data}
     function create_then_block$1(ctx) {
-    	let t_value = { data: /*data*/ ctx[1] } + "";
-    	let t;
+    	let each_blocks = [];
+    	let each_1_lookup = new Map();
+    	let each_1_anchor;
+    	let each_value = /*data*/ ctx[2];
+    	validate_each_argument(each_value);
+    	const get_key = ctx => /*id*/ ctx[3];
+    	validate_each_keys(ctx, each_value, get_each_context$7, get_key);
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		let child_ctx = get_each_context$7(ctx, each_value, i);
+    		let key = get_key(child_ctx);
+    		each_1_lookup.set(key, each_blocks[i] = create_each_block$7(key, child_ctx));
+    	}
 
     	const block = {
     		c: function create() {
-    			t = text(t_value);
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty();
     		},
     		l: function claim(nodes) {
-    			t = claim_text(nodes, t_value);
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].l(nodes);
+    			}
+
+    			each_1_anchor = empty();
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert_dev(target, each_1_anchor, anchor);
     		},
-    		p: noop,
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*$url, users*/ 3) {
+    				const each_value = /*data*/ ctx[2];
+    				validate_each_argument(each_value);
+    				validate_each_keys(ctx, each_value, get_each_context$7, get_key);
+    				each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value, each_1_lookup, each_1_anchor.parentNode, destroy_block, create_each_block$7, each_1_anchor, get_each_context$7);
+    			}
+    		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].d(detaching);
+    			}
+
+    			if (detaching) detach_dev(each_1_anchor);
     		}
     	};
 
@@ -12743,14 +12844,253 @@ var app = (function () {
     		block,
     		id: create_then_block$1.name,
     		type: "then",
-    		source: "(17:6) {:then data}",
+    		source: "(21:6) {:then data}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (15:19)          <p>Loading...</p>       {:then data}
+    // (38:16) {#if external_id && external_id.length > 5}
+    function create_if_block$6(ctx) {
+    	let li;
+    	let t0;
+    	let t1_value = /*external_id*/ ctx[9] + "";
+    	let t1;
+
+    	const block = {
+    		c: function create() {
+    			li = element("li");
+    			t0 = text("External ID: ");
+    			t1 = text(t1_value);
+    			this.h();
+    		},
+    		l: function claim(nodes) {
+    			li = claim_element(nodes, "LI", { class: true });
+    			var li_nodes = children(li);
+    			t0 = claim_text(li_nodes, "External ID: ");
+    			t1 = claim_text(li_nodes, t1_value);
+    			li_nodes.forEach(detach_dev);
+    			this.h();
+    		},
+    		h: function hydrate() {
+    			attr_dev(li, "class", "text-xs");
+    			add_location(li, file$f, 38, 18, 1314);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, li, anchor);
+    			append_dev(li, t0);
+    			append_dev(li, t1);
+    		},
+    		p: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(li);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$6.name,
+    		type: "if",
+    		source: "(38:16) {#if external_id && external_id.length > 5}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (22:8) {#each data as { id, email, deleted_at, created_at, first_name, last_name, external_id, jwt_token, temporary_token }
+    function create_each_block$7(key_1, ctx) {
+    	let a;
+    	let div;
+    	let h1;
+    	let span0;
+    	let t0_value = /*email*/ ctx[4] + "";
+    	let t0;
+    	let t1;
+    	let span1;
+    	let t2;
+    	let t3_value = /*id*/ ctx[3] + "";
+    	let t3;
+    	let t4;
+    	let ul;
+    	let li0;
+    	let t5;
+    	let t6_value = /*first_name*/ ctx[7] + "";
+    	let t6;
+    	let t7;
+    	let li1;
+    	let t8;
+    	let t9_value = /*last_name*/ ctx[8] + "";
+    	let t9;
+    	let t10;
+    	let li2;
+    	let t11;
+    	let t12;
+    	let li3;
+    	let t13;
+    	let t14_value = /*jwt_token*/ ctx[10] + "";
+    	let t14;
+    	let t15;
+    	let a_href_value;
+    	let if_block = /*external_id*/ ctx[9] && /*external_id*/ ctx[9].length > 5 && create_if_block$6(ctx);
+
+    	const block = {
+    		key: key_1,
+    		first: null,
+    		c: function create() {
+    			a = element("a");
+    			div = element("div");
+    			h1 = element("h1");
+    			span0 = element("span");
+    			t0 = text(t0_value);
+    			t1 = space();
+    			span1 = element("span");
+    			t2 = text("ID: ");
+    			t3 = text(t3_value);
+    			t4 = space();
+    			ul = element("ul");
+    			li0 = element("li");
+    			t5 = text("First name: ");
+    			t6 = text(t6_value);
+    			t7 = space();
+    			li1 = element("li");
+    			t8 = text("Last name: ");
+    			t9 = text(t9_value);
+    			t10 = space();
+    			li2 = element("li");
+    			t11 = space();
+    			if (if_block) if_block.c();
+    			t12 = space();
+    			li3 = element("li");
+    			t13 = text("JWT: ");
+    			t14 = text(t14_value);
+    			t15 = space();
+    			this.h();
+    		},
+    		l: function claim(nodes) {
+    			a = claim_element(nodes, "A", { class: true, href: true });
+    			var a_nodes = children(a);
+    			div = claim_element(a_nodes, "DIV", { class: true });
+    			var div_nodes = children(div);
+    			h1 = claim_element(div_nodes, "H1", { class: true });
+    			var h1_nodes = children(h1);
+    			span0 = claim_element(h1_nodes, "SPAN", {});
+    			var span0_nodes = children(span0);
+    			t0 = claim_text(span0_nodes, t0_value);
+    			span0_nodes.forEach(detach_dev);
+    			t1 = claim_space(h1_nodes);
+    			span1 = claim_element(h1_nodes, "SPAN", {});
+    			var span1_nodes = children(span1);
+    			t2 = claim_text(span1_nodes, "ID: ");
+    			t3 = claim_text(span1_nodes, t3_value);
+    			span1_nodes.forEach(detach_dev);
+    			h1_nodes.forEach(detach_dev);
+    			t4 = claim_space(div_nodes);
+    			ul = claim_element(div_nodes, "UL", { class: true });
+    			var ul_nodes = children(ul);
+    			li0 = claim_element(ul_nodes, "LI", {});
+    			var li0_nodes = children(li0);
+    			t5 = claim_text(li0_nodes, "First name: ");
+    			t6 = claim_text(li0_nodes, t6_value);
+    			li0_nodes.forEach(detach_dev);
+    			t7 = claim_space(ul_nodes);
+    			li1 = claim_element(ul_nodes, "LI", {});
+    			var li1_nodes = children(li1);
+    			t8 = claim_text(li1_nodes, "Last name: ");
+    			t9 = claim_text(li1_nodes, t9_value);
+    			li1_nodes.forEach(detach_dev);
+    			t10 = claim_space(ul_nodes);
+    			li2 = claim_element(ul_nodes, "LI", { class: true });
+    			children(li2).forEach(detach_dev);
+    			t11 = claim_space(ul_nodes);
+    			if (if_block) if_block.l(ul_nodes);
+    			t12 = claim_space(ul_nodes);
+    			li3 = claim_element(ul_nodes, "LI", { class: true });
+    			var li3_nodes = children(li3);
+    			t13 = claim_text(li3_nodes, "JWT: ");
+    			t14 = claim_text(li3_nodes, t14_value);
+    			li3_nodes.forEach(detach_dev);
+    			ul_nodes.forEach(detach_dev);
+    			div_nodes.forEach(detach_dev);
+    			t15 = claim_space(a_nodes);
+    			a_nodes.forEach(detach_dev);
+    			this.h();
+    		},
+    		h: function hydrate() {
+    			add_location(span0, file$f, 29, 17, 943);
+    			add_location(span1, file$f, 30, 17, 981);
+    			attr_dev(h1, "class", "flex justify-between pb-2 mb-2 text-2xl leading-relaxed");
+    			add_location(h1, file$f, 27, 14, 841);
+    			add_location(li0, file$f, 34, 16, 1075);
+    			add_location(li1, file$f, 35, 16, 1126);
+    			attr_dev(li2, "class", "pt-2 mt-4 text-xs border-t border-gray-400");
+    			add_location(li2, file$f, 36, 16, 1175);
+    			attr_dev(li3, "class", "text-xs");
+    			add_location(li3, file$f, 40, 16, 1404);
+    			attr_dev(ul, "class", "text-sm");
+    			add_location(ul, file$f, 33, 14, 1038);
+    			attr_dev(div, "class", "relative flex flex-col h-full p-5 bg-gray-200 border border-gray-400 hover:bg-gray-300 hover:shadow-md");
+    			add_location(div, file$f, 25, 12, 696);
+    			attr_dev(a, "class", "");
+    			attr_dev(a, "href", a_href_value = /*$url*/ ctx[0]("../Manage/:id", { id: /*id*/ ctx[3] }));
+    			add_location(a, file$f, 22, 10, 610);
+    			this.first = a;
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, a, anchor);
+    			append_dev(a, div);
+    			append_dev(div, h1);
+    			append_dev(h1, span0);
+    			append_dev(span0, t0);
+    			append_dev(h1, t1);
+    			append_dev(h1, span1);
+    			append_dev(span1, t2);
+    			append_dev(span1, t3);
+    			append_dev(div, t4);
+    			append_dev(div, ul);
+    			append_dev(ul, li0);
+    			append_dev(li0, t5);
+    			append_dev(li0, t6);
+    			append_dev(ul, t7);
+    			append_dev(ul, li1);
+    			append_dev(li1, t8);
+    			append_dev(li1, t9);
+    			append_dev(ul, t10);
+    			append_dev(ul, li2);
+    			append_dev(ul, t11);
+    			if (if_block) if_block.m(ul, null);
+    			append_dev(ul, t12);
+    			append_dev(ul, li3);
+    			append_dev(li3, t13);
+    			append_dev(li3, t14);
+    			append_dev(a, t15);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (/*external_id*/ ctx[9] && /*external_id*/ ctx[9].length > 5) if_block.p(ctx, dirty);
+
+    			if (dirty & /*$url*/ 1 && a_href_value !== (a_href_value = /*$url*/ ctx[0]("../Manage/:id", { id: /*id*/ ctx[3] }))) {
+    				attr_dev(a, "href", a_href_value);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(a);
+    			if (if_block) if_block.d();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block$7.name,
+    		type: "each",
+    		source: "(22:8) {#each data as { id, email, deleted_at, created_at, first_name, last_name, external_id, jwt_token, temporary_token }",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (19:22)          <p>Loading...</p>       {:then data}
     function create_pending_block$1(ctx) {
     	let p;
     	let t;
@@ -12769,7 +13109,7 @@ var app = (function () {
     			this.h();
     		},
     		h: function hydrate() {
-    			add_location(p, file$f, 15, 8, 390);
+    			add_location(p, file$f, 19, 8, 432);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -12785,7 +13125,7 @@ var app = (function () {
     		block,
     		id: create_pending_block$1.name,
     		type: "pending",
-    		source: "(15:19)          <p>Loading...</p>       {:then data}",
+    		source: "(19:22)          <p>Loading...</p>       {:then data}",
     		ctx
     	});
 
@@ -12811,10 +13151,10 @@ var app = (function () {
     		pending: create_pending_block$1,
     		then: create_then_block$1,
     		catch: create_catch_block$1,
-    		value: 1
+    		value: 2
     	};
 
-    	handle_promise(promise = /*gu*/ ctx[0](), info);
+    	handle_promise(promise = /*users*/ ctx[1](), info);
 
     	const block = {
     		c: function create() {
@@ -12855,14 +13195,14 @@ var app = (function () {
     		},
     		h: function hydrate() {
     			attr_dev(h1, "class", "mb-2 text-5xl");
-    			add_location(h1, file$f, 7, 0, 145);
-    			add_location(p, file$f, 8, 0, 182);
-    			attr_dev(div0, "class", "grid gap-5 lg:grid-cols-3 md:grid-cols-2");
-    			add_location(div0, file$f, 12, 4, 306);
+    			add_location(h1, file$f, 11, 0, 199);
+    			add_location(p, file$f, 12, 0, 236);
+    			attr_dev(div0, "class", "grid gap-5 lg:grid-cols-2");
+    			add_location(div0, file$f, 16, 4, 360);
     			attr_dev(div1, "class", "container py-8");
-    			add_location(div1, file$f, 11, 2, 273);
+    			add_location(div1, file$f, 15, 2, 327);
     			attr_dev(section, "class", "overflow-hidden");
-    			add_location(section, file$f, 10, 0, 237);
+    			add_location(section, file$f, 14, 0, 291);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, h1, anchor);
@@ -12883,7 +13223,7 @@ var app = (function () {
 
     			{
     				const child_ctx = ctx.slice();
-    				child_ctx[1] = info.resolved;
+    				child_ctx[2] = info.resolved;
     				info.block.p(child_ctx, dirty);
     			}
     		},
@@ -12913,7 +13253,15 @@ var app = (function () {
     }
 
     function instance$j($$self, $$props, $$invalidate) {
-    	const gu = async () => await api.getUsers();
+    	let $url;
+    	validate_store(url, "url");
+    	component_subscribe($$self, url, $$value => $$invalidate(0, $url = $$value));
+
+    	const users = async () => {
+    		const res = await api.getUsers();
+    		return res.users.results;
+    	};
+
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
@@ -12922,8 +13270,8 @@ var app = (function () {
 
     	let { $$slots = {}, $$scope } = $$props;
     	validate_slots("Users", $$slots, []);
-    	$$self.$capture_state = () => ({ api, gu });
-    	return [gu];
+    	$$self.$capture_state = () => ({ api, url, users, $url });
+    	return [$url, users];
     }
 
     class Users extends SvelteComponentDev {
@@ -12943,6 +13291,95 @@ var app = (function () {
     var index$2 = /*#__PURE__*/Object.freeze({
         __proto__: null,
         'default': Users
+    });
+
+    /* src/pages/Users/Manage/_layout.svelte generated by Svelte v3.24.1 */
+
+    function create_fragment$k(ctx) {
+    	let current;
+    	const default_slot_template = /*$$slots*/ ctx[1].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[0], null);
+
+    	const block = {
+    		c: function create() {
+    			if (default_slot) default_slot.c();
+    		},
+    		l: function claim(nodes) {
+    			if (default_slot) default_slot.l(nodes);
+    		},
+    		m: function mount(target, anchor) {
+    			if (default_slot) {
+    				default_slot.m(target, anchor);
+    			}
+
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (default_slot) {
+    				if (default_slot.p && dirty & /*$$scope*/ 1) {
+    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[0], dirty, null, null);
+    				}
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(default_slot, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (default_slot) default_slot.d(detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$k.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$k($$self, $$props, $$invalidate) {
+    	const writable_props = [];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Layout> was created with unknown prop '${key}'`);
+    	});
+
+    	let { $$slots = {}, $$scope } = $$props;
+    	validate_slots("Layout", $$slots, ['default']);
+
+    	$$self.$$set = $$props => {
+    		if ("$$scope" in $$props) $$invalidate(0, $$scope = $$props.$$scope);
+    	};
+
+    	return [$$scope, $$slots];
+    }
+
+    class Layout$3 extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$k, create_fragment$k, safe_not_equal, {});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Layout",
+    			options,
+    			id: create_fragment$k.name
+    		});
+    	}
+    }
+
+    var _layout$3 = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        'default': Layout$3
     });
 
     return app;
