@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.4.23 - pos-cli admin users
+* Added list of users to admin (phase 1)
+* Redesign of admin models list
+
 ## 4.4.22 - Init wizard
 * Added `--wizard` (-w) to `pos-cli init` with choice between different templates 
 
