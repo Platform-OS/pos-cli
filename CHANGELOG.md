@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.4.23 - pos-cli admin users
+## 4.4.24 - pos-cli admin users
 * Added list of users to admin (phase 1)
 * Redesign of admin models list
 
