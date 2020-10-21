@@ -77,7 +77,8 @@ describe('Audit - orphaned includes', () => {
     expect(stdout).toMatch('[Audit] 1 rule detected issues.');
     expect(stdout).toMatch(path.join('app', 'views', 'partials', 'not_included_partial.liquid'));
     expect(stdout).toMatch(path.join('modules', 'test', 'private', 'views', 'partials', 'not_included_partial.liquid'));
-    expect(stdout).not.toMatch('/included_partial.liquid');
+    expect(stdout).not.toMatch(path.join('app', 'views', 'partials', 'included_partial.liquid'));
+    expect(stdout).not.toMatch(path.join('app', 'views', 'partials', 'included_partial_2.liquid'));
     expect(stdout).not.toMatch(path.join('app', 'views', 'partials', 'shared', 'head.liquid'));
   });
 
