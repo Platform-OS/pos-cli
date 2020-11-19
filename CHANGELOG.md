@@ -1,8 +1,9 @@
 # Changelog
 ## 4.4.25
 * Deprecate `headers` in `api_calls` files in favour of `request_headers`
-* Improve displaying errors on import and deploy
-* Support `{% liquid %}` tag in `audit` command.
+* Improve displaying errors on `import` and `deploy`
+* Support `{% liquid %}` tag in `audit` command
+* Add usage statistics
 
 ## 4.4.24 - pos-cli admin users
 * Added list of users to admin (phase 1)
