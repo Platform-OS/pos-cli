@@ -5,31 +5,35 @@ const program = require('commander'),
   ora = require('ora'),
   shell = require('shelljs'),
   Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   fetchFiles = require('../lib/data/fetchFiles'),
   waitForStatus = require('../lib/data/waitForStatus'),
   downloadFile = require('../lib/downloadFile');
+
+const logger = require('../lib/logger'),
+  report = require('../lib/logger/report');
+
 let gateway;
+
 const spinner = ora({ text: 'Exporting', stream: process.stdout, spinner: 'bouncingBar' });
 const transform = ({ users = { results: [] }, transactables = { results: [] }, models = { results: [] } }) => {
   return {
     users: users.results,
     transactables: transactables.results,
-    models: models.results
+    models: models.results,
   };
 };
 
-const fetchFilesForData = async data => {
+const fetchFilesForData = async (data) => {
   // TODO: user properties
   data.users = await Promise.all(
-    data.users.map(async user => {
-      user.profiles = await Promise.all(user.profiles.map(profile => fetchFiles(profile)));
+    data.users.map(async (user) => {
+      user.profiles = await Promise.all(user.profiles.map((profile) => fetchFiles(profile)));
       return user;
     })
   );
-  data.transactables = await Promise.all(data.transactables.map(model => fetchFiles(model)));
-  data.models = await Promise.all(data.models.map(model => fetchFiles(model)));
+  data.transactables = await Promise.all(data.transactables.map((model) => fetchFiles(model)));
+  data.models = await Promise.all(data.models.map((model) => fetchFiles(model)));
 
   return data;
 };
@@ -51,7 +55,6 @@ program
     const authData = fetchAuthData(environment, program);
     gateway = new Gateway(authData);
 
-
     const exportFinished = () => {
       spinner.stopAndPersist().succeed(`Done. Exported to: ${filename}`);
     };
@@ -66,11 +69,11 @@ program
       let data = transform(exportTask.data);
       spinner.succeed('Downloading files');
       fetchFilesForData(data)
-        .then(data => {
+        .then((data) => {
           fs.writeFileSync(filename, JSON.stringify(data));
           exportFinished();
         })
-        .catch(e => {
+        .catch((e) => {
           logger.Warn('export error');
           logger.Warn(e.message);
         });
@@ -79,16 +82,19 @@ program
     spinner.start();
     gateway
       .dataExportStart(exportInternalIds, isZipFile)
-      .then(exportTask => {
+      .then((exportTask) => {
         waitForStatus(() => gateway.dataExportStatus(exportTask.id, isZipFile))
-          .then(exportTask => {
+          .then((exportTask) => {
             if (isZipFile) {
               handleZipFileExport(exportTask, filename);
             } else {
               handleJsonFileExport(exportTask, filename);
             }
+            report('Data: Export', {
+              extras: [ { key: 'status', value: 'Success' } ],
+            });
           })
-          .catch(error => {
+          .catch((error) => {
             logger.Debug(error);
             spinner.fail('Export failed');
           });
@@ -97,9 +103,12 @@ program
         spinner.fail('Export failed');
         logger.Error('[404] Data export is not supported by the server');
       })
-      .catch(e => {
+      .catch((e) => {
         spinner.fail('Export failed');
         logger.Error(e.message);
+        report('Data: Export', {
+          extras: [ { key: 'status', value: 'Error' } ],
+        });
       });
   });
 

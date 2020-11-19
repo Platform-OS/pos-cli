@@ -3,8 +3,10 @@
 const program = require('commander'),
   prompts = require('prompts'),
   Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings;
+
+const logger = require('../lib/logger'),
+  report = require('../lib/logger/report');
 
 const confirmationText = 'CLEAN DATA';
 
@@ -36,6 +38,13 @@ const confirmCleanup = async (gateway, inlineConfirmation, includeSchema) => {
   const confirmed = inlineConfirmation || (await promptConfirmation(confirmationText)) == confirmationText;
   if (confirmed) {
     clean(gateway, includeSchema);
+
+    report('Data: Clean', {
+      extras: [
+        { key: 'status', value: 'Success' },
+        { key: 'url', value: gateway.url }
+      ],
+    });
   } else {
     logger.Error('Wrong confirmation. Closed without cleaning instance data.');
   }

@@ -6,7 +6,6 @@ const program = require('commander'),
   shell = require('shelljs'),
   crypto = require('crypto'),
   Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   transform = require('../lib/data/uploadFiles'),
   isValidJSON = require('../lib/data/isValidJSON'),
@@ -14,11 +13,14 @@ const program = require('commander'),
   uploadFile = require('../lib/s3UploadFile').uploadFile,
   presignUrl = require('../lib/presignUrl').presignUrl;
 
+const logger = require('../lib/logger'),
+  report = require('../lib/logger/report');
+
 let gateway;
 const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 const tmpFileName = './tmp/data-imported.json';
 
-const logInvalidFile = filename => {
+const logInvalidFile = (filename) => {
   return logger.Error(
     `
 Invalid format of ${filename}. Must be a valid json file. Check file using one of JSON validators online: https://jsonlint.com .
@@ -37,7 +39,7 @@ const dataImport = async (filename, rawIds, isZipFile) => {
     try {
       const { uploadUrl, accessUrl } = await presignUrl(uploadedFilename, filename);
       await uploadFile(filename, uploadUrl);
-      formData = { 'zip_file_url': accessUrl };
+      formData = { zip_file_url: accessUrl };
     } catch (error) {
       logger.Debug(error);
       spinner.fail('Import failed');
@@ -55,16 +57,16 @@ const dataImport = async (filename, rawIds, isZipFile) => {
   formData['raw_ids'] = rawIds;
   gateway
     .dataImportStart(formData)
-    .then(importTask => {
-      spinner
-        .stopAndPersist()
-        .succeed('Data sent')
-        .start(`Importing ${filename}`);
+    .then((importTask) => {
+      spinner.stopAndPersist().succeed('Data sent').start(`Importing ${filename}`);
       waitForStatus(() => gateway.dataImportStatus(importTask.id, isZipFile))
         .then(() => {
           spinner.stopAndPersist().succeed('Import done.');
+          report('Data: Import', {
+            extras: [{ key: 'status', value: 'Success' }],
+          });
         })
-        .catch(error => {
+        .catch((error) => {
           logger.Debug(error);
           spinner.fail('Import failed');
         });
@@ -73,16 +75,23 @@ const dataImport = async (filename, rawIds, isZipFile) => {
       spinner.fail('Import failed');
       logger.Error('[404] Data import is not supported by the server');
     })
-    .catch(e => {
+    .catch((e) => {
       spinner.fail('Import failed');
       logger.Error(e.message);
+      report('Data: Import', {
+        extras: [{ key: 'status', value: 'Error' }],
+      });
     });
 };
 
 program
   .name('pos-cli data import')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-p --path <import-file-path>', 'path of import .json or .zip file. Example: data.json, data.zip', 'data.json')
+  .option(
+    '-p --path <import-file-path>',
+    'path of import .json or .zip file. Example: data.json, data.zip',
+    'data.json'
+  )
   .option('--raw-ids <raw-ids>', 'do not remap ids after import', 'false')
   .option('-z --zip', 'import from zip archive', 'false')
   .action((environment, params) => {
@@ -92,7 +101,7 @@ program
     const authData = fetchAuthData(environment, program);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
-      MARKETPLACE_URL: authData.url
+      MARKETPLACE_URL: authData.url,
     });
 
     if (!fs.existsSync(filename)) {

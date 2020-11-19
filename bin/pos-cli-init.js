@@ -67,7 +67,14 @@ program
         ])
         .then((answers) => {
           createStructure(repos[answers.repo], answers.branch);
-        });
+
+          report('Init: wizard', {
+            extras: [
+              { key: 'status', value: 'Success' },
+              { key: 'repo', value: repos[answers.repo] },
+            ],
+          });
+        })
       return;
     }
 
