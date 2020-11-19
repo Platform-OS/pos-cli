@@ -90,7 +90,7 @@ program
             } else {
               handleJsonFileExport(exportTask, filename);
             }
-            report('Data: Export', {
+            report('[OK] Data: Export', {
               extras: [ { key: 'status', value: 'Success' } ],
             });
           })
@@ -102,11 +102,14 @@ program
       .catch({ statusCode: 404 }, () => {
         spinner.fail('Export failed');
         logger.Error('[404] Data export is not supported by the server');
+        report('[ERR] Data: Export - Not supported', {
+          extras: [ { key: 'status', value: 'Error' } ],
+        });
       })
       .catch((e) => {
         spinner.fail('Export failed');
         logger.Error(e.message);
-        report('Data: Export', {
+        report('[ERR] Data: Export - Failed', {
           extras: [ { key: 'status', value: 'Error' } ],
         });
       });

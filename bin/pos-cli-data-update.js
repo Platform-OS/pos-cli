@@ -45,7 +45,7 @@ For example: https://jsonlint.com`
         const formData = { 'update[data]': fs.createReadStream(tmpFileName) };
         gateway.dataUpdate(formData).then(() => {
           spinner.stopAndPersist().succeed('Update scheduled. Check pos-cli logs for info when it is done.');
-          report('Data: Update', {
+          report('[OK] Data: Update', {
             extras: [{ key: 'status', value: 'Success' }],
           });
         });
@@ -57,7 +57,7 @@ For example: https://jsonlint.com`
       .catch((e) => {
         spinner.fail('Update failed');
         logger.Error(e.message);
-          report('Data: Update', {
+          report('[ERR] Data: Update', {
             extras: [{ key: 'status', value: 'Error' }],
           });
       });

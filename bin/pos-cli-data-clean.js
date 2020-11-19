@@ -15,7 +15,14 @@ const clean = (gateway, includeSchema) => {
   gateway
     .dataClean(confirmationText, includeSchema)
     .then(() => logger.Success('Instance data scheduled to be clean.'))
-    .catch({ statusCode: 404 }, () => logger.Error('[404] Data clean is not supported by the server'));
+    .catch({ statusCode: 404 }, () => {
+      logger.Error('[404] Data clean is not supported by the server');
+      report('[Err] Data: Clean - Not supported', {
+        extras: [
+          { key: 'status', value: 'Error' }
+        ],
+      });
+    });
 };
 
 const promptConfirmation = async confirmationText => {
@@ -39,7 +46,7 @@ const confirmCleanup = async (gateway, inlineConfirmation, includeSchema) => {
   if (confirmed) {
     clean(gateway, includeSchema);
 
-    report('Data: Clean', {
+    report('[OK] Data: Clean', {
       extras: [
         { key: 'status', value: 'Success' },
         { key: 'url', value: gateway.url }
@@ -47,6 +54,11 @@ const confirmCleanup = async (gateway, inlineConfirmation, includeSchema) => {
     });
   } else {
     logger.Error('Wrong confirmation. Closed without cleaning instance data.');
+    report('[ERR] Data: Clean - Wrong confirmation', {
+      extras: [
+        { key: 'status', value: 'Success' }
+      ],
+    });
   }
 };
 

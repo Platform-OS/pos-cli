@@ -20,7 +20,7 @@ function createStructure(url, branch) {
   degit(`${url}${branch}`, { force: true, cache: false, verbose: false })
     .clone('.')
     .then(() => {
-      report('Init', {
+      report('[OK] Init', {
         extras: [
           { key: 'status', value: 'Success' },
           { key: 'hasBranch', value: !!branch },
@@ -29,7 +29,7 @@ function createStructure(url, branch) {
       logger.Success('Directory structure sucessfully created.');
     })
     .catch((error) => {
-      report('Init', {
+      report('[ERR] Init', {
         extras: [
           { key: 'status', value: 'Error' },
           { key: 'hasBranch', value: !!branch },
@@ -68,7 +68,7 @@ program
         .then((answers) => {
           createStructure(repos[answers.repo], answers.branch);
 
-          report('Init: wizard', {
+          report('Init: Wizard', {
             extras: [
               { key: 'status', value: 'Success' },
               { key: 'repo', value: repos[answers.repo] },
