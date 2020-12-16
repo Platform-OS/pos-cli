@@ -99,7 +99,11 @@ program
           }
         })
         .catch(e => {
-          logger.Error('Response from server invalid, token is missing.');
+          if (e.statusCode === 401) {
+            logger.Error('Either email or password is incorrect.');
+          } else {
+            logger.Error(e.message);
+          }
         });
     });
   });
