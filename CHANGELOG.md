@@ -1,4 +1,9 @@
 # Changelog
+## 4.4.26
+* Improve error message on wrong password when using `pos-cli env add`
+* Fix `pos-cli sync` issue with `webpack` file generation, it will wait untill file is completly written.
+
+
 ## 4.4.25
 * Deprecate `headers` in `api_calls` files in favour of `request_headers`
 * Improve displaying errors on `import` and `deploy`
