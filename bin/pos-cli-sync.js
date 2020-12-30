@@ -13,7 +13,7 @@ program
   .name('pos-cli sync')
   .arguments('[environment]', 'Name of environment. Example: staging')
   .option('-c, --concurrency <number>', 'Maximum concurrent connections to the server', DEFAULT_CONCURRENCY)
-  .option('-d, --direct-assets-upload', 'Uploads assets straight to S3 servers [experimental]')
+  .option('-d, --direct-assets-upload', 'deprecated, this is the default strategy', true)
   .option('-o, --open', 'When ready, open default browser with instance')
   .option('-l, --livereload', 'Use livereload')
   .action(async (environment, params) => {
