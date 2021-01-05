@@ -28,6 +28,7 @@ program
   .alias('l')
   .command('migrations', 'manage migrations')
   .command('modules', 'manage modules')
+  .command('uploads', 'manage uploaded files')
   .command('sync <environment>', 'update environment on file change')
   .alias('s')
   .parse(process.argv);
