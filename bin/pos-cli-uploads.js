@@ -4,6 +4,6 @@ const program = require('commander');
 
 program
   .name('pos-cli uploads')
-  .command('upload [environment]', 'export instance data to a json file')
-  .command('download [environment]', 'import instance data(from external source) from a json file')
+  .command('push [environment]', 'push uploads data into instance')
+  // .command('pull [environment]', 'download uploades data from instance into disk')
   .parse(process.argv);

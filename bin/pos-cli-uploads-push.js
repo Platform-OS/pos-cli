@@ -21,7 +21,7 @@ const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bo
 const uploadZip = async (directory) => {
   spinner.start();
   const instanceId = (await gateway.getInstance()).id;
-  const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/uploads_data.zip`;
+  const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/data.property_upload_import.zip`;
   try {
     const { uploadUrl } = await presignUrl(propertyUploadsDirectory, directory);
     await uploadFile(directory, uploadUrl);
@@ -38,6 +38,7 @@ const uploadDirectory = async (directory) => {
   spinner.start();
   const instanceId = (await gateway.getInstance()).id;
   const propertyUploadsDirectory = `instances/${instanceId}/property_uploads`;
+  logger.Debug(propertyUploadsDirectory);
 
   try {
     const data = await presignDirectory(propertyUploadsDirectory);
@@ -46,10 +47,10 @@ const uploadDirectory = async (directory) => {
     for (const file of files) {
       let dataForFile = cloneDeep(data);
       const fileSubdir = path.dirname(file.replace(directory, ''))
-      const key = data.fields.key.replace('property_uploads/${filename}', `property_uploads${fileSubdir}/\${filename}`);
-      data.fields.key = key;
+      const key = dataForFile.fields.key.replace('property_uploads/${filename}', `property_uploads${fileSubdir}/\${filename}`);
+      dataForFile.fields.key = key;
 
-      await uploadFileFormData(file, data);
+      await uploadFileFormData(file, dataForFile);
     }
     spinner.stopAndPersist().succeed('Upload done.');
   } catch (error) {
@@ -62,7 +63,7 @@ const uploadDirectory = async (directory) => {
 
 
 program
-  .name('pos-cli uploads upload')
+  .name('pos-cli uploads push')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <path>', 'path of uploads directory')
   .action((environment, params) => {
