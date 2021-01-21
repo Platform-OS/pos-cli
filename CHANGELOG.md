@@ -1,6 +1,6 @@
 # Changelog
 ## 4.5.0
-* Added new command for uploading files for property of type `upload`
+* Added new command `pos-cli uploads push` for uploading files for property of type `upload`
 
 ## 4.4.26
 * Improve error message on wrong password when using `pos-cli env add`
