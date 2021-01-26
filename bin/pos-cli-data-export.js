@@ -37,7 +37,7 @@ const fetchFilesForData = async data => {
 program
   .name('pos-cli data export')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .option('-p --path <export-file-path>', 'output for exported data. Example: data.json, data.zip', 'data.json')
+  .option('-p --path <export-file-path>', 'output for exported data. Example: data.json, data.zip')
   .option(
     '-e --export-internal-ids <export-internal-ids>',
     'use normal object `id` instead of `external_id` in exported json data',
@@ -45,9 +45,12 @@ program
   )
   .option('-z --zip', 'export to zip archive', 'false')
   .action((environment, params) => {
-    const filename = params.path;
-    const exportInternalIds = params.exportInternalIds;
     const isZipFile = params.zip;
+    let filename = params.path;
+    if (!filename) {
+      filename = isZipFile ? 'data.zip' : 'data.json';
+    }
+    const exportInternalIds = params.exportInternalIds;
     const authData = fetchAuthData(environment, program);
     gateway = new Gateway(authData);
 
