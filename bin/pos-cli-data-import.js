@@ -69,6 +69,7 @@ const dataImport = async (filename, rawIds, isZipFile) => {
         .catch((error) => {
           logger.Debug(error);
           spinner.fail('Import failed');
+          logger.Error('Unable to import data file');
         });
     })
     .catch({ statusCode: 404 }, () => {
