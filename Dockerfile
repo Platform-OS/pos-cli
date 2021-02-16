@@ -6,7 +6,7 @@ RUN mkdir $SOURCE
 
 ADD . $SOURCE
 
-RUN apk update -qq && apk add vim curl && npm install -g $SOURCE
+RUN apk update -qq && apk add vim curl ruby && npm install -g $SOURCE
 
 RUN mkdir /app
 WORKDIR /app
