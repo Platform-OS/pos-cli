@@ -1,4 +1,10 @@
 # Changelog
+## 4.5.5
+* Add AVIF format to watch list
+
+## 4.5.3
+* Improve environment reporting
+
 ## 4.5.0
 * Added new command `pos-cli uploads push` for uploading files for property of type `upload`
 
