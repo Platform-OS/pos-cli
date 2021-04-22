@@ -1,5 +1,6 @@
 const path = require('path');
 const webpack = require('webpack');
+const { ESBuildMinifyPlugin } = require('esbuild-loader');
 
 module.exports = {
   mode: process.env.NODE_ENV || 'development',
@@ -17,13 +18,24 @@ module.exports = {
       },
     }),
   ],
+  optimization: {
+    minimizer: [
+      new ESBuildMinifyPlugin({
+        target: 'node12', // Syntax to compile to (see options below for possible values)
+        css: true,
+      }),
+    ],
+  },
   module: {
     rules: [
       {
-        exclude: /node_modules/,
         test: /\.jsx?$/,
-        loader: 'babel-loader',
-        options: { cacheDirectory: true },
+        loader: 'esbuild-loader',
+        exclude: /node_modules/,
+        options: {
+          loader: 'jsx',
+          target: 'node12',
+        },
       },
       {
         test: /\.css$/,
