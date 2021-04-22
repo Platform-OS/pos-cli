@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "4.5.6",
+  "version": "4.5.7",
   "description": "Manage your platformOS application",
   "scripts": {
     "build:admin": "npm ci -C gui/admin && npm run build -C gui/admin",
