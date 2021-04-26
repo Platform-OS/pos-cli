@@ -29,7 +29,7 @@ program
 
       fs.writeFileSync(path, body['body'], logger.Error);
 
-      report('Migrations run');
+      report('Migrations run', { extras: [] });
       logger.Success(`[Migration Generate] Saved to: ${path}`);
     });
   });
