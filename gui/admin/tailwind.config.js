@@ -1,4 +1,10 @@
 module.exports = {
+  mode: 'JIT',
+  purge: {
+    content: [
+      './src/**/*.svelte',
+    ],
+  },
   theme: {
     screens: {
       'md': '1024px',
@@ -10,11 +16,5 @@ module.exports = {
       padding: '0'
     },
   },
-  plugins: [require('@tailwindcss/custom-forms')],
-  future: {
-    removeDeprecatedGapUtilities: true,
-    purgeLayersByDefault: true,
-    defaultLineHeights: true,
-    standardFontWeights: true
-  }
+  plugins: [require('@tailwindcss/custom-forms')]
 };

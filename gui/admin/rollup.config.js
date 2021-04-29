@@ -3,9 +3,9 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import alias from '@rollup/plugin-alias';
 import livereload from 'rollup-plugin-livereload';
-import { terser } from 'rollup-plugin-terser';
 import copy from 'rollup-plugin-copy';
 import postcss from 'rollup-plugin-postcss';
+import esbuild from 'rollup-plugin-esbuild'
 import path from 'path';
 import del from 'del';
 
@@ -33,7 +33,11 @@ function createConfig({ output, inlineDynamicImports, plugins = [] }) {
     plugins: [
       postcss({
         extract: true,
-        plugins: [],
+        plugins: [
+          require('postcss-import')(),
+          require('autoprefixer')(),
+          require('tailwindcss')()
+        ],
       }),
       alias({
         entries: [{ find: '@', replacement: path.resolve('src') }],
@@ -46,6 +50,7 @@ function createConfig({ output, inlineDynamicImports, plugins = [] }) {
         copyOnce: true,
         flatten: false,
       }),
+
       svelte({
         dev: !production,
         hydratable: true,
@@ -55,9 +60,13 @@ function createConfig({ output, inlineDynamicImports, plugins = [] }) {
         browser: true,
         dedupe: (importee) => importee === 'svelte' || importee.startsWith('svelte/'),
       }),
+
       commonjs(),
 
-      production && terser(),
+      esbuild({
+        include: /\.js?$/, // default, inferred from `loaders` option
+        minify: process.env.NODE_ENV === 'production',
+      }),
 
       ...plugins,
     ],
