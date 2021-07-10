@@ -189,4 +189,7 @@ export default {
 
     return graph({ query });
   },
+  getLogs() {
+    return fetch('/api/logs').then(res => res.json());
+  }
 };
