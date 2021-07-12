@@ -2671,7 +2671,7 @@ var app = (function () {
     }
 
     // (152:0) {#if !parentElement}
-    function create_if_block$7(ctx) {
+    function create_if_block$6(ctx) {
     	let span;
     	let mounted;
     	let dispose;
@@ -2706,7 +2706,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$7.name,
+    		id: create_if_block$6.name,
     		type: "if",
     		source: "(152:0) {#if !parentElement}",
     		ctx
@@ -2720,7 +2720,7 @@ var app = (function () {
     	let if_block1_anchor;
     	let current;
     	let if_block0 = /*$context*/ ctx[6] && create_if_block_1$2(ctx);
-    	let if_block1 = !/*parentElement*/ ctx[3] && create_if_block$7(ctx);
+    	let if_block1 = !/*parentElement*/ ctx[3] && create_if_block$6(ctx);
 
     	const block = {
     		c: function create() {
@@ -2768,7 +2768,7 @@ var app = (function () {
 
     			if (!/*parentElement*/ ctx[3]) {
     				if (if_block1) ; else {
-    					if_block1 = create_if_block$7(ctx);
+    					if_block1 = create_if_block$6(ctx);
     					if_block1.c();
     					if_block1.m(if_block1_anchor.parentNode, if_block1_anchor);
     				}
@@ -3178,7 +3178,7 @@ var app = (function () {
     const { Object: Object_1$2 } = globals;
 
     // (64:0) {#if layouts && $route !== null}
-    function create_if_block$6(ctx) {
+    function create_if_block$5(ctx) {
     	let route_1;
     	let current;
 
@@ -3222,7 +3222,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$6.name,
+    		id: create_if_block$5.name,
     		type: "if",
     		source: "(64:0) {#if layouts && $route !== null}",
     		ctx
@@ -3235,7 +3235,7 @@ var app = (function () {
     	let t;
     	let prefetcher;
     	let current;
-    	let if_block = /*layouts*/ ctx[0] && /*$route*/ ctx[1] !== null && create_if_block$6(ctx);
+    	let if_block = /*layouts*/ ctx[0] && /*$route*/ ctx[1] !== null && create_if_block$5(ctx);
     	prefetcher = new Prefetcher({ $$inline: true });
 
     	const block = {
@@ -3264,7 +3264,7 @@ var app = (function () {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block$6(ctx);
+    					if_block = create_if_block$5(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
     					if_block.m(t.parentNode, t);
@@ -3779,7 +3779,7 @@ var app = (function () {
           "name": "_fallback",
           "ext": "svelte",
           "badExt": false,
-          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/_fallback.svelte",
+          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/_fallback.svelte",
           "importPath": "../../../../src/pages/_fallback.svelte",
           "isLayout": false,
           "isReset": false,
@@ -3806,7 +3806,7 @@ var app = (function () {
           "name": "_layout",
           "ext": "svelte",
           "badExt": false,
-          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/_layout.svelte",
+          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/_layout.svelte",
           "importPath": "../../../../src/pages/_layout.svelte",
           "isLayout": true,
           "isReset": false,
@@ -3833,7 +3833,7 @@ var app = (function () {
           "name": "index",
           "ext": "svelte",
           "badExt": false,
-          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/index.svelte",
+          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/index.svelte",
           "importPath": "../../../../src/pages/index.svelte",
           "isLayout": false,
           "isReset": false,
@@ -3860,7 +3860,7 @@ var app = (function () {
           "name": "Logs",
           "ext": "",
           "badExt": false,
-          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs",
+          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Logs",
           "children": [
             {
               "isFile": true,
@@ -3870,7 +3870,7 @@ var app = (function () {
               "name": "_layout",
               "ext": "svelte",
               "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs/_layout.svelte",
+              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Logs/_layout.svelte",
               "importPath": "../../../../src/pages/Logs/_layout.svelte",
               "isLayout": true,
               "isReset": false,
@@ -3897,7 +3897,7 @@ var app = (function () {
               "name": "index",
               "ext": "svelte",
               "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs/index.svelte",
+              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Logs/index.svelte",
               "importPath": "../../../../src/pages/Logs/index.svelte",
               "isLayout": false,
               "isReset": false,
@@ -3924,7 +3924,7 @@ var app = (function () {
               "name": "Modal",
               "ext": "svelte",
               "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs/Modal.svelte",
+              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Logs/Modal.svelte",
               "importPath": "../../../../src/pages/Logs/Modal.svelte",
               "isLayout": false,
               "isReset": false,
@@ -3967,7 +3967,7 @@ var app = (function () {
           "name": "Models",
           "ext": "",
           "badExt": false,
-          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models",
+          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models",
           "children": [
             {
               "isFile": true,
@@ -3977,7 +3977,7 @@ var app = (function () {
               "name": "_layout",
               "ext": "svelte",
               "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models/_layout.svelte",
+              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models/_layout.svelte",
               "importPath": "../../../../src/pages/Models/_layout.svelte",
               "isLayout": true,
               "isReset": false,
@@ -4004,7 +4004,7 @@ var app = (function () {
               "name": "index",
               "ext": "svelte",
               "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models/index.svelte",
+              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models/index.svelte",
               "importPath": "../../../../src/pages/Models/index.svelte",
               "isLayout": false,
               "isReset": false,
@@ -4031,7 +4031,7 @@ var app = (function () {
               "name": "Manage",
               "ext": "",
               "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models/Manage",
+              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models/Manage",
               "children": [
                 {
                   "isFile": true,
@@ -4041,7 +4041,7 @@ var app = (function () {
                   "name": "[id]",
                   "ext": "svelte",
                   "badExt": false,
-                  "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models/Manage/[id].svelte",
+                  "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models/Manage/[id].svelte",
                   "importPath": "../../../../src/pages/Models/Manage/[id].svelte",
                   "isLayout": false,
                   "isReset": false,
@@ -4100,7 +4100,7 @@ var app = (function () {
           "name": "Users",
           "ext": "",
           "badExt": false,
-          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users",
+          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users",
           "children": [
             {
               "isFile": true,
@@ -4110,7 +4110,7 @@ var app = (function () {
               "name": "_layout",
               "ext": "svelte",
               "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/_layout.svelte",
+              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users/_layout.svelte",
               "importPath": "../../../../src/pages/Users/_layout.svelte",
               "isLayout": true,
               "isReset": false,
@@ -4137,7 +4137,7 @@ var app = (function () {
               "name": "index",
               "ext": "svelte",
               "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/index.svelte",
+              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users/index.svelte",
               "importPath": "../../../../src/pages/Users/index.svelte",
               "isLayout": false,
               "isReset": false,
@@ -4164,7 +4164,7 @@ var app = (function () {
               "name": "Manage",
               "ext": "",
               "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/Manage",
+              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users/Manage",
               "children": [
                 {
                   "isFile": true,
@@ -4174,7 +4174,7 @@ var app = (function () {
                   "name": "_layout",
                   "ext": "svelte",
                   "badExt": false,
-                  "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/Manage/_layout.svelte",
+                  "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users/Manage/_layout.svelte",
                   "importPath": "../../../../src/pages/Users/Manage/_layout.svelte",
                   "isLayout": true,
                   "isReset": false,
@@ -4328,7 +4328,7 @@ var app = (function () {
     	}
     }
 
-    const app = HMR(App, {target: document.body}, "routify-app");
+    const app = HMR(App, { target: document.body }, 'routify-app');
 
     /* src/pages/_fallback.svelte generated by Svelte v3.24.1 */
     const file$e = "src/pages/_fallback.svelte";
@@ -6217,162 +6217,33 @@ var app = (function () {
 
     function get_each_context$5(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[5] = list[i].id;
-    	child_ctx[6] = list[i].error_type;
+    	child_ctx[6] = list[i].id;
+    	child_ctx[4] = list[i].isHighlighted;
     	child_ctx[7] = list[i].message;
-    	child_ctx[8] = list[i].updated_at;
+    	child_ctx[8] = list[i].error_type;
+    	child_ctx[9] = list[i].updated_at;
     	return child_ctx;
     }
 
-    // (68:14) {:else}
-    function create_else_block$4(ctx) {
-    	let span;
-    	let t_value = /*message*/ ctx[7].substr(1, MAX_PREVIEW) + "";
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			span = element("span");
-    			t = text(t_value);
-    			this.h();
-    		},
-    		l: function claim(nodes) {
-    			span = claim_element(nodes, "SPAN", { class: true });
-    			var span_nodes = children(span);
-    			t = claim_text(span_nodes, t_value);
-    			span_nodes.forEach(detach_dev);
-    			this.h();
-    		},
-    		h: function hydrate() {
-    			attr_dev(span, "class", "break-all");
-    			add_location(span, file$9, 68, 16, 1835);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, span, anchor);
-    			append_dev(span, t);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*logs*/ 1 && t_value !== (t_value = /*message*/ ctx[7].substr(1, MAX_PREVIEW) + "")) set_data_dev(t, t_value);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(span);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_else_block$4.name,
-    		type: "else",
-    		source: "(68:14) {:else}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (60:14) {#if message.length > MAX_PREVIEW}
-    function create_if_block$5(ctx) {
-    	let details;
-    	let summary;
-    	let span;
-    	let t0_value = /*message*/ ctx[7].substr(1, MAX_PREVIEW) + "";
-    	let t0;
-    	let t1;
-    	let pre;
-    	let t2_value = /*getMsg*/ ctx[3](/*message*/ ctx[7]) + "";
-    	let t2;
-
-    	const block = {
-    		c: function create() {
-    			details = element("details");
-    			summary = element("summary");
-    			span = element("span");
-    			t0 = text(t0_value);
-    			t1 = space();
-    			pre = element("pre");
-    			t2 = text(t2_value);
-    			this.h();
-    		},
-    		l: function claim(nodes) {
-    			details = claim_element(nodes, "DETAILS", { class: true });
-    			var details_nodes = children(details);
-    			summary = claim_element(details_nodes, "SUMMARY", {});
-    			var summary_nodes = children(summary);
-    			span = claim_element(summary_nodes, "SPAN", { class: true });
-    			var span_nodes = children(span);
-    			t0 = claim_text(span_nodes, t0_value);
-    			span_nodes.forEach(detach_dev);
-    			summary_nodes.forEach(detach_dev);
-    			t1 = claim_space(details_nodes);
-    			pre = claim_element(details_nodes, "PRE", { class: true });
-    			var pre_nodes = children(pre);
-    			t2 = claim_text(pre_nodes, t2_value);
-    			pre_nodes.forEach(detach_dev);
-    			details_nodes.forEach(detach_dev);
-    			this.h();
-    		},
-    		h: function hydrate() {
-    			attr_dev(span, "class", "break-all");
-    			add_location(span, file$9, 61, 27, 1534);
-    			add_location(summary, file$9, 61, 18, 1525);
-    			attr_dev(pre, "class", "text-sm overflow-y-auto max-h-64 ml-4 mt-4 border border-gray-200");
-    			add_location(pre, file$9, 63, 18, 1627);
-    			attr_dev(details, "class", "mt-1");
-    			add_location(details, file$9, 60, 16, 1484);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, details, anchor);
-    			append_dev(details, summary);
-    			append_dev(summary, span);
-    			append_dev(span, t0);
-    			append_dev(details, t1);
-    			append_dev(details, pre);
-    			append_dev(pre, t2);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*logs*/ 1 && t0_value !== (t0_value = /*message*/ ctx[7].substr(1, MAX_PREVIEW) + "")) set_data_dev(t0, t0_value);
-    			if (dirty & /*logs*/ 1 && t2_value !== (t2_value = /*getMsg*/ ctx[3](/*message*/ ctx[7]) + "")) set_data_dev(t2, t2_value);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(details);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block$5.name,
-    		type: "if",
-    		source: "(60:14) {#if message.length > MAX_PREVIEW}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (49:8) {#each logs as { id, error_type, message, updated_at }
+    // (48:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }
     function create_each_block$5(key_1, ctx) {
     	let li;
     	let span0;
-    	let t0_value = /*error_type*/ ctx[6] + "";
+    	let t0_value = /*error_type*/ ctx[8] + "";
     	let t0;
     	let t1;
     	let span1;
-    	let t2_value = /*updated_at*/ ctx[8] + "";
+    	let t2_value = /*updated_at*/ ctx[9] + "";
     	let t2;
     	let t3;
     	let span2;
-    	let li_class_value;
+    	let div;
+    	let t4_value = /*message*/ ctx[7] + "";
     	let t4;
-    	let t5_value = /*id*/ ctx[5] + "";
+    	let div_title_value;
+    	let span2_class_value;
     	let t5;
-
-    	function select_block_type(ctx, dirty) {
-    		if (/*message*/ ctx[7].length > MAX_PREVIEW) return create_if_block$5;
-    		return create_else_block$4;
-    	}
-
-    	let current_block_type = select_block_type(ctx);
-    	let if_block = current_block_type(ctx);
+    	let li_class_value;
 
     	const block = {
     		key: key_1,
@@ -6386,9 +6257,9 @@ var app = (function () {
     			t2 = text(t2_value);
     			t3 = space();
     			span2 = element("span");
-    			if_block.c();
-    			t4 = space();
-    			t5 = text(t5_value);
+    			div = element("div");
+    			t4 = text(t4_value);
+    			t5 = space();
     			this.h();
     		},
     		l: function claim(nodes) {
@@ -6406,26 +6277,31 @@ var app = (function () {
     			t3 = claim_space(li_nodes);
     			span2 = claim_element(li_nodes, "SPAN", { class: true });
     			var span2_nodes = children(span2);
-    			if_block.l(span2_nodes);
+    			div = claim_element(span2_nodes, "DIV", { class: true, title: true });
+    			var div_nodes = children(div);
+    			t4 = claim_text(div_nodes, t4_value);
+    			div_nodes.forEach(detach_dev);
     			span2_nodes.forEach(detach_dev);
+    			t5 = claim_space(li_nodes);
     			li_nodes.forEach(detach_dev);
-    			t4 = claim_space(nodes);
-    			t5 = claim_text(nodes, t5_value);
     			this.h();
     		},
     		h: function hydrate() {
     			attr_dev(span0, "class", "text-xs");
-    			add_location(span0, file$9, 55, 12, 1278);
+    			add_location(span0, file$9, 54, 12, 1272);
     			attr_dev(span1, "class", "text-xs");
-    			add_location(span1, file$9, 56, 12, 1332);
-    			attr_dev(span2, "class", "text-base w-full");
-    			add_location(span2, file$9, 57, 12, 1386);
+    			add_location(span1, file$9, 55, 12, 1326);
+    			attr_dev(div, "class", "w-full");
+    			attr_dev(div, "title", div_title_value = /*stringify*/ ctx[2](/*message*/ ctx[7]));
+    			add_location(div, file$9, 57, 14, 1486);
 
-    			attr_dev(li, "class", li_class_value = "\n              " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[5]
+    			attr_dev(span2, "class", span2_class_value = "text-base w-full mt-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[6]
     			? "border-red-500 border-b"
-    			: "") + " text-sm\n              flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ");
+    			: ""));
 
-    			add_location(li, file$9, 49, 8, 1055);
+    			add_location(span2, file$9, 56, 12, 1380);
+    			attr_dev(li, "class", li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[4] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ");
+    			add_location(li, file$9, 48, 10, 1063);
     			this.first = li;
     		},
     		m: function mount(target, anchor) {
@@ -6437,39 +6313,31 @@ var app = (function () {
     			append_dev(span1, t2);
     			append_dev(li, t3);
     			append_dev(li, span2);
-    			if_block.m(span2, null);
-    			insert_dev(target, t4, anchor);
-    			insert_dev(target, t5, anchor);
+    			append_dev(span2, div);
+    			append_dev(div, t4);
+    			append_dev(li, t5);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*logs*/ 1 && t0_value !== (t0_value = /*error_type*/ ctx[6] + "")) set_data_dev(t0, t0_value);
-    			if (dirty & /*logs*/ 1 && t2_value !== (t2_value = /*updated_at*/ ctx[8] + "")) set_data_dev(t2, t2_value);
+    			if (dirty & /*logs*/ 1 && t0_value !== (t0_value = /*error_type*/ ctx[8] + "")) set_data_dev(t0, t0_value);
+    			if (dirty & /*logs*/ 1 && t2_value !== (t2_value = /*updated_at*/ ctx[9] + "")) set_data_dev(t2, t2_value);
+    			if (dirty & /*logs*/ 1 && t4_value !== (t4_value = /*message*/ ctx[7] + "")) set_data_dev(t4, t4_value);
 
-    			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block) {
-    				if_block.p(ctx, dirty);
-    			} else {
-    				if_block.d(1);
-    				if_block = current_block_type(ctx);
-
-    				if (if_block) {
-    					if_block.c();
-    					if_block.m(span2, null);
-    				}
+    			if (dirty & /*logs*/ 1 && div_title_value !== (div_title_value = /*stringify*/ ctx[2](/*message*/ ctx[7]))) {
+    				attr_dev(div, "title", div_title_value);
     			}
 
-    			if (dirty & /*cachedLastId, logs*/ 3 && li_class_value !== (li_class_value = "\n              " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[5]
+    			if (dirty & /*cachedLastId, logs*/ 3 && span2_class_value !== (span2_class_value = "text-base w-full mt-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[6]
     			? "border-red-500 border-b"
-    			: "") + " text-sm\n              flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ")) {
+    			: ""))) {
+    				attr_dev(span2, "class", span2_class_value);
+    			}
+
+    			if (dirty & /*logs*/ 1 && li_class_value !== (li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[4] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ")) {
     				attr_dev(li, "class", li_class_value);
     			}
-
-    			if (dirty & /*logs*/ 1 && t5_value !== (t5_value = /*id*/ ctx[5] + "")) set_data_dev(t5, t5_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(li);
-    			if_block.d();
-    			if (detaching) detach_dev(t4);
-    			if (detaching) detach_dev(t5);
     		}
     	};
 
@@ -6477,7 +6345,7 @@ var app = (function () {
     		block,
     		id: create_each_block$5.name,
     		type: "each",
-    		source: "(49:8) {#each logs as { id, error_type, message, updated_at }",
+    		source: "(48:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }",
     		ctx
     	});
 
@@ -6501,7 +6369,7 @@ var app = (function () {
     	let dispose;
     	let each_value = /*logs*/ ctx[0];
     	validate_each_argument(each_value);
-    	const get_key = ctx => /*id*/ ctx[5];
+    	const get_key = ctx => /*id*/ ctx[6];
     	validate_each_keys(ctx, each_value, get_each_context$5, get_key);
 
     	for (let i = 0; i < each_value.length; i += 1) {
@@ -6513,7 +6381,7 @@ var app = (function () {
     	const block = {
     		c: function create() {
     			h1 = element("h1");
-    			t0 = text("Logs");
+    			t0 = text("platformOS Logs");
     			t1 = space();
     			section = element("section");
     			div1 = element("div");
@@ -6532,7 +6400,7 @@ var app = (function () {
     		l: function claim(nodes) {
     			h1 = claim_element(nodes, "H1", { class: true });
     			var h1_nodes = children(h1);
-    			t0 = claim_text(h1_nodes, "Logs");
+    			t0 = claim_text(h1_nodes, "platformOS Logs");
     			h1_nodes.forEach(detach_dev);
     			t1 = claim_space(nodes);
     			section = claim_element(nodes, "SECTION", { class: true });
@@ -6561,16 +6429,16 @@ var app = (function () {
     		},
     		h: function hydrate() {
     			attr_dev(h1, "class", "mb-2 text-5xl");
-    			add_location(h1, file$9, 42, 0, 846);
-    			add_location(ul, file$9, 47, 6, 973);
-    			attr_dev(div0, "class", "");
-    			add_location(div0, file$9, 46, 4, 952);
+    			add_location(h1, file$9, 41, 0, 823);
+    			add_location(ul, file$9, 46, 6, 964);
+    			attr_dev(div0, "class", "m-1");
+    			add_location(div0, file$9, 45, 4, 940);
     			attr_dev(button, "class", "border-px rounded-sm bg-gray-200 px-3");
-    			add_location(button, file$9, 78, 4, 2015);
+    			add_location(button, file$9, 64, 4, 1631);
     			attr_dev(div1, "class", "container py-8");
-    			add_location(div1, file$9, 45, 2, 919);
+    			add_location(div1, file$9, 44, 2, 907);
     			attr_dev(section, "class", "overflow-hidden");
-    			add_location(section, file$9, 44, 0, 883);
+    			add_location(section, file$9, 43, 0, 871);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, h1, anchor);
@@ -6590,12 +6458,12 @@ var app = (function () {
     			append_dev(button, t3);
 
     			if (!mounted) {
-    				dispose = listen_dev(button, "click", /*fetchLogs*/ ctx[2], false, false, false);
+    				dispose = listen_dev(button, "click", /*fetchLogs*/ ctx[3], false, false, false);
     				mounted = true;
     			}
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*logs, cachedLastId, getMsg, MAX_PREVIEW*/ 11) {
+    			if (dirty & /*logs, cachedLastId, stringify*/ 7) {
     				const each_value = /*logs*/ ctx[0];
     				validate_each_argument(each_value);
     				validate_each_keys(ctx, each_value, get_each_context$5, get_key);
@@ -6636,10 +6504,18 @@ var app = (function () {
     	let cachedLastId = null;
     	let lastId = null;
 
-    	// const isHighlighted = item => {
-    	//   item.highlighted = !!item.error_type.match(/error/i);
-    	//   return item;
-    	// }
+    	const isHighlighted = item => {
+    		item.isHighlighted = !!item.error_type.match(/error/i);
+    	};
+
+    	const stringify = msg => {
+    		try {
+    			return JSON.stringify(JSON.parse(msg), null, 4);
+    		} catch(e) {
+    			return msg;
+    		}
+    	};
+
     	const fetchLogs = () => {
     		return fetch(`/api/logs?lastId=${lastId}`).then(res => res.json()).then(res => {
     			if (!res.logs.length) return res;
@@ -6647,21 +6523,13 @@ var app = (function () {
     			lastId = res.logs.slice(-1)[0].id;
     			return res;
     		}).then(res => {
-    			// res.logs.forEach(isHighlighted);
-    			$$invalidate(0, logs = res.logs);
+    			res.logs.forEach(isHighlighted);
+    			$$invalidate(0, logs = logs.concat(res.logs));
     		});
     	};
 
-    	const getMsg = msg => {
-    		try {
-    			return JSON.stringify(JSON.parse(msg), null, 2);
-    		} catch(e) {
-    			return msg;
-    		}
-    	};
-
     	onMount(async () => {
-    		$$invalidate(0, logs = await fetchLogs());
+    		fetchLogs();
     	});
 
     	const writable_props = [];
@@ -6679,8 +6547,9 @@ var app = (function () {
     		logs,
     		cachedLastId,
     		lastId,
-    		fetchLogs,
-    		getMsg
+    		isHighlighted,
+    		stringify,
+    		fetchLogs
     	});
 
     	$$self.$inject_state = $$props => {
@@ -6693,7 +6562,7 @@ var app = (function () {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [logs, cachedLastId, fetchLogs, getMsg];
+    	return [logs, cachedLastId, stringify, fetchLogs, isHighlighted];
     }
 
     class Logs extends SvelteComponentDev {
@@ -6722,8 +6591,8 @@ var app = (function () {
 
     function add_css() {
     	var style = element("style");
-    	style.id = "svelte-1k3utew-style";
-    	style.textContent = ".modal-background.svelte-1k3utew{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3)}.modal.svelte-1k3utew{position:absolute;left:50%;top:50%;width:calc(100vw - 4em);max-width:32em;max-height:calc(100vh - 4em);overflow:auto;transform:translate(-50%,-50%);padding:1em;border-radius:0.2em;background:white}button.svelte-1k3utew{display:block}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiTW9kYWwuc3ZlbHRlIiwic291cmNlcyI6WyJNb2RhbC5zdmVsdGUiXSwic291cmNlc0NvbnRlbnQiOlsiPHNjcmlwdD5cblx0aW1wb3J0IHsgY3JlYXRlRXZlbnREaXNwYXRjaGVyLCBvbkRlc3Ryb3kgfSBmcm9tICdzdmVsdGUnO1xuXG5cdGNvbnN0IGRpc3BhdGNoID0gY3JlYXRlRXZlbnREaXNwYXRjaGVyKCk7XG5cdGNvbnN0IGNsb3NlID0gKCkgPT4gZGlzcGF0Y2goJ2Nsb3NlJyk7XG5cblx0bGV0IG1vZGFsO1xuXG5cdGNvbnN0IGhhbmRsZV9rZXlkb3duID0gZSA9PiB7XG5cdFx0aWYgKGUua2V5ID09PSAnRXNjYXBlJykge1xuXHRcdFx0Y2xvc2UoKTtcblx0XHRcdHJldHVybjtcblx0XHR9XG5cblx0XHRpZiAoZS5rZXkgPT09ICdUYWInKSB7XG5cdFx0XHQvLyB0cmFwIGZvY3VzXG5cdFx0XHRjb25zdCBub2RlcyA9IG1vZGFsLnF1ZXJ5U2VsZWN0b3JBbGwoJyonKTtcblx0XHRcdGNvbnN0IHRhYmJhYmxlID0gQXJyYXkuZnJvbShub2RlcykuZmlsdGVyKG4gPT4gbi50YWJJbmRleCA+PSAwKTtcblxuXHRcdFx0bGV0IGluZGV4ID0gdGFiYmFibGUuaW5kZXhPZihkb2N1bWVudC5hY3RpdmVFbGVtZW50KTtcblx0XHRcdGlmIChpbmRleCA9PT0gLTEgJiYgZS5zaGlmdEtleSkgaW5kZXggPSAwO1xuXG5cdFx0XHRpbmRleCArPSB0YWJiYWJsZS5sZW5ndGggKyAoZS5zaGlmdEtleSA/IC0xIDogMSk7XG5cdFx0XHRpbmRleCAlPSB0YWJiYWJsZS5sZW5ndGg7XG5cblx0XHRcdHRhYmJhYmxlW2luZGV4XS5mb2N1cygpO1xuXHRcdFx0ZS5wcmV2ZW50RGVmYXVsdCgpO1xuXHRcdH1cblx0fTtcblxuXHRjb25zdCBwcmV2aW91c2x5X2ZvY3VzZWQgPSB0eXBlb2YgZG9jdW1lbnQgIT09ICd1bmRlZmluZWQnICYmIGRvY3VtZW50LmFjdGl2ZUVsZW1lbnQ7XG5cblx0aWYgKHByZXZpb3VzbHlfZm9jdXNlZCkge1xuXHRcdG9uRGVzdHJveSgoKSA9PiB7XG5cdFx0XHRwcmV2aW91c2x5X2ZvY3VzZWQuZm9jdXMoKTtcblx0XHR9KTtcblx0fVxuPC9zY3JpcHQ+XG5cbjxzdmVsdGU6d2luZG93IG9uOmtleWRvd249e2hhbmRsZV9rZXlkb3dufS8+XG5cbjxkaXYgY2xhc3M9XCJtb2RhbC1iYWNrZ3JvdW5kXCIgb246Y2xpY2s9e2Nsb3NlfT48L2Rpdj5cblxuPGRpdiBjbGFzcz1cIm1vZGFsXCIgcm9sZT1cImRpYWxvZ1wiIGFyaWEtbW9kYWw9XCJ0cnVlXCIgYmluZDp0aGlzPXttb2RhbH0+XG5cdDxzbG90IG5hbWU9XCJoZWFkZXJcIj48L3Nsb3Q+XG5cdDxocj5cblx0PHNsb3Q+PC9zbG90PlxuXHQ8aHI+XG5cblx0PCEtLSBzdmVsdGUtaWdub3JlIGExMXktYXV0b2ZvY3VzIC0tPlxuXHQ8YnV0dG9uIGF1dG9mb2N1cyBvbjpjbGljaz17Y2xvc2V9PmNsb3NlIG1vZGFsPC9idXR0b24+XG48L2Rpdj5cblxuPHN0eWxlPlxuXHQubW9kYWwtYmFja2dyb3VuZCB7XG5cdFx0cG9zaXRpb246IGZpeGVkO1xuXHRcdHRvcDogMDtcblx0XHRsZWZ0OiAwO1xuXHRcdHdpZHRoOiAxMDAlO1xuXHRcdGhlaWdodDogMTAwJTtcblx0XHRiYWNrZ3JvdW5kOiByZ2JhKDAsMCwwLDAuMyk7XG5cdH1cblxuXHQubW9kYWwge1xuXHRcdHBvc2l0aW9uOiBhYnNvbHV0ZTtcblx0XHRsZWZ0OiA1MCU7XG5cdFx0dG9wOiA1MCU7XG5cdFx0d2lkdGg6IGNhbGMoMTAwdncgLSA0ZW0pO1xuXHRcdG1heC13aWR0aDogMzJlbTtcblx0XHRtYXgtaGVpZ2h0OiBjYWxjKDEwMHZoIC0gNGVtKTtcblx0XHRvdmVyZmxvdzogYXV0bztcblx0XHR0cmFuc2Zvcm06IHRyYW5zbGF0ZSgtNTAlLC01MCUpO1xuXHRcdHBhZGRpbmc6IDFlbTtcblx0XHRib3JkZXItcmFkaXVzOiAwLjJlbTtcblx0XHRiYWNrZ3JvdW5kOiB3aGl0ZTtcblx0fVxuXG5cdGJ1dHRvbiB7XG5cdFx0ZGlzcGxheTogYmxvY2s7XG5cdH1cbjwvc3R5bGU+Il0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQXNEQyxpQkFBaUIsZUFBQyxDQUFDLEFBQ2xCLFFBQVEsQ0FBRSxLQUFLLENBQ2YsR0FBRyxDQUFFLENBQUMsQ0FDTixJQUFJLENBQUUsQ0FBQyxDQUNQLEtBQUssQ0FBRSxJQUFJLENBQ1gsTUFBTSxDQUFFLElBQUksQ0FDWixVQUFVLENBQUUsS0FBSyxDQUFDLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxHQUFHLENBQUMsQUFDNUIsQ0FBQyxBQUVELE1BQU0sZUFBQyxDQUFDLEFBQ1AsUUFBUSxDQUFFLFFBQVEsQ0FDbEIsSUFBSSxDQUFFLEdBQUcsQ0FDVCxHQUFHLENBQUUsR0FBRyxDQUNSLEtBQUssQ0FBRSxLQUFLLEtBQUssQ0FBQyxDQUFDLENBQUMsR0FBRyxDQUFDLENBQ3hCLFNBQVMsQ0FBRSxJQUFJLENBQ2YsVUFBVSxDQUFFLEtBQUssS0FBSyxDQUFDLENBQUMsQ0FBQyxHQUFHLENBQUMsQ0FDN0IsUUFBUSxDQUFFLElBQUksQ0FDZCxTQUFTLENBQUUsVUFBVSxJQUFJLENBQUMsSUFBSSxDQUFDLENBQy9CLE9BQU8sQ0FBRSxHQUFHLENBQ1osYUFBYSxDQUFFLEtBQUssQ0FDcEIsVUFBVSxDQUFFLEtBQUssQUFDbEIsQ0FBQyxBQUVELE1BQU0sZUFBQyxDQUFDLEFBQ1AsT0FBTyxDQUFFLEtBQUssQUFDZixDQUFDIn0= */";
+    	style.id = "svelte-11g0cp4-style";
+    	style.textContent = ".modal-background.svelte-11g0cp4{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3)}.modal.svelte-11g0cp4{position:absolute;left:50%;top:50%;width:calc(100vw - 4em);max-width:32em;max-height:calc(100vh - 4em);overflow:auto;transform:translate(-50%,-50%);padding:1em;border-radius:0.2em;background:white}button.svelte-11g0cp4{display:block}\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiTW9kYWwuc3ZlbHRlIiwic291cmNlcyI6WyJNb2RhbC5zdmVsdGUiXSwic291cmNlc0NvbnRlbnQiOlsiPHNjcmlwdD5cbiAgaW1wb3J0IHsgY3JlYXRlRXZlbnREaXNwYXRjaGVyLCBvbkRlc3Ryb3kgfSBmcm9tICdzdmVsdGUnO1xuXG4gIGNvbnN0IGRpc3BhdGNoID0gY3JlYXRlRXZlbnREaXNwYXRjaGVyKCk7XG4gIGNvbnN0IGNsb3NlID0gKCkgPT4gZGlzcGF0Y2goJ2Nsb3NlJyk7XG5cbiAgbGV0IG1vZGFsO1xuXG4gIGNvbnN0IGhhbmRsZV9rZXlkb3duID0gZSA9PiB7XG4gICAgaWYgKGUua2V5ID09PSAnRXNjYXBlJykge1xuICAgICAgY2xvc2UoKTtcbiAgICAgIHJldHVybjtcbiAgICB9XG5cbiAgICBpZiAoZS5rZXkgPT09ICdUYWInKSB7XG4gICAgICAvLyB0cmFwIGZvY3VzXG4gICAgICBjb25zdCBub2RlcyA9IG1vZGFsLnF1ZXJ5U2VsZWN0b3JBbGwoJyonKTtcbiAgICAgIGNvbnN0IHRhYmJhYmxlID0gQXJyYXkuZnJvbShub2RlcykuZmlsdGVyKG4gPT4gbi50YWJJbmRleCA+PSAwKTtcblxuICAgICAgbGV0IGluZGV4ID0gdGFiYmFibGUuaW5kZXhPZihkb2N1bWVudC5hY3RpdmVFbGVtZW50KTtcbiAgICAgIGlmIChpbmRleCA9PT0gLTEgJiYgZS5zaGlmdEtleSkgaW5kZXggPSAwO1xuXG4gICAgICBpbmRleCArPSB0YWJiYWJsZS5sZW5ndGggKyAoZS5zaGlmdEtleSA/IC0xIDogMSk7XG4gICAgICBpbmRleCAlPSB0YWJiYWJsZS5sZW5ndGg7XG5cbiAgICAgIHRhYmJhYmxlW2luZGV4XS5mb2N1cygpO1xuICAgICAgZS5wcmV2ZW50RGVmYXVsdCgpO1xuICAgIH1cbiAgfTtcblxuICBjb25zdCBwcmV2aW91c2x5X2ZvY3VzZWQgPSB0eXBlb2YgZG9jdW1lbnQgIT09ICd1bmRlZmluZWQnICYmIGRvY3VtZW50LmFjdGl2ZUVsZW1lbnQ7XG5cbiAgaWYgKHByZXZpb3VzbHlfZm9jdXNlZCkge1xuICAgIG9uRGVzdHJveSgoKSA9PiB7XG4gICAgICBwcmV2aW91c2x5X2ZvY3VzZWQuZm9jdXMoKTtcbiAgICB9KTtcbiAgfVxuPC9zY3JpcHQ+XG5cbjxzdmVsdGU6d2luZG93IG9uOmtleWRvd249e2hhbmRsZV9rZXlkb3dufS8+XG5cbjxkaXYgY2xhc3M9XCJtb2RhbC1iYWNrZ3JvdW5kXCIgb246Y2xpY2s9e2Nsb3NlfT48L2Rpdj5cblxuPGRpdiBjbGFzcz1cIm1vZGFsXCIgcm9sZT1cImRpYWxvZ1wiIGFyaWEtbW9kYWw9XCJ0cnVlXCIgYmluZDp0aGlzPXttb2RhbH0+XG4gIDxzbG90IG5hbWU9XCJoZWFkZXJcIj48L3Nsb3Q+XG4gIDxocj5cbiAgPHNsb3Q+PC9zbG90PlxuICA8aHI+XG5cbiAgPCEtLSBzdmVsdGUtaWdub3JlIGExMXktYXV0b2ZvY3VzIC0tPlxuICA8YnV0dG9uIGF1dG9mb2N1cyBvbjpjbGljaz17Y2xvc2V9PmNsb3NlIG1vZGFsPC9idXR0b24+XG48L2Rpdj5cblxuPHN0eWxlPlxuICAubW9kYWwtYmFja2dyb3VuZCB7XG4gICAgcG9zaXRpb246IGZpeGVkO1xuICAgIHRvcDogMDtcbiAgICBsZWZ0OiAwO1xuICAgIHdpZHRoOiAxMDAlO1xuICAgIGhlaWdodDogMTAwJTtcbiAgICBiYWNrZ3JvdW5kOiByZ2JhKDAsMCwwLDAuMyk7XG4gIH1cblxuICAubW9kYWwge1xuICAgIHBvc2l0aW9uOiBhYnNvbHV0ZTtcbiAgICBsZWZ0OiA1MCU7XG4gICAgdG9wOiA1MCU7XG4gICAgd2lkdGg6IGNhbGMoMTAwdncgLSA0ZW0pO1xuICAgIG1heC13aWR0aDogMzJlbTtcbiAgICBtYXgtaGVpZ2h0OiBjYWxjKDEwMHZoIC0gNGVtKTtcbiAgICBvdmVyZmxvdzogYXV0bztcbiAgICB0cmFuc2Zvcm06IHRyYW5zbGF0ZSgtNTAlLC01MCUpO1xuICAgIHBhZGRpbmc6IDFlbTtcbiAgICBib3JkZXItcmFkaXVzOiAwLjJlbTtcbiAgICBiYWNrZ3JvdW5kOiB3aGl0ZTtcbiAgfVxuXG4gIGJ1dHRvbiB7XG4gICAgZGlzcGxheTogYmxvY2s7XG4gIH1cbjwvc3R5bGU+XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBc0RFLGlCQUFpQixlQUFDLENBQUMsQUFDakIsUUFBUSxDQUFFLEtBQUssQ0FDZixHQUFHLENBQUUsQ0FBQyxDQUNOLElBQUksQ0FBRSxDQUFDLENBQ1AsS0FBSyxDQUFFLElBQUksQ0FDWCxNQUFNLENBQUUsSUFBSSxDQUNaLFVBQVUsQ0FBRSxLQUFLLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDLEdBQUcsQ0FBQyxBQUM3QixDQUFDLEFBRUQsTUFBTSxlQUFDLENBQUMsQUFDTixRQUFRLENBQUUsUUFBUSxDQUNsQixJQUFJLENBQUUsR0FBRyxDQUNULEdBQUcsQ0FBRSxHQUFHLENBQ1IsS0FBSyxDQUFFLEtBQUssS0FBSyxDQUFDLENBQUMsQ0FBQyxHQUFHLENBQUMsQ0FDeEIsU0FBUyxDQUFFLElBQUksQ0FDZixVQUFVLENBQUUsS0FBSyxLQUFLLENBQUMsQ0FBQyxDQUFDLEdBQUcsQ0FBQyxDQUM3QixRQUFRLENBQUUsSUFBSSxDQUNkLFNBQVMsQ0FBRSxVQUFVLElBQUksQ0FBQyxJQUFJLENBQUMsQ0FDL0IsT0FBTyxDQUFFLEdBQUcsQ0FDWixhQUFhLENBQUUsS0FBSyxDQUNwQixVQUFVLENBQUUsS0FBSyxBQUNuQixDQUFDLEFBRUQsTUFBTSxlQUFDLENBQUMsQUFDTixPQUFPLENBQUUsS0FBSyxBQUNoQixDQUFDIn0= */";
     	append_dev(document_1.head, style);
     }
 
@@ -6795,17 +6664,17 @@ var app = (function () {
     			this.h();
     		},
     		h: function hydrate() {
-    			attr_dev(div0, "class", "modal-background svelte-1k3utew");
-    			add_location(div0, file$8, 41, 0, 890);
-    			add_location(hr0, file$8, 45, 1, 1045);
-    			add_location(hr1, file$8, 47, 1, 1066);
+    			attr_dev(div0, "class", "modal-background svelte-11g0cp4");
+    			add_location(div0, file$8, 41, 0, 947);
+    			add_location(hr0, file$8, 45, 2, 1104);
+    			add_location(hr1, file$8, 47, 2, 1127);
     			button.autofocus = true;
-    			attr_dev(button, "class", "svelte-1k3utew");
-    			add_location(button, file$8, 50, 1, 1112);
-    			attr_dev(div1, "class", "modal svelte-1k3utew");
+    			attr_dev(button, "class", "svelte-11g0cp4");
+    			add_location(button, file$8, 50, 2, 1175);
+    			attr_dev(div1, "class", "modal svelte-11g0cp4");
     			attr_dev(div1, "role", "dialog");
     			attr_dev(div1, "aria-modal", "true");
-    			add_location(div1, file$8, 43, 0, 945);
+    			add_location(div1, file$8, 43, 0, 1002);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div0, anchor);
@@ -6967,7 +6836,7 @@ var app = (function () {
     class Modal extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		if (!document_1.getElementById("svelte-1k3utew-style")) add_css();
+    		if (!document_1.getElementById("svelte-11g0cp4-style")) add_css();
     		init$1(this, options, instance$b, create_fragment$b, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
@@ -7074,7 +6943,8 @@ var app = (function () {
     });
 
     const createStore$2 = () => {
-      const {subscribe, set, update} = writable({});
+      const { subscribe, set, update } = writable({});
+
       return {
         subscribe,
         set,
@@ -7084,74 +6954,66 @@ var app = (function () {
         }
       };
     };
+
     var filtersStore = createStore$2();
 
-    var __defProp = Object.defineProperty;
-    var __hasOwnProp = Object.prototype.hasOwnProperty;
-    var __getOwnPropSymbols = Object.getOwnPropertySymbols;
-    var __propIsEnum = Object.prototype.propertyIsEnumerable;
-    var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, {enumerable: true, configurable: true, writable: true, value}) : obj[key] = value;
-    var __objSpread = (a, b) => {
-      for (var prop in b || (b = {}))
-        if (__hasOwnProp.call(b, prop))
-          __defNormalProp(a, prop, b[prop]);
-      if (__getOwnPropSymbols)
-        for (var prop of __getOwnPropSymbols(b)) {
-          if (__propIsEnum.call(b, prop))
-            __defNormalProp(a, prop, b[prop]);
-        }
-      return a;
-    };
     const createStore$1 = () => {
-      const {subscribe, set, update} = writable({page: 1});
+      const { subscribe, set, update } = writable({ page: 1 });
+
       return {
         subscribe,
         set,
         update,
-        setPaginationData: ({total_entries, total_pages}) => {
-          update((s) => {
-            return __objSpread(__objSpread({}, s), {total_entries, total_pages});
+        setPaginationData: ({ total_entries, total_pages }) => {
+          update(s => {
+            return { ...s, total_entries, total_pages };
           });
         },
-        setSchemaId: (id) => {
-          update((s) => __objSpread(__objSpread({}, s), {schemaId: id}));
+        setSchemaId: id => {
+          update(s => ({ ...s, schemaId: id }));
         },
-        reset: () => update((s) => __objSpread(__objSpread({}, s), {page: 1})),
+        reset: () => update(s => ({ ...s, page: 1 })),
         increment: () => {
-          update((s) => {
+          update(s => {
             const page = s.page + 1;
-            return __objSpread(__objSpread({}, s), {page});
+            return { ...s, page };
           });
         },
         decrement: () => {
-          update((s) => {
+          update(s => {
             const page = s.page - 1 || 1;
-            return __objSpread(__objSpread({}, s), {page});
+            return { ...s, page };
           });
         }
       };
     };
+
     var pageStore = createStore$1();
 
     var typeMap = {
-      array: "value_array",
-      boolean: "value_boolean",
-      date: "value",
-      datetime: "value",
-      float: "value_float",
-      integer: "value_int",
-      string: "value",
-      text: "value",
-      upload: "value"
+      array: 'value_array',
+      boolean: 'value_boolean',
+      date: 'value',
+      datetime: 'value',
+      float: 'value_float',
+      integer: 'value_int',
+      string: 'value',
+      text: 'value',
+      upload: 'value',
     };
 
     const getPropsString = (props) => {
-      return Object.keys(props).map((prop) => {
-        const {name, value, attribute_type} = props[prop];
-        const updateType = typeMap[attribute_type];
-        return `{ name: "${name}", ${updateType}: ${value}}`;
-      }).join("\n");
+      return Object.keys(props)
+        .map((prop) => {
+          const { name, value, attribute_type } = props[prop];
+
+          const updateType = typeMap[attribute_type];
+
+          return `{ name: "${name}", ${updateType}: ${value}}`;
+        })
+        .join('\n');
     };
+
     const getPropertiesFilter = (f) => {
       const filterString = `
     properties: [{
@@ -7159,24 +7021,31 @@ var app = (function () {
       ${f.operation}: ${f.value}
     }]
   `;
+
       return filterString;
     };
+
     const graph = (body) => {
-      return fetch("/api/graph", {
-        headers: {"Content-Type": "application/json"},
-        method: "POST",
-        body: JSON.stringify(body)
-      }).then((res) => res.json()).then((res) => {
-        if (res.errors) {
-          const err = res.errors[0].message;
-          return danger(`Error: ${err}`, 5e3);
-        }
-        return res && res.data;
-      });
+      return fetch('/api/graph', {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          if (res.errors) {
+            const err = res.errors[0].message;
+            return danger(`Error: ${err}`, 5000);
+          }
+
+          return res && res.data;
+        });
     };
+
     var api = {
       getModelSchemas(id) {
-        const filter = id ? `filter: { id: { value: ${id} } }` : "";
+        const filter = id ? `filter: { id: { value: ${id} } }` : '';
+
         const query = `query {
       admin_model_schemas(
           per_page: 100
@@ -7192,17 +7061,19 @@ var app = (function () {
         }
       }
     }`;
-        return graph({query}).then((data) => data.admin_model_schemas.results);
+
+        return graph({ query }).then((data) => data.admin_model_schemas.results);
       },
-      getModels({schemaId, id, page = 1, deleted = false}) {
+      getModels({ schemaId, id, page = 1, deleted = false }) {
         const f = get_store_value(filtersStore);
-        let propertyFilter = "";
+        let propertyFilter = '';
         if (f.property && f.operation && f.type) {
           propertyFilter = getPropertiesFilter(f);
         }
-        const deletedFilter = deleted ? `deleted_at: { exists: true }` : "";
-        const idFilter = id ? `id: { value: ${id} }` : "";
-        const schemaIdFilter = schemaId ? `model_schema_id: { value: ${schemaId} }` : "";
+
+        const deletedFilter = deleted ? `deleted_at: { exists: true }` : '';
+        const idFilter = id ? `id: { value: ${id} }` : '';
+        const schemaIdFilter = schemaId ? `model_schema_id: { value: ${schemaId} }` : '';
         const query = `query {
       models(
         page: ${page}
@@ -7225,15 +7096,18 @@ var app = (function () {
         }
       }
     }`;
-        return graph({query}).then((data) => {
+
+        return graph({ query }).then((data) => {
           if (data && data.models) {
-            pageStore.setPaginationData({total_pages: data.models.total_pages});
+            pageStore.setPaginationData({ total_pages: data.models.total_pages });
           }
+
           return data.models.results;
         });
       },
-      updateModel({id, props}) {
+      updateModel({ id, props }) {
         const properties = getPropsString(props);
+
         const query = `
       mutation {
         model_update(
@@ -7245,7 +7119,8 @@ var app = (function () {
           id
         }
       }`;
-        return graph({query});
+
+        return graph({ query });
       },
       deleteModel(id) {
         const query = `mutation {
@@ -7253,7 +7128,8 @@ var app = (function () {
         id
       }
     }`;
-        return graph({query});
+
+        return graph({ query });
       },
       undeleteModel(id) {
         const query = `
@@ -7265,10 +7141,12 @@ var app = (function () {
           id
         }
       }`;
-        return graph({query});
+
+        return graph({ query });
       },
       createModel(schemaName, props) {
         const properties = getPropsString(props);
+
         const query = `mutation {
       model_create(model: {
         model_schema_name: "${schemaName}",
@@ -7277,7 +7155,8 @@ var app = (function () {
         id
       }
     }`;
-        return graph({query});
+
+        return graph({ query });
       },
       getUsers(email = "", fn = "", ln = "") {
         const query = `query getUsers {
@@ -7302,10 +7181,11 @@ var app = (function () {
         }
       }
     }`;
-        return graph({query});
+
+        return graph({ query });
       },
       getLogs() {
-        return fetch("/api/logs").then((res) => res.json());
+        return fetch('/api/logs').then(res => res.json());
       }
     };
 
@@ -10121,28 +10001,30 @@ var app = (function () {
 
     function getTime(datetime) {
       const dt = new Date(datetime);
-      return format(dt, "dd MMM yyyy, HH:mm:ss");
+      return format(dt, 'dd MMM yyyy, HH:mm:ss');
     }
 
     const createStore = () => {
-      const {subscribe, set, update} = writable([]);
+      const { subscribe, set, update } = writable([]);
+
       return {
         subscribe,
         set,
         update,
         addModel: (model) => {
-          return update((models) => [...models, model]);
+          return update(models => [...models, model]);
         },
         refreshModels: (schemaId, page = 1) => {
           return Promise.all([
-            api.getModels({schemaId, page}),
-            api.getModels({schemaId, deleted: true, page})
+            api.getModels({ schemaId, page }),
+            api.getModels({ schemaId, deleted: true, page })
           ]).then((results) => {
             set([...results[0], ...results[1]]);
           });
         }
       };
     };
+
     var modelsStore = createStore();
 
     /* src/_components/InputField.svelte generated by Svelte v3.24.1 */
