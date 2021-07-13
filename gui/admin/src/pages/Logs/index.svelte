@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
 
-  const MAX_PREVIEW = 250;
+  const POLLING_INTERVAL = 2000;
 
   let logs = [];
   let cachedLastId = null;
@@ -19,7 +19,12 @@
     }
   }
 
+  const isBrowserTabFocused = () => !document.hidden;
+
   const fetchLogs = () => {
+    // Make sure first load is always done (middle button click) by checking for cachedLastId
+    if (!isBrowserTabFocused() && cachedLastId) return;
+
     return fetch(`/api/logs?lastId=${lastId}`)
       .then((res) => res.json())
       .then((res) => {
@@ -31,12 +36,16 @@
       }).then(res => {
         res.logs.forEach(isHighlighted);
         logs = logs.concat(res.logs);
-      });
+      }).then(() => {
+        document.querySelector('footer').scrollIntoView();
+        setTimeout(fetchLogs, POLLING_INTERVAL);
+      })
   }
 
   onMount(async () => {
     fetchLogs()
   });
+
 </script>
 
 <h1 class="mb-2 text-5xl">platformOS Logs</h1>
@@ -62,6 +71,6 @@
       </ul>
     </div>
 
-    <button on:click={fetchLogs} class="border-px rounded-sm bg-gray-200 px-3">Load more</button>
+    <p class="bg-yellow-100 border-yellow-600 px-3 py-2">Polling for new logs every {POLLING_INTERVAL / 1000} seconds.</p>
   </div>
 </section>

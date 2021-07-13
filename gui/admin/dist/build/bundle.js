@@ -3774,13 +3774,7 @@ var app = (function () {
         {
           "isFile": true,
           "isDir": false,
-          "file": "_fallback.svelte",
-          "filepath": "/_fallback.svelte",
-          "name": "_fallback",
           "ext": "svelte",
-          "badExt": false,
-          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/_fallback.svelte",
-          "importPath": "../../../../src/pages/_fallback.svelte",
           "isLayout": false,
           "isReset": false,
           "isIndex": false,
@@ -3801,13 +3795,7 @@ var app = (function () {
         {
           "isFile": true,
           "isDir": false,
-          "file": "_layout.svelte",
-          "filepath": "/_layout.svelte",
-          "name": "_layout",
           "ext": "svelte",
-          "badExt": false,
-          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/_layout.svelte",
-          "importPath": "../../../../src/pages/_layout.svelte",
           "isLayout": true,
           "isReset": false,
           "isIndex": false,
@@ -3828,13 +3816,7 @@ var app = (function () {
         {
           "isFile": true,
           "isDir": false,
-          "file": "index.svelte",
-          "filepath": "/index.svelte",
-          "name": "index",
           "ext": "svelte",
-          "badExt": false,
-          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/index.svelte",
-          "importPath": "../../../../src/pages/index.svelte",
           "isLayout": false,
           "isReset": false,
           "isIndex": true,
@@ -3855,23 +3837,12 @@ var app = (function () {
         {
           "isFile": false,
           "isDir": true,
-          "file": "Logs",
-          "filepath": "/Logs",
-          "name": "Logs",
           "ext": "",
-          "badExt": false,
-          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Logs",
           "children": [
             {
               "isFile": true,
               "isDir": false,
-              "file": "_layout.svelte",
-              "filepath": "/Logs/_layout.svelte",
-              "name": "_layout",
               "ext": "svelte",
-              "badExt": false,
-              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Logs/_layout.svelte",
-              "importPath": "../../../../src/pages/Logs/_layout.svelte",
               "isLayout": true,
               "isReset": false,
               "isIndex": false,
@@ -3892,13 +3863,7 @@ var app = (function () {
             {
               "isFile": true,
               "isDir": false,
-              "file": "index.svelte",
-              "filepath": "/Logs/index.svelte",
-              "name": "index",
               "ext": "svelte",
-              "badExt": false,
-              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Logs/index.svelte",
-              "importPath": "../../../../src/pages/Logs/index.svelte",
               "isLayout": false,
               "isReset": false,
               "isIndex": true,
@@ -3919,13 +3884,7 @@ var app = (function () {
             {
               "isFile": true,
               "isDir": false,
-              "file": "Modal.svelte",
-              "filepath": "/Logs/Modal.svelte",
-              "name": "Modal",
               "ext": "svelte",
-              "badExt": false,
-              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Logs/Modal.svelte",
-              "importPath": "../../../../src/pages/Logs/Modal.svelte",
               "isLayout": false,
               "isReset": false,
               "isIndex": false,
@@ -3962,23 +3921,12 @@ var app = (function () {
         {
           "isFile": false,
           "isDir": true,
-          "file": "Models",
-          "filepath": "/Models",
-          "name": "Models",
           "ext": "",
-          "badExt": false,
-          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models",
           "children": [
             {
               "isFile": true,
               "isDir": false,
-              "file": "_layout.svelte",
-              "filepath": "/Models/_layout.svelte",
-              "name": "_layout",
               "ext": "svelte",
-              "badExt": false,
-              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models/_layout.svelte",
-              "importPath": "../../../../src/pages/Models/_layout.svelte",
               "isLayout": true,
               "isReset": false,
               "isIndex": false,
@@ -3999,13 +3947,7 @@ var app = (function () {
             {
               "isFile": true,
               "isDir": false,
-              "file": "index.svelte",
-              "filepath": "/Models/index.svelte",
-              "name": "index",
               "ext": "svelte",
-              "badExt": false,
-              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models/index.svelte",
-              "importPath": "../../../../src/pages/Models/index.svelte",
               "isLayout": false,
               "isReset": false,
               "isIndex": true,
@@ -4026,23 +3968,12 @@ var app = (function () {
             {
               "isFile": false,
               "isDir": true,
-              "file": "Manage",
-              "filepath": "/Models/Manage",
-              "name": "Manage",
               "ext": "",
-              "badExt": false,
-              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models/Manage",
               "children": [
                 {
                   "isFile": true,
                   "isDir": false,
-                  "file": "[id].svelte",
-                  "filepath": "/Models/Manage/[id].svelte",
-                  "name": "[id]",
                   "ext": "svelte",
-                  "badExt": false,
-                  "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Models/Manage/[id].svelte",
-                  "importPath": "../../../../src/pages/Models/Manage/[id].svelte",
                   "isLayout": false,
                   "isReset": false,
                   "isIndex": false,
@@ -4095,23 +4026,12 @@ var app = (function () {
         {
           "isFile": false,
           "isDir": true,
-          "file": "Users",
-          "filepath": "/Users",
-          "name": "Users",
           "ext": "",
-          "badExt": false,
-          "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users",
           "children": [
             {
               "isFile": true,
               "isDir": false,
-              "file": "_layout.svelte",
-              "filepath": "/Users/_layout.svelte",
-              "name": "_layout",
               "ext": "svelte",
-              "badExt": false,
-              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users/_layout.svelte",
-              "importPath": "../../../../src/pages/Users/_layout.svelte",
               "isLayout": true,
               "isReset": false,
               "isIndex": false,
@@ -4132,13 +4052,7 @@ var app = (function () {
             {
               "isFile": true,
               "isDir": false,
-              "file": "index.svelte",
-              "filepath": "/Users/index.svelte",
-              "name": "index",
               "ext": "svelte",
-              "badExt": false,
-              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users/index.svelte",
-              "importPath": "../../../../src/pages/Users/index.svelte",
               "isLayout": false,
               "isReset": false,
               "isIndex": true,
@@ -4159,23 +4073,12 @@ var app = (function () {
             {
               "isFile": false,
               "isDir": true,
-              "file": "Manage",
-              "filepath": "/Users/Manage",
-              "name": "Manage",
               "ext": "",
-              "badExt": false,
-              "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users/Manage",
               "children": [
                 {
                   "isFile": true,
                   "isDir": false,
-                  "file": "_layout.svelte",
-                  "filepath": "/Users/Manage/_layout.svelte",
-                  "name": "_layout",
                   "ext": "svelte",
-                  "badExt": false,
-                  "absolutePath": "/lib/node_modules/@platformos/pos-cli/gui/admin/src/pages/Users/Manage/_layout.svelte",
-                  "importPath": "../../../../src/pages/Users/Manage/_layout.svelte",
                   "isLayout": true,
                   "isReset": false,
                   "isIndex": false,
@@ -4328,7 +4231,7 @@ var app = (function () {
     	}
     }
 
-    const app = HMR(App, { target: document.body }, 'routify-app');
+    const app = HMR(App, {target: document.body}, "routify-app");
 
     /* src/pages/_fallback.svelte generated by Svelte v3.24.1 */
     const file$e = "src/pages/_fallback.svelte";
@@ -6217,28 +6120,28 @@ var app = (function () {
 
     function get_each_context$5(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[6] = list[i].id;
-    	child_ctx[4] = list[i].isHighlighted;
-    	child_ctx[7] = list[i].message;
-    	child_ctx[8] = list[i].error_type;
-    	child_ctx[9] = list[i].updated_at;
+    	child_ctx[7] = list[i].id;
+    	child_ctx[3] = list[i].isHighlighted;
+    	child_ctx[8] = list[i].message;
+    	child_ctx[9] = list[i].error_type;
+    	child_ctx[10] = list[i].updated_at;
     	return child_ctx;
     }
 
-    // (48:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }
+    // (57:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }
     function create_each_block$5(key_1, ctx) {
     	let li;
     	let span0;
-    	let t0_value = /*error_type*/ ctx[8] + "";
+    	let t0_value = /*error_type*/ ctx[9] + "";
     	let t0;
     	let t1;
     	let span1;
-    	let t2_value = /*updated_at*/ ctx[9] + "";
+    	let t2_value = /*updated_at*/ ctx[10] + "";
     	let t2;
     	let t3;
     	let span2;
     	let div;
-    	let t4_value = /*message*/ ctx[7] + "";
+    	let t4_value = /*message*/ ctx[8] + "";
     	let t4;
     	let div_title_value;
     	let span2_class_value;
@@ -6288,20 +6191,20 @@ var app = (function () {
     		},
     		h: function hydrate() {
     			attr_dev(span0, "class", "text-xs");
-    			add_location(span0, file$9, 54, 12, 1272);
+    			add_location(span0, file$9, 63, 12, 1614);
     			attr_dev(span1, "class", "text-xs");
-    			add_location(span1, file$9, 55, 12, 1326);
+    			add_location(span1, file$9, 64, 12, 1668);
     			attr_dev(div, "class", "w-full");
-    			attr_dev(div, "title", div_title_value = /*stringify*/ ctx[2](/*message*/ ctx[7]));
-    			add_location(div, file$9, 57, 14, 1486);
+    			attr_dev(div, "title", div_title_value = /*stringify*/ ctx[2](/*message*/ ctx[8]));
+    			add_location(div, file$9, 66, 14, 1828);
 
-    			attr_dev(span2, "class", span2_class_value = "text-base w-full mt-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[6]
+    			attr_dev(span2, "class", span2_class_value = "text-base w-full mt-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[7]
     			? "border-red-500 border-b"
     			: ""));
 
-    			add_location(span2, file$9, 56, 12, 1380);
-    			attr_dev(li, "class", li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[4] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ");
-    			add_location(li, file$9, 48, 10, 1063);
+    			add_location(span2, file$9, 65, 12, 1722);
+    			attr_dev(li, "class", li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[3] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ");
+    			add_location(li, file$9, 57, 10, 1405);
     			this.first = li;
     		},
     		m: function mount(target, anchor) {
@@ -6318,21 +6221,21 @@ var app = (function () {
     			append_dev(li, t5);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*logs*/ 1 && t0_value !== (t0_value = /*error_type*/ ctx[8] + "")) set_data_dev(t0, t0_value);
-    			if (dirty & /*logs*/ 1 && t2_value !== (t2_value = /*updated_at*/ ctx[9] + "")) set_data_dev(t2, t2_value);
-    			if (dirty & /*logs*/ 1 && t4_value !== (t4_value = /*message*/ ctx[7] + "")) set_data_dev(t4, t4_value);
+    			if (dirty & /*logs*/ 1 && t0_value !== (t0_value = /*error_type*/ ctx[9] + "")) set_data_dev(t0, t0_value);
+    			if (dirty & /*logs*/ 1 && t2_value !== (t2_value = /*updated_at*/ ctx[10] + "")) set_data_dev(t2, t2_value);
+    			if (dirty & /*logs*/ 1 && t4_value !== (t4_value = /*message*/ ctx[8] + "")) set_data_dev(t4, t4_value);
 
-    			if (dirty & /*logs*/ 1 && div_title_value !== (div_title_value = /*stringify*/ ctx[2](/*message*/ ctx[7]))) {
+    			if (dirty & /*logs*/ 1 && div_title_value !== (div_title_value = /*stringify*/ ctx[2](/*message*/ ctx[8]))) {
     				attr_dev(div, "title", div_title_value);
     			}
 
-    			if (dirty & /*cachedLastId, logs*/ 3 && span2_class_value !== (span2_class_value = "text-base w-full mt-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[6]
+    			if (dirty & /*cachedLastId, logs*/ 3 && span2_class_value !== (span2_class_value = "text-base w-full mt-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[7]
     			? "border-red-500 border-b"
     			: ""))) {
     				attr_dev(span2, "class", span2_class_value);
     			}
 
-    			if (dirty & /*logs*/ 1 && li_class_value !== (li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[4] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ")) {
+    			if (dirty & /*logs*/ 1 && li_class_value !== (li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[3] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ")) {
     				attr_dev(li, "class", li_class_value);
     			}
     		},
@@ -6345,7 +6248,7 @@ var app = (function () {
     		block,
     		id: create_each_block$5.name,
     		type: "each",
-    		source: "(48:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }",
+    		source: "(57:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }",
     		ctx
     	});
 
@@ -6363,13 +6266,14 @@ var app = (function () {
     	let each_blocks = [];
     	let each_1_lookup = new Map();
     	let t2;
-    	let button;
+    	let p;
     	let t3;
-    	let mounted;
-    	let dispose;
+    	let t4_value = POLLING_INTERVAL / 1000 + "";
+    	let t4;
+    	let t5;
     	let each_value = /*logs*/ ctx[0];
     	validate_each_argument(each_value);
-    	const get_key = ctx => /*id*/ ctx[6];
+    	const get_key = ctx => /*id*/ ctx[7];
     	validate_each_keys(ctx, each_value, get_each_context$5, get_key);
 
     	for (let i = 0; i < each_value.length; i += 1) {
@@ -6393,8 +6297,10 @@ var app = (function () {
     			}
 
     			t2 = space();
-    			button = element("button");
-    			t3 = text("Load more");
+    			p = element("p");
+    			t3 = text("Polling for new logs every ");
+    			t4 = text(t4_value);
+    			t5 = text(" seconds.");
     			this.h();
     		},
     		l: function claim(nodes) {
@@ -6419,26 +6325,28 @@ var app = (function () {
     			ul_nodes.forEach(detach_dev);
     			div0_nodes.forEach(detach_dev);
     			t2 = claim_space(div1_nodes);
-    			button = claim_element(div1_nodes, "BUTTON", { class: true });
-    			var button_nodes = children(button);
-    			t3 = claim_text(button_nodes, "Load more");
-    			button_nodes.forEach(detach_dev);
+    			p = claim_element(div1_nodes, "P", { class: true });
+    			var p_nodes = children(p);
+    			t3 = claim_text(p_nodes, "Polling for new logs every ");
+    			t4 = claim_text(p_nodes, t4_value);
+    			t5 = claim_text(p_nodes, " seconds.");
+    			p_nodes.forEach(detach_dev);
     			div1_nodes.forEach(detach_dev);
     			section_nodes.forEach(detach_dev);
     			this.h();
     		},
     		h: function hydrate() {
     			attr_dev(h1, "class", "mb-2 text-5xl");
-    			add_location(h1, file$9, 41, 0, 823);
-    			add_location(ul, file$9, 46, 6, 964);
+    			add_location(h1, file$9, 50, 0, 1165);
+    			add_location(ul, file$9, 55, 6, 1306);
     			attr_dev(div0, "class", "m-1");
-    			add_location(div0, file$9, 45, 4, 940);
-    			attr_dev(button, "class", "border-px rounded-sm bg-gray-200 px-3");
-    			add_location(button, file$9, 64, 4, 1631);
+    			add_location(div0, file$9, 54, 4, 1282);
+    			attr_dev(p, "class", "bg-yellow-100 border-yellow-600 px-3 py-2");
+    			add_location(p, file$9, 73, 4, 1973);
     			attr_dev(div1, "class", "container py-8");
-    			add_location(div1, file$9, 44, 2, 907);
+    			add_location(div1, file$9, 53, 2, 1249);
     			attr_dev(section, "class", "overflow-hidden");
-    			add_location(section, file$9, 43, 0, 871);
+    			add_location(section, file$9, 52, 0, 1213);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, h1, anchor);
@@ -6454,13 +6362,10 @@ var app = (function () {
     			}
 
     			append_dev(div1, t2);
-    			append_dev(div1, button);
-    			append_dev(button, t3);
-
-    			if (!mounted) {
-    				dispose = listen_dev(button, "click", /*fetchLogs*/ ctx[3], false, false, false);
-    				mounted = true;
-    			}
+    			append_dev(div1, p);
+    			append_dev(p, t3);
+    			append_dev(p, t4);
+    			append_dev(p, t5);
     		},
     		p: function update(ctx, [dirty]) {
     			if (dirty & /*logs, cachedLastId, stringify*/ 7) {
@@ -6480,9 +6385,6 @@ var app = (function () {
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].d();
     			}
-
-    			mounted = false;
-    			dispose();
     		}
     	};
 
@@ -6497,7 +6399,7 @@ var app = (function () {
     	return block;
     }
 
-    const MAX_PREVIEW = 250;
+    const POLLING_INTERVAL = 2000;
 
     function instance$c($$self, $$props, $$invalidate) {
     	let logs = [];
@@ -6516,7 +6418,12 @@ var app = (function () {
     		}
     	};
 
+    	const isBrowserTabFocused = () => !document.hidden;
+
     	const fetchLogs = () => {
+    		// Make sure first load is always done (middle button click) by checking for cachedLastId
+    		if (!isBrowserTabFocused() && cachedLastId) return;
+
     		return fetch(`/api/logs?lastId=${lastId}`).then(res => res.json()).then(res => {
     			if (!res.logs.length) return res;
     			$$invalidate(1, cachedLastId = lastId);
@@ -6525,6 +6432,9 @@ var app = (function () {
     		}).then(res => {
     			res.logs.forEach(isHighlighted);
     			$$invalidate(0, logs = logs.concat(res.logs));
+    		}).then(() => {
+    			document.querySelector("footer").scrollIntoView();
+    			setTimeout(fetchLogs, POLLING_INTERVAL);
     		});
     	};
 
@@ -6543,12 +6453,13 @@ var app = (function () {
 
     	$$self.$capture_state = () => ({
     		onMount,
-    		MAX_PREVIEW,
+    		POLLING_INTERVAL,
     		logs,
     		cachedLastId,
     		lastId,
     		isHighlighted,
     		stringify,
+    		isBrowserTabFocused,
     		fetchLogs
     	});
 
@@ -6562,7 +6473,7 @@ var app = (function () {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [logs, cachedLastId, stringify, fetchLogs, isHighlighted];
+    	return [logs, cachedLastId, stringify, isHighlighted];
     }
 
     class Logs extends SvelteComponentDev {
@@ -6943,8 +6854,7 @@ var app = (function () {
     });
 
     const createStore$2 = () => {
-      const { subscribe, set, update } = writable({});
-
+      const {subscribe, set, update} = writable({});
       return {
         subscribe,
         set,
@@ -6954,66 +6864,74 @@ var app = (function () {
         }
       };
     };
-
     var filtersStore = createStore$2();
 
+    var __defProp = Object.defineProperty;
+    var __hasOwnProp = Object.prototype.hasOwnProperty;
+    var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+    var __propIsEnum = Object.prototype.propertyIsEnumerable;
+    var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, {enumerable: true, configurable: true, writable: true, value}) : obj[key] = value;
+    var __objSpread = (a, b) => {
+      for (var prop in b || (b = {}))
+        if (__hasOwnProp.call(b, prop))
+          __defNormalProp(a, prop, b[prop]);
+      if (__getOwnPropSymbols)
+        for (var prop of __getOwnPropSymbols(b)) {
+          if (__propIsEnum.call(b, prop))
+            __defNormalProp(a, prop, b[prop]);
+        }
+      return a;
+    };
     const createStore$1 = () => {
-      const { subscribe, set, update } = writable({ page: 1 });
-
+      const {subscribe, set, update} = writable({page: 1});
       return {
         subscribe,
         set,
         update,
-        setPaginationData: ({ total_entries, total_pages }) => {
-          update(s => {
-            return { ...s, total_entries, total_pages };
+        setPaginationData: ({total_entries, total_pages}) => {
+          update((s) => {
+            return __objSpread(__objSpread({}, s), {total_entries, total_pages});
           });
         },
-        setSchemaId: id => {
-          update(s => ({ ...s, schemaId: id }));
+        setSchemaId: (id) => {
+          update((s) => __objSpread(__objSpread({}, s), {schemaId: id}));
         },
-        reset: () => update(s => ({ ...s, page: 1 })),
+        reset: () => update((s) => __objSpread(__objSpread({}, s), {page: 1})),
         increment: () => {
-          update(s => {
+          update((s) => {
             const page = s.page + 1;
-            return { ...s, page };
+            return __objSpread(__objSpread({}, s), {page});
           });
         },
         decrement: () => {
-          update(s => {
+          update((s) => {
             const page = s.page - 1 || 1;
-            return { ...s, page };
+            return __objSpread(__objSpread({}, s), {page});
           });
         }
       };
     };
-
     var pageStore = createStore$1();
 
     var typeMap = {
-      array: 'value_array',
-      boolean: 'value_boolean',
-      date: 'value',
-      datetime: 'value',
-      float: 'value_float',
-      integer: 'value_int',
-      string: 'value',
-      text: 'value',
-      upload: 'value',
+      array: "value_array",
+      boolean: "value_boolean",
+      date: "value",
+      datetime: "value",
+      float: "value_float",
+      integer: "value_int",
+      string: "value",
+      text: "value",
+      upload: "value"
     };
 
     const getPropsString = (props) => {
-      return Object.keys(props)
-        .map((prop) => {
-          const { name, value, attribute_type } = props[prop];
-
-          const updateType = typeMap[attribute_type];
-
-          return `{ name: "${name}", ${updateType}: ${value}}`;
-        })
-        .join('\n');
+      return Object.keys(props).map((prop) => {
+        const {name, value, attribute_type} = props[prop];
+        const updateType = typeMap[attribute_type];
+        return `{ name: "${name}", ${updateType}: ${value}}`;
+      }).join("\n");
     };
-
     const getPropertiesFilter = (f) => {
       const filterString = `
     properties: [{
@@ -7021,31 +6939,24 @@ var app = (function () {
       ${f.operation}: ${f.value}
     }]
   `;
-
       return filterString;
     };
-
     const graph = (body) => {
-      return fetch('/api/graph', {
-        headers: { 'Content-Type': 'application/json' },
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-        .then((res) => res.json())
-        .then((res) => {
-          if (res.errors) {
-            const err = res.errors[0].message;
-            return danger(`Error: ${err}`, 5000);
-          }
-
-          return res && res.data;
-        });
+      return fetch("/api/graph", {
+        headers: {"Content-Type": "application/json"},
+        method: "POST",
+        body: JSON.stringify(body)
+      }).then((res) => res.json()).then((res) => {
+        if (res.errors) {
+          const err = res.errors[0].message;
+          return danger(`Error: ${err}`, 5e3);
+        }
+        return res && res.data;
+      });
     };
-
     var api = {
       getModelSchemas(id) {
-        const filter = id ? `filter: { id: { value: ${id} } }` : '';
-
+        const filter = id ? `filter: { id: { value: ${id} } }` : "";
         const query = `query {
       admin_model_schemas(
           per_page: 100
@@ -7061,19 +6972,17 @@ var app = (function () {
         }
       }
     }`;
-
-        return graph({ query }).then((data) => data.admin_model_schemas.results);
+        return graph({query}).then((data) => data.admin_model_schemas.results);
       },
-      getModels({ schemaId, id, page = 1, deleted = false }) {
+      getModels({schemaId, id, page = 1, deleted = false}) {
         const f = get_store_value(filtersStore);
-        let propertyFilter = '';
+        let propertyFilter = "";
         if (f.property && f.operation && f.type) {
           propertyFilter = getPropertiesFilter(f);
         }
-
-        const deletedFilter = deleted ? `deleted_at: { exists: true }` : '';
-        const idFilter = id ? `id: { value: ${id} }` : '';
-        const schemaIdFilter = schemaId ? `model_schema_id: { value: ${schemaId} }` : '';
+        const deletedFilter = deleted ? `deleted_at: { exists: true }` : "";
+        const idFilter = id ? `id: { value: ${id} }` : "";
+        const schemaIdFilter = schemaId ? `model_schema_id: { value: ${schemaId} }` : "";
         const query = `query {
       models(
         page: ${page}
@@ -7096,18 +7005,15 @@ var app = (function () {
         }
       }
     }`;
-
-        return graph({ query }).then((data) => {
+        return graph({query}).then((data) => {
           if (data && data.models) {
-            pageStore.setPaginationData({ total_pages: data.models.total_pages });
+            pageStore.setPaginationData({total_pages: data.models.total_pages});
           }
-
           return data.models.results;
         });
       },
-      updateModel({ id, props }) {
+      updateModel({id, props}) {
         const properties = getPropsString(props);
-
         const query = `
       mutation {
         model_update(
@@ -7119,8 +7025,7 @@ var app = (function () {
           id
         }
       }`;
-
-        return graph({ query });
+        return graph({query});
       },
       deleteModel(id) {
         const query = `mutation {
@@ -7128,8 +7033,7 @@ var app = (function () {
         id
       }
     }`;
-
-        return graph({ query });
+        return graph({query});
       },
       undeleteModel(id) {
         const query = `
@@ -7141,12 +7045,10 @@ var app = (function () {
           id
         }
       }`;
-
-        return graph({ query });
+        return graph({query});
       },
       createModel(schemaName, props) {
         const properties = getPropsString(props);
-
         const query = `mutation {
       model_create(model: {
         model_schema_name: "${schemaName}",
@@ -7155,8 +7057,7 @@ var app = (function () {
         id
       }
     }`;
-
-        return graph({ query });
+        return graph({query});
       },
       getUsers(email = "", fn = "", ln = "") {
         const query = `query getUsers {
@@ -7181,11 +7082,10 @@ var app = (function () {
         }
       }
     }`;
-
-        return graph({ query });
+        return graph({query});
       },
       getLogs() {
-        return fetch('/api/logs').then(res => res.json());
+        return fetch("/api/logs").then((res) => res.json());
       }
     };
 
@@ -10001,30 +9901,28 @@ var app = (function () {
 
     function getTime(datetime) {
       const dt = new Date(datetime);
-      return format(dt, 'dd MMM yyyy, HH:mm:ss');
+      return format(dt, "dd MMM yyyy, HH:mm:ss");
     }
 
     const createStore = () => {
-      const { subscribe, set, update } = writable([]);
-
+      const {subscribe, set, update} = writable([]);
       return {
         subscribe,
         set,
         update,
         addModel: (model) => {
-          return update(models => [...models, model]);
+          return update((models) => [...models, model]);
         },
         refreshModels: (schemaId, page = 1) => {
           return Promise.all([
-            api.getModels({ schemaId, page }),
-            api.getModels({ schemaId, deleted: true, page })
+            api.getModels({schemaId, page}),
+            api.getModels({schemaId, deleted: true, page})
           ]).then((results) => {
             set([...results[0], ...results[1]]);
           });
         }
       };
     };
-
     var modelsStore = createStore();
 
     /* src/_components/InputField.svelte generated by Svelte v3.24.1 */
