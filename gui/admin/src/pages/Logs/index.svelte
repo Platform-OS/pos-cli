@@ -2,10 +2,13 @@
   import { onMount } from "svelte";
 
   const POLLING_INTERVAL = 3000;
+  const SUMMARY_LENGTH = 250;
 
   let logs = [];
   let cachedLastId = null;
   let lastId = null;
+
+  const showDetails = document.location.href.indexOf('?2') > 0;
 
   const isHighlighted = (item) => {
     item.isHighlighted = !!item.error_type.match(/error/i);
@@ -65,7 +68,14 @@
           >
             <span class="text-xs">{error_type}</span>
             <span class="text-xs">{updated_at}</span>
-            <div class="w-full" title={stringify(message)}>{message}</div>
+            {#if showDetails}
+              <details class="w-full">
+                <summary class="mb-2">{message.substr(0, SUMMARY_LENGTH)}</summary>
+                <pre class="px-2 py-3 bg-gray-200 break-all">{stringify(message)}</pre>
+              </details>
+            {:else}
+              <div title={stringify(message)}>{message}</div>
+            {/if}
           </li>
 
           <hr class="border-b my-2 {cachedLastId === id ? 'border-red-500' : 'border-white'}">
