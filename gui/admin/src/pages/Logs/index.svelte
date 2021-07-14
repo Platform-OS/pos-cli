@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { format } from 'date-fns'
 
   const POLLING_INTERVAL = 3000;
   const SUMMARY_LENGTH = 250;
@@ -63,18 +64,25 @@
           <li
             class="text-sm
             {isHighlighted ? 'text-red-800' : ''} text-sm
-            flex flex-wrap justify-between shadow border border-gray-200 p-2
+            flex {showDetails ? '' : 'flex-wrap'} items-center justify-between shadow border border-gray-200 py-2
             "
           >
-            <span class="text-xs">{error_type}</span>
-            <span class="text-xs">{updated_at}</span>
+            <span class="{showDetails ? 'w-64 ml-4' : 'mx-2 text-xs'}">{error_type}</span>
+
+            {#if !showDetails}
+              <span class="text-xs mx-2">{format(new Date(updated_at), 'dd/MM/yyyy HH:mm:ss')}</span>
+            {/if}
+
             {#if showDetails}
-              <details class="w-full">
-                <summary class="mb-2">{message.substr(0, SUMMARY_LENGTH)}</summary>
-                <pre class="px-2 py-3 bg-gray-200 break-all">{stringify(message)}</pre>
-              </details>
+              <pre class="ml-4 flex-1 px-2 py-3 bg-gray-200 max-h-64 focus:max-h-112 overflow-y-auto overflow-x-visible"
+                title="{format(new Date(updated_at), 'dd/MM/yyyy HH:mm:ss')}"
+              >
+                <code class="break-all">
+                  {stringify(message)}
+                </code>
+              </pre>
             {:else}
-              <div title={stringify(message)}>{message}</div>
+              <div class="w-full px-2" title={stringify(message)}>{message}</div>
             {/if}
           </li>
 
