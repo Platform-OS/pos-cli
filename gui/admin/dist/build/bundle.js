@@ -3774,7 +3774,13 @@ var app = (function () {
         {
           "isFile": true,
           "isDir": false,
+          "file": "_fallback.svelte",
+          "filepath": "/_fallback.svelte",
+          "name": "_fallback",
           "ext": "svelte",
+          "badExt": false,
+          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/_fallback.svelte",
+          "importPath": "../../../../src/pages/_fallback.svelte",
           "isLayout": false,
           "isReset": false,
           "isIndex": false,
@@ -3795,7 +3801,13 @@ var app = (function () {
         {
           "isFile": true,
           "isDir": false,
+          "file": "_layout.svelte",
+          "filepath": "/_layout.svelte",
+          "name": "_layout",
           "ext": "svelte",
+          "badExt": false,
+          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/_layout.svelte",
+          "importPath": "../../../../src/pages/_layout.svelte",
           "isLayout": true,
           "isReset": false,
           "isIndex": false,
@@ -3816,7 +3828,13 @@ var app = (function () {
         {
           "isFile": true,
           "isDir": false,
+          "file": "index.svelte",
+          "filepath": "/index.svelte",
+          "name": "index",
           "ext": "svelte",
+          "badExt": false,
+          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/index.svelte",
+          "importPath": "../../../../src/pages/index.svelte",
           "isLayout": false,
           "isReset": false,
           "isIndex": true,
@@ -3837,12 +3855,23 @@ var app = (function () {
         {
           "isFile": false,
           "isDir": true,
+          "file": "Logs",
+          "filepath": "/Logs",
+          "name": "Logs",
           "ext": "",
+          "badExt": false,
+          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs",
           "children": [
             {
               "isFile": true,
               "isDir": false,
+              "file": "_layout.svelte",
+              "filepath": "/Logs/_layout.svelte",
+              "name": "_layout",
               "ext": "svelte",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs/_layout.svelte",
+              "importPath": "../../../../src/pages/Logs/_layout.svelte",
               "isLayout": true,
               "isReset": false,
               "isIndex": false,
@@ -3863,7 +3892,13 @@ var app = (function () {
             {
               "isFile": true,
               "isDir": false,
+              "file": "index.svelte",
+              "filepath": "/Logs/index.svelte",
+              "name": "index",
               "ext": "svelte",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs/index.svelte",
+              "importPath": "../../../../src/pages/Logs/index.svelte",
               "isLayout": false,
               "isReset": false,
               "isIndex": true,
@@ -3884,7 +3919,13 @@ var app = (function () {
             {
               "isFile": true,
               "isDir": false,
+              "file": "Modal.svelte",
+              "filepath": "/Logs/Modal.svelte",
+              "name": "Modal",
               "ext": "svelte",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs/Modal.svelte",
+              "importPath": "../../../../src/pages/Logs/Modal.svelte",
               "isLayout": false,
               "isReset": false,
               "isIndex": false,
@@ -3921,12 +3962,23 @@ var app = (function () {
         {
           "isFile": false,
           "isDir": true,
+          "file": "Models",
+          "filepath": "/Models",
+          "name": "Models",
           "ext": "",
+          "badExt": false,
+          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models",
           "children": [
             {
               "isFile": true,
               "isDir": false,
+              "file": "_layout.svelte",
+              "filepath": "/Models/_layout.svelte",
+              "name": "_layout",
               "ext": "svelte",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models/_layout.svelte",
+              "importPath": "../../../../src/pages/Models/_layout.svelte",
               "isLayout": true,
               "isReset": false,
               "isIndex": false,
@@ -3947,7 +3999,13 @@ var app = (function () {
             {
               "isFile": true,
               "isDir": false,
+              "file": "index.svelte",
+              "filepath": "/Models/index.svelte",
+              "name": "index",
               "ext": "svelte",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models/index.svelte",
+              "importPath": "../../../../src/pages/Models/index.svelte",
               "isLayout": false,
               "isReset": false,
               "isIndex": true,
@@ -3968,12 +4026,23 @@ var app = (function () {
             {
               "isFile": false,
               "isDir": true,
+              "file": "Manage",
+              "filepath": "/Models/Manage",
+              "name": "Manage",
               "ext": "",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models/Manage",
               "children": [
                 {
                   "isFile": true,
                   "isDir": false,
+                  "file": "[id].svelte",
+                  "filepath": "/Models/Manage/[id].svelte",
+                  "name": "[id]",
                   "ext": "svelte",
+                  "badExt": false,
+                  "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Models/Manage/[id].svelte",
+                  "importPath": "../../../../src/pages/Models/Manage/[id].svelte",
                   "isLayout": false,
                   "isReset": false,
                   "isIndex": false,
@@ -4026,12 +4095,23 @@ var app = (function () {
         {
           "isFile": false,
           "isDir": true,
+          "file": "Users",
+          "filepath": "/Users",
+          "name": "Users",
           "ext": "",
+          "badExt": false,
+          "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users",
           "children": [
             {
               "isFile": true,
               "isDir": false,
+              "file": "_layout.svelte",
+              "filepath": "/Users/_layout.svelte",
+              "name": "_layout",
               "ext": "svelte",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/_layout.svelte",
+              "importPath": "../../../../src/pages/Users/_layout.svelte",
               "isLayout": true,
               "isReset": false,
               "isIndex": false,
@@ -4052,7 +4132,13 @@ var app = (function () {
             {
               "isFile": true,
               "isDir": false,
+              "file": "index.svelte",
+              "filepath": "/Users/index.svelte",
+              "name": "index",
               "ext": "svelte",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/index.svelte",
+              "importPath": "../../../../src/pages/Users/index.svelte",
               "isLayout": false,
               "isReset": false,
               "isIndex": true,
@@ -4073,12 +4159,23 @@ var app = (function () {
             {
               "isFile": false,
               "isDir": true,
+              "file": "Manage",
+              "filepath": "/Users/Manage",
+              "name": "Manage",
               "ext": "",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/Manage",
               "children": [
                 {
                   "isFile": true,
                   "isDir": false,
+                  "file": "_layout.svelte",
+                  "filepath": "/Users/Manage/_layout.svelte",
+                  "name": "_layout",
                   "ext": "svelte",
+                  "badExt": false,
+                  "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Users/Manage/_layout.svelte",
+                  "importPath": "../../../../src/pages/Users/Manage/_layout.svelte",
                   "isLayout": true,
                   "isReset": false,
                   "isIndex": false,
@@ -4365,38 +4462,24 @@ var app = (function () {
     });
 
     /* src/_components/Header.svelte generated by Svelte v3.24.1 */
+
     const file$d = "src/_components/Header.svelte";
 
     function create_fragment$i(ctx) {
     	let header;
     	let div;
-    	let a0;
+    	let a;
     	let span;
-    	let t0;
-    	let t1;
-    	let nav;
-    	let a1;
-    	let t2;
-    	let a1_href_value;
-    	let t3;
-    	let a2;
-    	let t4;
-    	let a2_href_value;
+    	let img;
+    	let img_src_value;
 
     	const block = {
     		c: function create() {
     			header = element("header");
     			div = element("div");
-    			a0 = element("a");
+    			a = element("a");
     			span = element("span");
-    			t0 = text("platformOS Admin");
-    			t1 = space();
-    			nav = element("nav");
-    			a1 = element("a");
-    			t2 = text("Models");
-    			t3 = space();
-    			a2 = element("a");
-    			t4 = text("Users");
+    			img = element("img");
     			this.h();
     		},
     		l: function claim(nodes) {
@@ -4404,72 +4487,40 @@ var app = (function () {
     			var header_nodes = children(header);
     			div = claim_element(header_nodes, "DIV", { class: true });
     			var div_nodes = children(div);
-    			a0 = claim_element(div_nodes, "A", { href: true, class: true });
-    			var a0_nodes = children(a0);
-    			span = claim_element(a0_nodes, "SPAN", { class: true });
+    			a = claim_element(div_nodes, "A", { href: true, class: true });
+    			var a_nodes = children(a);
+    			span = claim_element(a_nodes, "SPAN", { class: true });
     			var span_nodes = children(span);
-    			t0 = claim_text(span_nodes, "platformOS Admin");
+    			img = claim_element(span_nodes, "IMG", { src: true, alt: true, class: true });
     			span_nodes.forEach(detach_dev);
-    			a0_nodes.forEach(detach_dev);
-    			t1 = claim_space(div_nodes);
-    			nav = claim_element(div_nodes, "NAV", { class: true });
-    			var nav_nodes = children(nav);
-    			a1 = claim_element(nav_nodes, "A", { class: true, href: true });
-    			var a1_nodes = children(a1);
-    			t2 = claim_text(a1_nodes, "Models");
-    			a1_nodes.forEach(detach_dev);
-    			t3 = claim_space(nav_nodes);
-    			a2 = claim_element(nav_nodes, "A", { class: true, href: true });
-    			var a2_nodes = children(a2);
-    			t4 = claim_text(a2_nodes, "Users");
-    			a2_nodes.forEach(detach_dev);
-    			nav_nodes.forEach(detach_dev);
+    			a_nodes.forEach(detach_dev);
     			div_nodes.forEach(detach_dev);
     			header_nodes.forEach(detach_dev);
     			this.h();
     		},
     		h: function hydrate() {
-    			attr_dev(span, "class", "text-xl");
-    			add_location(span, file$d, 7, 6, 282);
-    			attr_dev(a0, "href", "/");
-    			attr_dev(a0, "class", "flex items-center mb-4 font-medium text-gray-900 title-font md:mb-0");
-    			add_location(a0, file$d, 6, 4, 187);
-    			attr_dev(a1, "class", "mr-5 text-lg text-blue-700 hover:underline");
-    			attr_dev(a1, "href", a1_href_value = /*$url*/ ctx[0]("../Models/index"));
-    			add_location(a1, file$d, 10, 6, 422);
-    			attr_dev(a2, "class", "mr-5 text-lg text-blue-700 hover:underline");
-    			attr_dev(a2, "href", a2_href_value = /*$url*/ ctx[0]("../Users/index"));
-    			add_location(a2, file$d, 13, 6, 540);
-    			attr_dev(nav, "class", "flex flex-wrap items-center justify-center mx-auto text-base");
-    			add_location(nav, file$d, 9, 4, 341);
+    			if (img.src !== (img_src_value = "./logo.svg")) attr_dev(img, "src", img_src_value);
+    			attr_dev(img, "alt", "");
+    			attr_dev(img, "class", "w-64 h-10");
+    			add_location(img, file$d, 4, 8, 303);
+    			attr_dev(span, "class", "text-xl font-light text-blue-700 underline hover:no-underline");
+    			add_location(span, file$d, 3, 6, 218);
+    			attr_dev(a, "href", "/");
+    			attr_dev(a, "class", "flex items-center mb-4 font-medium text-gray-900 title-font md:mb-0");
+    			add_location(a, file$d, 2, 4, 123);
     			attr_dev(div, "class", "container flex flex-col flex-wrap items-center py-5 mx-auto md:flex-row");
-    			add_location(div, file$d, 5, 2, 97);
-    			attr_dev(header, "class", "text-gray-700 ");
-    			add_location(header, file$d, 4, 0, 63);
+    			add_location(div, file$d, 1, 2, 33);
+    			attr_dev(header, "class", "text-gray-700");
+    			add_location(header, file$d, 0, 0, 0);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, header, anchor);
     			append_dev(header, div);
-    			append_dev(div, a0);
-    			append_dev(a0, span);
-    			append_dev(span, t0);
-    			append_dev(div, t1);
-    			append_dev(div, nav);
-    			append_dev(nav, a1);
-    			append_dev(a1, t2);
-    			append_dev(nav, t3);
-    			append_dev(nav, a2);
-    			append_dev(a2, t4);
+    			append_dev(div, a);
+    			append_dev(a, span);
+    			append_dev(span, img);
     		},
-    		p: function update(ctx, [dirty]) {
-    			if (dirty & /*$url*/ 1 && a1_href_value !== (a1_href_value = /*$url*/ ctx[0]("../Models/index"))) {
-    				attr_dev(a1, "href", a1_href_value);
-    			}
-
-    			if (dirty & /*$url*/ 1 && a2_href_value !== (a2_href_value = /*$url*/ ctx[0]("../Users/index"))) {
-    				attr_dev(a2, "href", a2_href_value);
-    			}
-    		},
+    		p: noop,
     		i: noop,
     		o: noop,
     		d: function destroy(detaching) {
@@ -4488,10 +4539,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$i($$self, $$props, $$invalidate) {
-    	let $url;
-    	validate_store(url, "url");
-    	component_subscribe($$self, url, $$value => $$invalidate(0, $url = $$value));
+    function instance$i($$self, $$props) {
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
@@ -4500,8 +4548,7 @@ var app = (function () {
 
     	let { $$slots = {}, $$scope } = $$props;
     	validate_slots("Header", $$slots, []);
-    	$$self.$capture_state = () => ({ url, $url });
-    	return [$url];
+    	return [];
     }
 
     class Header extends SvelteComponentDev {
@@ -5216,8 +5263,8 @@ var app = (function () {
 
     function create_fragment$e(ctx) {
     	let section0;
-    	let div9;
-    	let div8;
+    	let div13;
+    	let div12;
     	let div3;
     	let div2;
     	let div0;
@@ -5264,64 +5311,87 @@ var app = (function () {
     	let path3;
     	let a1_href_value;
     	let t17;
-    	let hr;
-    	let t18;
-    	let section1;
-    	let div17;
-    	let div16;
-    	let div12;
     	let div11;
-    	let img0;
-    	let img0_src_value;
-    	let t19;
     	let div10;
-    	let h22;
-    	let t20;
-    	let t21;
-    	let ul2;
-    	let li4;
-    	let t22;
-    	let t23;
-    	let li5;
-    	let t24;
-    	let t25;
-    	let li6;
-    	let t26;
-    	let t27;
-    	let a2;
-    	let t28;
+    	let div8;
     	let svg4;
     	let path4;
-    	let t29;
+    	let t18;
+    	let div9;
+    	let h22;
+    	let t19;
+    	let t20;
+    	let ul2;
+    	let li4;
+    	let t21;
+    	let t22;
+    	let li5;
+    	let t23;
+    	let t24;
+    	let a2;
+    	let t25;
+    	let svg5;
+    	let path5;
+    	let a2_href_value;
+    	let t26;
+    	let hr;
+    	let t27;
+    	let section1;
+    	let div21;
+    	let div20;
+    	let div16;
     	let div15;
+    	let img0;
+    	let img0_src_value;
+    	let t28;
     	let div14;
-    	let img1;
-    	let img1_src_value;
-    	let t30;
-    	let div13;
     	let h23;
+    	let t29;
+    	let t30;
+    	let ul3;
+    	let li6;
     	let t31;
     	let t32;
-    	let ul3;
     	let li7;
     	let t33;
     	let t34;
     	let li8;
     	let t35;
     	let t36;
-    	let li9;
-    	let t37;
-    	let t38;
     	let a3;
+    	let t37;
+    	let svg6;
+    	let path6;
+    	let t38;
+    	let div19;
+    	let div18;
+    	let img1;
+    	let img1_src_value;
     	let t39;
-    	let svg5;
-    	let path5;
+    	let div17;
+    	let h24;
+    	let t40;
+    	let t41;
+    	let ul4;
+    	let li9;
+    	let t42;
+    	let t43;
+    	let li10;
+    	let t44;
+    	let t45;
+    	let li11;
+    	let t46;
+    	let t47;
+    	let a4;
+    	let t48;
+    	let svg7;
+    	let path7;
 
     	const block = {
     		c: function create() {
     			section0 = element("section");
-    			div9 = element("div");
-    			div8 = element("div");
+    			div13 = element("div");
+    			div12 = element("div");
     			div3 = element("div");
     			div2 = element("div");
     			div0 = element("div");
@@ -5366,66 +5436,88 @@ var app = (function () {
     			svg3 = svg_element("svg");
     			path3 = svg_element("path");
     			t17 = space();
-    			hr = element("hr");
-    			t18 = space();
-    			section1 = element("section");
-    			div17 = element("div");
-    			div16 = element("div");
-    			div12 = element("div");
     			div11 = element("div");
-    			img0 = element("img");
-    			t19 = space();
     			div10 = element("div");
-    			h22 = element("h2");
-    			t20 = text("Liquid Evaluator");
-    			t21 = space();
-    			ul2 = element("ul");
-    			li4 = element("li");
-    			t22 = text("Run Liquid code against your instance");
-    			t23 = space();
-    			li5 = element("li");
-    			t24 = text("Test Liquid logic");
-    			t25 = space();
-    			li6 = element("li");
-    			t26 = text("Quickly prototype your ideas");
-    			t27 = space();
-    			a2 = element("a");
-    			t28 = text("Go to Liquid Evaluator\n              ");
+    			div8 = element("div");
     			svg4 = svg_element("svg");
     			path4 = svg_element("path");
-    			t29 = space();
-    			div15 = element("div");
-    			div14 = element("div");
-    			img1 = element("img");
-    			t30 = space();
-    			div13 = element("div");
-    			h23 = element("h2");
-    			t31 = text("GraphiQL");
-    			t32 = space();
-    			ul3 = element("ul");
-    			li7 = element("li");
-    			t33 = text("Run GraphQL against your instance");
-    			t34 = space();
-    			li8 = element("li");
-    			t35 = text("Explore documentation");
-    			t36 = space();
-    			li9 = element("li");
-    			t37 = text("Quickly prototype your queries and mutations");
-    			t38 = space();
-    			a3 = element("a");
-    			t39 = text("Go to GraphiQL\n              ");
+    			t18 = space();
+    			div9 = element("div");
+    			h22 = element("h2");
+    			t19 = text("Instance Logs");
+    			t20 = space();
+    			ul2 = element("ul");
+    			li4 = element("li");
+    			t21 = text("View system logs about performance and others");
+    			t22 = space();
+    			li5 = element("li");
+    			t23 = text("View your own logs");
+    			t24 = space();
+    			a2 = element("a");
+    			t25 = text("Go to Logs\n              ");
     			svg5 = svg_element("svg");
     			path5 = svg_element("path");
+    			t26 = space();
+    			hr = element("hr");
+    			t27 = space();
+    			section1 = element("section");
+    			div21 = element("div");
+    			div20 = element("div");
+    			div16 = element("div");
+    			div15 = element("div");
+    			img0 = element("img");
+    			t28 = space();
+    			div14 = element("div");
+    			h23 = element("h2");
+    			t29 = text("Liquid Evaluator");
+    			t30 = space();
+    			ul3 = element("ul");
+    			li6 = element("li");
+    			t31 = text("Run Liquid code against your instance");
+    			t32 = space();
+    			li7 = element("li");
+    			t33 = text("Test Liquid logic");
+    			t34 = space();
+    			li8 = element("li");
+    			t35 = text("Quickly prototype your ideas");
+    			t36 = space();
+    			a3 = element("a");
+    			t37 = text("Go to Liquid Evaluator\n              ");
+    			svg6 = svg_element("svg");
+    			path6 = svg_element("path");
+    			t38 = space();
+    			div19 = element("div");
+    			div18 = element("div");
+    			img1 = element("img");
+    			t39 = space();
+    			div17 = element("div");
+    			h24 = element("h2");
+    			t40 = text("GraphiQL");
+    			t41 = space();
+    			ul4 = element("ul");
+    			li9 = element("li");
+    			t42 = text("Run GraphQL against your instance");
+    			t43 = space();
+    			li10 = element("li");
+    			t44 = text("Explore documentation");
+    			t45 = space();
+    			li11 = element("li");
+    			t46 = text("Quickly prototype your queries and mutations");
+    			t47 = space();
+    			a4 = element("a");
+    			t48 = text("Go to GraphiQL\n              ");
+    			svg7 = svg_element("svg");
+    			path7 = svg_element("path");
     			this.h();
     		},
     		l: function claim(nodes) {
     			section0 = claim_element(nodes, "SECTION", { class: true });
     			var section0_nodes = children(section0);
-    			div9 = claim_element(section0_nodes, "DIV", { class: true });
-    			var div9_nodes = children(div9);
-    			div8 = claim_element(div9_nodes, "DIV", { class: true });
-    			var div8_nodes = children(div8);
-    			div3 = claim_element(div8_nodes, "DIV", { class: true });
+    			div13 = claim_element(section0_nodes, "DIV", { class: true });
+    			var div13_nodes = children(div13);
+    			div12 = claim_element(div13_nodes, "DIV", { class: true });
+    			var div12_nodes = children(div12);
+    			div3 = claim_element(div12_nodes, "DIV", { class: true });
     			var div3_nodes = children(div3);
     			div2 = claim_element(div3_nodes, "DIV", { class: true });
     			var div2_nodes = children(div2);
@@ -5500,8 +5592,8 @@ var app = (function () {
     			div1_nodes.forEach(detach_dev);
     			div2_nodes.forEach(detach_dev);
     			div3_nodes.forEach(detach_dev);
-    			t8 = claim_space(div8_nodes);
-    			div7 = claim_element(div8_nodes, "DIV", { class: true });
+    			t8 = claim_space(div12_nodes);
+    			div7 = claim_element(div12_nodes, "DIV", { class: true });
     			var div7_nodes = children(div7);
     			div6 = claim_element(div7_nodes, "DIV", { class: true });
     			var div6_nodes = children(div6);
@@ -5576,55 +5668,16 @@ var app = (function () {
     			div5_nodes.forEach(detach_dev);
     			div6_nodes.forEach(detach_dev);
     			div7_nodes.forEach(detach_dev);
-    			div8_nodes.forEach(detach_dev);
-    			div9_nodes.forEach(detach_dev);
-    			section0_nodes.forEach(detach_dev);
-    			t17 = claim_space(nodes);
-    			hr = claim_element(nodes, "HR", {});
-    			t18 = claim_space(nodes);
-    			section1 = claim_element(nodes, "SECTION", { class: true });
-    			var section1_nodes = children(section1);
-    			div17 = claim_element(section1_nodes, "DIV", { class: true });
-    			var div17_nodes = children(div17);
-    			div16 = claim_element(div17_nodes, "DIV", { class: true });
-    			var div16_nodes = children(div16);
-    			div12 = claim_element(div16_nodes, "DIV", { class: true });
-    			var div12_nodes = children(div12);
+    			t17 = claim_space(div12_nodes);
     			div11 = claim_element(div12_nodes, "DIV", { class: true });
     			var div11_nodes = children(div11);
-    			img0 = claim_element(div11_nodes, "IMG", { src: true, alt: true, class: true });
-    			t19 = claim_space(div11_nodes);
     			div10 = claim_element(div11_nodes, "DIV", { class: true });
     			var div10_nodes = children(div10);
-    			h22 = claim_element(div10_nodes, "H2", { class: true });
-    			var h22_nodes = children(h22);
-    			t20 = claim_text(h22_nodes, "Liquid Evaluator");
-    			h22_nodes.forEach(detach_dev);
-    			t21 = claim_space(div10_nodes);
-    			ul2 = claim_element(div10_nodes, "UL", { class: true });
-    			var ul2_nodes = children(ul2);
-    			li4 = claim_element(ul2_nodes, "LI", {});
-    			var li4_nodes = children(li4);
-    			t22 = claim_text(li4_nodes, "Run Liquid code against your instance");
-    			li4_nodes.forEach(detach_dev);
-    			t23 = claim_space(ul2_nodes);
-    			li5 = claim_element(ul2_nodes, "LI", {});
-    			var li5_nodes = children(li5);
-    			t24 = claim_text(li5_nodes, "Test Liquid logic");
-    			li5_nodes.forEach(detach_dev);
-    			t25 = claim_space(ul2_nodes);
-    			li6 = claim_element(ul2_nodes, "LI", {});
-    			var li6_nodes = children(li6);
-    			t26 = claim_text(li6_nodes, "Quickly prototype your ideas");
-    			li6_nodes.forEach(detach_dev);
-    			ul2_nodes.forEach(detach_dev);
-    			t27 = claim_space(div10_nodes);
-    			a2 = claim_element(div10_nodes, "A", { href: true, target: true, class: true });
-    			var a2_nodes = children(a2);
-    			t28 = claim_text(a2_nodes, "Go to Liquid Evaluator\n              ");
+    			div8 = claim_element(div10_nodes, "DIV", { class: true });
+    			var div8_nodes = children(div8);
 
     			svg4 = claim_element(
-    				a2_nodes,
+    				div8_nodes,
     				"svg",
     				{
     					fill: true,
@@ -5642,48 +5695,34 @@ var app = (function () {
     			path4 = claim_element(svg4_nodes, "path", { d: true }, 1);
     			children(path4).forEach(detach_dev);
     			svg4_nodes.forEach(detach_dev);
-    			a2_nodes.forEach(detach_dev);
-    			div10_nodes.forEach(detach_dev);
-    			div11_nodes.forEach(detach_dev);
-    			div12_nodes.forEach(detach_dev);
-    			t29 = claim_space(div16_nodes);
-    			div15 = claim_element(div16_nodes, "DIV", { class: true });
-    			var div15_nodes = children(div15);
-    			div14 = claim_element(div15_nodes, "DIV", { class: true });
-    			var div14_nodes = children(div14);
-    			img1 = claim_element(div14_nodes, "IMG", { src: true, alt: true, class: true });
-    			t30 = claim_space(div14_nodes);
-    			div13 = claim_element(div14_nodes, "DIV", { class: true });
-    			var div13_nodes = children(div13);
-    			h23 = claim_element(div13_nodes, "H2", { class: true });
-    			var h23_nodes = children(h23);
-    			t31 = claim_text(h23_nodes, "GraphiQL");
-    			h23_nodes.forEach(detach_dev);
-    			t32 = claim_space(div13_nodes);
-    			ul3 = claim_element(div13_nodes, "UL", { class: true });
-    			var ul3_nodes = children(ul3);
-    			li7 = claim_element(ul3_nodes, "LI", {});
-    			var li7_nodes = children(li7);
-    			t33 = claim_text(li7_nodes, "Run GraphQL against your instance");
-    			li7_nodes.forEach(detach_dev);
-    			t34 = claim_space(ul3_nodes);
-    			li8 = claim_element(ul3_nodes, "LI", {});
-    			var li8_nodes = children(li8);
-    			t35 = claim_text(li8_nodes, "Explore documentation");
-    			li8_nodes.forEach(detach_dev);
-    			t36 = claim_space(ul3_nodes);
-    			li9 = claim_element(ul3_nodes, "LI", {});
-    			var li9_nodes = children(li9);
-    			t37 = claim_text(li9_nodes, "Quickly prototype your queries and mutations");
-    			li9_nodes.forEach(detach_dev);
-    			ul3_nodes.forEach(detach_dev);
-    			t38 = claim_space(div13_nodes);
-    			a3 = claim_element(div13_nodes, "A", { href: true, target: true, class: true });
-    			var a3_nodes = children(a3);
-    			t39 = claim_text(a3_nodes, "Go to GraphiQL\n              ");
+    			div8_nodes.forEach(detach_dev);
+    			t18 = claim_space(div10_nodes);
+    			div9 = claim_element(div10_nodes, "DIV", { class: true });
+    			var div9_nodes = children(div9);
+    			h22 = claim_element(div9_nodes, "H2", { class: true });
+    			var h22_nodes = children(h22);
+    			t19 = claim_text(h22_nodes, "Instance Logs");
+    			h22_nodes.forEach(detach_dev);
+    			t20 = claim_space(div9_nodes);
+    			ul2 = claim_element(div9_nodes, "UL", { class: true });
+    			var ul2_nodes = children(ul2);
+    			li4 = claim_element(ul2_nodes, "LI", {});
+    			var li4_nodes = children(li4);
+    			t21 = claim_text(li4_nodes, "View system logs about performance and others");
+    			li4_nodes.forEach(detach_dev);
+    			t22 = claim_space(ul2_nodes);
+    			li5 = claim_element(ul2_nodes, "LI", {});
+    			var li5_nodes = children(li5);
+    			t23 = claim_text(li5_nodes, "View your own logs");
+    			li5_nodes.forEach(detach_dev);
+    			ul2_nodes.forEach(detach_dev);
+    			t24 = claim_space(div9_nodes);
+    			a2 = claim_element(div9_nodes, "A", { href: true, class: true });
+    			var a2_nodes = children(a2);
+    			t25 = claim_text(a2_nodes, "Go to Logs\n              ");
 
     			svg5 = claim_element(
-    				a3_nodes,
+    				a2_nodes,
     				"svg",
     				{
     					fill: true,
@@ -5701,12 +5740,141 @@ var app = (function () {
     			path5 = claim_element(svg5_nodes, "path", { d: true }, 1);
     			children(path5).forEach(detach_dev);
     			svg5_nodes.forEach(detach_dev);
-    			a3_nodes.forEach(detach_dev);
+    			a2_nodes.forEach(detach_dev);
+    			div9_nodes.forEach(detach_dev);
+    			div10_nodes.forEach(detach_dev);
+    			div11_nodes.forEach(detach_dev);
+    			div12_nodes.forEach(detach_dev);
     			div13_nodes.forEach(detach_dev);
+    			section0_nodes.forEach(detach_dev);
+    			t26 = claim_space(nodes);
+    			hr = claim_element(nodes, "HR", {});
+    			t27 = claim_space(nodes);
+    			section1 = claim_element(nodes, "SECTION", { class: true });
+    			var section1_nodes = children(section1);
+    			div21 = claim_element(section1_nodes, "DIV", { class: true });
+    			var div21_nodes = children(div21);
+    			div20 = claim_element(div21_nodes, "DIV", { class: true });
+    			var div20_nodes = children(div20);
+    			div16 = claim_element(div20_nodes, "DIV", { class: true });
+    			var div16_nodes = children(div16);
+    			div15 = claim_element(div16_nodes, "DIV", { class: true });
+    			var div15_nodes = children(div15);
+    			img0 = claim_element(div15_nodes, "IMG", { src: true, alt: true, class: true });
+    			t28 = claim_space(div15_nodes);
+    			div14 = claim_element(div15_nodes, "DIV", { class: true });
+    			var div14_nodes = children(div14);
+    			h23 = claim_element(div14_nodes, "H2", { class: true });
+    			var h23_nodes = children(h23);
+    			t29 = claim_text(h23_nodes, "Liquid Evaluator");
+    			h23_nodes.forEach(detach_dev);
+    			t30 = claim_space(div14_nodes);
+    			ul3 = claim_element(div14_nodes, "UL", { class: true });
+    			var ul3_nodes = children(ul3);
+    			li6 = claim_element(ul3_nodes, "LI", {});
+    			var li6_nodes = children(li6);
+    			t31 = claim_text(li6_nodes, "Run Liquid code against your instance");
+    			li6_nodes.forEach(detach_dev);
+    			t32 = claim_space(ul3_nodes);
+    			li7 = claim_element(ul3_nodes, "LI", {});
+    			var li7_nodes = children(li7);
+    			t33 = claim_text(li7_nodes, "Test Liquid logic");
+    			li7_nodes.forEach(detach_dev);
+    			t34 = claim_space(ul3_nodes);
+    			li8 = claim_element(ul3_nodes, "LI", {});
+    			var li8_nodes = children(li8);
+    			t35 = claim_text(li8_nodes, "Quickly prototype your ideas");
+    			li8_nodes.forEach(detach_dev);
+    			ul3_nodes.forEach(detach_dev);
+    			t36 = claim_space(div14_nodes);
+    			a3 = claim_element(div14_nodes, "A", { href: true, target: true, class: true });
+    			var a3_nodes = children(a3);
+    			t37 = claim_text(a3_nodes, "Go to Liquid Evaluator\n              ");
+
+    			svg6 = claim_element(
+    				a3_nodes,
+    				"svg",
+    				{
+    					fill: true,
+    					stroke: true,
+    					"stroke-linecap": true,
+    					"stroke-linejoin": true,
+    					"stroke-width": true,
+    					class: true,
+    					viewBox: true
+    				},
+    				1
+    			);
+
+    			var svg6_nodes = children(svg6);
+    			path6 = claim_element(svg6_nodes, "path", { d: true }, 1);
+    			children(path6).forEach(detach_dev);
+    			svg6_nodes.forEach(detach_dev);
+    			a3_nodes.forEach(detach_dev);
     			div14_nodes.forEach(detach_dev);
     			div15_nodes.forEach(detach_dev);
     			div16_nodes.forEach(detach_dev);
+    			t38 = claim_space(div20_nodes);
+    			div19 = claim_element(div20_nodes, "DIV", { class: true });
+    			var div19_nodes = children(div19);
+    			div18 = claim_element(div19_nodes, "DIV", { class: true });
+    			var div18_nodes = children(div18);
+    			img1 = claim_element(div18_nodes, "IMG", { src: true, alt: true, class: true });
+    			t39 = claim_space(div18_nodes);
+    			div17 = claim_element(div18_nodes, "DIV", { class: true });
+    			var div17_nodes = children(div17);
+    			h24 = claim_element(div17_nodes, "H2", { class: true });
+    			var h24_nodes = children(h24);
+    			t40 = claim_text(h24_nodes, "GraphiQL");
+    			h24_nodes.forEach(detach_dev);
+    			t41 = claim_space(div17_nodes);
+    			ul4 = claim_element(div17_nodes, "UL", { class: true });
+    			var ul4_nodes = children(ul4);
+    			li9 = claim_element(ul4_nodes, "LI", {});
+    			var li9_nodes = children(li9);
+    			t42 = claim_text(li9_nodes, "Run GraphQL against your instance");
+    			li9_nodes.forEach(detach_dev);
+    			t43 = claim_space(ul4_nodes);
+    			li10 = claim_element(ul4_nodes, "LI", {});
+    			var li10_nodes = children(li10);
+    			t44 = claim_text(li10_nodes, "Explore documentation");
+    			li10_nodes.forEach(detach_dev);
+    			t45 = claim_space(ul4_nodes);
+    			li11 = claim_element(ul4_nodes, "LI", {});
+    			var li11_nodes = children(li11);
+    			t46 = claim_text(li11_nodes, "Quickly prototype your queries and mutations");
+    			li11_nodes.forEach(detach_dev);
+    			ul4_nodes.forEach(detach_dev);
+    			t47 = claim_space(div17_nodes);
+    			a4 = claim_element(div17_nodes, "A", { href: true, target: true, class: true });
+    			var a4_nodes = children(a4);
+    			t48 = claim_text(a4_nodes, "Go to GraphiQL\n              ");
+
+    			svg7 = claim_element(
+    				a4_nodes,
+    				"svg",
+    				{
+    					fill: true,
+    					stroke: true,
+    					"stroke-linecap": true,
+    					"stroke-linejoin": true,
+    					"stroke-width": true,
+    					class: true,
+    					viewBox: true
+    				},
+    				1
+    			);
+
+    			var svg7_nodes = children(svg7);
+    			path7 = claim_element(svg7_nodes, "path", { d: true }, 1);
+    			children(path7).forEach(detach_dev);
+    			svg7_nodes.forEach(detach_dev);
+    			a4_nodes.forEach(detach_dev);
     			div17_nodes.forEach(detach_dev);
+    			div18_nodes.forEach(detach_dev);
+    			div19_nodes.forEach(detach_dev);
+    			div20_nodes.forEach(detach_dev);
+    			div21_nodes.forEach(detach_dev);
     			section1_nodes.forEach(detach_dev);
     			this.h();
     		},
@@ -5785,57 +5953,26 @@ var app = (function () {
     			add_location(div6, file$a, 29, 8, 1502);
     			attr_dev(div7, "class", "p-4 lg:w-1/2 md:w-full");
     			add_location(div7, file$a, 28, 6, 1457);
-    			attr_dev(div8, "class", "flex flex-wrap w-full -m-4");
-    			add_location(div8, file$a, 6, 4, 154);
-    			attr_dev(div9, "class", "container flex flex-wrap py-8 mx-auto");
-    			add_location(div9, file$a, 5, 2, 98);
-    			attr_dev(section0, "class", "text-gray-700 ");
-    			add_location(section0, file$a, 4, 0, 63);
-    			add_location(hr, file$a, 53, 0, 2718);
-    			if (img0.src !== (img0_src_value = "./dupa.png")) attr_dev(img0, "src", img0_src_value);
-    			attr_dev(img0, "alt", "Liquid Evaluator");
-    			attr_dev(img0, "class", "w-1/3 mr-6 shadow-md");
-    			add_location(img0, file$a, 60, 10, 2976);
-    			attr_dev(h22, "class", "mb-3 text-lg font-medium text-gray-900 title-font");
-    			add_location(h22, file$a, 63, 12, 3098);
-    			add_location(li4, file$a, 65, 14, 3251);
-    			add_location(li5, file$a, 66, 14, 3312);
-    			add_location(li6, file$a, 67, 14, 3353);
-    			attr_dev(ul2, "class", "text-sm list-disc list-inside");
-    			add_location(ul2, file$a, 64, 12, 3194);
-    			attr_dev(path4, "d", "M5 12h14M12 5l7 7-7 7");
-    			add_location(path4, file$a, 71, 16, 3710);
+    			attr_dev(path4, "d", "M22 12h-4l-3 9L9 3l-3 9H2");
+    			add_location(path4, file$a, 54, 14, 3123);
     			attr_dev(svg4, "fill", "none");
     			attr_dev(svg4, "stroke", "currentColor");
     			attr_dev(svg4, "stroke-linecap", "round");
     			attr_dev(svg4, "stroke-linejoin", "round");
     			attr_dev(svg4, "stroke-width", "2");
-    			attr_dev(svg4, "class", "w-4 h-4 ml-2");
+    			attr_dev(svg4, "class", "w-8 h-8");
     			attr_dev(svg4, "viewBox", "0 0 24 24");
-    			add_location(svg4, file$a, 70, 14, 3549);
-    			attr_dev(a2, "href", "/gui/liquid");
-    			attr_dev(a2, "target", "_blank");
-    			attr_dev(a2, "class", "inline-flex items-center mt-3 text-blue-500");
-    			add_location(a2, file$a, 69, 12, 3421);
-    			attr_dev(div10, "class", "flex-grow");
-    			add_location(div10, file$a, 62, 10, 3062);
-    			attr_dev(div11, "class", "flex p-8 border-2 border-gray-200 rounded-lg");
-    			add_location(div11, file$a, 59, 8, 2907);
-    			attr_dev(div12, "class", "p-4 lg:w-1/2 md:w-full");
-    			add_location(div12, file$a, 58, 6, 2862);
-    			if (img1.src !== (img1_src_value = "./graphiql.png")) attr_dev(img1, "src", img1_src_value);
-    			attr_dev(img1, "alt", "Liquid Evaluator");
-    			attr_dev(img1, "class", "w-1/3 mr-6 shadow-md");
-    			add_location(img1, file$a, 80, 10, 3954);
-    			attr_dev(h23, "class", "mb-3 text-lg font-medium text-gray-900 title-font");
-    			add_location(h23, file$a, 83, 12, 4080);
-    			add_location(li7, file$a, 85, 14, 4225);
-    			add_location(li8, file$a, 86, 14, 4282);
-    			add_location(li9, file$a, 87, 14, 4327);
-    			attr_dev(ul3, "class", "text-sm list-disc list-inside");
-    			add_location(ul3, file$a, 84, 12, 4168);
+    			add_location(svg4, file$a, 53, 12, 2969);
+    			attr_dev(div8, "class", "inline-flex items-center justify-center flex-shrink-0 w-16 h-16 mb-4 text-blue-500 bg-blue-100 rounded-full sm:mr-8 sm:mb-0");
+    			add_location(div8, file$a, 52, 10, 2819);
+    			attr_dev(h22, "class", "mb-3 text-lg font-medium text-gray-900 title-font");
+    			add_location(h22, file$a, 58, 12, 3254);
+    			add_location(li4, file$a, 60, 14, 3396);
+    			add_location(li5, file$a, 61, 14, 3465);
+    			attr_dev(ul2, "class", "list-disc list-inside");
+    			add_location(ul2, file$a, 59, 12, 3347);
     			attr_dev(path5, "d", "M5 12h14M12 5l7 7-7 7");
-    			add_location(path5, file$a, 91, 16, 4693);
+    			add_location(path5, file$a, 65, 16, 3786);
     			attr_dev(svg5, "fill", "none");
     			attr_dev(svg5, "stroke", "currentColor");
     			attr_dev(svg5, "stroke-linecap", "round");
@@ -5843,29 +5980,97 @@ var app = (function () {
     			attr_dev(svg5, "stroke-width", "2");
     			attr_dev(svg5, "class", "w-4 h-4 ml-2");
     			attr_dev(svg5, "viewBox", "0 0 24 24");
-    			add_location(svg5, file$a, 90, 14, 4532);
-    			attr_dev(a3, "href", "/gui/graphql");
+    			add_location(svg5, file$a, 64, 14, 3625);
+    			attr_dev(a2, "href", a2_href_value = /*$url*/ ctx[0]("/Logs"));
+    			attr_dev(a2, "class", "inline-flex items-center mt-3 text-blue-500");
+    			add_location(a2, file$a, 63, 12, 3523);
+    			attr_dev(div9, "class", "flex-grow ml-8");
+    			add_location(div9, file$a, 57, 10, 3213);
+    			attr_dev(div10, "class", "flex p-8 border-2 border-gray-200 rounded-lg sm:flex-row");
+    			add_location(div10, file$a, 51, 8, 2738);
+    			attr_dev(div11, "class", "p-4 lg:w-1/2 md:w-full");
+    			add_location(div11, file$a, 50, 6, 2693);
+    			attr_dev(div12, "class", "flex flex-wrap w-full -m-4");
+    			add_location(div12, file$a, 6, 4, 154);
+    			attr_dev(div13, "class", "container flex flex-wrap py-8 mx-auto");
+    			add_location(div13, file$a, 5, 2, 98);
+    			attr_dev(section0, "class", "text-gray-700 ");
+    			add_location(section0, file$a, 4, 0, 63);
+    			add_location(hr, file$a, 75, 0, 3941);
+    			if (img0.src !== (img0_src_value = "./dupa.png")) attr_dev(img0, "src", img0_src_value);
+    			attr_dev(img0, "alt", "Liquid Evaluator");
+    			attr_dev(img0, "class", "w-1/3 mr-6 shadow-md");
+    			add_location(img0, file$a, 82, 10, 4199);
+    			attr_dev(h23, "class", "mb-3 text-lg font-medium text-gray-900 title-font");
+    			add_location(h23, file$a, 85, 12, 4321);
+    			add_location(li6, file$a, 87, 14, 4474);
+    			add_location(li7, file$a, 88, 14, 4535);
+    			add_location(li8, file$a, 89, 14, 4576);
+    			attr_dev(ul3, "class", "text-sm list-disc list-inside");
+    			add_location(ul3, file$a, 86, 12, 4417);
+    			attr_dev(path6, "d", "M5 12h14M12 5l7 7-7 7");
+    			add_location(path6, file$a, 93, 16, 4933);
+    			attr_dev(svg6, "fill", "none");
+    			attr_dev(svg6, "stroke", "currentColor");
+    			attr_dev(svg6, "stroke-linecap", "round");
+    			attr_dev(svg6, "stroke-linejoin", "round");
+    			attr_dev(svg6, "stroke-width", "2");
+    			attr_dev(svg6, "class", "w-4 h-4 ml-2");
+    			attr_dev(svg6, "viewBox", "0 0 24 24");
+    			add_location(svg6, file$a, 92, 14, 4772);
+    			attr_dev(a3, "href", "/gui/liquid");
     			attr_dev(a3, "target", "_blank");
     			attr_dev(a3, "class", "inline-flex items-center mt-3 text-blue-500");
-    			add_location(a3, file$a, 89, 12, 4411);
-    			attr_dev(div13, "class", "flex-grow");
-    			add_location(div13, file$a, 82, 10, 4044);
-    			attr_dev(div14, "class", "flex p-8 border-2 border-gray-200 rounded-lg");
-    			add_location(div14, file$a, 79, 8, 3885);
-    			attr_dev(div15, "class", "p-4 lg:w-1/2 md:w-full");
-    			add_location(div15, file$a, 78, 6, 3840);
-    			attr_dev(div16, "class", "flex flex-wrap w-full -m-4");
-    			add_location(div16, file$a, 57, 4, 2815);
-    			attr_dev(div17, "class", "container flex flex-wrap py-8 mx-auto");
-    			add_location(div17, file$a, 56, 2, 2759);
+    			add_location(a3, file$a, 91, 12, 4644);
+    			attr_dev(div14, "class", "flex-grow");
+    			add_location(div14, file$a, 84, 10, 4285);
+    			attr_dev(div15, "class", "flex p-8 border-2 border-gray-200 rounded-lg");
+    			add_location(div15, file$a, 81, 8, 4130);
+    			attr_dev(div16, "class", "p-4 lg:w-1/2 md:w-full");
+    			add_location(div16, file$a, 80, 6, 4085);
+    			if (img1.src !== (img1_src_value = "./graphiql.png")) attr_dev(img1, "src", img1_src_value);
+    			attr_dev(img1, "alt", "Liquid Evaluator");
+    			attr_dev(img1, "class", "w-1/3 mr-6 shadow-md");
+    			add_location(img1, file$a, 102, 10, 5177);
+    			attr_dev(h24, "class", "mb-3 text-lg font-medium text-gray-900 title-font");
+    			add_location(h24, file$a, 105, 12, 5303);
+    			add_location(li9, file$a, 107, 14, 5448);
+    			add_location(li10, file$a, 108, 14, 5505);
+    			add_location(li11, file$a, 109, 14, 5550);
+    			attr_dev(ul4, "class", "text-sm list-disc list-inside");
+    			add_location(ul4, file$a, 106, 12, 5391);
+    			attr_dev(path7, "d", "M5 12h14M12 5l7 7-7 7");
+    			add_location(path7, file$a, 113, 16, 5916);
+    			attr_dev(svg7, "fill", "none");
+    			attr_dev(svg7, "stroke", "currentColor");
+    			attr_dev(svg7, "stroke-linecap", "round");
+    			attr_dev(svg7, "stroke-linejoin", "round");
+    			attr_dev(svg7, "stroke-width", "2");
+    			attr_dev(svg7, "class", "w-4 h-4 ml-2");
+    			attr_dev(svg7, "viewBox", "0 0 24 24");
+    			add_location(svg7, file$a, 112, 14, 5755);
+    			attr_dev(a4, "href", "/gui/graphql");
+    			attr_dev(a4, "target", "_blank");
+    			attr_dev(a4, "class", "inline-flex items-center mt-3 text-blue-500");
+    			add_location(a4, file$a, 111, 12, 5634);
+    			attr_dev(div17, "class", "flex-grow");
+    			add_location(div17, file$a, 104, 10, 5267);
+    			attr_dev(div18, "class", "flex p-8 border-2 border-gray-200 rounded-lg");
+    			add_location(div18, file$a, 101, 8, 5108);
+    			attr_dev(div19, "class", "p-4 lg:w-1/2 md:w-full");
+    			add_location(div19, file$a, 100, 6, 5063);
+    			attr_dev(div20, "class", "flex flex-wrap w-full -m-4");
+    			add_location(div20, file$a, 79, 4, 4038);
+    			attr_dev(div21, "class", "container flex flex-wrap py-8 mx-auto");
+    			add_location(div21, file$a, 78, 2, 3982);
     			attr_dev(section1, "class", "text-gray-700 ");
-    			add_location(section1, file$a, 55, 0, 2724);
+    			add_location(section1, file$a, 77, 0, 3947);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, section0, anchor);
-    			append_dev(section0, div9);
-    			append_dev(div9, div8);
-    			append_dev(div8, div3);
+    			append_dev(section0, div13);
+    			append_dev(div13, div12);
+    			append_dev(div12, div3);
     			append_dev(div3, div2);
     			append_dev(div2, div0);
     			append_dev(div0, svg0);
@@ -5886,8 +6091,8 @@ var app = (function () {
     			append_dev(a0, t7);
     			append_dev(a0, svg1);
     			append_dev(svg1, path1);
-    			append_dev(div8, t8);
-    			append_dev(div8, div7);
+    			append_dev(div12, t8);
+    			append_dev(div12, div7);
     			append_dev(div7, div6);
     			append_dev(div6, div4);
     			append_dev(div4, svg2);
@@ -5908,57 +6113,79 @@ var app = (function () {
     			append_dev(a1, t16);
     			append_dev(a1, svg3);
     			append_dev(svg3, path3);
-    			insert_dev(target, t17, anchor);
-    			insert_dev(target, hr, anchor);
-    			insert_dev(target, t18, anchor);
-    			insert_dev(target, section1, anchor);
-    			append_dev(section1, div17);
-    			append_dev(div17, div16);
-    			append_dev(div16, div12);
+    			append_dev(div12, t17);
     			append_dev(div12, div11);
-    			append_dev(div11, img0);
-    			append_dev(div11, t19);
     			append_dev(div11, div10);
-    			append_dev(div10, h22);
-    			append_dev(h22, t20);
-    			append_dev(div10, t21);
-    			append_dev(div10, ul2);
-    			append_dev(ul2, li4);
-    			append_dev(li4, t22);
-    			append_dev(ul2, t23);
-    			append_dev(ul2, li5);
-    			append_dev(li5, t24);
-    			append_dev(ul2, t25);
-    			append_dev(ul2, li6);
-    			append_dev(li6, t26);
-    			append_dev(div10, t27);
-    			append_dev(div10, a2);
-    			append_dev(a2, t28);
-    			append_dev(a2, svg4);
+    			append_dev(div10, div8);
+    			append_dev(div8, svg4);
     			append_dev(svg4, path4);
-    			append_dev(div16, t29);
+    			append_dev(div10, t18);
+    			append_dev(div10, div9);
+    			append_dev(div9, h22);
+    			append_dev(h22, t19);
+    			append_dev(div9, t20);
+    			append_dev(div9, ul2);
+    			append_dev(ul2, li4);
+    			append_dev(li4, t21);
+    			append_dev(ul2, t22);
+    			append_dev(ul2, li5);
+    			append_dev(li5, t23);
+    			append_dev(div9, t24);
+    			append_dev(div9, a2);
+    			append_dev(a2, t25);
+    			append_dev(a2, svg5);
+    			append_dev(svg5, path5);
+    			insert_dev(target, t26, anchor);
+    			insert_dev(target, hr, anchor);
+    			insert_dev(target, t27, anchor);
+    			insert_dev(target, section1, anchor);
+    			append_dev(section1, div21);
+    			append_dev(div21, div20);
+    			append_dev(div20, div16);
     			append_dev(div16, div15);
+    			append_dev(div15, img0);
+    			append_dev(div15, t28);
     			append_dev(div15, div14);
-    			append_dev(div14, img1);
+    			append_dev(div14, h23);
+    			append_dev(h23, t29);
     			append_dev(div14, t30);
-    			append_dev(div14, div13);
-    			append_dev(div13, h23);
-    			append_dev(h23, t31);
-    			append_dev(div13, t32);
-    			append_dev(div13, ul3);
+    			append_dev(div14, ul3);
+    			append_dev(ul3, li6);
+    			append_dev(li6, t31);
+    			append_dev(ul3, t32);
     			append_dev(ul3, li7);
     			append_dev(li7, t33);
     			append_dev(ul3, t34);
     			append_dev(ul3, li8);
     			append_dev(li8, t35);
-    			append_dev(ul3, t36);
-    			append_dev(ul3, li9);
-    			append_dev(li9, t37);
-    			append_dev(div13, t38);
-    			append_dev(div13, a3);
-    			append_dev(a3, t39);
-    			append_dev(a3, svg5);
-    			append_dev(svg5, path5);
+    			append_dev(div14, t36);
+    			append_dev(div14, a3);
+    			append_dev(a3, t37);
+    			append_dev(a3, svg6);
+    			append_dev(svg6, path6);
+    			append_dev(div20, t38);
+    			append_dev(div20, div19);
+    			append_dev(div19, div18);
+    			append_dev(div18, img1);
+    			append_dev(div18, t39);
+    			append_dev(div18, div17);
+    			append_dev(div17, h24);
+    			append_dev(h24, t40);
+    			append_dev(div17, t41);
+    			append_dev(div17, ul4);
+    			append_dev(ul4, li9);
+    			append_dev(li9, t42);
+    			append_dev(ul4, t43);
+    			append_dev(ul4, li10);
+    			append_dev(li10, t44);
+    			append_dev(ul4, t45);
+    			append_dev(ul4, li11);
+    			append_dev(li11, t46);
+    			append_dev(div17, t47);
+    			append_dev(div17, a4);
+    			append_dev(a4, t48);
+    			append_dev(a4, svg7);
+    			append_dev(svg7, path7);
     		},
     		p: function update(ctx, [dirty]) {
     			if (dirty & /*$url*/ 1 && a0_href_value !== (a0_href_value = /*$url*/ ctx[0]("../Models/index"))) {
@@ -5968,14 +6195,18 @@ var app = (function () {
     			if (dirty & /*$url*/ 1 && a1_href_value !== (a1_href_value = /*$url*/ ctx[0]("../Users/index"))) {
     				attr_dev(a1, "href", a1_href_value);
     			}
+
+    			if (dirty & /*$url*/ 1 && a2_href_value !== (a2_href_value = /*$url*/ ctx[0]("/Logs"))) {
+    				attr_dev(a2, "href", a2_href_value);
+    			}
     		},
     		i: noop,
     		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(section0);
-    			if (detaching) detach_dev(t17);
+    			if (detaching) detach_dev(t26);
     			if (detaching) detach_dev(hr);
-    			if (detaching) detach_dev(t18);
+    			if (detaching) detach_dev(t27);
     			if (detaching) detach_dev(section1);
     		}
     	};
@@ -6128,7 +6359,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (57:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }
+    // (59:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }
     function create_each_block$5(key_1, ctx) {
     	let li;
     	let span0;
@@ -6139,14 +6370,14 @@ var app = (function () {
     	let t2_value = /*updated_at*/ ctx[10] + "";
     	let t2;
     	let t3;
-    	let span2;
     	let div;
     	let t4_value = /*message*/ ctx[8] + "";
     	let t4;
     	let div_title_value;
-    	let span2_class_value;
-    	let t5;
     	let li_class_value;
+    	let t5;
+    	let hr;
+    	let hr_class_value;
 
     	const block = {
     		key: key_1,
@@ -6159,10 +6390,10 @@ var app = (function () {
     			span1 = element("span");
     			t2 = text(t2_value);
     			t3 = space();
-    			span2 = element("span");
     			div = element("div");
     			t4 = text(t4_value);
     			t5 = space();
+    			hr = element("hr");
     			this.h();
     		},
     		l: function claim(nodes) {
@@ -6178,33 +6409,31 @@ var app = (function () {
     			t2 = claim_text(span1_nodes, t2_value);
     			span1_nodes.forEach(detach_dev);
     			t3 = claim_space(li_nodes);
-    			span2 = claim_element(li_nodes, "SPAN", { class: true });
-    			var span2_nodes = children(span2);
-    			div = claim_element(span2_nodes, "DIV", { class: true, title: true });
+    			div = claim_element(li_nodes, "DIV", { class: true, title: true });
     			var div_nodes = children(div);
     			t4 = claim_text(div_nodes, t4_value);
     			div_nodes.forEach(detach_dev);
-    			span2_nodes.forEach(detach_dev);
-    			t5 = claim_space(li_nodes);
     			li_nodes.forEach(detach_dev);
+    			t5 = claim_space(nodes);
+    			hr = claim_element(nodes, "HR", { class: true });
     			this.h();
     		},
     		h: function hydrate() {
     			attr_dev(span0, "class", "text-xs");
-    			add_location(span0, file$9, 63, 12, 1614);
+    			add_location(span0, file$9, 65, 12, 1634);
     			attr_dev(span1, "class", "text-xs");
-    			add_location(span1, file$9, 64, 12, 1668);
+    			add_location(span1, file$9, 66, 12, 1688);
     			attr_dev(div, "class", "w-full");
     			attr_dev(div, "title", div_title_value = /*stringify*/ ctx[2](/*message*/ ctx[8]));
-    			add_location(div, file$9, 66, 14, 1828);
+    			add_location(div, file$9, 67, 12, 1742);
+    			attr_dev(li, "class", li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[3] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between shadow border border-gray-200 p-2\n            ");
+    			add_location(li, file$9, 59, 10, 1430);
 
-    			attr_dev(span2, "class", span2_class_value = "text-base w-full mt-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[7]
-    			? "border-red-500 border-b"
-    			: ""));
+    			attr_dev(hr, "class", hr_class_value = "border-b my-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[7]
+    			? "border-red-500"
+    			: "border-white"));
 
-    			add_location(span2, file$9, 65, 12, 1722);
-    			attr_dev(li, "class", li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[3] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ");
-    			add_location(li, file$9, 57, 10, 1405);
+    			add_location(hr, file$9, 70, 10, 1832);
     			this.first = li;
     		},
     		m: function mount(target, anchor) {
@@ -6215,10 +6444,10 @@ var app = (function () {
     			append_dev(li, span1);
     			append_dev(span1, t2);
     			append_dev(li, t3);
-    			append_dev(li, span2);
-    			append_dev(span2, div);
+    			append_dev(li, div);
     			append_dev(div, t4);
-    			append_dev(li, t5);
+    			insert_dev(target, t5, anchor);
+    			insert_dev(target, hr, anchor);
     		},
     		p: function update(ctx, dirty) {
     			if (dirty & /*logs*/ 1 && t0_value !== (t0_value = /*error_type*/ ctx[9] + "")) set_data_dev(t0, t0_value);
@@ -6229,18 +6458,20 @@ var app = (function () {
     				attr_dev(div, "title", div_title_value);
     			}
 
-    			if (dirty & /*cachedLastId, logs*/ 3 && span2_class_value !== (span2_class_value = "text-base w-full mt-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[7]
-    			? "border-red-500 border-b"
-    			: ""))) {
-    				attr_dev(span2, "class", span2_class_value);
+    			if (dirty & /*logs*/ 1 && li_class_value !== (li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[3] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between shadow border border-gray-200 p-2\n            ")) {
+    				attr_dev(li, "class", li_class_value);
     			}
 
-    			if (dirty & /*logs*/ 1 && li_class_value !== (li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[3] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between mb-5 shadow border border-gray-200 p-2\n            ")) {
-    				attr_dev(li, "class", li_class_value);
+    			if (dirty & /*cachedLastId, logs*/ 3 && hr_class_value !== (hr_class_value = "border-b my-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[7]
+    			? "border-red-500"
+    			: "border-white"))) {
+    				attr_dev(hr, "class", hr_class_value);
     			}
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(li);
+    			if (detaching) detach_dev(t5);
+    			if (detaching) detach_dev(hr);
     		}
     	};
 
@@ -6248,7 +6479,7 @@ var app = (function () {
     		block,
     		id: create_each_block$5.name,
     		type: "each",
-    		source: "(57:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }",
+    		source: "(59:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }",
     		ctx
     	});
 
@@ -6256,21 +6487,18 @@ var app = (function () {
     }
 
     function create_fragment$c(ctx) {
-    	let h1;
-    	let t0;
-    	let t1;
     	let section;
     	let div1;
     	let div0;
     	let ul;
     	let each_blocks = [];
     	let each_1_lookup = new Map();
-    	let t2;
+    	let t0;
     	let p;
+    	let t1;
+    	let t2_value = POLLING_INTERVAL / 1000 + "";
+    	let t2;
     	let t3;
-    	let t4_value = POLLING_INTERVAL / 1000 + "";
-    	let t4;
-    	let t5;
     	let each_value = /*logs*/ ctx[0];
     	validate_each_argument(each_value);
     	const get_key = ctx => /*id*/ ctx[7];
@@ -6284,9 +6512,6 @@ var app = (function () {
 
     	const block = {
     		c: function create() {
-    			h1 = element("h1");
-    			t0 = text("platformOS Logs");
-    			t1 = space();
     			section = element("section");
     			div1 = element("div");
     			div0 = element("div");
@@ -6296,19 +6521,14 @@ var app = (function () {
     				each_blocks[i].c();
     			}
 
-    			t2 = space();
+    			t0 = space();
     			p = element("p");
-    			t3 = text("Polling for new logs every ");
-    			t4 = text(t4_value);
-    			t5 = text(" seconds.");
+    			t1 = text("Polling for new logs every ");
+    			t2 = text(t2_value);
+    			t3 = text(" seconds.");
     			this.h();
     		},
     		l: function claim(nodes) {
-    			h1 = claim_element(nodes, "H1", { class: true });
-    			var h1_nodes = children(h1);
-    			t0 = claim_text(h1_nodes, "platformOS Logs");
-    			h1_nodes.forEach(detach_dev);
-    			t1 = claim_space(nodes);
     			section = claim_element(nodes, "SECTION", { class: true });
     			var section_nodes = children(section);
     			div1 = claim_element(section_nodes, "DIV", { class: true });
@@ -6324,34 +6544,29 @@ var app = (function () {
 
     			ul_nodes.forEach(detach_dev);
     			div0_nodes.forEach(detach_dev);
-    			t2 = claim_space(div1_nodes);
+    			t0 = claim_space(div1_nodes);
     			p = claim_element(div1_nodes, "P", { class: true });
     			var p_nodes = children(p);
-    			t3 = claim_text(p_nodes, "Polling for new logs every ");
-    			t4 = claim_text(p_nodes, t4_value);
-    			t5 = claim_text(p_nodes, " seconds.");
+    			t1 = claim_text(p_nodes, "Polling for new logs every ");
+    			t2 = claim_text(p_nodes, t2_value);
+    			t3 = claim_text(p_nodes, " seconds.");
     			p_nodes.forEach(detach_dev);
     			div1_nodes.forEach(detach_dev);
     			section_nodes.forEach(detach_dev);
     			this.h();
     		},
     		h: function hydrate() {
-    			attr_dev(h1, "class", "mb-2 text-5xl");
-    			add_location(h1, file$9, 50, 0, 1165);
-    			add_location(ul, file$9, 55, 6, 1306);
+    			add_location(ul, file$9, 57, 6, 1331);
     			attr_dev(div0, "class", "m-1");
-    			add_location(div0, file$9, 54, 4, 1282);
+    			add_location(div0, file$9, 56, 4, 1307);
     			attr_dev(p, "class", "bg-yellow-100 border-yellow-600 px-3 py-2");
-    			add_location(p, file$9, 73, 4, 1973);
+    			add_location(p, file$9, 75, 4, 1961);
     			attr_dev(div1, "class", "container py-8");
-    			add_location(div1, file$9, 53, 2, 1249);
+    			add_location(div1, file$9, 55, 2, 1274);
     			attr_dev(section, "class", "overflow-hidden");
-    			add_location(section, file$9, 52, 0, 1213);
+    			add_location(section, file$9, 54, 0, 1238);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, h1, anchor);
-    			append_dev(h1, t0);
-    			insert_dev(target, t1, anchor);
     			insert_dev(target, section, anchor);
     			append_dev(section, div1);
     			append_dev(div1, div0);
@@ -6361,14 +6576,14 @@ var app = (function () {
     				each_blocks[i].m(ul, null);
     			}
 
-    			append_dev(div1, t2);
+    			append_dev(div1, t0);
     			append_dev(div1, p);
+    			append_dev(p, t1);
+    			append_dev(p, t2);
     			append_dev(p, t3);
-    			append_dev(p, t4);
-    			append_dev(p, t5);
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*logs, cachedLastId, stringify*/ 7) {
+    			if (dirty & /*cachedLastId, logs, stringify*/ 7) {
     				const each_value = /*logs*/ ctx[0];
     				validate_each_argument(each_value);
     				validate_each_keys(ctx, each_value, get_each_context$5, get_key);
@@ -6378,8 +6593,6 @@ var app = (function () {
     		i: noop,
     		o: noop,
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(h1);
-    			if (detaching) detach_dev(t1);
     			if (detaching) detach_dev(section);
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
@@ -6399,7 +6612,7 @@ var app = (function () {
     	return block;
     }
 
-    const POLLING_INTERVAL = 2000;
+    const POLLING_INTERVAL = 3000;
 
     function instance$c($$self, $$props, $$invalidate) {
     	let logs = [];
@@ -6432,14 +6645,20 @@ var app = (function () {
     		}).then(res => {
     			res.logs.forEach(isHighlighted);
     			$$invalidate(0, logs = logs.concat(res.logs));
-    		}).then(() => {
-    			document.querySelector("footer").scrollIntoView();
-    			setTimeout(fetchLogs, POLLING_INTERVAL);
+
+    			if (res.logs.length > 0) {
+    				setTimeout(
+    					() => {
+    						document.querySelector("footer").scrollIntoView();
+    					},
+    					200
+    				);
+    			}
     		});
     	};
 
     	onMount(async () => {
-    		fetchLogs();
+    		setInterval(fetchLogs, POLLING_INTERVAL);
     	});
 
     	const writable_props = [];
