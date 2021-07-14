@@ -1,4 +1,8 @@
 # Changelog
+
+## 4.5.9
+* Add logs to `pos-cli gui serve` at http://localhost:3333/Logs
+
 ## 4.5.5
 * Add AVIF format to watch list
 
@@ -23,7 +27,7 @@
 * Redesign of admin models list
 
 ## 4.4.22 - Init wizard
-* Added `--wizard` (-w) to `pos-cli init` with choice between different templates 
+* Added `--wizard` (-w) to `pos-cli init` with choice between different templates
 
 ## 4.4.21 - 15 July 2020 - Admin improvements
 * Correctly display arrays in fields
@@ -49,7 +53,7 @@
 ## 4.4.13 - 11 May 2020
 * Fixed node.js v14 warnings
 
-## 4.4.12 - 8 May 2020 
+## 4.4.12 - 8 May 2020
 * Added `'` and `&` as valid filename characters
 * Added `-c` alias for `--concurrency` in `pos-cli sync`
 
@@ -65,7 +69,7 @@
 * Added `@` and `%` to valid `pos-cli sync` characters
 
 ## 4.4.9 - 31 March 2020
-* Fixed `pos-cli deploy -d` assets manifest creation on Windows 
+* Fixed `pos-cli deploy -d` assets manifest creation on Windows
 * `pos-cli init` is now using `--force` by default
 * Fixed `pos-cli audit` for graphql audit when checking multiline tag
 
@@ -99,7 +103,7 @@
 ## 4.2.5 - 25 February 2020
 * Added `mp3`, `mp4`, `webm` and `ogg`, extensions to `pos-cli sync` watch list
 * Added `--direct-assets-upload` (`-d`) option to `pos-cli sync` command for faster
-  assets syncing 
+  assets syncing
 
 ## 4.2.4 - 5 February 2020
 * `pos-cli logs` now prints info about request path and partial when available
@@ -107,7 +111,7 @@
 * Fixed `pos-cli deploy` command with `-d` option for direct assets upload
 
 ## 4.2.3 - 20 December 2019
-* `pos-cli gui serve` now remembers last used query between page reloads 
+* `pos-cli gui serve` now remembers last used query between page reloads
 * `pos-cli gui serve` GraphiQL explorer will not show deprecated queries/mutations
 
 ## 4.2.2 - 19 December 2019
@@ -115,7 +119,7 @@
 
 ## 4.2.1 - 19 December 2019
 * Add filter to `pos-cli logs` that allows to display only given log type
-* Fixed git submodules in modules/ 
+* Fixed git submodules in modules/
 * Add graphiql explorer to `pos-cli gui serve`
 
 ## 4.1.19 - 5 December 2019
@@ -126,7 +130,7 @@
 
 ## 4.1.17 - 4 November 2019
 * Add support for `.posignore` file which works the same way as `.gitignore` for git
-* Do not include modules assets using `pos-cli deploy` with `--direct-assets-upload` flag 
+* Do not include modules assets using `pos-cli deploy` with `--direct-assets-upload` flag
 * Fix packing and uploading assets when using `pos-cli deploy` with `--direct-assets-upload` flag
 
 ## 4.1.16 - 16 October 2019
@@ -134,7 +138,7 @@
 * Fix spelling issue in `pos-cli data clean` message
 
 ## 4.1.15 - 1 October 2019
-* Use `bundledDependencies` to prevent conflicts with globally installed npm packages  
+* Use `bundledDependencies` to prevent conflicts with globally installed npm packages
 
 ## 4.1.14 - 30 September 2019
 * Send false in `partialDeploy` when deploying module
