@@ -31,7 +31,6 @@ class LogStream extends EventEmitter {
         return false;
       }
 
-      console.log('len', logs.length);
 
       for (let k in logs) {
         const row = logs[k];
