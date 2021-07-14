@@ -31,6 +31,7 @@ class LogStream extends EventEmitter {
         return false;
       }
 
+
       for (let k in logs) {
         const row = logs[k];
         const filter = !!program.filter && program.filter.toLowerCase();
