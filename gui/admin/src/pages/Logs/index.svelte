@@ -1,5 +1,13 @@
 <script>
   import { onMount } from "svelte";
+  import { format } from 'date-fns'
+
+  // import hljs from 'highlight.js';
+  import hljs from 'highlight.js/lib/core';
+  import json from 'highlight.js/lib/languages/json';
+  hljs.registerLanguage('json', json);
+
+  import 'highlight.js/styles/googlecode.css';
 
   const POLLING_INTERVAL = 3000;
   const SUMMARY_LENGTH = 250;
@@ -16,7 +24,9 @@
 
   const stringify = (msg) => {
     try {
-      return JSON.stringify(JSON.parse(msg), null, 4);
+      const json = JSON.stringify(JSON.parse(msg), null, 4);
+      const html = hljs.highlightAuto(json).value;
+      return html;
     } catch (e) {
       return msg;
     }
@@ -51,30 +61,38 @@
   };
 
   onMount(async () => {
+    fetchLogs();
     setInterval(fetchLogs, POLLING_INTERVAL);
   });
 </script>
 
 <section class="overflow-hidden">
-  <div class="container py-8">
+  <div class="container">
     <div class="m-1">
       <ul>
         {#each logs as { id, isHighlighted, message, error_type, updated_at } (id)}
           <li
             class="text-sm
             {isHighlighted ? 'text-red-800' : ''} text-sm
-            flex flex-wrap justify-between shadow border border-gray-200 p-2
+            flex {showDetails ? '' : 'flex-wrap'} items-center justify-between shadow border border-gray-200 py-2
             "
           >
-            <span class="text-xs">{error_type}</span>
-            <span class="text-xs">{updated_at}</span>
+            <span class="{showDetails ? 'w-64 ml-4' : 'mx-2 text-xs'}">{error_type}</span>
+
+            {#if !showDetails}
+              <span class="text-xs mx-2">{format(new Date(updated_at), 'dd/MM/yyyy HH:mm:ss')}</span>
+            {/if}
+
             {#if showDetails}
-              <details class="w-full">
-                <summary class="mb-2">{message.substr(0, SUMMARY_LENGTH)}</summary>
-                <pre class="px-2 py-3 bg-gray-200 break-all">{stringify(message)}</pre>
-              </details>
+              <pre class="ml-4 flex-1 px-2 py-3 bg-gray-200 max-h-64 hover:max-h-96 hover:h-96 overflow-y-auto overflow-x-visible"
+                title="{format(new Date(updated_at), 'dd/MM/yyyy HH:mm:ss')}"
+              >
+                <code class="break-all">
+                  {@html stringify(message)}
+                </code>
+              </pre>
             {:else}
-              <div title={stringify(message)}>{message}</div>
+              <div class="w-full px-2" title={stringify(message)}>{message}</div>
             {/if}
           </li>
 
