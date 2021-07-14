@@ -2671,7 +2671,7 @@ var app = (function () {
     }
 
     // (152:0) {#if !parentElement}
-    function create_if_block$6(ctx) {
+    function create_if_block$7(ctx) {
     	let span;
     	let mounted;
     	let dispose;
@@ -2706,7 +2706,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$6.name,
+    		id: create_if_block$7.name,
     		type: "if",
     		source: "(152:0) {#if !parentElement}",
     		ctx
@@ -2720,7 +2720,7 @@ var app = (function () {
     	let if_block1_anchor;
     	let current;
     	let if_block0 = /*$context*/ ctx[6] && create_if_block_1$2(ctx);
-    	let if_block1 = !/*parentElement*/ ctx[3] && create_if_block$6(ctx);
+    	let if_block1 = !/*parentElement*/ ctx[3] && create_if_block$7(ctx);
 
     	const block = {
     		c: function create() {
@@ -2768,7 +2768,7 @@ var app = (function () {
 
     			if (!/*parentElement*/ ctx[3]) {
     				if (if_block1) ; else {
-    					if_block1 = create_if_block$6(ctx);
+    					if_block1 = create_if_block$7(ctx);
     					if_block1.c();
     					if_block1.m(if_block1_anchor.parentNode, if_block1_anchor);
     				}
@@ -3178,7 +3178,7 @@ var app = (function () {
     const { Object: Object_1$2 } = globals;
 
     // (64:0) {#if layouts && $route !== null}
-    function create_if_block$5(ctx) {
+    function create_if_block$6(ctx) {
     	let route_1;
     	let current;
 
@@ -3222,7 +3222,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$5.name,
+    		id: create_if_block$6.name,
     		type: "if",
     		source: "(64:0) {#if layouts && $route !== null}",
     		ctx
@@ -3235,7 +3235,7 @@ var app = (function () {
     	let t;
     	let prefetcher;
     	let current;
-    	let if_block = /*layouts*/ ctx[0] && /*$route*/ ctx[1] !== null && create_if_block$5(ctx);
+    	let if_block = /*layouts*/ ctx[0] && /*$route*/ ctx[1] !== null && create_if_block$6(ctx);
     	prefetcher = new Prefetcher({ $$inline: true });
 
     	const block = {
@@ -3264,7 +3264,7 @@ var app = (function () {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block$5(ctx);
+    					if_block = create_if_block$6(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
     					if_block.m(t.parentNode, t);
@@ -6351,33 +6351,160 @@ var app = (function () {
 
     function get_each_context$5(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[7] = list[i].id;
-    	child_ctx[3] = list[i].isHighlighted;
-    	child_ctx[8] = list[i].message;
-    	child_ctx[9] = list[i].error_type;
-    	child_ctx[10] = list[i].updated_at;
+    	child_ctx[8] = list[i].id;
+    	child_ctx[4] = list[i].isHighlighted;
+    	child_ctx[9] = list[i].message;
+    	child_ctx[10] = list[i].error_type;
+    	child_ctx[11] = list[i].updated_at;
     	return child_ctx;
     }
 
-    // (59:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }
+    // (76:12) {:else}
+    function create_else_block$4(ctx) {
+    	let div;
+    	let t_value = /*message*/ ctx[9] + "";
+    	let t;
+    	let div_title_value;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			t = text(t_value);
+    			this.h();
+    		},
+    		l: function claim(nodes) {
+    			div = claim_element(nodes, "DIV", { title: true });
+    			var div_nodes = children(div);
+    			t = claim_text(div_nodes, t_value);
+    			div_nodes.forEach(detach_dev);
+    			this.h();
+    		},
+    		h: function hydrate() {
+    			attr_dev(div, "title", div_title_value = /*stringify*/ ctx[3](/*message*/ ctx[9]));
+    			add_location(div, file$9, 76, 14, 2125);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    			append_dev(div, t);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*logs*/ 1 && t_value !== (t_value = /*message*/ ctx[9] + "")) set_data_dev(t, t_value);
+
+    			if (dirty & /*logs*/ 1 && div_title_value !== (div_title_value = /*stringify*/ ctx[3](/*message*/ ctx[9]))) {
+    				attr_dev(div, "title", div_title_value);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_else_block$4.name,
+    		type: "else",
+    		source: "(76:12) {:else}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (71:12) {#if showDetails}
+    function create_if_block$5(ctx) {
+    	let details;
+    	let summary;
+    	let t0_value = /*message*/ ctx[9].substr(0, SUMMARY_LENGTH) + "";
+    	let t0;
+    	let t1;
+    	let pre;
+    	let t2_value = /*stringify*/ ctx[3](/*message*/ ctx[9]) + "";
+    	let t2;
+
+    	const block = {
+    		c: function create() {
+    			details = element("details");
+    			summary = element("summary");
+    			t0 = text(t0_value);
+    			t1 = space();
+    			pre = element("pre");
+    			t2 = text(t2_value);
+    			this.h();
+    		},
+    		l: function claim(nodes) {
+    			details = claim_element(nodes, "DETAILS", { class: true });
+    			var details_nodes = children(details);
+    			summary = claim_element(details_nodes, "SUMMARY", { class: true });
+    			var summary_nodes = children(summary);
+    			t0 = claim_text(summary_nodes, t0_value);
+    			summary_nodes.forEach(detach_dev);
+    			t1 = claim_space(details_nodes);
+    			pre = claim_element(details_nodes, "PRE", { class: true });
+    			var pre_nodes = children(pre);
+    			t2 = claim_text(pre_nodes, t2_value);
+    			pre_nodes.forEach(detach_dev);
+    			details_nodes.forEach(detach_dev);
+    			this.h();
+    		},
+    		h: function hydrate() {
+    			attr_dev(summary, "class", "mb-2");
+    			add_location(summary, file$9, 72, 16, 1910);
+    			attr_dev(pre, "class", "px-2 py-3 bg-gray-200 break-all");
+    			add_location(pre, file$9, 73, 16, 1994);
+    			attr_dev(details, "class", "w-full");
+    			add_location(details, file$9, 71, 14, 1869);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, details, anchor);
+    			append_dev(details, summary);
+    			append_dev(summary, t0);
+    			append_dev(details, t1);
+    			append_dev(details, pre);
+    			append_dev(pre, t2);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*logs*/ 1 && t0_value !== (t0_value = /*message*/ ctx[9].substr(0, SUMMARY_LENGTH) + "")) set_data_dev(t0, t0_value);
+    			if (dirty & /*logs*/ 1 && t2_value !== (t2_value = /*stringify*/ ctx[3](/*message*/ ctx[9]) + "")) set_data_dev(t2, t2_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(details);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$5.name,
+    		type: "if",
+    		source: "(71:12) {#if showDetails}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (62:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }
     function create_each_block$5(key_1, ctx) {
     	let li;
     	let span0;
-    	let t0_value = /*error_type*/ ctx[9] + "";
+    	let t0_value = /*error_type*/ ctx[10] + "";
     	let t0;
     	let t1;
     	let span1;
-    	let t2_value = /*updated_at*/ ctx[10] + "";
+    	let t2_value = /*updated_at*/ ctx[11] + "";
     	let t2;
     	let t3;
-    	let div;
-    	let t4_value = /*message*/ ctx[8] + "";
-    	let t4;
-    	let div_title_value;
     	let li_class_value;
-    	let t5;
+    	let t4;
     	let hr;
     	let hr_class_value;
+
+    	function select_block_type(ctx, dirty) {
+    		if (/*showDetails*/ ctx[2]) return create_if_block$5;
+    		return create_else_block$4;
+    	}
+
+    	let current_block_type = select_block_type(ctx);
+    	let if_block = current_block_type(ctx);
 
     	const block = {
     		key: key_1,
@@ -6390,9 +6517,8 @@ var app = (function () {
     			span1 = element("span");
     			t2 = text(t2_value);
     			t3 = space();
-    			div = element("div");
-    			t4 = text(t4_value);
-    			t5 = space();
+    			if_block.c();
+    			t4 = space();
     			hr = element("hr");
     			this.h();
     		},
@@ -6409,31 +6535,25 @@ var app = (function () {
     			t2 = claim_text(span1_nodes, t2_value);
     			span1_nodes.forEach(detach_dev);
     			t3 = claim_space(li_nodes);
-    			div = claim_element(li_nodes, "DIV", { class: true, title: true });
-    			var div_nodes = children(div);
-    			t4 = claim_text(div_nodes, t4_value);
-    			div_nodes.forEach(detach_dev);
+    			if_block.l(li_nodes);
     			li_nodes.forEach(detach_dev);
-    			t5 = claim_space(nodes);
+    			t4 = claim_space(nodes);
     			hr = claim_element(nodes, "HR", { class: true });
     			this.h();
     		},
     		h: function hydrate() {
     			attr_dev(span0, "class", "text-xs");
-    			add_location(span0, file$9, 65, 12, 1634);
+    			add_location(span0, file$9, 68, 12, 1729);
     			attr_dev(span1, "class", "text-xs");
-    			add_location(span1, file$9, 66, 12, 1688);
-    			attr_dev(div, "class", "w-full");
-    			attr_dev(div, "title", div_title_value = /*stringify*/ ctx[2](/*message*/ ctx[8]));
-    			add_location(div, file$9, 67, 12, 1742);
-    			attr_dev(li, "class", li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[3] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between shadow border border-gray-200 p-2\n            ");
-    			add_location(li, file$9, 59, 10, 1430);
+    			add_location(span1, file$9, 69, 12, 1783);
+    			attr_dev(li, "class", li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[4] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between shadow border border-gray-200 p-2\n            ");
+    			add_location(li, file$9, 62, 10, 1525);
 
-    			attr_dev(hr, "class", hr_class_value = "border-b my-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[7]
+    			attr_dev(hr, "class", hr_class_value = "border-b my-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[8]
     			? "border-red-500"
     			: "border-white"));
 
-    			add_location(hr, file$9, 70, 10, 1832);
+    			add_location(hr, file$9, 80, 10, 2218);
     			this.first = li;
     		},
     		m: function mount(target, anchor) {
@@ -6444,25 +6564,20 @@ var app = (function () {
     			append_dev(li, span1);
     			append_dev(span1, t2);
     			append_dev(li, t3);
-    			append_dev(li, div);
-    			append_dev(div, t4);
-    			insert_dev(target, t5, anchor);
+    			if_block.m(li, null);
+    			insert_dev(target, t4, anchor);
     			insert_dev(target, hr, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*logs*/ 1 && t0_value !== (t0_value = /*error_type*/ ctx[9] + "")) set_data_dev(t0, t0_value);
-    			if (dirty & /*logs*/ 1 && t2_value !== (t2_value = /*updated_at*/ ctx[10] + "")) set_data_dev(t2, t2_value);
-    			if (dirty & /*logs*/ 1 && t4_value !== (t4_value = /*message*/ ctx[8] + "")) set_data_dev(t4, t4_value);
+    			if (dirty & /*logs*/ 1 && t0_value !== (t0_value = /*error_type*/ ctx[10] + "")) set_data_dev(t0, t0_value);
+    			if (dirty & /*logs*/ 1 && t2_value !== (t2_value = /*updated_at*/ ctx[11] + "")) set_data_dev(t2, t2_value);
+    			if_block.p(ctx, dirty);
 
-    			if (dirty & /*logs*/ 1 && div_title_value !== (div_title_value = /*stringify*/ ctx[2](/*message*/ ctx[8]))) {
-    				attr_dev(div, "title", div_title_value);
-    			}
-
-    			if (dirty & /*logs*/ 1 && li_class_value !== (li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[3] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between shadow border border-gray-200 p-2\n            ")) {
+    			if (dirty & /*logs*/ 1 && li_class_value !== (li_class_value = "text-sm\n            " + (/*isHighlighted*/ ctx[4] ? "text-red-800" : "") + " text-sm\n            flex flex-wrap justify-between shadow border border-gray-200 p-2\n            ")) {
     				attr_dev(li, "class", li_class_value);
     			}
 
-    			if (dirty & /*cachedLastId, logs*/ 3 && hr_class_value !== (hr_class_value = "border-b my-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[7]
+    			if (dirty & /*cachedLastId, logs*/ 3 && hr_class_value !== (hr_class_value = "border-b my-2 " + (/*cachedLastId*/ ctx[1] === /*id*/ ctx[8]
     			? "border-red-500"
     			: "border-white"))) {
     				attr_dev(hr, "class", hr_class_value);
@@ -6470,7 +6585,8 @@ var app = (function () {
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(li);
-    			if (detaching) detach_dev(t5);
+    			if_block.d();
+    			if (detaching) detach_dev(t4);
     			if (detaching) detach_dev(hr);
     		}
     	};
@@ -6479,7 +6595,7 @@ var app = (function () {
     		block,
     		id: create_each_block$5.name,
     		type: "each",
-    		source: "(59:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }",
+    		source: "(62:8) {#each logs as { id, isHighlighted, message, error_type, updated_at }",
     		ctx
     	});
 
@@ -6501,7 +6617,7 @@ var app = (function () {
     	let t3;
     	let each_value = /*logs*/ ctx[0];
     	validate_each_argument(each_value);
-    	const get_key = ctx => /*id*/ ctx[7];
+    	const get_key = ctx => /*id*/ ctx[8];
     	validate_each_keys(ctx, each_value, get_each_context$5, get_key);
 
     	for (let i = 0; i < each_value.length; i += 1) {
@@ -6556,15 +6672,15 @@ var app = (function () {
     			this.h();
     		},
     		h: function hydrate() {
-    			add_location(ul, file$9, 57, 6, 1331);
+    			add_location(ul, file$9, 60, 6, 1426);
     			attr_dev(div0, "class", "m-1");
-    			add_location(div0, file$9, 56, 4, 1307);
+    			add_location(div0, file$9, 59, 4, 1402);
     			attr_dev(p, "class", "bg-yellow-100 border-yellow-600 px-3 py-2");
-    			add_location(p, file$9, 75, 4, 1961);
+    			add_location(p, file$9, 85, 4, 2347);
     			attr_dev(div1, "class", "container py-8");
-    			add_location(div1, file$9, 55, 2, 1274);
+    			add_location(div1, file$9, 58, 2, 1369);
     			attr_dev(section, "class", "overflow-hidden");
-    			add_location(section, file$9, 54, 0, 1238);
+    			add_location(section, file$9, 57, 0, 1333);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, section, anchor);
@@ -6583,7 +6699,7 @@ var app = (function () {
     			append_dev(p, t3);
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*cachedLastId, logs, stringify*/ 7) {
+    			if (dirty & /*cachedLastId, logs, stringify, SUMMARY_LENGTH, showDetails*/ 15) {
     				const each_value = /*logs*/ ctx[0];
     				validate_each_argument(each_value);
     				validate_each_keys(ctx, each_value, get_each_context$5, get_key);
@@ -6613,11 +6729,13 @@ var app = (function () {
     }
 
     const POLLING_INTERVAL = 3000;
+    const SUMMARY_LENGTH = 250;
 
     function instance$c($$self, $$props, $$invalidate) {
     	let logs = [];
     	let cachedLastId = null;
     	let lastId = null;
+    	const showDetails = document.location.href.indexOf("?2") > 0;
 
     	const isHighlighted = item => {
     		item.isHighlighted = !!item.error_type.match(/error/i);
@@ -6673,9 +6791,11 @@ var app = (function () {
     	$$self.$capture_state = () => ({
     		onMount,
     		POLLING_INTERVAL,
+    		SUMMARY_LENGTH,
     		logs,
     		cachedLastId,
     		lastId,
+    		showDetails,
     		isHighlighted,
     		stringify,
     		isBrowserTabFocused,
@@ -6692,7 +6812,7 @@ var app = (function () {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [logs, cachedLastId, stringify, isHighlighted];
+    	return [logs, cachedLastId, showDetails, stringify, isHighlighted];
     }
 
     class Logs extends SvelteComponentDev {
