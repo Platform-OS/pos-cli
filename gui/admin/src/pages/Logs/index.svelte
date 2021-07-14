@@ -2,6 +2,13 @@
   import { onMount } from "svelte";
   import { format } from 'date-fns'
 
+  // import hljs from 'highlight.js';
+  import hljs from 'highlight.js/lib/core';
+  import json from 'highlight.js/lib/languages/json';
+  hljs.registerLanguage('json', json);
+
+  import 'highlight.js/styles/googlecode.css';
+
   const POLLING_INTERVAL = 3000;
   const SUMMARY_LENGTH = 250;
 
@@ -17,7 +24,9 @@
 
   const stringify = (msg) => {
     try {
-      return JSON.stringify(JSON.parse(msg), null, 4);
+      const json = JSON.stringify(JSON.parse(msg), null, 4);
+      const html = hljs.highlightAuto(json).value;
+      return html;
     } catch (e) {
       return msg;
     }
@@ -52,12 +61,13 @@
   };
 
   onMount(async () => {
+    fetchLogs();
     setInterval(fetchLogs, POLLING_INTERVAL);
   });
 </script>
 
 <section class="overflow-hidden">
-  <div class="container py-8">
+  <div class="container">
     <div class="m-1">
       <ul>
         {#each logs as { id, isHighlighted, message, error_type, updated_at } (id)}
@@ -74,11 +84,11 @@
             {/if}
 
             {#if showDetails}
-              <pre class="ml-4 flex-1 px-2 py-3 bg-gray-200 max-h-64 focus:max-h-112 overflow-y-auto overflow-x-visible"
+              <pre class="ml-4 flex-1 px-2 py-3 bg-gray-200 max-h-64 hover:max-h-96 hover:h-96 overflow-y-auto overflow-x-visible"
                 title="{format(new Date(updated_at), 'dd/MM/yyyy HH:mm:ss')}"
               >
                 <code class="break-all">
-                  {stringify(message)}
+                  {@html stringify(message)}
                 </code>
               </pre>
             {:else}

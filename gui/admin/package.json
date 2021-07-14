@@ -41,6 +41,7 @@
     "testcafe": "^1.9.2"
   },
   "dependencies": {
-    "date-fns": "^2.16.1"
+    "date-fns": "^2.16.1",
+    "highlight.js": "^11.1.0"
   }
 }
