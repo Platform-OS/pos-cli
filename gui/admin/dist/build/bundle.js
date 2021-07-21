@@ -11384,10 +11384,9 @@ var app = (function () {
     	let t2;
     	let t3;
     	let div;
-    	let t4_value = /*message*/ ctx[3] + "";
-    	let t4;
+    	let raw_value = stringify(/*message*/ ctx[3], { pretty: true }) + "";
     	let div_title_value;
-    	let t5;
+    	let t4;
     	let li_class_value;
 
     	const block = {
@@ -11402,8 +11401,7 @@ var app = (function () {
     			t2 = text(t2_value);
     			t3 = space();
     			div = element("div");
-    			t4 = text(t4_value);
-    			t5 = space();
+    			t4 = space();
     			this.h();
     		},
     		l: function claim(nodes) {
@@ -11421,9 +11419,8 @@ var app = (function () {
     			t3 = claim_space(li_nodes);
     			div = claim_element(li_nodes, "DIV", { class: true, title: true });
     			var div_nodes = children(div);
-    			t4 = claim_text(div_nodes, t4_value);
     			div_nodes.forEach(detach_dev);
-    			t5 = claim_space(li_nodes);
+    			t4 = claim_space(li_nodes);
     			li_nodes.forEach(detach_dev);
     			this.h();
     		},
@@ -11448,14 +11445,13 @@ var app = (function () {
     			append_dev(span1, t2);
     			append_dev(li, t3);
     			append_dev(li, div);
-    			append_dev(div, t4);
-    			append_dev(li, t5);
+    			div.innerHTML = raw_value;
+    			append_dev(li, t4);
     		},
     		p: function update(ctx, dirty) {
     			if (dirty & /*$logs*/ 1 && t0_value !== (t0_value = /*error_type*/ ctx[4] + "")) set_data_dev(t0, t0_value);
     			if (dirty & /*$logs*/ 1 && t2_value !== (t2_value = format(new Date(/*updated_at*/ ctx[5]), "dd/MM/yyyy HH:mm:ss") + "")) set_data_dev(t2, t2_value);
-    			if (dirty & /*$logs*/ 1 && t4_value !== (t4_value = /*message*/ ctx[3] + "")) set_data_dev(t4, t4_value);
-
+    			if (dirty & /*$logs*/ 1 && raw_value !== (raw_value = stringify(/*message*/ ctx[3], { pretty: true }) + "")) div.innerHTML = raw_value;
     			if (dirty & /*$logs*/ 1 && div_title_value !== (div_title_value = stringify(/*message*/ ctx[3]))) {
     				attr_dev(div, "title", div_title_value);
     			}

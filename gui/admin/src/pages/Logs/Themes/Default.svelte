@@ -19,7 +19,7 @@
       >
 
       <div class="w-full px-2 break-all" title={stringify(message)}>
-        {message}
+        {@html stringify(message, { pretty: true })}
       </div>
     </li>
   {/each}
