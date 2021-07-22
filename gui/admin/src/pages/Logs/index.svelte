@@ -12,7 +12,7 @@
   });
 </script>
 
-<section class="container m-1">
+<section class="xl:container">
   <ul>
     {#each $logs as log}
       <Item {log} />
