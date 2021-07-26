@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import fetchLogs from "./fetchLogs";
-  import { logs } from "./store.js";
+  import { logs, cachedLastId } from "./store.js";
   import Item from "./Themes/Item.svelte";
 
   const POLLING_INTERVAL = 3000;
@@ -15,7 +15,7 @@
 <section class="xl:container">
   <ul>
     {#each $logs as log}
-      <Item {log} />
+      <Item {log} {cachedLastId} />
     {/each}
   </ul>
 
