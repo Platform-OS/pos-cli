@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.5.10
+* Improve `pos-cli gui serve` logs behavior, layout, add pretty print
+
 ## 4.5.9
 * Add logs to `pos-cli gui serve` at http://localhost:3333/Logs
 
