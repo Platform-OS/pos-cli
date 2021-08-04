@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.5.11
+* Add filtering of logs in `pos-cli gui serve`
+
 ## 4.5.10
 * Improve `pos-cli gui serve` logs behavior, layout, add pretty print
 

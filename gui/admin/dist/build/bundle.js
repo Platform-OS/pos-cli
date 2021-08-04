@@ -253,6 +253,9 @@ var app = (function () {
     function claim_space(nodes) {
         return claim_text(nodes, ' ');
     }
+    function set_input_value(input, value) {
+        input.value = value == null ? '' : value;
+    }
     function set_style(node, key, value, important) {
         node.style.setProperty(key, value, important ? 'important' : '');
     }
@@ -2074,7 +2077,7 @@ var app = (function () {
     	let if_block;
     	let if_block_anchor;
     	let current;
-    	const if_block_creators = [create_if_block_2$2, create_if_block_3$1];
+    	const if_block_creators = [create_if_block_2$2, create_if_block_3$2];
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
@@ -2168,7 +2171,7 @@ var app = (function () {
     }
 
     // (132:36) 
-    function create_if_block_3$1(ctx) {
+    function create_if_block_3$2(ctx) {
     	let each_blocks = [];
     	let each_1_lookup = new Map();
     	let each_1_anchor;
@@ -2244,7 +2247,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block_3$1.name,
+    		id: create_if_block_3$2.name,
     		type: "if",
     		source: "(132:36) ",
     		ctx
@@ -3919,6 +3922,33 @@ var app = (function () {
             {
               "isFile": true,
               "isDir": false,
+              "file": "Item.svelte",
+              "filepath": "/Logs/Item.svelte",
+              "name": "Item",
+              "ext": "svelte",
+              "badExt": false,
+              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs/Item.svelte",
+              "importPath": "../../../../src/pages/Logs/Item.svelte",
+              "isLayout": false,
+              "isReset": false,
+              "isIndex": false,
+              "isFallback": false,
+              "isPage": true,
+              "ownMeta": {},
+              "meta": {
+                "preload": false,
+                "prerender": true,
+                "precache-order": false,
+                "precache-proximity": true,
+                "recursive": true
+              },
+              "path": "/Logs/Item",
+              "id": "_Logs_Item",
+              "component": () => Promise.resolve().then(function () { return Item$1; }).then(m => m.default)
+            },
+            {
+              "isFile": true,
+              "isDir": false,
               "file": "Modal.svelte",
               "filepath": "/Logs/Modal.svelte",
               "name": "Modal",
@@ -3942,59 +3972,6 @@ var app = (function () {
               "path": "/Logs/Modal",
               "id": "_Logs_Modal",
               "component": () => Promise.resolve().then(function () { return Modal$1; }).then(m => m.default)
-            },
-            {
-              "isFile": false,
-              "isDir": true,
-              "file": "Themes",
-              "filepath": "/Logs/Themes",
-              "name": "Themes",
-              "ext": "",
-              "badExt": false,
-              "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs/Themes",
-              "children": [
-                {
-                  "isFile": true,
-                  "isDir": false,
-                  "file": "Item.svelte",
-                  "filepath": "/Logs/Themes/Item.svelte",
-                  "name": "Item",
-                  "ext": "svelte",
-                  "badExt": false,
-                  "absolutePath": "/Users/pavel/projects/pos-cli/gui/admin/src/pages/Logs/Themes/Item.svelte",
-                  "importPath": "../../../../src/pages/Logs/Themes/Item.svelte",
-                  "isLayout": false,
-                  "isReset": false,
-                  "isIndex": false,
-                  "isFallback": false,
-                  "isPage": true,
-                  "ownMeta": {},
-                  "meta": {
-                    "preload": false,
-                    "prerender": true,
-                    "precache-order": false,
-                    "precache-proximity": true,
-                    "recursive": true
-                  },
-                  "path": "/Logs/Themes/Item",
-                  "id": "_Logs_Themes_Item",
-                  "component": () => Promise.resolve().then(function () { return Item$1; }).then(m => m.default)
-                }
-              ],
-              "isLayout": false,
-              "isReset": false,
-              "isIndex": false,
-              "isFallback": false,
-              "isPage": false,
-              "ownMeta": {},
-              "meta": {
-                "preload": false,
-                "prerender": true,
-                "precache-order": false,
-                "precache-proximity": true,
-                "recursive": true
-              },
-              "path": "/Logs/Themes"
             }
           ],
           "isLayout": false,
@@ -11350,242 +11327,18 @@ var app = (function () {
       return html;
     }
 
-    /* src/pages/Logs/Themes/Item.svelte generated by Svelte v3.24.1 */
-    const file$a = "src/pages/Logs/Themes/Item.svelte";
+    /* src/pages/Logs/Item.svelte generated by Svelte v3.24.1 */
+    const file$a = "src/pages/Logs/Item.svelte";
 
-    // (30:4) {#if isJson(log.message)}
-    function create_if_block_2$1(ctx) {
-    	let label;
-    	let input;
-    	let input_name_value;
-    	let input_id_value;
-    	let t;
-    	let label_for_value;
-    	let mounted;
-    	let dispose;
-
-    	const block = {
-    		c: function create() {
-    			label = element("label");
-    			input = element("input");
-    			t = text("\n        Prettify");
-    			this.h();
-    		},
-    		l: function claim(nodes) {
-    			label = claim_element(nodes, "LABEL", { for: true, class: true });
-    			var label_nodes = children(label);
-
-    			input = claim_element(label_nodes, "INPUT", {
-    				type: true,
-    				class: true,
-    				name: true,
-    				id: true
-    			});
-
-    			t = claim_text(label_nodes, "\n        Prettify");
-    			label_nodes.forEach(detach_dev);
-    			this.h();
-    		},
-    		h: function hydrate() {
-    			attr_dev(input, "type", "checkbox");
-    			attr_dev(input, "class", "cursor-pointer w-4 h-4");
-    			attr_dev(input, "name", input_name_value = "cv-" + /*log*/ ctx[0].id);
-    			attr_dev(input, "id", input_id_value = "cv-" + /*log*/ ctx[0].id);
-    			add_location(input, file$a, 34, 8, 761);
-    			attr_dev(label, "for", label_for_value = "cv-" + /*log*/ ctx[0].id);
-    			attr_dev(label, "class", "cursor-pointer px-2 py-1 lg:ml-2 lg:mt-2 bg-gray-100");
-    			add_location(label, file$a, 30, 6, 643);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, label, anchor);
-    			append_dev(label, input);
-    			input.checked = /*formatted*/ ctx[2];
-    			append_dev(label, t);
-
-    			if (!mounted) {
-    				dispose = listen_dev(input, "change", /*input_change_handler*/ ctx[4]);
-    				mounted = true;
-    			}
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*log*/ 1 && input_name_value !== (input_name_value = "cv-" + /*log*/ ctx[0].id)) {
-    				attr_dev(input, "name", input_name_value);
-    			}
-
-    			if (dirty & /*log*/ 1 && input_id_value !== (input_id_value = "cv-" + /*log*/ ctx[0].id)) {
-    				attr_dev(input, "id", input_id_value);
-    			}
-
-    			if (dirty & /*formatted*/ 4) {
-    				input.checked = /*formatted*/ ctx[2];
-    			}
-
-    			if (dirty & /*log*/ 1 && label_for_value !== (label_for_value = "cv-" + /*log*/ ctx[0].id)) {
-    				attr_dev(label, "for", label_for_value);
-    			}
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(label);
-    			mounted = false;
-    			dispose();
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_2$1.name,
-    		type: "if",
-    		source: "(30:4) {#if isJson(log.message)}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (56:4) {:else}
-    function create_else_block$4(ctx) {
-    	let t_value = /*log*/ ctx[0].message + "";
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			t = text(t_value);
-    		},
-    		l: function claim(nodes) {
-    			t = claim_text(nodes, t_value);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*log*/ 1 && t_value !== (t_value = /*log*/ ctx[0].message + "")) set_data_dev(t, t_value);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_else_block$4.name,
-    		type: "else",
-    		source: "(56:4) {:else}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (52:4) {#if isJson(log.message)}
-    function create_if_block_1$2(ctx) {
-    	let p;
-    	let raw_value = stringify(/*log*/ ctx[0].message, { formatted: /*formatted*/ ctx[2] }) + "";
-
-    	const block = {
-    		c: function create() {
-    			p = element("p");
-    			this.h();
-    		},
-    		l: function claim(nodes) {
-    			p = claim_element(nodes, "P", { class: true });
-    			var p_nodes = children(p);
-    			p_nodes.forEach(detach_dev);
-    			this.h();
-    		},
-    		h: function hydrate() {
-    			attr_dev(p, "class", "font-mono max-h-72 overflow-y-auto");
-    			add_location(p, file$a, 52, 6, 1183);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, p, anchor);
-    			p.innerHTML = raw_value;
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*log, formatted*/ 5 && raw_value !== (raw_value = stringify(/*log*/ ctx[0].message, { formatted: /*formatted*/ ctx[2] }) + "")) p.innerHTML = raw_value;		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(p);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_1$2.name,
-    		type: "if",
-    		source: "(52:4) {#if isJson(log.message)}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (62:0) {#if log.id === get(cachedLastId)}
+    // (30:0) {#if shouldShow(log, filter)}
     function create_if_block$5(ctx) {
-    	let li;
-    	let hr;
-    	let t0;
-    	let span;
-    	let t1;
-
-    	const block = {
-    		c: function create() {
-    			li = element("li");
-    			hr = element("hr");
-    			t0 = space();
-    			span = element("span");
-    			t1 = text("NEW");
-    			this.h();
-    		},
-    		l: function claim(nodes) {
-    			li = claim_element(nodes, "LI", { class: true });
-    			var li_nodes = children(li);
-    			hr = claim_element(li_nodes, "HR", { class: true });
-    			t0 = claim_space(li_nodes);
-    			span = claim_element(li_nodes, "SPAN", { class: true });
-    			var span_nodes = children(span);
-    			t1 = claim_text(span_nodes, "NEW");
-    			span_nodes.forEach(detach_dev);
-    			li_nodes.forEach(detach_dev);
-    			this.h();
-    		},
-    		h: function hydrate() {
-    			attr_dev(hr, "class", "bg-red-700 h-1");
-    			add_location(hr, file$a, 63, 4, 1432);
-    			attr_dev(span, "class", "text-sm absolute -top-3 left-1/2 bg-white px-4 py-1");
-    			add_location(span, file$a, 64, 4, 1466);
-    			attr_dev(li, "class", "relative my-5");
-    			add_location(li, file$a, 62, 2, 1401);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, li, anchor);
-    			append_dev(li, hr);
-    			append_dev(li, t0);
-    			append_dev(li, span);
-    			append_dev(span, t1);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(li);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block$5.name,
-    		type: "if",
-    		source: "(62:0) {#if log.id === get(cachedLastId)}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function create_fragment$d(ctx) {
     	let li;
     	let div0;
     	let span0;
     	let t0_value = /*log*/ ctx[0].error_type + "";
     	let t0;
     	let t1;
-    	let show_if_2 = /*isJson*/ ctx[3](/*log*/ ctx[0].message);
+    	let show_if_2 = /*isJson*/ ctx[4](/*log*/ ctx[0].message);
     	let t2;
     	let span1;
     	let t3_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss") + "";
@@ -11597,17 +11350,17 @@ var app = (function () {
     	let t5;
     	let show_if = /*log*/ ctx[0].id === get_store_value(/*cachedLastId*/ ctx[1]);
     	let if_block2_anchor;
-    	let if_block0 = show_if_2 && create_if_block_2$1(ctx);
+    	let if_block0 = show_if_2 && create_if_block_3$1(ctx);
 
     	function select_block_type(ctx, dirty) {
-    		if (show_if_1 == null || dirty & /*log*/ 1) show_if_1 = !!/*isJson*/ ctx[3](/*log*/ ctx[0].message);
-    		if (show_if_1) return create_if_block_1$2;
+    		if (show_if_1 == null || dirty & /*log*/ 1) show_if_1 = !!/*isJson*/ ctx[4](/*log*/ ctx[0].message);
+    		if (show_if_1) return create_if_block_2$1;
     		return create_else_block$4;
     	}
 
     	let current_block_type = select_block_type(ctx, -1);
     	let if_block1 = current_block_type(ctx);
-    	let if_block2 = show_if && create_if_block$5(ctx);
+    	let if_block2 = show_if && create_if_block_1$2(ctx);
 
     	const block = {
     		c: function create() {
@@ -11658,15 +11411,15 @@ var app = (function () {
     		},
     		h: function hydrate() {
     			attr_dev(span0, "class", "mx-2");
-    			add_location(span0, file$a, 27, 4, 563);
+    			add_location(span0, file$a, 38, 6, 924);
     			attr_dev(div0, "class", "flex flex-wrap items-center lg:w-32");
-    			add_location(div0, file$a, 26, 2, 509);
+    			add_location(div0, file$a, 37, 4, 868);
     			attr_dev(span1, "class", "mx-2 text-xs lg:order-first");
-    			add_location(span1, file$a, 46, 2, 991);
+    			add_location(span1, file$a, 57, 4, 1386);
     			attr_dev(div1, "class", "w-full break-all items-start");
-    			add_location(div1, file$a, 50, 2, 1104);
-    			attr_dev(li, "class", li_class_value = "" + ((/*log*/ ctx[0].isHighlighted ? "text-red-800" : "") + "\n  text-sm mb-2\n  flex flex-wrap lg:flex-nowrap items-start justify-between shadow border border-gray-200 p-2\n  "));
-    			add_location(li, file$a, 20, 0, 337);
+    			add_location(div1, file$a, 61, 4, 1505);
+    			attr_dev(li, "class", li_class_value = "" + ((/*log*/ ctx[0].isHighlighted ? "text-red-800" : "") + "\n    text-sm mb-2\n    flex flex-wrap lg:flex-nowrap items-start justify-between shadow border border-gray-200 p-2\n    "));
+    			add_location(li, file$a, 31, 2, 684);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, li, anchor);
@@ -11685,15 +11438,15 @@ var app = (function () {
     			if (if_block2) if_block2.m(target, anchor);
     			insert_dev(target, if_block2_anchor, anchor);
     		},
-    		p: function update(ctx, [dirty]) {
+    		p: function update(ctx, dirty) {
     			if (dirty & /*log*/ 1 && t0_value !== (t0_value = /*log*/ ctx[0].error_type + "")) set_data_dev(t0, t0_value);
-    			if (dirty & /*log*/ 1) show_if_2 = /*isJson*/ ctx[3](/*log*/ ctx[0].message);
+    			if (dirty & /*log*/ 1) show_if_2 = /*isJson*/ ctx[4](/*log*/ ctx[0].message);
 
     			if (show_if_2) {
     				if (if_block0) {
     					if_block0.p(ctx, dirty);
     				} else {
-    					if_block0 = create_if_block_2$1(ctx);
+    					if_block0 = create_if_block_3$1(ctx);
     					if_block0.c();
     					if_block0.m(div0, null);
     				}
@@ -11716,7 +11469,7 @@ var app = (function () {
     				}
     			}
 
-    			if (dirty & /*log*/ 1 && li_class_value !== (li_class_value = "" + ((/*log*/ ctx[0].isHighlighted ? "text-red-800" : "") + "\n  text-sm mb-2\n  flex flex-wrap lg:flex-nowrap items-start justify-between shadow border border-gray-200 p-2\n  "))) {
+    			if (dirty & /*log*/ 1 && li_class_value !== (li_class_value = "" + ((/*log*/ ctx[0].isHighlighted ? "text-red-800" : "") + "\n    text-sm mb-2\n    flex flex-wrap lg:flex-nowrap items-start justify-between shadow border border-gray-200 p-2\n    "))) {
     				attr_dev(li, "class", li_class_value);
     			}
 
@@ -11724,7 +11477,7 @@ var app = (function () {
 
     			if (show_if) {
     				if (if_block2) ; else {
-    					if_block2 = create_if_block$5(ctx);
+    					if_block2 = create_if_block_1$2(ctx);
     					if_block2.c();
     					if_block2.m(if_block2_anchor.parentNode, if_block2_anchor);
     				}
@@ -11733,8 +11486,6 @@ var app = (function () {
     				if_block2 = null;
     			}
     		},
-    		i: noop,
-    		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(li);
     			if (if_block0) if_block0.d();
@@ -11742,6 +11493,284 @@ var app = (function () {
     			if (detaching) detach_dev(t5);
     			if (if_block2) if_block2.d(detaching);
     			if (detaching) detach_dev(if_block2_anchor);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$5.name,
+    		type: "if",
+    		source: "(30:0) {#if shouldShow(log, filter)}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (41:6) {#if isJson(log.message)}
+    function create_if_block_3$1(ctx) {
+    	let label;
+    	let input;
+    	let input_name_value;
+    	let input_id_value;
+    	let t;
+    	let label_for_value;
+    	let mounted;
+    	let dispose;
+
+    	const block = {
+    		c: function create() {
+    			label = element("label");
+    			input = element("input");
+    			t = text("\n          Prettify");
+    			this.h();
+    		},
+    		l: function claim(nodes) {
+    			label = claim_element(nodes, "LABEL", { for: true, class: true });
+    			var label_nodes = children(label);
+
+    			input = claim_element(label_nodes, "INPUT", {
+    				type: true,
+    				class: true,
+    				name: true,
+    				id: true
+    			});
+
+    			t = claim_text(label_nodes, "\n          Prettify");
+    			label_nodes.forEach(detach_dev);
+    			this.h();
+    		},
+    		h: function hydrate() {
+    			attr_dev(input, "type", "checkbox");
+    			attr_dev(input, "class", "cursor-pointer w-4 h-4");
+    			attr_dev(input, "name", input_name_value = "cv-" + /*log*/ ctx[0].id);
+    			attr_dev(input, "id", input_id_value = "cv-" + /*log*/ ctx[0].id);
+    			add_location(input, file$a, 45, 10, 1134);
+    			attr_dev(label, "for", label_for_value = "cv-" + /*log*/ ctx[0].id);
+    			attr_dev(label, "class", "cursor-pointer px-2 py-1 lg:ml-2 lg:mt-2 bg-gray-100");
+    			add_location(label, file$a, 41, 8, 1008);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, label, anchor);
+    			append_dev(label, input);
+    			input.checked = /*formatted*/ ctx[3];
+    			append_dev(label, t);
+
+    			if (!mounted) {
+    				dispose = listen_dev(input, "change", /*input_change_handler*/ ctx[6]);
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*log*/ 1 && input_name_value !== (input_name_value = "cv-" + /*log*/ ctx[0].id)) {
+    				attr_dev(input, "name", input_name_value);
+    			}
+
+    			if (dirty & /*log*/ 1 && input_id_value !== (input_id_value = "cv-" + /*log*/ ctx[0].id)) {
+    				attr_dev(input, "id", input_id_value);
+    			}
+
+    			if (dirty & /*formatted*/ 8) {
+    				input.checked = /*formatted*/ ctx[3];
+    			}
+
+    			if (dirty & /*log*/ 1 && label_for_value !== (label_for_value = "cv-" + /*log*/ ctx[0].id)) {
+    				attr_dev(label, "for", label_for_value);
+    			}
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(label);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_3$1.name,
+    		type: "if",
+    		source: "(41:6) {#if isJson(log.message)}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (67:6) {:else}
+    function create_else_block$4(ctx) {
+    	let t_value = /*log*/ ctx[0].message + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text(t_value);
+    		},
+    		l: function claim(nodes) {
+    			t = claim_text(nodes, t_value);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*log*/ 1 && t_value !== (t_value = /*log*/ ctx[0].message + "")) set_data_dev(t, t_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_else_block$4.name,
+    		type: "else",
+    		source: "(67:6) {:else}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (63:6) {#if isJson(log.message)}
+    function create_if_block_2$1(ctx) {
+    	let p;
+    	let raw_value = stringify(/*log*/ ctx[0].message, { formatted: /*formatted*/ ctx[3] }) + "";
+
+    	const block = {
+    		c: function create() {
+    			p = element("p");
+    			this.h();
+    		},
+    		l: function claim(nodes) {
+    			p = claim_element(nodes, "P", { class: true });
+    			var p_nodes = children(p);
+    			p_nodes.forEach(detach_dev);
+    			this.h();
+    		},
+    		h: function hydrate() {
+    			attr_dev(p, "class", "font-mono max-h-96 overflow-y-auto");
+    			add_location(p, file$a, 63, 8, 1588);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, p, anchor);
+    			p.innerHTML = raw_value;
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*log, formatted*/ 9 && raw_value !== (raw_value = stringify(/*log*/ ctx[0].message, { formatted: /*formatted*/ ctx[3] }) + "")) p.innerHTML = raw_value;		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(p);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_2$1.name,
+    		type: "if",
+    		source: "(63:6) {#if isJson(log.message)}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (73:2) {#if log.id === get(cachedLastId)}
+    function create_if_block_1$2(ctx) {
+    	let li;
+    	let hr;
+    	let t0;
+    	let span;
+    	let t1;
+
+    	const block = {
+    		c: function create() {
+    			li = element("li");
+    			hr = element("hr");
+    			t0 = space();
+    			span = element("span");
+    			t1 = text("NEW");
+    			this.h();
+    		},
+    		l: function claim(nodes) {
+    			li = claim_element(nodes, "LI", { class: true });
+    			var li_nodes = children(li);
+    			hr = claim_element(li_nodes, "HR", { class: true });
+    			t0 = claim_space(li_nodes);
+    			span = claim_element(li_nodes, "SPAN", { class: true });
+    			var span_nodes = children(span);
+    			t1 = claim_text(span_nodes, "NEW");
+    			span_nodes.forEach(detach_dev);
+    			li_nodes.forEach(detach_dev);
+    			this.h();
+    		},
+    		h: function hydrate() {
+    			attr_dev(hr, "class", "bg-red-700 h-1");
+    			add_location(hr, file$a, 74, 6, 1857);
+    			attr_dev(span, "class", "text-sm absolute -top-3 left-1/2 bg-white px-4 py-1");
+    			add_location(span, file$a, 75, 6, 1893);
+    			attr_dev(li, "class", "relative my-5");
+    			add_location(li, file$a, 73, 4, 1824);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, li, anchor);
+    			append_dev(li, hr);
+    			append_dev(li, t0);
+    			append_dev(li, span);
+    			append_dev(span, t1);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(li);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1$2.name,
+    		type: "if",
+    		source: "(73:2) {#if log.id === get(cachedLastId)}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$d(ctx) {
+    	let show_if = /*shouldShow*/ ctx[5](/*log*/ ctx[0], /*filter*/ ctx[2]);
+    	let if_block_anchor;
+    	let if_block = show_if && create_if_block$5(ctx);
+
+    	const block = {
+    		c: function create() {
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		l: function claim(nodes) {
+    			if (if_block) if_block.l(nodes);
+    			if_block_anchor = empty();
+    		},
+    		m: function mount(target, anchor) {
+    			if (if_block) if_block.m(target, anchor);
+    			insert_dev(target, if_block_anchor, anchor);
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (dirty & /*log, filter*/ 5) show_if = /*shouldShow*/ ctx[5](/*log*/ ctx[0], /*filter*/ ctx[2]);
+
+    			if (show_if) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+    				} else {
+    					if_block = create_if_block$5(ctx);
+    					if_block.c();
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				if_block.d(1);
+    				if_block = null;
+    			}
+    		},
+    		i: noop,
+    		o: noop,
+    		d: function destroy(detaching) {
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach_dev(if_block_anchor);
     		}
     	};
 
@@ -11766,10 +11795,18 @@ var app = (function () {
     		}
     	};
 
+    	const shouldShow = ({ error_type, message }, filter) => {
+    		const typeLower = log.error_type.toLowerCase();
+    		const messageLower = log.message.toLowerCase();
+    		const filterL = filter.toLowerCase();
+    		return typeLower.indexOf(filterL) > -1 || messageLower.indexOf(filterL) > -1;
+    	};
+
     	let { log } = $$props;
     	let { cachedLastId } = $$props;
+    	let { filter } = $$props;
     	let formatted = false;
-    	const writable_props = ["log", "cachedLastId"];
+    	const writable_props = ["log", "cachedLastId", "filter"];
 
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Item> was created with unknown prop '${key}'`);
@@ -11780,12 +11817,13 @@ var app = (function () {
 
     	function input_change_handler() {
     		formatted = this.checked;
-    		$$invalidate(2, formatted);
+    		$$invalidate(3, formatted);
     	}
 
     	$$self.$$set = $$props => {
     		if ("log" in $$props) $$invalidate(0, log = $$props.log);
     		if ("cachedLastId" in $$props) $$invalidate(1, cachedLastId = $$props.cachedLastId);
+    		if ("filter" in $$props) $$invalidate(2, filter = $$props.filter);
     	};
 
     	$$self.$capture_state = () => ({
@@ -11793,28 +11831,31 @@ var app = (function () {
     		format,
     		stringify,
     		isJson,
+    		shouldShow,
     		log,
     		cachedLastId,
+    		filter,
     		formatted
     	});
 
     	$$self.$inject_state = $$props => {
     		if ("log" in $$props) $$invalidate(0, log = $$props.log);
     		if ("cachedLastId" in $$props) $$invalidate(1, cachedLastId = $$props.cachedLastId);
-    		if ("formatted" in $$props) $$invalidate(2, formatted = $$props.formatted);
+    		if ("filter" in $$props) $$invalidate(2, filter = $$props.filter);
+    		if ("formatted" in $$props) $$invalidate(3, formatted = $$props.formatted);
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [log, cachedLastId, formatted, isJson, input_change_handler];
+    	return [log, cachedLastId, filter, formatted, isJson, shouldShow, input_change_handler];
     }
 
     class Item extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init$1(this, options, instance$d, create_fragment$d, safe_not_equal, { log: 0, cachedLastId: 1 });
+    		init$1(this, options, instance$d, create_fragment$d, safe_not_equal, { log: 0, cachedLastId: 1, filter: 2 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
@@ -11833,6 +11874,10 @@ var app = (function () {
     		if (/*cachedLastId*/ ctx[1] === undefined && !("cachedLastId" in props)) {
     			console.warn("<Item> was created without expected prop 'cachedLastId'");
     		}
+
+    		if (/*filter*/ ctx[2] === undefined && !("filter" in props)) {
+    			console.warn("<Item> was created without expected prop 'filter'");
+    		}
     	}
 
     	get log() {
@@ -11850,6 +11895,14 @@ var app = (function () {
     	set cachedLastId(value) {
     		throw new Error("<Item>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
     	}
+
+    	get filter() {
+    		throw new Error("<Item>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set filter(value) {
+    		throw new Error("<Item>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
     }
 
     var Item$1 = /*#__PURE__*/Object.freeze({
@@ -11862,17 +11915,21 @@ var app = (function () {
 
     function get_each_context$5(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[1] = list[i];
+    	child_ctx[3] = list[i];
     	return child_ctx;
     }
 
-    // (17:4) {#each $logs as log}
+    // (18:4) {#each $logs as log}
     function create_each_block$5(ctx) {
     	let item;
     	let current;
 
     	item = new Item({
-    			props: { log: /*log*/ ctx[1], cachedLastId },
+    			props: {
+    				log: /*log*/ ctx[3],
+    				cachedLastId,
+    				filter: /*filter*/ ctx[0]
+    			},
     			$$inline: true
     		});
 
@@ -11889,7 +11946,8 @@ var app = (function () {
     		},
     		p: function update(ctx, dirty) {
     			const item_changes = {};
-    			if (dirty & /*$logs*/ 1) item_changes.log = /*log*/ ctx[1];
+    			if (dirty & /*$logs*/ 2) item_changes.log = /*log*/ ctx[3];
+    			if (dirty & /*filter*/ 1) item_changes.filter = /*filter*/ ctx[0];
     			item.$set(item_changes);
     		},
     		i: function intro(local) {
@@ -11910,7 +11968,7 @@ var app = (function () {
     		block,
     		id: create_each_block$5.name,
     		type: "each",
-    		source: "(17:4) {#each $logs as log}",
+    		source: "(18:4) {#each $logs as log}",
     		ctx
     	});
 
@@ -11921,13 +11979,20 @@ var app = (function () {
     	let section;
     	let ul;
     	let t0;
-    	let p;
+    	let p1;
+    	let label;
+    	let p0;
     	let t1;
-    	let t2_value = POLLING_INTERVAL / 1000 + "";
     	let t2;
+    	let input;
     	let t3;
+    	let t4_value = POLLING_INTERVAL / 1000 + "";
+    	let t4;
+    	let t5;
     	let current;
-    	let each_value = /*$logs*/ ctx[0];
+    	let mounted;
+    	let dispose;
+    	let each_value = /*$logs*/ ctx[1];
     	validate_each_argument(each_value);
     	let each_blocks = [];
 
@@ -11949,10 +12014,15 @@ var app = (function () {
     			}
 
     			t0 = space();
-    			p = element("p");
-    			t1 = text("Polling for new logs every ");
-    			t2 = text(t2_value);
-    			t3 = text(" seconds.");
+    			p1 = element("p");
+    			label = element("label");
+    			p0 = element("p");
+    			t1 = text("Filter:");
+    			t2 = space();
+    			input = element("input");
+    			t3 = text("\n    Polling for new logs every ");
+    			t4 = text(t4_value);
+    			t5 = text(" seconds.");
     			this.h();
     		},
     		l: function claim(nodes) {
@@ -11967,21 +12037,39 @@ var app = (function () {
 
     			ul_nodes.forEach(detach_dev);
     			t0 = claim_space(section_nodes);
-    			p = claim_element(section_nodes, "P", { class: true });
-    			var p_nodes = children(p);
-    			t1 = claim_text(p_nodes, "Polling for new logs every ");
-    			t2 = claim_text(p_nodes, t2_value);
-    			t3 = claim_text(p_nodes, " seconds.");
-    			p_nodes.forEach(detach_dev);
+    			p1 = claim_element(section_nodes, "P", { class: true });
+    			var p1_nodes = children(p1);
+    			label = claim_element(p1_nodes, "LABEL", { for: true, class: true });
+    			var label_nodes = children(label);
+    			p0 = claim_element(label_nodes, "P", { class: true, title: true });
+    			var p0_nodes = children(p0);
+    			t1 = claim_text(p0_nodes, "Filter:");
+    			p0_nodes.forEach(detach_dev);
+    			t2 = claim_space(label_nodes);
+    			input = claim_element(label_nodes, "INPUT", { type: true, class: true });
+    			label_nodes.forEach(detach_dev);
+    			t3 = claim_text(p1_nodes, "\n    Polling for new logs every ");
+    			t4 = claim_text(p1_nodes, t4_value);
+    			t5 = claim_text(p1_nodes, " seconds.");
+    			p1_nodes.forEach(detach_dev);
     			section_nodes.forEach(detach_dev);
     			this.h();
     		},
     		h: function hydrate() {
-    			add_location(ul, file$9, 15, 2, 350);
-    			attr_dev(p, "class", "bg-yellow-100 font-light text-sm border-yellow-600 px-3 py-2 mt-4 flex");
-    			add_location(p, file$9, 21, 2, 439);
+    			add_location(ul, file$9, 16, 2, 362);
+    			attr_dev(p0, "class", "mr-2");
+    			attr_dev(p0, "title", "Filter by log type and message text");
+    			add_location(p0, file$9, 26, 6, 630);
+    			attr_dev(input, "type", "text");
+    			attr_dev(input, "class", "border outline-none border-gray-200 p-1");
+    			add_location(input, file$9, 27, 6, 708);
+    			attr_dev(label, "for", "");
+    			attr_dev(label, "class", "flex items-center");
+    			add_location(label, file$9, 25, 4, 583);
+    			attr_dev(p1, "class", "bg-yellow-100 font-light flex justify-between items-center text-sm border-yellow-600 px-3 py-2 mt-4");
+    			add_location(p1, file$9, 22, 2, 460);
     			attr_dev(section, "class", "xl:container");
-    			add_location(section, file$9, 14, 0, 317);
+    			add_location(section, file$9, 15, 0, 329);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, section, anchor);
@@ -11992,15 +12080,26 @@ var app = (function () {
     			}
 
     			append_dev(section, t0);
-    			append_dev(section, p);
-    			append_dev(p, t1);
-    			append_dev(p, t2);
-    			append_dev(p, t3);
+    			append_dev(section, p1);
+    			append_dev(p1, label);
+    			append_dev(label, p0);
+    			append_dev(p0, t1);
+    			append_dev(label, t2);
+    			append_dev(label, input);
+    			set_input_value(input, /*filter*/ ctx[0]);
+    			append_dev(p1, t3);
+    			append_dev(p1, t4);
+    			append_dev(p1, t5);
     			current = true;
+
+    			if (!mounted) {
+    				dispose = listen_dev(input, "input", /*input_input_handler*/ ctx[2]);
+    				mounted = true;
+    			}
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*$logs, cachedLastId*/ 1) {
-    				each_value = /*$logs*/ ctx[0];
+    			if (dirty & /*$logs, cachedLastId, filter*/ 3) {
+    				each_value = /*$logs*/ ctx[1];
     				validate_each_argument(each_value);
     				let i;
 
@@ -12026,6 +12125,10 @@ var app = (function () {
 
     				check_outros();
     			}
+
+    			if (dirty & /*filter*/ 1 && input.value !== /*filter*/ ctx[0]) {
+    				set_input_value(input, /*filter*/ ctx[0]);
+    			}
     		},
     		i: function intro(local) {
     			if (current) return;
@@ -12048,6 +12151,8 @@ var app = (function () {
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(section);
     			destroy_each(each_blocks, detaching);
+    			mounted = false;
+    			dispose();
     		}
     	};
 
@@ -12067,7 +12172,8 @@ var app = (function () {
     function instance$c($$self, $$props, $$invalidate) {
     	let $logs;
     	validate_store(logs, "logs");
-    	component_subscribe($$self, logs, $$value => $$invalidate(0, $logs = $$value));
+    	component_subscribe($$self, logs, $$value => $$invalidate(1, $logs = $$value));
+    	let filter = "";
 
     	onMount(async () => {
     		fetchLogs();
@@ -12083,6 +12189,11 @@ var app = (function () {
     	let { $$slots = {}, $$scope } = $$props;
     	validate_slots("Logs", $$slots, []);
 
+    	function input_input_handler() {
+    		filter = this.value;
+    		$$invalidate(0, filter);
+    	}
+
     	$$self.$capture_state = () => ({
     		onMount,
     		fetchLogs,
@@ -12090,10 +12201,19 @@ var app = (function () {
     		cachedLastId,
     		Item,
     		POLLING_INTERVAL,
+    		filter,
     		$logs
     	});
 
-    	return [$logs];
+    	$$self.$inject_state = $$props => {
+    		if ("filter" in $$props) $$invalidate(0, filter = $$props.filter);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [filter, $logs, input_input_handler];
     }
 
     class Logs extends SvelteComponentDev {
