@@ -1,6 +1,5 @@
 <script>
   import { slide } from "svelte/transition";
-  import { notifier } from "@beyonk/svelte-notifications";
 
   import NewModelInputField from "@/_components/NewModelInputField.svelte";
   import api from "@/lib/api";
@@ -19,7 +18,6 @@
     api.createModel(schemaName, newProps).then(data => {
       if (data) {
         modelsStore.refreshModels(schemaId);
-        data && notifier.success("Model created.");
         showNewForm = false;
       }
     });

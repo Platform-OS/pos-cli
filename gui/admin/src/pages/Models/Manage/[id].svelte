@@ -1,10 +1,7 @@
 <script>
-  import { onMount, setContext, getContext } from "svelte";
-  import { ready, url, params } from "@sveltech/routify";
-  import { slide, fade } from "svelte/transition";
-
-  import { notifier } from "@beyonk/svelte-notifications";
-  let timeout = 5000;
+  import { onMount } from "svelte";
+  import { params } from "@sveltech/routify";
+  import { slide } from "svelte/transition";
 
   import getTime from "@/lib/getTime";
   import api from "@/lib/api";
@@ -49,7 +46,6 @@
 
     api.deleteModel(id).then(data => {
       modelsStore.refreshModels(schemaId);
-      data && notifier.success("Model deleted.");
     });
   };
 
@@ -64,14 +60,12 @@
 
   const handleUpdateModel = ({ id }) => {
     api.updateModel({ id, props: formCache[id] }).then(data => {
-      data && notifier.success("Model updated.");
     });
   };
 
   const handleUndelete = id => {
     api.undeleteModel(id).then(data => {
       modelsStore.refreshModels(schemaId);
-      data && notifier.success("Model restored.");
     })
   };
 </script>

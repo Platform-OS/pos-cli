@@ -30,7 +30,7 @@ const getPropertiesFilter = (f) => {
   return filterString;
 };
 
-const graph = (body) => {
+const graph = (body, successMessage = "Success") => {
   return fetch('/api/graph', {
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
@@ -41,10 +41,14 @@ const graph = (body) => {
       if (res.errors) {
         const err = res.errors[0].message;
         return notifier.danger(`Error: ${err}`, 5000);
+      } else {
+        if (successMessage !== false) {
+          notifier.success(successMessage);
+        }
       }
 
       return res && res.data;
-    });
+    })
 };
 
 export default {
@@ -67,7 +71,7 @@ export default {
       }
     }`;
 
-    return graph({ query }).then((data) => data.admin_model_schemas.results);
+    return graph({ query }, false).then((data) => data.admin_model_schemas.results);
   },
   getModels({ schemaId, id, page = 1, deleted = false }) {
     const f = get(filtersStore);
@@ -102,7 +106,7 @@ export default {
       }
     }`;
 
-    return graph({ query }).then((data) => {
+    return graph({ query }, false).then((data) => {
       if (data && data.models) {
         pageStore.setPaginationData({ total_pages: data.models.total_pages });
       }
@@ -187,9 +191,36 @@ export default {
       }
     }`;
 
-    return graph({ query });
+    return graph({ query }, false);
   },
   getLogs() {
     return fetch('/api/logs').then(res => res.json());
+  },
+  getConstants() {
+    const query = `query getConstants {
+      constants {
+        results { name, value }
+      }
+    }`;
+
+    return graph({ query }, false);
+  },
+  setConstant(name, value) {
+    const query = `mutation {
+      constant_set(name: "${name}", value: "${value}") {
+        name, value
+      }
+    }`;
+
+    return graph({ query }, "Constant updated");
+  },
+  unsetConstant(name) {
+    const query = `mutation {
+      constant_unset(name: "${name}") {
+        name
+      }
+    }`;
+
+    return graph({ query }, "Constant unset");
   }
 };

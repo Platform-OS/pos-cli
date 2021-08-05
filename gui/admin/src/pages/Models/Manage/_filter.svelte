@@ -1,12 +1,8 @@
 <script>
   import { slide } from "svelte/transition";
-  import { notifier } from "@beyonk/svelte-notifications";
 
   import filtersStore from "./_filters-store";
   import modelsStore from "./_models-store";
-
-	import { createEventDispatcher } from 'svelte';
-  const dispatch = createEventDispatcher();
 
   export let props;
   export let schemaId;
@@ -22,7 +18,6 @@
 
     filtersStore.set(filters);
     modelsStore.refreshModels(schemaId);
-    notifier.info("Refreshing models...");
   }
 
   const getPropType = (props, name) => {
