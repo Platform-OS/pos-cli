@@ -3,63 +3,49 @@
   import fetchConstants from "./fetchConstants";
 
   export let item;
-  export let newItem;
   let valueEl;
   let nameEl;
 
   const updateConstant = () => {
-    const newName = newItem ? nameEl.value : item.name;
+    const name = item.name;
+    const value = valueEl.value;
 
-    api.setConstant(newName, valueEl.value).then(() => {
-      fetchConstants();
-
-      if (newItem) {
-        valueEl.value = "";
-        nameEl.value = "";
-      }
-    });
+    api.setConstant(name, value).then(fetchConstants); // sorry, no sorry :)
   };
 
   const deleteConstant = () => {
-    api.unsetConstant(nameEl.textContent.trim()).then(() => {
-      fetchConstants();
-    });
+    const name = nameEl.textContent.trim();
+
+    api.unsetConstant(name).then(fetchConstants); // sorry, no sorry :)
   };
 </script>
 
-<li class="flex items-center mb-2 p-2 bg-gray-100">
-  {#if newItem}
-    <input
-      class="min-w-48 p-1 bg-white text-gray-600"
-      type="text"
-      value=""
-      required
-      placeholder="Name"
-      bind:this={nameEl}
-    />
-  {:else}
-    <span class="min-w-48" bind:this={nameEl}>{item.name}</span>
-  {/if}
-
-  <input
-    class="w-full mx-4 p-1 bg-white text-gray-600"
-    type="text"
-    value={item.value}
-    required
-    placeholder="Value"
-    bind:this={valueEl}
-  />
-
-  <button
-    on:click={updateConstant}
-    class="rounded p-1 border border-gray-300 mx-4 w-36"
-    >{newItem ? "Add new" : "Update"}</button
+<li class="rounded mb-4 px-4 py-2 bg-gray-100">
+  <form
+    action=""
+    class="flex flex-wrap justify-between w-full"
+    on:submit|preventDefault={updateConstant}
   >
+    <label for="val" class="font-semibold cursor-pointer" bind:this={nameEl}>{item.name}</label>
 
-  {#if !newItem}
     <button
+      type="button"
       on:click={deleteConstant}
-      class="rounded p-1 border border-gray-300 ml-auto">Delete</button
+      class="rounded px-2 py-1 text-sm border border-gray-300 mb-2">Delete</button
     >
-  {/if}
+
+    <input
+      class="rounded w-full px-2 py-1 mb-2 bg-white text-gray-600"
+      type="text"
+      id="val"
+      value={item.value}
+      required
+      placeholder="Value"
+      bind:this={valueEl}
+    />
+
+    <button
+      class="rounded py-1 px-2 bg-green-800 text-white">Save</button
+    >
+  </form>
 </li>

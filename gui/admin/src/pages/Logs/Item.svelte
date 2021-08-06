@@ -36,7 +36,7 @@
     "
   >
     <div class="flex flex-wrap items-center lg:w-32">
-      <span class="mx-2">{log.error_type}</span>
+      <span class="mx-2 break-all">{log.error_type}</span>
 
       {#if isJson(log.message)}
         <label

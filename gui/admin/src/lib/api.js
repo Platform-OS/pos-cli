@@ -199,7 +199,7 @@ export default {
   getConstants() {
     const query = `query getConstants {
       constants {
-        results { name, value }
+        results { name, value, updated_at }
       }
     }`;
 
