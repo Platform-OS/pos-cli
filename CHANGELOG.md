@@ -2,7 +2,7 @@
 
 ## 4.5.11
 * Add filtering of logs in `pos-cli gui serve`
-* Add constants editor in `pos-cli gui serve`
+* Add constants editor to `pos-cli gui serve` at `http://localhost:3333/Constants`
 
 ## 4.5.10
 * Improve `pos-cli gui serve` logs behavior, layout, add pretty print
