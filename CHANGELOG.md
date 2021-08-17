@@ -1,5 +1,12 @@
 # Changelog
 
+
+## 4.5.12
+#### `pos-cli gui serve` logs improvements
+* Make filtering more prononunced
+* Highlight search phrase
+* Make Prettified text full height
+
 ## 4.5.11
 * Add filtering of logs in `pos-cli gui serve`
 * Add constants editor to `pos-cli gui serve` at `http://localhost:3333/Constants`
