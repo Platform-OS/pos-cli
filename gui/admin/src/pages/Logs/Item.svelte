@@ -2,6 +2,7 @@
   import { get } from "svelte/store";
   import { format } from "date-fns";
   import stringify from "./stringify";
+  import highlight from "./highlight";
 
   const isJson = (msg) => {
     try {
@@ -55,17 +56,17 @@
       {/if}
     </div>
 
-    <span class="mx-2 text-xs lg:order-first"
+    <span class="mx-4 text-xs lg:order-first"
       >{format(new Date(log.updated_at), "dd/MM hh:mm:ss")}</span
     >
 
     <div class="w-full break-all items-start">
       {#if isJson(log.message)}
-        <p class="font-mono max-h-96 overflow-y-auto">
+        <p class="font-mono { formatted ? '' : 'max-h-96' } overflow-y-auto">
           {@html stringify(log.message, { formatted: formatted })}
         </p>
       {:else}
-        {log.message}
+        {@html highlight(log.message, filter)}
       {/if}
     </div>
   </li>
