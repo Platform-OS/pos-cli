@@ -1,6 +1,6 @@
 <script>
   import { get } from "svelte/store";
-  import { format } from "date-fns";
+  import { format, formatRelative } from "date-fns";
   import stringify from "./stringify";
   import highlight from "./highlight";
 
@@ -36,7 +36,7 @@
     flex flex-wrap lg:flex-nowrap items-start justify-between shadow border border-gray-200 p-2
     "
   >
-    <div class="flex flex-wrap items-center lg:w-32">
+    <div class="flex flex-wrap items-center lg:w-48">
       <span class="mx-2 break-all">{log.error_type}</span>
 
       {#if isJson(log.message)}
@@ -56,13 +56,19 @@
       {/if}
     </div>
 
-    <span class="mx-4 text-xs lg:order-first"
-      >{format(new Date(log.updated_at), "dd/MM hh:mm:ss")}</span
-    >
+    <span class="mx-2 text-xs lg:order-first lg:hidden"
+      title="{format(new Date(log.updated_at), "dd/MM hh:mm:ss")}">
+      {formatRelative(new Date(log.updated_at), new Date())}
+    </span>
 
-    <div class="w-full break-all items-start">
+    <span class="mx-2 text-xs lg:order-first lg:inline-flex hidden"
+      >{format(new Date(log.updated_at), "dd/MM hh:mm:ss")}
+    </span>
+
+
+    <div class="w-full break-all items-start pl-2 mt-1">
       {#if isJson(log.message)}
-        <p class="font-mono { formatted ? '' : 'max-h-96' } overflow-y-auto">
+        <p class="font-mono overflow-x-auto { formatted ? '' : 'max-h-96' }">
           {@html stringify(log.message, { formatted: formatted })}
         </p>
       {:else}

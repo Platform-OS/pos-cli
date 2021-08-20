@@ -1,5 +1,5 @@
 
-(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(window.document);
+(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35730/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(window.document);
 var app = (function () {
     'use strict';
 
@@ -8017,6 +8017,84 @@ var app = (function () {
     }
 
     /**
+     * @name startOfDay
+     * @category Day Helpers
+     * @summary Return the start of a day for the given date.
+     *
+     * @description
+     * Return the start of a day for the given date.
+     * The result will be in the local timezone.
+     *
+     * ### v2.0.0 breaking changes:
+     *
+     * - [Changes that are common for the whole library](https://github.com/date-fns/date-fns/blob/master/docs/upgradeGuide.md#Common-Changes).
+     *
+     * @param {Date|Number} date - the original date
+     * @returns {Date} the start of a day
+     * @throws {TypeError} 1 argument required
+     *
+     * @example
+     * // The start of a day for 2 September 2014 11:55:00:
+     * var result = startOfDay(new Date(2014, 8, 2, 11, 55, 0))
+     * //=> Tue Sep 02 2014 00:00:00
+     */
+
+    function startOfDay(dirtyDate) {
+      requiredArgs(1, arguments);
+      var date = toDate(dirtyDate);
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+
+    var MILLISECONDS_IN_DAY$1 = 86400000;
+    /**
+     * @name differenceInCalendarDays
+     * @category Day Helpers
+     * @summary Get the number of calendar days between the given dates.
+     *
+     * @description
+     * Get the number of calendar days between the given dates. This means that the times are removed
+     * from the dates and then the difference in days is calculated.
+     *
+     * ### v2.0.0 breaking changes:
+     *
+     * - [Changes that are common for the whole library](https://github.com/date-fns/date-fns/blob/master/docs/upgradeGuide.md#Common-Changes).
+     *
+     * @param {Date|Number} dateLeft - the later date
+     * @param {Date|Number} dateRight - the earlier date
+     * @returns {Number} the number of calendar days
+     * @throws {TypeError} 2 arguments required
+     *
+     * @example
+     * // How many calendar days are between
+     * // 2 July 2011 23:00:00 and 2 July 2012 00:00:00?
+     * var result = differenceInCalendarDays(
+     *   new Date(2012, 6, 2, 0, 0),
+     *   new Date(2011, 6, 2, 23, 0)
+     * )
+     * //=> 366
+     * // How many calendar days are between
+     * // 2 July 2011 23:59:00 and 3 July 2011 00:01:00?
+     * var result = differenceInCalendarDays(
+     *   new Date(2011, 6, 3, 0, 1),
+     *   new Date(2011, 6, 2, 23, 59)
+     * )
+     * //=> 1
+     */
+
+    function differenceInCalendarDays(dirtyDateLeft, dirtyDateRight) {
+      requiredArgs(2, arguments);
+      var startOfDayLeft = startOfDay(dirtyDateLeft);
+      var startOfDayRight = startOfDay(dirtyDateRight);
+      var timestampLeft = startOfDayLeft.getTime() - getTimezoneOffsetInMilliseconds(startOfDayLeft);
+      var timestampRight = startOfDayRight.getTime() - getTimezoneOffsetInMilliseconds(startOfDayRight); // Round the number of days to the nearest integer
+      // because the number of milliseconds in a day is not constant
+      // (e.g. it's different in the day of the daylight saving time clock shift)
+
+      return Math.round((timestampLeft - timestampRight) / MILLISECONDS_IN_DAY$1);
+    }
+
+    /**
      * @name isValid
      * @category Common Helpers
      * @summary Is the given date valid?
@@ -8216,7 +8294,7 @@ var app = (function () {
       nextWeek: "eeee 'at' p",
       other: 'P'
     };
-    function formatRelative(token, _date, _baseDate, _options) {
+    function formatRelative$1(token, _date, _baseDate, _options) {
       return formatRelativeLocale[token];
     }
 
@@ -8578,7 +8656,7 @@ var app = (function () {
       code: 'en-US',
       formatDistance: formatDistance,
       formatLong: formatLong,
-      formatRelative: formatRelative,
+      formatRelative: formatRelative$1,
       localize: localize,
       match: match,
       options: {
@@ -10256,6 +10334,91 @@ var app = (function () {
 
     function cleanEscapedString(input) {
       return input.match(escapedStringRegExp)[1].replace(doubleQuoteRegExp, "'");
+    }
+
+    /**
+     * @name formatRelative
+     * @category Common Helpers
+     * @summary Represent the date in words relative to the given base date.
+     *
+     * @description
+     * Represent the date in words relative to the given base date.
+     *
+     * | Distance to the base date | Result                    |
+     * |---------------------------|---------------------------|
+     * | Previous 6 days           | last Sunday at 04:30 AM   |
+     * | Last day                  | yesterday at 04:30 AM     |
+     * | Same day                  | today at 04:30 AM         |
+     * | Next day                  | tomorrow at 04:30 AM      |
+     * | Next 6 days               | Sunday at 04:30 AM        |
+     * | Other                     | 12/31/2017                |
+     *
+     * ### v2.0.0 breaking changes:
+     *
+     * - [Changes that are common for the whole library](https://github.com/date-fns/date-fns/blob/master/docs/upgradeGuide.md#Common-Changes).
+     *
+     * @param {Date|Number} date - the date to format
+     * @param {Date|Number} baseDate - the date to compare with
+     * @param {Object} [options] - an object with options.
+     * @param {Locale} [options.locale=defaultLocale] - the locale object. See [Locale]{@link https://date-fns.org/docs/Locale}
+     * @param {0|1|2|3|4|5|6} [options.weekStartsOn=0] - the index of the first day of the week (0 - Sunday)
+     * @returns {String} the date in words
+     * @throws {TypeError} 2 arguments required
+     * @throws {RangeError} `date` must not be Invalid Date
+     * @throws {RangeError} `baseDate` must not be Invalid Date
+     * @throws {RangeError} `options.weekStartsOn` must be between 0 and 6
+     * @throws {RangeError} `options.locale` must contain `localize` property
+     * @throws {RangeError} `options.locale` must contain `formatLong` property
+     * @throws {RangeError} `options.locale` must contain `formatRelative` property
+     */
+
+    function formatRelative(dirtyDate, dirtyBaseDate, dirtyOptions) {
+      requiredArgs(2, arguments);
+      var date = toDate(dirtyDate);
+      var baseDate = toDate(dirtyBaseDate);
+      var options = dirtyOptions || {};
+      var locale$1 = options.locale || locale;
+
+      if (!locale$1.localize) {
+        throw new RangeError('locale must contain localize property');
+      }
+
+      if (!locale$1.formatLong) {
+        throw new RangeError('locale must contain formatLong property');
+      }
+
+      if (!locale$1.formatRelative) {
+        throw new RangeError('locale must contain formatRelative property');
+      }
+
+      var diff = differenceInCalendarDays(date, baseDate);
+
+      if (isNaN(diff)) {
+        throw new RangeError('Invalid time value');
+      }
+
+      var token;
+
+      if (diff < -6) {
+        token = 'other';
+      } else if (diff < -1) {
+        token = 'lastWeek';
+      } else if (diff < 0) {
+        token = 'yesterday';
+      } else if (diff < 1) {
+        token = 'today';
+      } else if (diff < 2) {
+        token = 'tomorrow';
+      } else if (diff < 7) {
+        token = 'nextWeek';
+      } else {
+        token = 'other';
+      }
+
+      var utcDate = subMilliseconds(date, getTimezoneOffsetInMilliseconds(date));
+      var utcBaseDate = subMilliseconds(baseDate, getTimezoneOffsetInMilliseconds(baseDate));
+      var formatStr = locale$1.formatRelative(token, utcDate, utcBaseDate, options);
+      return format(date, formatStr, options);
     }
 
     var deepFreezeEs6 = {exports: {}};
@@ -12849,13 +13012,18 @@ var app = (function () {
     	let show_if_2 = /*isJson*/ ctx[4](/*log*/ ctx[0].message);
     	let t2;
     	let span1;
-    	let t3_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss") + "";
+    	let t3_value = formatRelative(new Date(/*log*/ ctx[0].updated_at), new Date()) + "";
     	let t3;
+    	let span1_title_value;
     	let t4;
+    	let span2;
+    	let t5_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss") + "";
+    	let t5;
+    	let t6;
     	let div1;
     	let show_if_1;
     	let li_class_value;
-    	let t5;
+    	let t7;
     	let show_if = /*log*/ ctx[0].id === get_store_value(/*cachedLastId*/ ctx[1]);
     	let if_block2_anchor;
     	let if_block0 = show_if_2 && create_if_block_3$1(ctx);
@@ -12882,9 +13050,12 @@ var app = (function () {
     			span1 = element("span");
     			t3 = text(t3_value);
     			t4 = space();
+    			span2 = element("span");
+    			t5 = text(t5_value);
+    			t6 = space();
     			div1 = element("div");
     			if_block1.c();
-    			t5 = space();
+    			t7 = space();
     			if (if_block2) if_block2.c();
     			if_block2_anchor = empty();
     			this.h();
@@ -12902,32 +13073,40 @@ var app = (function () {
     			if (if_block0) if_block0.l(div0_nodes);
     			div0_nodes.forEach(detach_dev);
     			t2 = claim_space(li_nodes);
-    			span1 = claim_element(li_nodes, "SPAN", { class: true });
+    			span1 = claim_element(li_nodes, "SPAN", { class: true, title: true });
     			var span1_nodes = children(span1);
     			t3 = claim_text(span1_nodes, t3_value);
     			span1_nodes.forEach(detach_dev);
     			t4 = claim_space(li_nodes);
+    			span2 = claim_element(li_nodes, "SPAN", { class: true });
+    			var span2_nodes = children(span2);
+    			t5 = claim_text(span2_nodes, t5_value);
+    			span2_nodes.forEach(detach_dev);
+    			t6 = claim_space(li_nodes);
     			div1 = claim_element(li_nodes, "DIV", { class: true });
     			var div1_nodes = children(div1);
     			if_block1.l(div1_nodes);
     			div1_nodes.forEach(detach_dev);
     			li_nodes.forEach(detach_dev);
-    			t5 = claim_space(nodes);
+    			t7 = claim_space(nodes);
     			if (if_block2) if_block2.l(nodes);
     			if_block2_anchor = empty();
     			this.h();
     		},
     		h: function hydrate() {
     			attr_dev(span0, "class", "mx-2 break-all");
-    			add_location(span0, file$a, 39, 6, 963);
-    			attr_dev(div0, "class", "flex flex-wrap items-center lg:w-32");
-    			add_location(div0, file$a, 38, 4, 907);
-    			attr_dev(span1, "class", "mx-4 text-xs lg:order-first");
-    			add_location(span1, file$a, 58, 4, 1435);
-    			attr_dev(div1, "class", "w-full break-all items-start");
-    			add_location(div1, file$a, 62, 4, 1554);
+    			add_location(span0, file$a, 39, 6, 979);
+    			attr_dev(div0, "class", "flex flex-wrap items-center lg:w-48");
+    			add_location(div0, file$a, 38, 4, 923);
+    			attr_dev(span1, "class", "mx-2 text-xs lg:order-first lg:hidden");
+    			attr_dev(span1, "title", span1_title_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss"));
+    			add_location(span1, file$a, 58, 4, 1451);
+    			attr_dev(span2, "class", "mx-2 text-xs lg:order-first lg:inline-flex hidden");
+    			add_location(span2, file$a, 63, 4, 1649);
+    			attr_dev(div1, "class", "w-full break-all items-start pl-2 mt-1");
+    			add_location(div1, file$a, 68, 4, 1791);
     			attr_dev(li, "class", li_class_value = "" + ((/*log*/ ctx[0].isHighlighted ? "text-red-800" : "") + "\n    text-sm mb-2\n    flex flex-wrap lg:flex-nowrap items-start justify-between shadow border border-gray-200 p-2\n    "));
-    			add_location(li, file$a, 32, 2, 723);
+    			add_location(li, file$a, 32, 2, 739);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, li, anchor);
@@ -12940,9 +13119,12 @@ var app = (function () {
     			append_dev(li, span1);
     			append_dev(span1, t3);
     			append_dev(li, t4);
+    			append_dev(li, span2);
+    			append_dev(span2, t5);
+    			append_dev(li, t6);
     			append_dev(li, div1);
     			if_block1.m(div1, null);
-    			insert_dev(target, t5, anchor);
+    			insert_dev(target, t7, anchor);
     			if (if_block2) if_block2.m(target, anchor);
     			insert_dev(target, if_block2_anchor, anchor);
     		},
@@ -12963,7 +13145,13 @@ var app = (function () {
     				if_block0 = null;
     			}
 
-    			if (dirty & /*log*/ 1 && t3_value !== (t3_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss") + "")) set_data_dev(t3, t3_value);
+    			if (dirty & /*log*/ 1 && t3_value !== (t3_value = formatRelative(new Date(/*log*/ ctx[0].updated_at), new Date()) + "")) set_data_dev(t3, t3_value);
+
+    			if (dirty & /*log*/ 1 && span1_title_value !== (span1_title_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss"))) {
+    				attr_dev(span1, "title", span1_title_value);
+    			}
+
+    			if (dirty & /*log*/ 1 && t5_value !== (t5_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss") + "")) set_data_dev(t5, t5_value);
 
     			if (current_block_type === (current_block_type = select_block_type(ctx, dirty)) && if_block1) {
     				if_block1.p(ctx, dirty);
@@ -12998,7 +13186,7 @@ var app = (function () {
     			if (detaching) detach_dev(li);
     			if (if_block0) if_block0.d();
     			if_block1.d();
-    			if (detaching) detach_dev(t5);
+    			if (detaching) detach_dev(t7);
     			if (if_block2) if_block2.d(detaching);
     			if (detaching) detach_dev(if_block2_anchor);
     		}
@@ -13053,10 +13241,10 @@ var app = (function () {
     			attr_dev(input, "class", "cursor-pointer w-4 h-4");
     			attr_dev(input, "name", input_name_value = "cv-" + /*log*/ ctx[0].id);
     			attr_dev(input, "id", input_id_value = "cv-" + /*log*/ ctx[0].id);
-    			add_location(input, file$a, 46, 10, 1183);
+    			add_location(input, file$a, 46, 10, 1199);
     			attr_dev(label, "for", label_for_value = "cv-" + /*log*/ ctx[0].id);
     			attr_dev(label, "class", "cursor-pointer px-2 py-1 lg:ml-2 lg:mt-2 bg-gray-100");
-    			add_location(label, file$a, 42, 8, 1057);
+    			add_location(label, file$a, 42, 8, 1073);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, label, anchor);
@@ -13104,7 +13292,7 @@ var app = (function () {
     	return block;
     }
 
-    // (68:6) {:else}
+    // (74:6) {:else}
     function create_else_block$4(ctx) {
     	let html_tag;
     	let raw_value = highlight(/*log*/ ctx[0].message, /*filter*/ ctx[2]) + "";
@@ -13139,14 +13327,14 @@ var app = (function () {
     		block,
     		id: create_else_block$4.name,
     		type: "else",
-    		source: "(68:6) {:else}",
+    		source: "(74:6) {:else}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (64:6) {#if isJson(log.message)}
+    // (70:6) {#if isJson(log.message)}
     function create_if_block_2$1(ctx) {
     	let p;
     	let raw_value = stringify(/*log*/ ctx[0].message, { formatted: /*formatted*/ ctx[3] }) + "";
@@ -13164,8 +13352,8 @@ var app = (function () {
     			this.h();
     		},
     		h: function hydrate() {
-    			attr_dev(p, "class", p_class_value = "font-mono " + (/*formatted*/ ctx[3] ? "" : "max-h-96") + " overflow-y-auto");
-    			add_location(p, file$a, 64, 8, 1637);
+    			attr_dev(p, "class", p_class_value = "font-mono overflow-x-auto " + (/*formatted*/ ctx[3] ? "" : "max-h-96"));
+    			add_location(p, file$a, 70, 8, 1884);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -13173,7 +13361,7 @@ var app = (function () {
     		},
     		p: function update(ctx, dirty) {
     			if (dirty & /*log, formatted*/ 9 && raw_value !== (raw_value = stringify(/*log*/ ctx[0].message, { formatted: /*formatted*/ ctx[3] }) + "")) p.innerHTML = raw_value;
-    			if (dirty & /*formatted*/ 8 && p_class_value !== (p_class_value = "font-mono " + (/*formatted*/ ctx[3] ? "" : "max-h-96") + " overflow-y-auto")) {
+    			if (dirty & /*formatted*/ 8 && p_class_value !== (p_class_value = "font-mono overflow-x-auto " + (/*formatted*/ ctx[3] ? "" : "max-h-96"))) {
     				attr_dev(p, "class", p_class_value);
     			}
     		},
@@ -13186,14 +13374,14 @@ var app = (function () {
     		block,
     		id: create_if_block_2$1.name,
     		type: "if",
-    		source: "(64:6) {#if isJson(log.message)}",
+    		source: "(70:6) {#if isJson(log.message)}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (74:2) {#if log.id === get(cachedLastId)}
+    // (80:2) {#if log.id === get(cachedLastId)}
     function create_if_block_1$2(ctx) {
     	let li;
     	let hr;
@@ -13224,11 +13412,11 @@ var app = (function () {
     		},
     		h: function hydrate() {
     			attr_dev(hr, "class", "bg-red-700 h-1");
-    			add_location(hr, file$a, 75, 6, 1954);
+    			add_location(hr, file$a, 81, 6, 2201);
     			attr_dev(span, "class", "text-sm absolute -top-3 left-1/2 bg-white px-4 py-1");
-    			add_location(span, file$a, 76, 6, 1990);
+    			add_location(span, file$a, 82, 6, 2237);
     			attr_dev(li, "class", "relative my-5");
-    			add_location(li, file$a, 74, 4, 1921);
+    			add_location(li, file$a, 80, 4, 2168);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, li, anchor);
@@ -13246,7 +13434,7 @@ var app = (function () {
     		block,
     		id: create_if_block_1$2.name,
     		type: "if",
-    		source: "(74:2) {#if log.id === get(cachedLastId)}",
+    		source: "(80:2) {#if log.id === get(cachedLastId)}",
     		ctx
     	});
 
@@ -13350,6 +13538,7 @@ var app = (function () {
     	$$self.$capture_state = () => ({
     		get: get_store_value,
     		format,
+    		formatRelative,
     		stringify,
     		highlight,
     		isJson,
