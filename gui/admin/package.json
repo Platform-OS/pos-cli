@@ -42,5 +42,6 @@
   },
   "dependencies": {
     "date-fns": "^2.16.1",
-    "highlight.js": "^11.1.0"  }
+    "highlight.js": "^11.1.0"
+  }
 }
