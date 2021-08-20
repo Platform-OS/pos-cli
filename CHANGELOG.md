@@ -1,5 +1,7 @@
 # Changelog
 
+## 4.5.13
+* Change absolute datetime to relative in `pos-cli gui serve` logs
 
 ## 4.5.12
 

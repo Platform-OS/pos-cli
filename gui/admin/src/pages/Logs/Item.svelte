@@ -1,6 +1,6 @@
 <script>
   import { get } from "svelte/store";
-  import { format } from "date-fns";
+  import { format, formatRelative, subDays } from "date-fns";
   import stringify from "./stringify";
   import highlight from "./highlight";
 
@@ -56,8 +56,9 @@
       {/if}
     </div>
 
-    <span class="mx-4 text-xs lg:order-first"
-      >{format(new Date(log.updated_at), "dd/MM hh:mm:ss")}</span
+    <span class="mx-4 text-xs lg:order-first whitespace-nowrap"
+      title="{format(new Date(log.updated_at), "dd/MM hh:mm:ss")}"
+      >{formatRelative(new Date(log.updated_at), new Date())}</span
     >
 
     <div class="w-full break-all items-start">

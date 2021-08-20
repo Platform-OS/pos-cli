@@ -7960,6 +7960,47 @@ var app = (function () {
     }
 
     /**
+     * @name addDays
+     * @category Day Helpers
+     * @summary Add the specified number of days to the given date.
+     *
+     * @description
+     * Add the specified number of days to the given date.
+     *
+     * ### v2.0.0 breaking changes:
+     *
+     * - [Changes that are common for the whole library](https://github.com/date-fns/date-fns/blob/master/docs/upgradeGuide.md#Common-Changes).
+     *
+     * @param {Date|Number} date - the date to be changed
+     * @param {Number} amount - the amount of days to be added. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+     * @returns {Date} the new date with the days added
+     * @throws {TypeError} 2 arguments required
+     *
+     * @example
+     * // Add 10 days to 1 September 2014:
+     * var result = addDays(new Date(2014, 8, 1), 10)
+     * //=> Thu Sep 11 2014 00:00:00
+     */
+
+    function addDays(dirtyDate, dirtyAmount) {
+      requiredArgs(2, arguments);
+      var date = toDate(dirtyDate);
+      var amount = toInteger(dirtyAmount);
+
+      if (isNaN(amount)) {
+        return new Date(NaN);
+      }
+
+      if (!amount) {
+        // If 0 days, no-op to avoid changing times in the hour before end of DST
+        return date;
+      }
+
+      date.setDate(date.getDate() + amount);
+      return date;
+    }
+
+    /**
      * @name addMilliseconds
      * @category Millisecond Helpers
      * @summary Add the specified number of milliseconds to the given date.
@@ -8014,6 +8055,84 @@ var app = (function () {
       var hasNegativeUTCOffset = baseTimezoneOffset > 0;
       var millisecondsPartOfTimezoneOffset = hasNegativeUTCOffset ? (MILLISECONDS_IN_MINUTE + getDateMillisecondsPart(date)) % MILLISECONDS_IN_MINUTE : getDateMillisecondsPart(date);
       return baseTimezoneOffset * MILLISECONDS_IN_MINUTE + millisecondsPartOfTimezoneOffset;
+    }
+
+    /**
+     * @name startOfDay
+     * @category Day Helpers
+     * @summary Return the start of a day for the given date.
+     *
+     * @description
+     * Return the start of a day for the given date.
+     * The result will be in the local timezone.
+     *
+     * ### v2.0.0 breaking changes:
+     *
+     * - [Changes that are common for the whole library](https://github.com/date-fns/date-fns/blob/master/docs/upgradeGuide.md#Common-Changes).
+     *
+     * @param {Date|Number} date - the original date
+     * @returns {Date} the start of a day
+     * @throws {TypeError} 1 argument required
+     *
+     * @example
+     * // The start of a day for 2 September 2014 11:55:00:
+     * var result = startOfDay(new Date(2014, 8, 2, 11, 55, 0))
+     * //=> Tue Sep 02 2014 00:00:00
+     */
+
+    function startOfDay(dirtyDate) {
+      requiredArgs(1, arguments);
+      var date = toDate(dirtyDate);
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+
+    var MILLISECONDS_IN_DAY$1 = 86400000;
+    /**
+     * @name differenceInCalendarDays
+     * @category Day Helpers
+     * @summary Get the number of calendar days between the given dates.
+     *
+     * @description
+     * Get the number of calendar days between the given dates. This means that the times are removed
+     * from the dates and then the difference in days is calculated.
+     *
+     * ### v2.0.0 breaking changes:
+     *
+     * - [Changes that are common for the whole library](https://github.com/date-fns/date-fns/blob/master/docs/upgradeGuide.md#Common-Changes).
+     *
+     * @param {Date|Number} dateLeft - the later date
+     * @param {Date|Number} dateRight - the earlier date
+     * @returns {Number} the number of calendar days
+     * @throws {TypeError} 2 arguments required
+     *
+     * @example
+     * // How many calendar days are between
+     * // 2 July 2011 23:00:00 and 2 July 2012 00:00:00?
+     * var result = differenceInCalendarDays(
+     *   new Date(2012, 6, 2, 0, 0),
+     *   new Date(2011, 6, 2, 23, 0)
+     * )
+     * //=> 366
+     * // How many calendar days are between
+     * // 2 July 2011 23:59:00 and 3 July 2011 00:01:00?
+     * var result = differenceInCalendarDays(
+     *   new Date(2011, 6, 3, 0, 1),
+     *   new Date(2011, 6, 2, 23, 59)
+     * )
+     * //=> 1
+     */
+
+    function differenceInCalendarDays(dirtyDateLeft, dirtyDateRight) {
+      requiredArgs(2, arguments);
+      var startOfDayLeft = startOfDay(dirtyDateLeft);
+      var startOfDayRight = startOfDay(dirtyDateRight);
+      var timestampLeft = startOfDayLeft.getTime() - getTimezoneOffsetInMilliseconds(startOfDayLeft);
+      var timestampRight = startOfDayRight.getTime() - getTimezoneOffsetInMilliseconds(startOfDayRight); // Round the number of days to the nearest integer
+      // because the number of milliseconds in a day is not constant
+      // (e.g. it's different in the day of the daylight saving time clock shift)
+
+      return Math.round((timestampLeft - timestampRight) / MILLISECONDS_IN_DAY$1);
     }
 
     /**
@@ -8216,7 +8335,7 @@ var app = (function () {
       nextWeek: "eeee 'at' p",
       other: 'P'
     };
-    function formatRelative(token, _date, _baseDate, _options) {
+    function formatRelative$1(token, _date, _baseDate, _options) {
       return formatRelativeLocale[token];
     }
 
@@ -8578,7 +8697,7 @@ var app = (function () {
       code: 'en-US',
       formatDistance: formatDistance,
       formatLong: formatLong,
-      formatRelative: formatRelative,
+      formatRelative: formatRelative$1,
       localize: localize,
       match: match,
       options: {
@@ -10256,6 +10375,120 @@ var app = (function () {
 
     function cleanEscapedString(input) {
       return input.match(escapedStringRegExp)[1].replace(doubleQuoteRegExp, "'");
+    }
+
+    /**
+     * @name formatRelative
+     * @category Common Helpers
+     * @summary Represent the date in words relative to the given base date.
+     *
+     * @description
+     * Represent the date in words relative to the given base date.
+     *
+     * | Distance to the base date | Result                    |
+     * |---------------------------|---------------------------|
+     * | Previous 6 days           | last Sunday at 04:30 AM   |
+     * | Last day                  | yesterday at 04:30 AM     |
+     * | Same day                  | today at 04:30 AM         |
+     * | Next day                  | tomorrow at 04:30 AM      |
+     * | Next 6 days               | Sunday at 04:30 AM        |
+     * | Other                     | 12/31/2017                |
+     *
+     * ### v2.0.0 breaking changes:
+     *
+     * - [Changes that are common for the whole library](https://github.com/date-fns/date-fns/blob/master/docs/upgradeGuide.md#Common-Changes).
+     *
+     * @param {Date|Number} date - the date to format
+     * @param {Date|Number} baseDate - the date to compare with
+     * @param {Object} [options] - an object with options.
+     * @param {Locale} [options.locale=defaultLocale] - the locale object. See [Locale]{@link https://date-fns.org/docs/Locale}
+     * @param {0|1|2|3|4|5|6} [options.weekStartsOn=0] - the index of the first day of the week (0 - Sunday)
+     * @returns {String} the date in words
+     * @throws {TypeError} 2 arguments required
+     * @throws {RangeError} `date` must not be Invalid Date
+     * @throws {RangeError} `baseDate` must not be Invalid Date
+     * @throws {RangeError} `options.weekStartsOn` must be between 0 and 6
+     * @throws {RangeError} `options.locale` must contain `localize` property
+     * @throws {RangeError} `options.locale` must contain `formatLong` property
+     * @throws {RangeError} `options.locale` must contain `formatRelative` property
+     */
+
+    function formatRelative(dirtyDate, dirtyBaseDate, dirtyOptions) {
+      requiredArgs(2, arguments);
+      var date = toDate(dirtyDate);
+      var baseDate = toDate(dirtyBaseDate);
+      var options = dirtyOptions || {};
+      var locale$1 = options.locale || locale;
+
+      if (!locale$1.localize) {
+        throw new RangeError('locale must contain localize property');
+      }
+
+      if (!locale$1.formatLong) {
+        throw new RangeError('locale must contain formatLong property');
+      }
+
+      if (!locale$1.formatRelative) {
+        throw new RangeError('locale must contain formatRelative property');
+      }
+
+      var diff = differenceInCalendarDays(date, baseDate);
+
+      if (isNaN(diff)) {
+        throw new RangeError('Invalid time value');
+      }
+
+      var token;
+
+      if (diff < -6) {
+        token = 'other';
+      } else if (diff < -1) {
+        token = 'lastWeek';
+      } else if (diff < 0) {
+        token = 'yesterday';
+      } else if (diff < 1) {
+        token = 'today';
+      } else if (diff < 2) {
+        token = 'tomorrow';
+      } else if (diff < 7) {
+        token = 'nextWeek';
+      } else {
+        token = 'other';
+      }
+
+      var utcDate = subMilliseconds(date, getTimezoneOffsetInMilliseconds(date));
+      var utcBaseDate = subMilliseconds(baseDate, getTimezoneOffsetInMilliseconds(baseDate));
+      var formatStr = locale$1.formatRelative(token, utcDate, utcBaseDate, options);
+      return format(date, formatStr, options);
+    }
+
+    /**
+     * @name subDays
+     * @category Day Helpers
+     * @summary Subtract the specified number of days from the given date.
+     *
+     * @description
+     * Subtract the specified number of days from the given date.
+     *
+     * ### v2.0.0 breaking changes:
+     *
+     * - [Changes that are common for the whole library](https://github.com/date-fns/date-fns/blob/master/docs/upgradeGuide.md#Common-Changes).
+     *
+     * @param {Date|Number} date - the date to be changed
+     * @param {Number} amount - the amount of days to be subtracted. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+     * @returns {Date} the new date with the days subtracted
+     * @throws {TypeError} 2 arguments required
+     *
+     * @example
+     * // Subtract 10 days from 1 September 2014:
+     * var result = subDays(new Date(2014, 8, 1), 10)
+     * //=> Fri Aug 22 2014 00:00:00
+     */
+
+    function subDays(dirtyDate, dirtyAmount) {
+      requiredArgs(2, arguments);
+      var amount = toInteger(dirtyAmount);
+      return addDays(dirtyDate, -amount);
     }
 
     var deepFreezeEs6 = {exports: {}};
@@ -12849,8 +13082,9 @@ var app = (function () {
     	let show_if_2 = /*isJson*/ ctx[4](/*log*/ ctx[0].message);
     	let t2;
     	let span1;
-    	let t3_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss") + "";
+    	let t3_value = formatRelative(new Date(/*log*/ ctx[0].updated_at), new Date()) + "";
     	let t3;
+    	let span1_title_value;
     	let t4;
     	let div1;
     	let show_if_1;
@@ -12902,7 +13136,7 @@ var app = (function () {
     			if (if_block0) if_block0.l(div0_nodes);
     			div0_nodes.forEach(detach_dev);
     			t2 = claim_space(li_nodes);
-    			span1 = claim_element(li_nodes, "SPAN", { class: true });
+    			span1 = claim_element(li_nodes, "SPAN", { class: true, title: true });
     			var span1_nodes = children(span1);
     			t3 = claim_text(span1_nodes, t3_value);
     			span1_nodes.forEach(detach_dev);
@@ -12919,15 +13153,16 @@ var app = (function () {
     		},
     		h: function hydrate() {
     			attr_dev(span0, "class", "mx-2 break-all");
-    			add_location(span0, file$a, 39, 6, 963);
+    			add_location(span0, file$a, 39, 6, 988);
     			attr_dev(div0, "class", "flex flex-wrap items-center lg:w-32");
-    			add_location(div0, file$a, 38, 4, 907);
-    			attr_dev(span1, "class", "mx-4 text-xs lg:order-first");
-    			add_location(span1, file$a, 58, 4, 1435);
+    			add_location(div0, file$a, 38, 4, 932);
+    			attr_dev(span1, "class", "mx-4 text-xs lg:order-first whitespace-nowrap");
+    			attr_dev(span1, "title", span1_title_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss"));
+    			add_location(span1, file$a, 58, 4, 1460);
     			attr_dev(div1, "class", "w-full break-all items-start");
-    			add_location(div1, file$a, 62, 4, 1554);
+    			add_location(div1, file$a, 63, 4, 1666);
     			attr_dev(li, "class", li_class_value = "" + ((/*log*/ ctx[0].isHighlighted ? "text-red-800" : "") + "\n    text-sm mb-2\n    flex flex-wrap lg:flex-nowrap items-start justify-between shadow border border-gray-200 p-2\n    "));
-    			add_location(li, file$a, 32, 2, 723);
+    			add_location(li, file$a, 32, 2, 748);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, li, anchor);
@@ -12963,7 +13198,11 @@ var app = (function () {
     				if_block0 = null;
     			}
 
-    			if (dirty & /*log*/ 1 && t3_value !== (t3_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss") + "")) set_data_dev(t3, t3_value);
+    			if (dirty & /*log*/ 1 && t3_value !== (t3_value = formatRelative(new Date(/*log*/ ctx[0].updated_at), new Date()) + "")) set_data_dev(t3, t3_value);
+
+    			if (dirty & /*log*/ 1 && span1_title_value !== (span1_title_value = format(new Date(/*log*/ ctx[0].updated_at), "dd/MM hh:mm:ss"))) {
+    				attr_dev(span1, "title", span1_title_value);
+    			}
 
     			if (current_block_type === (current_block_type = select_block_type(ctx, dirty)) && if_block1) {
     				if_block1.p(ctx, dirty);
@@ -13053,10 +13292,10 @@ var app = (function () {
     			attr_dev(input, "class", "cursor-pointer w-4 h-4");
     			attr_dev(input, "name", input_name_value = "cv-" + /*log*/ ctx[0].id);
     			attr_dev(input, "id", input_id_value = "cv-" + /*log*/ ctx[0].id);
-    			add_location(input, file$a, 46, 10, 1183);
+    			add_location(input, file$a, 46, 10, 1208);
     			attr_dev(label, "for", label_for_value = "cv-" + /*log*/ ctx[0].id);
     			attr_dev(label, "class", "cursor-pointer px-2 py-1 lg:ml-2 lg:mt-2 bg-gray-100");
-    			add_location(label, file$a, 42, 8, 1057);
+    			add_location(label, file$a, 42, 8, 1082);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, label, anchor);
@@ -13104,7 +13343,7 @@ var app = (function () {
     	return block;
     }
 
-    // (68:6) {:else}
+    // (69:6) {:else}
     function create_else_block$4(ctx) {
     	let html_tag;
     	let raw_value = highlight(/*log*/ ctx[0].message, /*filter*/ ctx[2]) + "";
@@ -13139,14 +13378,14 @@ var app = (function () {
     		block,
     		id: create_else_block$4.name,
     		type: "else",
-    		source: "(68:6) {:else}",
+    		source: "(69:6) {:else}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (64:6) {#if isJson(log.message)}
+    // (65:6) {#if isJson(log.message)}
     function create_if_block_2$1(ctx) {
     	let p;
     	let raw_value = stringify(/*log*/ ctx[0].message, { formatted: /*formatted*/ ctx[3] }) + "";
@@ -13165,7 +13404,7 @@ var app = (function () {
     		},
     		h: function hydrate() {
     			attr_dev(p, "class", p_class_value = "font-mono " + (/*formatted*/ ctx[3] ? "" : "max-h-96") + " overflow-y-auto");
-    			add_location(p, file$a, 64, 8, 1637);
+    			add_location(p, file$a, 65, 8, 1749);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -13186,14 +13425,14 @@ var app = (function () {
     		block,
     		id: create_if_block_2$1.name,
     		type: "if",
-    		source: "(64:6) {#if isJson(log.message)}",
+    		source: "(65:6) {#if isJson(log.message)}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (74:2) {#if log.id === get(cachedLastId)}
+    // (75:2) {#if log.id === get(cachedLastId)}
     function create_if_block_1$2(ctx) {
     	let li;
     	let hr;
@@ -13224,11 +13463,11 @@ var app = (function () {
     		},
     		h: function hydrate() {
     			attr_dev(hr, "class", "bg-red-700 h-1");
-    			add_location(hr, file$a, 75, 6, 1954);
+    			add_location(hr, file$a, 76, 6, 2066);
     			attr_dev(span, "class", "text-sm absolute -top-3 left-1/2 bg-white px-4 py-1");
-    			add_location(span, file$a, 76, 6, 1990);
+    			add_location(span, file$a, 77, 6, 2102);
     			attr_dev(li, "class", "relative my-5");
-    			add_location(li, file$a, 74, 4, 1921);
+    			add_location(li, file$a, 75, 4, 2033);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, li, anchor);
@@ -13246,7 +13485,7 @@ var app = (function () {
     		block,
     		id: create_if_block_1$2.name,
     		type: "if",
-    		source: "(74:2) {#if log.id === get(cachedLastId)}",
+    		source: "(75:2) {#if log.id === get(cachedLastId)}",
     		ctx
     	});
 
@@ -13350,6 +13589,8 @@ var app = (function () {
     	$$self.$capture_state = () => ({
     		get: get_store_value,
     		format,
+    		formatRelative,
+    		subDays,
     		stringify,
     		highlight,
     		isJson,
