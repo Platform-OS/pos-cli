@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.5.13
+
+* Add `.map` and `.pptx` extensions to `pos-cli sync`
 
 ## 4.5.12
 
