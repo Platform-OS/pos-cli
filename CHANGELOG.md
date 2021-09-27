@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.5.14
+
+* Do not throw javascript error if internal waiting function rejects
+
 ## 4.5.13
 
 * Add `.map` and `.pptx` extensions to `pos-cli sync`
