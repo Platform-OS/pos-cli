@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.5.15
+
+* Do not include zip files in resources zip file (ie. `app/views/partials/Test.zip`). Zip files in assets remain intact
+
 ## 4.5.14
 
 * Do not throw javascript error if internal waiting function rejects
