@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.5.16
+
+* Add `pos-cli archive` command (creates a release archive without deployment)
+
 ## 4.5.15
 
 * Do not include zip files in resources zip file (ie. `app/views/partials/Test.zip`). Zip files in assets remain intact
