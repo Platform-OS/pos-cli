@@ -16,6 +16,7 @@ updateNotifier({
 program
   .name('pos-cli')
   .version(version, '-v, --version')
+  .command('archive', 'create an archive only (no deployment)')
   .command('audit', 'check your code for deprecations, recommendations, errors')
   .command('env', 'manage environments')
   .command('data', 'export, import or clean data on instance')
