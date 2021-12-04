@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.5.17
+
+* Add `.br` and `.gz` extensions to synced files.  
+
 ## 4.5.16
 
 * Add `pos-cli archive` command (creates a release archive without deployment)
