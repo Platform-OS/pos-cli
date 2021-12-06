@@ -198,7 +198,7 @@ export default {
   },
   getConstants() {
     const query = `query getConstants {
-      constants {
+      constants(per_page: 99) {
         results { name, value, updated_at }
       }
     }`;

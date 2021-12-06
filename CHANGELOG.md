@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.5.18
+
+* Display more 99 constants in constants editor, instead of only 20
+
 ## 4.5.17
 
 * Add `.br` and `.gz` extensions to synced files.  
