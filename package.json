@@ -3,6 +3,7 @@
   "version": "4.5.17",
   "description": "Manage your platformOS application",
   "scripts": {
+    "prepare": "npm run build:admin && npm run build:graphql",
     "build:admin": "npm ci -C gui/admin && npm run build -C gui/admin",
     "build:graphql": "npm ci -C gui/graphql && npm run build -C gui/graphql",
     "test": "jest --runInBand",

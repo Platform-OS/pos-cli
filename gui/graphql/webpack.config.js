@@ -2,6 +2,8 @@ const path = require('path');
 const webpack = require('webpack');
 const { ESBuildMinifyPlugin } = require('esbuild-loader');
 
+const prod = process.env.NODE_ENV === 'production';
+
 module.exports = {
   mode: process.env.NODE_ENV || 'development',
   output: {
@@ -43,4 +45,8 @@ module.exports = {
       },
     ],
   },
+  mode: prod ? 'production' : 'development',
+  stats: prod ? 'normal' : 'minimal',
+  bail: prod,
+  performance: { hints: false }
 };
