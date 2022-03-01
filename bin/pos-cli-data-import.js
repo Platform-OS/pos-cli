@@ -62,9 +62,7 @@ const dataImport = async (filename, rawIds, isZipFile) => {
       waitForStatus(() => gateway.dataImportStatus(importTask.id, isZipFile))
         .then(() => {
           spinner.stopAndPersist().succeed('Import done.');
-          report('[OK] Data: Import', {
-            extras: [{ key: 'status', value: 'Success' }],
-          });
+          report('[OK] Data: Import');
         })
         .catch((error) => {
           logger.Debug(error);
@@ -79,9 +77,7 @@ const dataImport = async (filename, rawIds, isZipFile) => {
     .catch((e) => {
       spinner.fail('Import failed');
       logger.Error(e.message);
-      report('[ERR] Data: Import', {
-        extras: [{ key: 'status', value: 'Error' }],
-      });
+      report('[ERR] Data: Import');
     });
 };
 

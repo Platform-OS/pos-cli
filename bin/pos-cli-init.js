@@ -20,21 +20,11 @@ function createStructure(url, branch) {
   degit(`${url}${branch}`, { force: true, cache: false, verbose: false })
     .clone('.')
     .then(() => {
-      report('[OK] Init', {
-        extras: [
-          { key: 'status', value: 'Success' },
-          { key: 'hasBranch', value: !!branch },
-        ],
-      });
+      report('[OK] Init');
       logger.Success('Directory structure sucessfully created.');
     })
     .catch((error) => {
-      report('[ERR] Init', {
-        extras: [
-          { key: 'status', value: 'Error' },
-          { key: 'hasBranch', value: !!branch },
-        ],
-      });
+      report('[ERR] Init');
       logger.Error(`Cloning failed. Reason: ${error.message}`);
     });
 }
@@ -68,12 +58,7 @@ program
         .then((answers) => {
           createStructure(repos[answers.repo], answers.branch);
 
-          report('Init: Wizard', {
-            extras: [
-              { key: 'status', value: 'Success' },
-              { key: 'repo', value: repos[answers.repo] },
-            ],
-          });
+          report('Init: Wizard');
         })
       return;
     }
