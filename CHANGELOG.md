@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.5.19
+* Replace reporting tool
+* Upgrade some npm dependencies
+
 ## 4.5.18
 
 * Display more 99 constants in constants editor, instead of only 20
