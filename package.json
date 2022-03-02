@@ -53,7 +53,7 @@
     "mustache": "^4.2.0",
     "node-notifier": "^10.0.1",
     "open": "^8.4.0",
-    "ora": "^6.1.0",
+    "ora": "^5.1.0",
     "prompts": "^2.4.2",
     "raygun": "^0.13.1",
     "readdirp": "^3.6.0",
