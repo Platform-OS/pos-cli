@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.5.20
+* Downgrade ora package
+
 ## 4.5.19
 * Replace reporting tool
 * Upgrade some npm dependencies
