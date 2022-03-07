@@ -19,6 +19,7 @@ program
   .command('archive', 'create an archive only (no deployment)')
   .command('audit', 'check your code for deprecations, recommendations, errors')
   .command('env', 'manage environments')
+  .command('constants', 'manage constants')
   .command('data', 'export, import or clean data on instance')
   .command('pull', 'export app data to a zip file')
   .command('deploy <environment>', 'deploy code to environment')
