@@ -29,19 +29,15 @@ See this [guide](https://documentation.platformos.com/get-started/partner-portal
 
 To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
 
-```
-pos-cli env add [environment] --email [your email] --url [your application url]
-```
+    pos-cli env add [environment] --email [your email] --url [your application url]
 
 Example: `pos-cli env add staging --email myemail@example.com --url https://example.com`
 
 Configuration for environments is in the `.pos` file.
 
 ### Syncing changes
-
-```
-pos-cli sync [environment]
-```
+    
+    pos-cli sync [environment]
 
 Example: `pos-cli sync staging`
 
@@ -52,32 +48,24 @@ Enables sync mode - immediately pushes changes made to the file system to the pr
 Add `--livereload` (`-l`) to your sync command to run the [LiveReload](http://livereload.com) server in the background.
 You need to install the LiveReload browser extension for it to refresh your browser on file changes.
 
-```
-pos-cli sync [environment] -l
-```
-
+    pos-cli sync [environment] -l
+    
 #### Automatically opening the browser
 
 If you add `--open` (`-o`) to the sync command, it will open your Instance in the default browser.  
 
-```
-pos-cli sync [environment] -o
-```
-
+    pos-cli sync [environment] -o
+    
 #### Concurrency
 
 By default, the `sync` command uses 3 concurrent connections to our server when syncing resources and assets. You can adjust it for your connection. 
 
-```
-pos-cli sync [environment] -c 10
-```
-
+    pos-cli sync [environment] -c 10
+    
 ### Deploying changes
 
-```
-pos-cli deploy [environment]
-```
-
+    pos-cli deploy [environment]
+    
 Example: `pos-cli deploy staging`
 
 Deploys all changes. It is recommended to first deploy to `staging`, test, and only then trigger a deploy to production. Effectively, deploy creates a zip file containing all your files and sends it to the API. It is then processed in the background. We store each zip file to allow you to roll back in case something goes wrong.
@@ -86,9 +74,7 @@ To skip the audit during deploy, set the environmental variable `CI` to `true`.
 
 ### Code audit
 
-```
-pos-cli audit
-```
+    pos-cli audit
 
 Example: `pos-cli audit`
 
@@ -98,39 +84,29 @@ Runs statical analysis on files in your current application directory.
 
 Access errors and logs that you or the system logs for you using the `logs` command. Read more on [how to create logs](https://documentation.platformos.com/api-reference/liquid/platformos-tags#log).
 
-```
-pos-cli logs [environment]
-```
+    pos-cli logs [environment]
 
 From now on, as long as your `logs` command is running, logs will appear here. Errors will trigger system notifications if your operating system supports them.
 
 You can filter logs by type using the `--filter` argument.
 
-```
-pos-cli logs [environment] --filter type
-```
+    pos-cli logs [environment] --filter type
 
 Example:
 
-```
-pos-cli logs staging --filter debug
-```
+    pos-cli logs staging --filter debug
 
 ### Listing environments
 
 If you forgot what your environments are called or the URL that corresponds to any name, use:
 
-```
-pos-cli env list
-```
+    pos-cli env list
 
 ### Initializing the directory structure
 
 If you need to create a new project from scratch you can initialize the directory structure using:
 
-```
-pos-cli init --url mdyd-dev/directory-structure --branch master
-```
+    pos-cli init --url mdyd-dev/directory-structure --branch master
 
 Default URL: `mdyd-dev/directory-structure`
 Default branch: `master`
@@ -139,6 +115,35 @@ The `init` command supports all formats supported by [degit](https://github.com/
 
 It downloads the directory structure from a given git repository and extracts it in your current directory.
 
+### Managing constants
+
+Add constant named `API_KEY` with value `abc123` on `dev` environment:
+
+    pos-cli constants set --name API_KEY --value abc123 dev
+
+Remove constant `API_KEY` on `staging` environment:
+
+    pos-cli constants unset --name API_KEY staging
+
+List defined constants without exposing their values on `production` environment:
+
+    pos-cli constants list production
+
+
+    SECRETTOKEN                                        "XX..."
+    TEMP_TOKEN                                         "XX..."
+    USE_SEARCH_INDEX                                   "tr..."
+
+List defined constants showing their values on `production` environment:
+
+    SAFE=1 pos-cli constants list production
+
+
+    SECRETTOKEN                                        "XXXXXXX"
+    TEMP_TOKEN                                         "XXXXXXXXXXXXXX"
+    USE_SEARCH_INDEX                                   "true"
+
+
 ### Modules
 
 #### List
@@ -146,17 +151,13 @@ It downloads the directory structure from a given git repository and extracts it
 Lists all modules installed through the Partners Portal on a given environment.
 This command will not list modules that you deployed via the `modules/` directory.
 
-```
-pos-cli modules list [environment]
-```
+    pos-cli modules list [environment]
 
 #### Remove
 
 Removes a module from your application.
 
-```
-pos-cli modules remove [environment] <module name>
-```
+    pos-cli modules remove [environment] <module name>
 
 ##### module templates
 
@@ -230,9 +231,7 @@ Read more about migrations in our documentation:
 
 Lists migrations deployed to the server and their current status.
 
-```
-pos-cli migrations list [environment] [name]
-```
+    pos-cli migrations list [environment] [name]
 
 #### Generate
 
@@ -240,9 +239,7 @@ Generates new migration with the name you provided. It will be prepended with a 
 
 Migrations run automatically on deploy.
 
-```
-pos-cli migrations generate [environment] [name]
-```
+    pos-cli migrations generate [environment] [name]
 
 #### Run
 
@@ -250,15 +247,11 @@ You can run a migration manually using the `run` command. You must first sync th
 
 The name of the migration is the filename without the extension, or just the timestamp.
 
-```
-pos-cli migrations run [environment] [name]
-```
+    pos-cli migrations run [environment] [name]
 
 Example:
 
-```
-pos-cli migrations run staging 20190715132951_update_admin_password
-```
+    pos-cli migrations run staging 20190715132951_update_admin_password
 
 ### Data
 
@@ -268,9 +261,7 @@ Exports data from the environment to a given file in JSON format.
 
 Read more about [exporting data with the CLI, REST API and GraphQL](https://documentation.platformos.com/developer-guide/data-import-export/export) in our documentation.
 
-```
-pos-cli data export staging --path=data.json
-```
+    pos-cli data export staging --path=data.json
 
 #### Import
 
@@ -278,9 +269,7 @@ Imports data from a given JSON file with proper data structure.
 
 Read more about [importing data with the CLI, REST API and GraphQL](https://documentation.platformos.com/developer-guide/data-import-export/import) in our documentation.
 
-```
-pos-cli data import staging --path=data.json
-```
+    pos-cli data import staging --path=data.json
 
 #### Clean (only staging)
 
@@ -292,17 +281,13 @@ This is useful for testing your imports/exports or resetting your database to a 
 
 **This operation is irreversible**. `pos-cli` will ask you twice if you are sure you want to do it.
 
-```
-pos-cli data clean staging
-```
+    pos-cli data clean staging
 
 ### Admin - Graphical interface
 
 To start the http server locally that will serve the GUI use:
 
-```
-pos-cli gui serve [environment]
-```
+    pos-cli gui serve [environment]
 
 Example: `pos-cli gui serve staging`
 
@@ -312,9 +297,7 @@ To open platformOS Admin go to [http://localhost:3333](http://localhost:3333)
 
 If you want to open platformOS Admin as soon as `gui serve` is running, add `--open` (`-o`) as your argument.
 
-```
-pos-cli gui serve [environment] -o
-```
+    pos-cli gui serve [environment] -o
 
 #### GraphiQL Browser
 
