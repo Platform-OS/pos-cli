@@ -24,7 +24,7 @@ function createModuleStructure(moduleName) {
 
 program
   .name('pos-cli modules init')
-  .arguments('<name>', 'base name of the migration. Example: cleanup_data')
+  .arguments('<name>', 'name of the module to create. Example: profile')
   .action(name => {
     createModuleStructure(name);
   });
