@@ -17,9 +17,17 @@ List defined constants without exposing their values:
 
     pos-cli constants list
 
+    SECRETTOKEN                                        "XX..."
+    TEMP_TOKEN                                         "XX..."
+    USE_SEARCH_INDEX                                   "tr..."
+
 List defined constants showing their values:
 
     SAFE=1 pos-cli constants list
+
+    SECRETTOKEN                                        "XXXXXXX"
+    TEMP_TOKEN                                         "XXXXXXXXXXXXXX"
+    USE_SEARCH_INDEX                                   "true"
 
 ## 4.5.20
 * Downgrade ora package
