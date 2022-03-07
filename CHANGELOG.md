@@ -1,5 +1,26 @@
 # Changelog
 
+## 4.5.21
+* Add `pos-cli constants`
+
+### Usage
+
+Add constant named `API_KEY` with value `abc123`:
+
+  pos-cli constants set --name API_KEY --value abc123
+
+Remove constant `API_KEY`:
+
+  pos-cli constants unset --name API_KEY
+
+List defined constants without exposing their values:
+
+  pos-cli constants list
+
+List defined constants showing their values:
+
+  SAFE=1 pos-cli constants list
+
 ## 4.5.20
 * Downgrade ora package
 
