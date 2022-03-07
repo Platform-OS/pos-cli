@@ -5,25 +5,25 @@
 
 ### Usage
 
-Add constant named `API_KEY` with value `abc123`:
+Add constant named `API_KEY` with value `abc123` on `dev` environment:
 
-    pos-cli constants set --name API_KEY --value abc123
+    pos-cli constants set --name API_KEY --value abc123 dev
 
-Remove constant `API_KEY`:
+Remove constant `API_KEY` on `staging` environment:
 
-    pos-cli constants unset --name API_KEY
+    pos-cli constants unset --name API_KEY staging
 
-List defined constants without exposing their values:
+List defined constants without exposing their values on `production` environment:
 
-    pos-cli constants list
+    pos-cli constants list production
 
     SECRETTOKEN                                        "XX..."
     TEMP_TOKEN                                         "XX..."
     USE_SEARCH_INDEX                                   "tr..."
 
-List defined constants showing their values:
+List defined constants showing their values on `production` environment:
 
-    SAFE=1 pos-cli constants list
+    SAFE=1 pos-cli constants list production
 
     SECRETTOKEN                                        "XXXXXXX"
     TEMP_TOKEN                                         "XXXXXXXXXXXXXX"
