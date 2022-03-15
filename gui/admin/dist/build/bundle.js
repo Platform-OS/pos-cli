@@ -11737,7 +11737,7 @@ var app = (function () {
     	let t0_value = /*log*/ ctx[0].error_type + "";
     	let t0;
     	let t1;
-    	let show_if_2 = /*isJson*/ ctx[4](/*log*/ ctx[0].message);
+    	let show_if_2 = /*isJson*/ ctx[5](/*log*/ ctx[0].message);
     	let t2;
     	let span1;
     	let t3_value = formatRelative(new Date(/*log*/ ctx[0].updated_at), new Date()) + "";
@@ -11757,7 +11757,7 @@ var app = (function () {
     	let if_block0 = show_if_2 && create_if_block_3$1(ctx);
 
     	function select_block_type(ctx, dirty) {
-    		if (show_if_1 == null || dirty & /*log*/ 1) show_if_1 = !!/*isJson*/ ctx[4](/*log*/ ctx[0].message);
+    		if (show_if_1 == null || dirty & /*log*/ 1) show_if_1 = !!/*isJson*/ ctx[5](/*log*/ ctx[0].message);
     		if (show_if_1) return create_if_block_2$1;
     		return create_else_block$4;
     	}
@@ -11852,7 +11852,7 @@ var app = (function () {
     		},
     		p(ctx, dirty) {
     			if (dirty & /*log*/ 1 && t0_value !== (t0_value = /*log*/ ctx[0].error_type + "")) set_data(t0, t0_value);
-    			if (dirty & /*log*/ 1) show_if_2 = /*isJson*/ ctx[4](/*log*/ ctx[0].message);
+    			if (dirty & /*log*/ 1) show_if_2 = /*isJson*/ ctx[5](/*log*/ ctx[0].message);
 
     			if (show_if_2) {
     				if (if_block0) {
@@ -11915,7 +11915,7 @@ var app = (function () {
     	};
     }
 
-    // (42:6) {#if isJson(log.message)}
+    // (46:6) {#if isJson(log.message)}
     function create_if_block_3$1(ctx) {
     	let label;
     	let input;
@@ -11963,7 +11963,7 @@ var app = (function () {
     			append(label, t);
 
     			if (!mounted) {
-    				dispose = listen(input, "change", /*input_change_handler*/ ctx[6]);
+    				dispose = listen(input, "change", /*input_change_handler*/ ctx[7]);
     				mounted = true;
     			}
     		},
@@ -11992,10 +11992,10 @@ var app = (function () {
     	};
     }
 
-    // (74:6) {:else}
+    // (78:6) {:else}
     function create_else_block$4(ctx) {
     	let html_tag;
-    	let raw_value = highlight(/*log*/ ctx[0].message, /*filter*/ ctx[2]) + "";
+    	let raw_value = highlight(/*escapeHTML*/ ctx[4](/*log*/ ctx[0].message), /*filter*/ ctx[2]) + "";
     	let html_anchor;
 
     	return {
@@ -12015,7 +12015,7 @@ var app = (function () {
     			insert(target, html_anchor, anchor);
     		},
     		p(ctx, dirty) {
-    			if (dirty & /*log, filter*/ 5 && raw_value !== (raw_value = highlight(/*log*/ ctx[0].message, /*filter*/ ctx[2]) + "")) html_tag.p(raw_value);
+    			if (dirty & /*log, filter*/ 5 && raw_value !== (raw_value = highlight(/*escapeHTML*/ ctx[4](/*log*/ ctx[0].message), /*filter*/ ctx[2]) + "")) html_tag.p(raw_value);
     		},
     		d(detaching) {
     			if (detaching) detach(html_anchor);
@@ -12024,7 +12024,7 @@ var app = (function () {
     	};
     }
 
-    // (70:6) {#if isJson(log.message)}
+    // (74:6) {#if isJson(log.message)}
     function create_if_block_2$1(ctx) {
     	let p;
     	let raw_value = stringify(/*log*/ ctx[0].message, { formatted: /*formatted*/ ctx[3] }) + "";
@@ -12060,7 +12060,7 @@ var app = (function () {
     	};
     }
 
-    // (80:2) {#if log.id === get(cachedLastId)}
+    // (84:2) {#if log.id === get(cachedLastId)}
     function create_if_block_1$2(ctx) {
     	let li;
     	let hr;
@@ -12108,7 +12108,7 @@ var app = (function () {
     }
 
     function create_fragment$d(ctx) {
-    	let show_if = /*shouldShow*/ ctx[5](/*log*/ ctx[0], /*filter*/ ctx[2]);
+    	let show_if = /*shouldShow*/ ctx[6](/*log*/ ctx[0], /*filter*/ ctx[2]);
     	let if_block_anchor;
     	let if_block = show_if && create_if_block$5(ctx);
 
@@ -12126,7 +12126,7 @@ var app = (function () {
     			insert(target, if_block_anchor, anchor);
     		},
     		p(ctx, [dirty]) {
-    			if (dirty & /*log, filter*/ 5) show_if = /*shouldShow*/ ctx[5](/*log*/ ctx[0], /*filter*/ ctx[2]);
+    			if (dirty & /*log, filter*/ 5) show_if = /*shouldShow*/ ctx[6](/*log*/ ctx[0], /*filter*/ ctx[2]);
 
     			if (show_if) {
     				if (if_block) {
@@ -12151,6 +12151,10 @@ var app = (function () {
     }
 
     function instance$d($$self, $$props, $$invalidate) {
+    	const escapeHTML = str => {
+    		return new Option(str).innerHTML;
+    	};
+
     	const isJson = msg => {
     		try {
     			JSON.parse(msg);
@@ -12183,7 +12187,16 @@ var app = (function () {
     		if ("filter" in $$props) $$invalidate(2, filter = $$props.filter);
     	};
 
-    	return [log, cachedLastId, filter, formatted, isJson, shouldShow, input_change_handler];
+    	return [
+    		log,
+    		cachedLastId,
+    		filter,
+    		formatted,
+    		escapeHTML,
+    		isJson,
+    		shouldShow,
+    		input_change_handler
+    	];
     }
 
     class Item extends SvelteComponent {

@@ -2,6 +2,7 @@
 
 ## 4.5.21
 * Add `pos-cli constants`
+* Escape HTML in `pos-cli gui` logs
 
 ### Usage
 

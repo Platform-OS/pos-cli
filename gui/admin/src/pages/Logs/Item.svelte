@@ -3,6 +3,9 @@
   import { format, formatRelative } from "date-fns";
   import stringify from "./stringify";
   import highlight from "./highlight";
+  import escapeHTML from "./escapeHTML";
+
+
 
   const isJson = (msg) => {
     try {
@@ -72,7 +75,7 @@
           {@html stringify(log.message, { formatted: formatted })}
         </p>
       {:else}
-        {@html highlight(log.message, filter)}
+        {@html highlight(escapeHTML(log.message), filter)}
       {/if}
     </div>
   </li>
