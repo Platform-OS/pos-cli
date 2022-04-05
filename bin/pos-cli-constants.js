@@ -14,7 +14,8 @@ program
   )
   .command(
     'list [environment]',
-    'List all constants'
+    `List all constants. If you want to show values of constants, use SAFE=1 environment variable.
+                     Example: SAFE=1 pos-cli constants list staging
+    `
   )
-  // .command('list', 'list all environments')
   .parse(process.argv);
