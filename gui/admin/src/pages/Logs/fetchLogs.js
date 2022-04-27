@@ -16,12 +16,24 @@ export default function () {
     .then((res) => {
       if (!res.logs.length) return res;
 
-      res.logs.forEach(item => item.isHighlighted = !!item.error_type.match(/error/i));
+      const newLogs = res.logs.map(item => new LogEntry(item));
 
-      logs.update(logs => logs.concat(res.logs));
+      logs.update(logs => logs.concat(newLogs));
       cachedLastId.set(get(lastId));
-      lastId.set(res.logs.slice(-1)[0].id);
+      lastId.set(newLogs.slice(-1)[0].id);
 
       scrollToBottom();
     });
+}
+
+class LogEntry {
+  constructor(data) {
+    this.id = data.id || "missing"
+    this.message = data.message || "missing"
+    this.error_type = data.error_type || "missing"
+    this.data = data.data || {}
+    this.updated_at = data.updated_at || new Date()
+
+    this.isHighlighted = !!this.error_type.match(/error/i)
+  }
 }

@@ -3814,6 +3814,6 @@ class App extends SvelteComponent {
 	}
 }
 
-const app = HMR(App, { target: document.body }, "routify-app");
+const app = HMR(App, { target: document.body }, 'routify-app');
 
 export { select_option as $, transition_out as A, onDestroy as B, create_slot as C, create_component as D, claim_component as E, mount_component as F, update_slot as G, destroy_component as H, writable as I, empty as J, prevent_default as K, run_all as L, binding_callbacks as M, get_store_value as N, svg_element as O, set_input_value as P, destroy_each as Q, onMount as R, SvelteComponent as S, HtmlTag as T, createEventDispatcher as U, handle_promise as V, destroy_block as W, add_flush_callback as X, add_render_callback as Y, create_in_transition as Z, bind as _, append as a, select_value as a0, toggle_class as a1, create_bidirectional_transition as a2, params as a3, app as a4, space as b, claim_element as c, children as d, element as e, claim_text as f, detach as g, claim_space as h, init$1 as i, attr as j, insert as k, component_subscribe as l, globals as m, noop as n, set_style as o, listen as p, set_data as q, create_out_transition as r, safe_not_equal as s, text as t, url as u, group_outros as v, update_keyed_each as w, outro_and_destroy_block as x, check_outros as y, transition_in as z };
