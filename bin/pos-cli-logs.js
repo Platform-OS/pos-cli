@@ -87,7 +87,7 @@ program
         logger.Error(text, options);
       } else {
         logger.Info(text, options);
-        if (!program.quiet) {
+        if (!program.quiet && data) {
           let parts = [];
           if (data.url) {
             requestUrl = url.parse(`https://${data.url}`);
