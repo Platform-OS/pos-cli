@@ -14,11 +14,17 @@ pipeline {
 
   stages {
     stage('Test') {
-      agent { docker { image "node:16-alpine"; args '-u root' } }
+      agent { docker { image "node:16-alpine"; args "-u root" } }
 
       steps {
-        sh 'npm ci'
-        sh 'npm test'
+        sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
+      }
+      post {
+        always {
+          script {
+            sh "chown -R 995:993 * && chown 995:993 ."
+          }
+        }
       }
     }
 

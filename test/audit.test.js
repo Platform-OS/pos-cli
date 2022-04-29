@@ -85,7 +85,7 @@ describe('Audit - orphaned includes', () => {
   test('Drops out on variable include', async () => {
     const { stdout } = await run('orphanedIncludes_variable');
 
-    expect(stdout).toMatch('Found partial included using a variable');
+    expect(stdout).toMatch('Found partial included using a variable in: app/views/pages/home.liquid');
     expect(stdout).toMatch('[Audit] 0 rules detected issues.');
   });
 });
