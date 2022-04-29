@@ -25,6 +25,7 @@ pipeline {
             sh "chown -R root:root"
           }
         }
+      }
     }
 
     stage('Build') {
