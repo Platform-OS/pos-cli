@@ -17,8 +17,7 @@ pipeline {
       agent { docker { image "node:16-alpine"; args "-u root" } }
 
       steps {
-        sh 'ls'
-        sh 'chown -R node:node * && su -c "whoami && ls -alh && pwd && npm ci" node'
+        sh 'chown -R node:node * && su -c "npm ci && npm test" node'
       }
     }
 
