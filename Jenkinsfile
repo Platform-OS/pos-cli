@@ -14,7 +14,7 @@ pipeline {
 
   stages {
     stage('Test') {
-      agent { docker { image "node:16-alpine"; args "-u node" } }
+      agent { docker { image "node:16-alpine"; args "-u 1000:1000" } }
 
       steps {
         sh 'ls'
