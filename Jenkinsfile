@@ -14,9 +14,10 @@ pipeline {
 
   stages {
     stage('Test') {
-      agent { docker { image "node:16-alpine"; args '-u node' } }
+      agent { docker { image "node:16-alpine"; args '-u root' } }
 
       steps {
+        sh 'su node'
         sh 'npm ci'
         sh 'npm test'
       }
