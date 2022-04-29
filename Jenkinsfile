@@ -17,6 +17,7 @@ pipeline {
       agent { docker { image "node:16-alpine" } }
 
       steps {
+        sh 'chown -R 995:993 "/.npm"'
         sh 'npm ci'
         sh 'npm test'
       }
