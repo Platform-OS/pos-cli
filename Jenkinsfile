@@ -19,6 +19,12 @@ pipeline {
       steps {
         sh 'chown -R node:node * && su -c "npm ci && npm test" node'
       }
+      post {
+        always {
+          script {
+            sh "chown -R root:root"
+          }
+        }
     }
 
     stage('Build') {
