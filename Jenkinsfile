@@ -18,7 +18,7 @@ pipeline {
 
       steps {
         sh 'ls'
-        sh 'su -c "whoami && ls -alh && pwd && npm ci" node'
+        sh 'chown -R node:node * && su -c "whoami && ls -alh && pwd && npm ci" node'
       }
     }
 
