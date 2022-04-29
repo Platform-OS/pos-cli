@@ -18,7 +18,7 @@ pipeline {
 
       steps {
         sh 'su node'
-        sh 'echo whoami'
+        sh 'whoami'
         sh 'npm ci'
         sh 'npm test'
       }
