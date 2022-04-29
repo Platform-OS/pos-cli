@@ -8,30 +8,22 @@ const lastId = writable(null);
 const clearLogs = () => logs.set([]);
 
 const isBrowserTabFocused = () => !document.hidden;
-
 const scrollToBottom = () => {
-  setTimeout(() => document.querySelector('footer').scrollIntoView(), 200);
+  setTimeout(() => document.querySelector("footer").scrollIntoView(), 200);
 };
-
-function fetchLogs () {
-  // Make sure first load is always done (middle button click) by checking for cachedLastId
-  if (!isBrowserTabFocused() && get_store_value(cachedLastId)) return;
-
-  return fetch(`/api/logs?lastId=${get_store_value(lastId)}`)
-    .then((res) => res.json())
-    .then((res) => {
-      if (!res.logs.length) return res;
-
-      const newLogs = res.logs.map(item => new LogEntry(item));
-
-      logs.update(logs => logs.concat(newLogs));
-      cachedLastId.set(get_store_value(lastId));
-      lastId.set(newLogs.slice(-1)[0].id);
-
-      scrollToBottom();
-    });
+function fetchLogs() {
+  if (!isBrowserTabFocused() && get_store_value(cachedLastId))
+    return;
+  return fetch(`/api/logs?lastId=${get_store_value(lastId)}`).then((res) => res.json()).then((res) => {
+    if (!res.logs.length)
+      return res;
+    const newLogs = res.logs.map((item) => new LogEntry(item));
+    logs.update((logs2) => logs2.concat(newLogs));
+    cachedLastId.set(get_store_value(lastId));
+    lastId.set(newLogs.slice(-1)[0].id);
+    scrollToBottom();
+  });
 }
-
 class LogEntry {
   constructor(data) {
     this.id = data.id || "missing";
@@ -39,7 +31,6 @@ class LogEntry {
     this.error_type = data.error_type || "missing";
     this.data = data.data || {};
     this.updated_at = data.updated_at || new Date();
-
     this.isHighlighted = !!this.error_type.match(/error/i);
   }
 }
