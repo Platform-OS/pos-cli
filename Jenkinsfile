@@ -17,8 +17,6 @@ pipeline {
       agent { docker { image "node:16-alpine" } }
 
       steps {
-        sh 'pwd'
-        sh 'whoami'
         sh 'npm ci'
         sh 'npm test'
       }
