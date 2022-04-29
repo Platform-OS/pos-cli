@@ -18,7 +18,7 @@ pipeline {
 
       steps {
         sh 'ls'
-        sh 'su -c "npm ci" node'
+        sh 'su -c "whoami && ls -alh && pwd && npm ci" node'
       }
     }
 
