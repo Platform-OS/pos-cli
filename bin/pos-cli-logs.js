@@ -72,6 +72,7 @@ program
 
     stream.on('message', ({ created_at, error_type, message, data }) => {
       if (message == null) message = '';
+      if (typeof(message) != "string") message = JSON.stringify(message);
 
       const text = `[${created_at.replace('T', ' ')}] - ${error_type}: ${message.replace(/\n$/, '')}`;
       const options = { exit: false, hideTimestamp: true };
