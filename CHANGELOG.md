@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.6.1
+* Add `--sync` to `pos-cli gui serve`. It will run gui and sync files in background.
+* Fix deploy with custom `.pos` file location.
+
+## 4.6.0 
+* Fix logs
+
 ## 4.5.21
 * Add `pos-cli constants`
 * Escape HTML in `pos-cli gui` logs
