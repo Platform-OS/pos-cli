@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.6.2
+* Fix `--port` argument in `pos-cli gui serve`
+* Add asset file size to manifest
+
 ## 4.6.1
 * Add `--sync` to `pos-cli gui serve`. It will run gui and sync files in background.
 * Fix deploy with custom `.pos` file location.
