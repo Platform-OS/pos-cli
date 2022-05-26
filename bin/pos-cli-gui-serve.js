@@ -23,12 +23,12 @@ program
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url,
+      PORT: params.port,
       CONCURRENCY: process.env.CONCURRENCY || DEFAULT_CONCURRENCY
     });
 
     try {
       await server.start(env);
-
       if (params.open) {
         await open(`http://localhost:${params.port}`);
       }
