@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.6.x
+* Fix error reporting in `pos-cli data import`
+
 ## 4.6.2
 * Fix `--port` argument in `pos-cli gui serve`
 * Add asset file size to manifest
