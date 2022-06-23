@@ -12,10 +12,10 @@ const program = require('commander'),
 const spinner = ora({ text: 'Sending file', stream: process.stdout, spinner: 'bouncingBar' });
 const uploadZip = async (directory, gateway) => {
   spinner.start();
-  const instanceId = (await gateway.getInstance()).id;
-  const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/data.property_upload_import.zip`;
-  logger.Debug(propertyUploadsDirectory);
   try {
+    const instanceId = (await gateway.getInstance()).id;
+    const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/data.property_upload_import.zip`;
+    logger.Debug(propertyUploadsDirectory);
     const { uploadUrl } = await presignUrl(propertyUploadsDirectory, directory);
     await uploadFile(directory, uploadUrl);
 
