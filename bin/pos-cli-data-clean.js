@@ -2,19 +2,32 @@
 
 const program = require('commander'),
   prompts = require('prompts'),
+  ora = require('ora'),
   Gateway = require('../lib/proxy'),
-  fetchAuthData = require('../lib/settings').fetchSettings;
-
-const logger = require('../lib/logger'),
+  waitForStatus = require('../lib/data/waitForStatus'),
+  fetchAuthData = require('../lib/settings').fetchSettings,
+  logger = require('../lib/logger'),
   report = require('../lib/logger/report');
 
 const confirmationText = 'CLEAN DATA';
+const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 
 const clean = (gateway, includeSchema) => {
   logger.Info('Going to clean data');
   gateway
     .dataClean(confirmationText, includeSchema)
-    .then(() => logger.Success('Instance data scheduled to be clean.'))
+    .then((cleanTask) => {
+      spinner.stopAndPersist().succeed('Clean started').start(`Cleaning instance`);
+      waitForStatus(() => gateway.dataCleanStatus(cleanTask.id))
+        .then(() => {
+          spinner.stopAndPersist().succeed('Cleaning done');
+        })
+        .catch((error) => {
+          logger.Debug(error);
+          spinner.fail('Data clean failed');
+          logger.Error(`Unable to clean instance ${error.error}`);
+        });
+    })
     .catch({ statusCode: 404 }, () => {
       logger.Error('[404] Data clean is not supported by the server');
       report('[Err] Data: Clean - Not supported');
@@ -29,10 +42,7 @@ const promptConfirmation = async confirmationText => {
 };
 
 const confirmCleanup = async (gateway, inlineConfirmation, includeSchema) => {
-  let schemaText = '';
-  if (includeSchema) {
-    schemaText = 'and database schemas '
-  }
+  let schemaText = includeSchema ? 'and database schemas ' : '';
 
   logger.Warn('');
   logger.Warn(`WARNING!!! You are going to REMOVE your data ${schemaText}from instance: ${gateway.url}`);
