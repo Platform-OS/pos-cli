@@ -1,7 +1,8 @@
 # Changelog
 
-## 4.6.x
+## 4.6.3
 * Fix error reporting in `pos-cli data import`
+* `pos-cli data clean` runs async and waits for finish 
 
 ## 4.6.2
 * Fix `--port` argument in `pos-cli gui serve`
