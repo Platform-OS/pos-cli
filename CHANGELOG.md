@@ -1,6 +1,12 @@
 # Changelog
 
-## 4.6.3
+* use Liquid Evaluator as a title
+* Fix fsevent os error
+
+## 4.7.1
+* Fix package-lock for graphql
+
+## 4.7.0
 * Fix error reporting in `pos-cli data import`
 * `pos-cli data clean` runs async and waits for finish 
 
