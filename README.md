@@ -153,6 +153,12 @@ This command will not list modules that you deployed via the `modules/` director
 
     pos-cli modules list [environment]
 
+#### Initialize
+
+Create a new module based on module starter repository.
+
+    pos-cli modules init <module name>
+
 #### Remove
 
 Removes a module from your application.
