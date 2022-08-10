@@ -7,5 +7,5 @@ program
   .command('remove [environment] <name>', 'remove module from instance (removes configuration and data)')
   .command('list [environment]', 'list installed modules')
   .command('pull [environment] <name>', 'pull a module')
-  .command('init <name>', 'create a module')
+  .command('init <name>', 'initialize a module with the starter structure')
   .parse(process.argv);

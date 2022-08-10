@@ -7,7 +7,7 @@ const logger = require('../lib/logger'),
   report = require('../lib/logger/report'),
   dir = require('../lib/directories');
 
-const moduleRepo = 'hosszukalman/pos-module-structure';
+const moduleRepo = 'Platform-OS/pos-module-template';
 
 function createModuleStructure(moduleName) {
   degit(moduleRepo, { force: true, cache: false, verbose: false })
