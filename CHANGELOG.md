@@ -4,6 +4,7 @@
 
 * use Liquid Evaluator as a title
 * Fix fsevent os error
+* Add `pos-cli modules init` command (initialize a module with the structure)
 
 ## 4.7.1
 * Fix package-lock for graphql
