@@ -1,0 +1,11 @@
+---
+slug: <%= modelNamePlural %>/:id
+---
+{% liquid
+
+  assign <%= modelName %>_id = context.params.id | split: '-' | last
+  function <%= modelName %> = 'lib/queries/<%= modelNamePlural %>/find', id: <%= modelName %>_id
+  include 'lib/present_or_404', property: <%= modelName %>.id
+
+  render 'theme/simple/<%= modelNamePlural %>/show', <%= modelName %>: <%= modelName %>, context: context
+%}

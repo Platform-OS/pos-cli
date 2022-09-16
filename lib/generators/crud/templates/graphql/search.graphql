@@ -1,0 +1,39 @@
+query search(
+  $id: ID
+  $limit: Int = 20
+  $page: Int = 1
+<% attributes.forEach((attr) => { -%>
+  $<%= attr.name %>: String
+<% }); -%>
+) {
+  <%= modelNamePlural %>: records(
+    per_page: $limit
+    page: $page
+    filter: {
+      id: { value: $id }
+      table: { value: "<%= modelName %>" }
+      properties: [
+      <% attributes.forEach((attr) => { -%>
+        { name: "<%= attr.name %>" value: $<%= attr.name %> }
+      <% }); -%>
+      ]
+    }
+    sort: [
+      { created_at: { order: DESC }}
+    ]
+  ){
+    total_entries
+    total_pages
+    has_previous_page
+    has_next_page
+    results {
+      id
+      created_at
+      type: table
+
+    <% attributes.forEach((attr) => { -%>
+      <%= attr.name %>: <%= graphqlPropertyMap[attr.type] %>(name: "<%= attr.name %>")
+    <% }); -%>
+    }
+  }
+}

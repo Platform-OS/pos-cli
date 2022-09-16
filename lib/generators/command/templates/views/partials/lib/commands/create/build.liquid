@@ -1,0 +1,4 @@
+{% liquid
+  assign data = '{}' | parse_json | hash_merge: id: object.id, name: object.name
+  return data
+%}

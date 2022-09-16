@@ -1,0 +1,10 @@
+{%  liquid
+  function object = 'lib/commands/<%= commandName %>/build', object: object
+  function object = 'lib/commands/<%= commandName %>/check', object: object
+
+  if object.valid
+    function object = 'lib/commands/execute', mutation_name: '<%= commandName %>' object: object, selection: 'record'
+  endif
+
+  return object
+%}
