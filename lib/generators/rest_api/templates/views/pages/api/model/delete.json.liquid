@@ -1,0 +1,13 @@
+---
+slug: <%= modelNamePlural %>
+method: delete
+---
+{% liquid
+  function current_profile = 'lib/current_profile', user_id: context.current_user.id
+  include 'lib/profile_present_or_not_authenticated', profile: current_profile
+
+  function object = 'lib/queries/<%= modelNamePlural %>/find', id: context.params.id
+  function object = 'lib/commands/<%= modelNamePlural %>/delete', object: object
+
+  render 'theme/json/shared/show', object: object
+%}

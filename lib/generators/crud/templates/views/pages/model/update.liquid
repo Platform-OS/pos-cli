@@ -1,0 +1,12 @@
+---
+slug: <%= modelNamePlural %>
+method: put
+---
+{% liquid
+  function object = 'lib/commands/<%= modelNamePlural %>/update', object: context.params.<%= modelName %>
+  if object.valid
+    include 'redirect_to', url: '/<%= modelNamePlural %>'
+  else
+    render 'theme/simple/<%= modelNamePlural %>/edit', object: object, context: context
+  endif
+%}

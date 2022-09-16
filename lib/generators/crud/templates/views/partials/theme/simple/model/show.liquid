@@ -1,0 +1,15 @@
+<div class="container">
+  <h1 class="text-4xl font-medium text-center">
+    <%= modelName %> - {{ <%= modelName %>.id }}
+  </h1>
+
+  <% attributes.forEach((attr) => { -%>
+  <span class="font-medium">
+    {{ 'app.<%= modelNamePlural %>.attr.<%= attr.name %>' | t }}
+  </span>
+  <p class="mb-10">
+    {{ <%= modelName %>.<%= attr.name %> }}
+  </p>
+
+  <% }); -%>
+</div>
