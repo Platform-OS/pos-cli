@@ -8,4 +8,5 @@ program
   .command('list [environment]', 'list installed modules')
   .command('pull [environment] <name>', 'pull a module')
   .command('init <name>', 'initialize a module with the starter structure')
+  .command('version <name> [version] --package', 'create a new version of the module')
   .parse(process.argv);
