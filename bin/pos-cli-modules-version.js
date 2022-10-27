@@ -22,7 +22,7 @@ function crateNewVersion(moduleName, version, options) {
     if (typeof options.package === 'string') {
       packageJSONPath = `${modulePath}/${options.package}`;
     }
-    version = files.readJSON(packageJSONPath).version;
+    version = files.readJSON(packageJSONPath, { throwDoesNotExistError: true }).version;
   }
 
   // Validate versions.
