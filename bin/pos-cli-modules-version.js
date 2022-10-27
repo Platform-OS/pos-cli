@@ -43,7 +43,7 @@ function crateNewVersion(moduleName, version, options) {
 }
 
 program
-  .name('pos-cli modules init')
+  .name('pos-cli modules version')
   .arguments('<name>', 'name of the module. Example: profile')
   .arguments('[version]', 'a valid semver version')
   .option('-p, --package [file]', 'use version from file as latest release, default: package.json')
