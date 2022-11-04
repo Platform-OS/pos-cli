@@ -21,8 +21,8 @@
   };
 </script>
 
-<h1 class="mb-2 text-5xl">Models</h1>
-<p>Choose schema that you want to see models for.</p>
+<h1 class="mb-2 text-5xl">Records</h1>
+<p>Choose table that you want to see the records for.</p>
 
 <section class="overflow-hidden">
   <div class="container py-8">

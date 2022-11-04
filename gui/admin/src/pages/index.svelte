@@ -13,12 +13,12 @@
             </svg>
           </div>
           <div class="flex-grow ml-8">
-            <h2 class="mb-3 text-lg font-medium text-gray-900 title-font">Manage models in your application</h2>
+            <h2 class="mb-3 text-lg font-medium text-gray-900 title-font">Manage database records in your application</h2>
             <ul class="list-disc list-inside">
-              <li>Inspect model schemas</li>
-              <li>Manage models (create, read, update, delete)</li>
+              <li>Inspect tables and schemas</li>
+              <li>Manage records (create, read, update, delete)</li>
             </ul>
-            <a  href={$url('../Models/index')} class="inline-flex items-center mt-3 text-blue-500">Go to Models
+            <a  href={$url('../Models/index')} class="inline-flex items-center mt-3 text-blue-500">Go to Records
               <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="w-4 h-4 ml-2" viewBox="0 0 24 24">
                 <path d="M5 12h14M12 5l7 7-7 7"></path>
               </svg>
