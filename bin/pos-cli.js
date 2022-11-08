@@ -32,6 +32,7 @@ program
   .command('modules', 'manage modules')
   .command('uploads', 'manage uploads files')
   .command('sync <environment>', 'update environment on file change')
+  .command('portaltest', 'test portal token')
   .alias('s')
   .parse(process.argv);
 
