@@ -10,4 +10,5 @@ program
   .command('push', 'publish module version')
   .command('remove [environment] <name>', 'remove module from instance (removes configuration and data)')
   .command('version [version] --package', 'create a new version of the module')
+  .command('setup', 'initialize module lock file')
   .parse(process.argv);
