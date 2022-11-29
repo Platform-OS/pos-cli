@@ -59,7 +59,7 @@ const dataImport = async (filename, rawIds, isZipFile) => {
     .dataImportStart(formData)
     .then((importTask) => {
       spinner.stopAndPersist().succeed('Data sent').start(`Importing ${filename}`);
-      waitForStatus(() => gateway.dataImportStatus(importTask.id, isZipFile))
+      waitForStatus(() => gateway.dataImportStatus(importTask.id, isZipFile), 'pending', 'done')
         .then(() => {
           spinner.stopAndPersist().succeed('Import done.');
           report('[OK] Data: Import');

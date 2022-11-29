@@ -86,7 +86,7 @@ program
     gateway
       .dataExportStart(exportInternalIds, isZipFile)
       .then((exportTask) => {
-        waitForStatus(() => gateway.dataExportStatus(exportTask.id, isZipFile))
+        waitForStatus(() => gateway.dataExportStatus(exportTask.id, isZipFile), 'pending', 'done')
           .then((exportTask) => {
             if (isZipFile) {
               handleZipFileExport(exportTask, filename);

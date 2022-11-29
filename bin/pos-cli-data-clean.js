@@ -18,7 +18,7 @@ const clean = (gateway, includeSchema) => {
     .dataClean(confirmationText, includeSchema)
     .then((cleanTask) => {
       spinner.stopAndPersist().succeed('Clean started').start(`Cleaning instance`);
-      waitForStatus(() => gateway.dataCleanStatus(cleanTask.id))
+      waitForStatus(() => gateway.dataCleanStatus(cleanTask.id), 'pending', 'done')
         .then(() => {
           spinner.stopAndPersist().succeed('Cleaning done');
         })
