@@ -33,9 +33,7 @@ const getPassword = () => {
       resolve(password);
     });
 
-    reader._writeToOutput = stringToWrite => {
-      (reader.stdoutMuted && reader.output.write('*')) || reader.output.write(stringToWrite);
-    };
+    reader._writeToOutput = stringToWrite => (reader.stdoutMuted && reader.output.write('*')) || reader.output.write(stringToWrite);
   });
 };
 
