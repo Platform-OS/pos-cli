@@ -1,34 +1,37 @@
 #!/usr/bin/env node
 
 const program = require('commander');
-
 const semver = require('semver');
 
-const logger = require('../lib/logger'),
-  report = require('../lib/logger/report'),
-  files = require('../lib/files'),
-  settings = require('../lib/settings'),
-  dir = require('../lib/directories');
+const dir = require('../lib/directories');
+const files = require('../lib/files');
+const logger = require('../lib/logger');
+const report = require('../lib/logger/report');
+const settings = require('../lib/settings');
 
+const configPath = `template-values.json`;
+const moduleConfig = () => {
+  return files.readJSON(configPath, { throwDoesNotExistError: true });
+};
 
-function crateNewVersion(moduleName, version, options) {
-  const modulePath = `${dir.MODULES}/${moduleName}`
-  const infoPath = `${modulePath}/template-values.json`;
-  let moduleInfo = settings.loadSettingsFileForModule(moduleName);
-
-  // Read the version from the package file.
-  if (options.package) {
-    let packageJSONPath = `${modulePath}/package.json`;
-    if (typeof options.package === 'string') {
-      packageJSONPath = `${modulePath}/${options.package}`;
-    }
-    version = files.readJSON(packageJSONPath, { throwDoesNotExistError: true }).version;
+const readVersionFromPackage = (options, version) => {
+  let packageJSONPath = `package.json`;
+  if (typeof options.package === 'string') {
+    packageJSONPath = `${options.package}`;
   }
+  return files.readJSON(packageJSONPath, { throwDoesNotExistError: true }).version;
+};
 
+const storeNewVersion = (config, version) => {
+  config.version = version;
+  files.writeJSON(configPath, config);
+};
+
+const validateVersions = (config, version) => {
   // Validate versions.
-  if (!semver.valid(moduleInfo.version)) {
+  if (!semver.valid(config.version)) {
     report('[ERR] The current version is not valid');
-    logger.Error(`The "${moduleName}" module's version ("${moduleInfo.version}") is not valid`);
+    logger.Error(`The "${moduleName}" module's version ("${config.version}") is not valid`);
     return
   }
   if (!semver.valid(version)) {
@@ -36,19 +39,28 @@ function crateNewVersion(moduleName, version, options) {
     logger.Error(`The "${moduleName}" module's new version ("${version}") is not valid`);
     return
   }
-    
-  // Store the new version.
-  moduleInfo.version = version
-  files.writeJSON(infoPath, moduleInfo);
+
+  return true;
+};
+
+function crateNewVersion(version, options) {
+  let config = moduleConfig();
+  const moduleName = config['machine_name'];
+
+  if (options.package) version = readVersionFromPackage(options);
+  if (!validateVersions(config, version)) return;
+
+  storeNewVersion(config, version);
 }
 
 program
   .name('pos-cli modules version')
-  .arguments('<name>', 'name of the module. Example: profile')
   .arguments('[version]', 'a valid semver version')
   .option('-p, --package [file]', 'use version from file as latest release, default: package.json')
-  .action((name, version, options) => {
-    crateNewVersion(name, version, options);
+  .option('--path <path>', 'module root directory, default is current directory')
+  .action((version, options) => {
+    if (options.path) process.chdir(options.path);
+    crateNewVersion(version, options);
   });
 
 program.parse(process.argv);
