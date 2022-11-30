@@ -64,7 +64,9 @@ const checkParams = params => {
 program
   .name('pos-cli modules push')
   .option('--email <email>', 'Partner Portal account email. Example: foo@example.com')
+  .option('--path <path>', 'module root directory, default is current directory')
   .action(async (params) => {
+    if (params.path) process.chdir(params.path);
     checkParams(params);
     const password = await getPassword();
     logger.Info(`Asking ${portal.HOST} for access token...`);
