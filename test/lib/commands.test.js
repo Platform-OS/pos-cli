@@ -96,6 +96,12 @@ test.skip('should run help on modules remove', async () => {
   expect(code).toEqual(1);
 });
 
+test('should run help on modules push', async () => {
+  const { stdout, code } = await run('modules push');
+  expect(stdout).toMatch('Usage: pos-cli modules push [options]');
+  expect(code).toEqual(1);
+});
+
 test('should run help on sync', async () => {
   const { stdout, code } = await run('sync');
   expect(stdout).toMatch('Usage: pos-cli sync [options] [environment]');
