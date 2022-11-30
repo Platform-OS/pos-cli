@@ -39,7 +39,7 @@ const getPassword = () => {
 
 const getToken = async (email, password) => {
   try {
-    const token = await portal.jwt_token(email, password)
+    const token = await portal.jwtToken(email, password)
     return token.auth_token;
   } catch (e) {
     if (e.statusCode === 401) {
@@ -68,7 +68,12 @@ program
   .action(async (params) => {
     if (params.path) process.chdir(params.path);
     checkParams(params);
-    const password = await getPassword();
+    let password;
+    if (process.env.PORTAL_PASSWORD) {
+      password = process.env.PORTAL_PASSWORD;
+    } else {
+      password = await getPassword();
+    }
     logger.Info(`Asking ${portal.HOST} for access token...`);
     const token = await getToken(params.email, password);
     publishVersion(token);
