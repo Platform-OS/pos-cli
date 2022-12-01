@@ -10,6 +10,7 @@ pipeline {
     MPKIT_TOKEN = credentials('POS_TOKEN')
     MPKIT_EMAIL = "darek+ci@near-me.com"
     MPKIT_URL = "https://qa-17263.staging.oregon.platform-os.com"
+    POS_PORTAL_PASSWORD = credentials('POS_PORTAL_PASSWORD')
   }
 
   stages {
