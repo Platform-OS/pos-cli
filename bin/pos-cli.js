@@ -22,17 +22,15 @@ program
   .command('constants', 'manage constants')
   .command('data', 'export, import or clean data on instance')
   .command('pull', 'export app data to a zip file')
-  .command('deploy <environment>', 'deploy code to environment')
-  .alias('d')
+  .command('deploy <environment>', 'deploy code to environment').alias('d')
   .command('gui', 'gui for content editor, graphql')
   .command('init', 'initialize directory structure')
-  .command('logs <environment>', 'display logs and errors')
-  .alias('l')
+  .command('logs <environment>', 'display logs and errors').alias('l')
   .command('migrations', 'manage migrations')
   .command('modules', 'manage modules')
   .command('uploads', 'manage uploads files')
-  .command('sync <environment>', 'update environment on file change')
-  .alias('s')
+  .command('sync <environment>', 'update environment on file change').alias('s')
+  .command('portalauth', 'auth with portal')
   .parse(process.argv);
 
 const commandList = Object.keys(program._execs);

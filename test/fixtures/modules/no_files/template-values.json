@@ -1,0 +1,7 @@
+{
+  "name": "pos-cli ci",
+  "machine_name": "pos_cli_ci_test",
+  "type": "module",
+  "version": "0.0.1",
+  "dependencies": {}
+}

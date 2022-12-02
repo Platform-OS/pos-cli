@@ -6,6 +6,7 @@
 * Fix fsevent os error
 * Add `pos-cli modules init` command (initialize a module with the structure)
 * Add `pos-cli modules version` command to create new version of the module
+* Add `pos-cli modules push` command to publish new version fo the module
 
 ## 4.7.1
 * Fix package-lock for graphql

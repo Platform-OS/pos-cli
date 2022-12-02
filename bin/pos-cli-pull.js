@@ -21,7 +21,7 @@ program
     gateway
       .appExportStart()
       .then(exportTask => {
-        waitForStatus(() => gateway.appExportStatus(exportTask.id))
+        waitForStatus(() => gateway.appExportStatus(exportTask.id), 'ready_for_export', 'success')
           .then(exportTask => downloadFile(exportTask.zip_file.url, filename))
           .then(() => spinner.succeed('Downloading files'))
           .catch(error => {
