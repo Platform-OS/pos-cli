@@ -2,6 +2,7 @@
 
 ## master
 
+## 4.8.0
 * use Liquid Evaluator as a title
 * Fix fsevent os error
 * Add `pos-cli modules init` command (initialize a module with the structure)
