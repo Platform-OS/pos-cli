@@ -18,19 +18,18 @@ program
   .version(version, '-v, --version')
   .command('archive', 'create an archive only (no deployment)')
   .command('audit', 'check your code for deprecations, recommendations, errors')
-  .command('env', 'manage environments')
   .command('constants', 'manage constants')
   .command('data', 'export, import or clean data on instance')
-  .command('pull', 'export app data to a zip file')
   .command('deploy <environment>', 'deploy code to environment').alias('d')
-  .command('gui', 'gui for content editor, graphql')
+  .command('env', 'manage environments')
+  .command('gui', 'gui for content editor, graphql, logs')
   .command('init', 'initialize directory structure')
   .command('logs <environment>', 'display logs and errors').alias('l')
   .command('migrations', 'manage migrations')
   .command('modules', 'manage modules')
-  .command('uploads', 'manage uploads files')
+  .command('pull', 'export app data to a zip file')
   .command('sync <environment>', 'update environment on file change').alias('s')
-  .command('portalauth', 'auth with portal')
+  .command('uploads', 'manage uploads files')
   .parse(process.argv);
 
 const commandList = Object.keys(program._execs);
