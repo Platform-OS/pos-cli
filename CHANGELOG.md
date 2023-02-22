@@ -2,6 +2,9 @@
 
 ## master
 
+## 4.8.1
+* Fix `pos-cli sync` to not stop working when there were syntax in synced files
+
 ## 4.8.0
 * use Liquid Evaluator as a title
 * Fix fsevent os error
