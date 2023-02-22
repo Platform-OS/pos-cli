@@ -24,13 +24,14 @@ describe('Server errors', () => {
 
   test('Wrong email', async () => {
     const { stdout, stderr } = await run('good', '--email foo@example.com');
-    expect(stderr).toMatch('Either email or password is incorrect');
+    expect(stderr).toMatch('You are unauthorized to do this operation. Check if your Token/URL or email/password are correct.');
   });
 
   test('Wrong version', async () => {
     const { stdout, stderr } = await run('good', '--email pos-cli-ci@platformos.com');
     expect(stdout).toMatch("for access token");
     expect(stdout).toMatch("Release Uploaded");
-    expect(stderr).toMatch('Module Version not created: Name has already been taken');
+    expect(stderr).toMatch('Name has already been taken');
+    expect(stderr).toMatch('Module Version not created');
   });
 });
