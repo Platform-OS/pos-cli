@@ -1,0 +1,55 @@
+/*
+	styling of forms and form inputs
+
+	colors
+	spacings
+*/
+
+
+
+input,
+select,
+textarea {
+	padding: .5rem 1rem;
+
+	border-radius: .5rem;
+	background-color: var(--color-middleground);
+
+	transition-property: background-color, box-shadow, color;
+	transition-duration: .1s;
+	transition-timing-function: linear;
+}
+
+textarea {
+	padding: 1rem;
+}
+
+	.content-context textarea {
+		background-color: var(--color-context-input-background);
+	}
+
+select {
+	padding-inline-end: 2.1em;
+
+	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" style="enable-background:new 0 0 24 24" viewBox="0 0 24 24"><path d="M12 18.999c-.4 0-.776-.156-1.059-.438L.22 7.841A.745.745 0 0 1 0 7.31c0-.2.078-.389.22-.53a.744.744 0 0 1 1.06 0L12 17.499 22.72 6.78a.744.744 0 0 1 1.06 0 .744.744 0 0 1 0 1.06L13.06 18.56a1.487 1.487 0 0 1-1.06.439z"/></svg>');
+	background-repeat: no-repeat;
+	background-position: right .7em center;
+	background-size: .7em;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+	box-shadow: 0 0 1px 2px var(--color-interaction-hover);
+}
+
+input::placeholder,
+textarea::placeholder {
+	color: var(--color-text-secondary);
+}
+
+.content-context input:disabled,
+.content-context select:disabled,
+.content-context textarea:disabled {
+	color: rgba(var(--color-rgb-context-button-text), .6);
+}
