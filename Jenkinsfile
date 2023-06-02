@@ -13,7 +13,6 @@ pipeline {
   stages {
     stage('Test') {
       agent { kubernetes { yaml podTemplate("amd64") } }
-      agent { docker { ; args "-u root" } }
 
       steps {
         sh 'set -e'
