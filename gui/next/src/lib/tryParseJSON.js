@@ -4,24 +4,24 @@
 // ------------------------------------------------------------------------
 const tryParseJSON = (argument) => {
 
-	// first, check if passed argument is JSON and if so just return it
-	if(argument && typeof argument === 'object'){
-		return argument;
-	}
+  // first, check if passed argument is JSON and if so just return it
+  if(argument && typeof argument === 'object'){
+    return argument;
+  }
 
-	// if argument is a string, try to parse it as JSON
-	try {
-		const o = JSON.parse(argument);
+  // if argument is a string, try to parse it as JSON
+  try {
+    const o = JSON.parse(argument);
 
-		if(o && typeof o === 'object'){
-			return o;
-		}
-	}
-	// catch the error from parsing JSON but do nothing
-	catch(e){};
+    if(o && typeof o === 'object'){
+      return o;
+    }
+  }
+  // catch the error from parsing JSON but do nothing
+  catch(e){};
 
-	// if everything failed we can assumen the argument is not parsable JSON
-	return false;
+  // if everything failed we can assumen the argument is not parsable JSON
+  return false;
 
 };
 

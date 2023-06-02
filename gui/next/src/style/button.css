@@ -1,14 +1,14 @@
 /*
-	button component
+  button component
 
-	general styling
-	buttons in the context area
-	icon
-	invisible label in button for screen readers
-	combined buttons placed next to each other
-	small variant
-	danger variant
-	confirmation variant
+  general styling
+  buttons in the context area
+  icon
+  invisible label in button for screen readers
+  combined buttons placed next to each other
+  small variant
+  danger variant
+  confirmation variant
 */
 
 
@@ -16,52 +16,52 @@
 /* general styling
 ============================================================================ */
 .button {
-	padding: .7rem 1rem;
-	display: inline-flex;
-	align-items: center;
-	gap: .6em;
+  padding: .7rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .6em;
 
-	border-radius: .5rem;
-	background-color: var(--color-middleground);
+  border-radius: .5rem;
+  background-color: var(--color-middleground);
 
-	leading-trim: both;
-	line-height: 1em;
-	color: var(--color-text);
+  leading-trim: both;
+  line-height: 1em;
+  color: var(--color-text);
 
-	transition: all .1s linear;
+  transition: all .1s linear;
 }
 
 button {
-	cursor: pointer;
+  cursor: pointer;
 }
 
 .button:hover {
-	background-color: rgba(var(--color-rgb-interaction-hover), .2);
+  background-color: rgba(var(--color-rgb-interaction-hover), .2);
 }
 
 .button:focus-visible {
-	box-shadow: 0 0 1px 2px var(--color-interaction-hover);
+  box-shadow: 0 0 1px 2px var(--color-interaction-hover);
 }
 
 .button.active {
-	background-color: rgba(var(--color-rgb-interaction-hover), .1);
+  background-color: rgba(var(--color-rgb-interaction-hover), .1);
 }
 
 
 /* buttons in the context area
 ============================================================================ */
 .content-context .button {
-	background-color: var(--color-context-button-background);
+  background-color: var(--color-context-button-background);
 
-	color: var(--color-context-button-text);
+  color: var(--color-context-button-text);
 }
 
 .content-context .button:hover {
-	background-color: var(--color-context-button-background-hover);
+  background-color: var(--color-context-button-background-hover);
 }
 
 .content-context .button:hover svg {
-	color: currentColor;
+  color: currentColor;
 }
 
 
@@ -69,43 +69,43 @@ button {
 /* icon
 ============================================================================ */
 .button svg {
-	width: 18px;
-	height: 18px;
-	margin-block: -.04rem;
+  width: 18px;
+  height: 18px;
+  margin-block: -.04rem;
 
-	pointer-events: none;
+  pointer-events: none;
 }
 
 .button:hover svg {
-	color: var(--color-interaction);
+  color: var(--color-interaction);
 }
 
 .button:has(svg) {
-	padding-block: .64rem;
+  padding-block: .64rem;
 }
 
 
 /* invisible label in button for screen readers
 ============================================================================ */
 button .label {
-	position: absolute;
-	left: -100vw;
+  position: absolute;
+  left: -100vw;
 }
 
 
 /* combined buttons placed next to each other
 ============================================================================ */
 .combo {
-	display: flex;
-	gap: 1px;
+  display: flex;
+  gap: 1px;
 }
 
 .combo button:first-child {
-	border-radius: .5rem 0 0 .5rem;
+  border-radius: .5rem 0 0 .5rem;
 }
 
 .combo button:last-child {
-	border-radius: 0 .5rem .5rem 0;
+  border-radius: 0 .5rem .5rem 0;
 }
 
 
@@ -113,29 +113,29 @@ button .label {
 /* small variant
 ============================================================================ */
 .button.compact {
-	padding: .4rem;
+  padding: .4rem;
 }
 
 
 /* danger variant
 ============================================================================ */
 .button.danger {
-	color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 
 /* danger variant
 ============================================================================ */
 .button.confirmation {
-	background-color: rgba(var(--color-rgb-confirmation), .2);
+  background-color: rgba(var(--color-rgb-confirmation), .2);
 
-	color: var(--color-confirmation);
+  color: var(--color-confirmation);
 }
 
 .button.confirmation:hover {
-	color: var(--color-confirmation);
+  color: var(--color-confirmation);
 }
 
 .button.confirmation:hover svg {
-	color: inherit;
+  color: inherit;
 }

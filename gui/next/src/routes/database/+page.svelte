@@ -1,3 +1,3 @@
 <svelte:head>
-	<title>Database | platformOS</title>
+  <title>Database | platformOS</title>
 </svelte:head>

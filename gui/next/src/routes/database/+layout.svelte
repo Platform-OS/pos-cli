@@ -16,15 +16,15 @@ let tablesHidden = false;
 
 onMount(() => {
 
-	// global hotkeys
-	// ------------------------------------------------------------------------
-	document.addEventListener('keydown', (event) => {
-		// hide the sidebar on pressing 'b' when no input is active
-		if(!event.target.matches('input, textarea') && event.key === 'b'){
-			tablesHidden = !tablesHidden;
-			localStorage.tablesHidden = tablesHidden;
-		}
-	});
+  // global hotkeys
+  // ------------------------------------------------------------------------
+  document.addEventListener('keydown', (event) => {
+    // hide the sidebar on pressing 'b' when no input is active
+    if(!event.target.matches('input, textarea') && event.key === 'b'){
+      tablesHidden = !tablesHidden;
+      localStorage.tablesHidden = tablesHidden;
+    }
+  });
 
 });
 
@@ -36,19 +36,19 @@ onMount(() => {
 <style>
 
 .container {
-	display: grid;
-	grid-template-columns: 350px auto;
+  display: grid;
+  grid-template-columns: 350px auto;
 
-	transition: grid-template-columns .2s ease-in-out;
+  transition: grid-template-columns .2s ease-in-out;
 }
 
-	.container.tablesHidden {
-		grid-template-columns: 0 auto;
-	}
+  .container.tablesHidden {
+    grid-template-columns: 0 auto;
+  }
 
 
 .tables-container {
-	overflow: hidden;
+  overflow: hidden;
 }
 
 </style>
@@ -58,10 +58,10 @@ onMount(() => {
 <!-- ================================================================== -->
 <div class="container" class:tablesHidden={tablesHidden}>
 
-	<div class="tables-container">
-		<Tables on:sidebarNeeded={() => tablesHidden = false} />
-	</div>
+  <div class="tables-container">
+    <Tables on:sidebarNeeded={() => tablesHidden = false} />
+  </div>
 
-	<slot></slot>
+  <slot></slot>
 
 </div>

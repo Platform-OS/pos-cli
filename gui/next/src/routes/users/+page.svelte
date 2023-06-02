@@ -1,4 +1,4 @@
 <!-- ================================================================== -->
 <svelte:head>
-	<title>Users | platformOS</title>
+  <title>Users | platformOS</title>
 </svelte:head>

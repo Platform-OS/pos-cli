@@ -1,5 +1,5 @@
 <!--
-	list of tables and filtering ability for those
+  list of tables and filtering ability for those
 -->
 
 
@@ -37,25 +37,25 @@ let filterText;
 const dispatch = createEventDispatcher();
 
 onMount(async () => {
-	// focus the filter input on load
-	filterInput.focus();
+  // focus the filter input on load
+  filterInput.focus();
 
-	// global hotkeys
-	document.addEventListener('keydown', (event) => {
-		// focus input on ctrl+k
-		if(event.ctrlKey && event.key === 'k'){
-			event.preventDefault();
+  // global hotkeys
+  document.addEventListener('keydown', (event) => {
+    // focus input on ctrl+k
+    if(event.ctrlKey && event.key === 'k'){
+      event.preventDefault();
 
-			dispatch('sidebarNeeded');
-			filterInput.focus();
-			filterInput.select();
-		}
-	});
+      dispatch('sidebarNeeded');
+      filterInput.focus();
+      filterInput.select();
+    }
+  });
 
-	// scroll active table into view
-	if($page.data.table){
-		container.querySelector(`[href$="${$page.data.table.id}"]`).scrollIntoView({behavior: 'smooth', block: 'center'});
-	}
+  // scroll active table into view
+  if($page.data.table){
+    container.querySelector(`[href$="${$page.data.table.id}"]`).scrollIntoView({behavior: 'smooth', block: 'center'});
+  }
 });
 
 
@@ -65,11 +65,11 @@ onMount(async () => {
 // ------------------------------------------------------------------------
 const filter = () => {
 
-	if(filterText){
-		tables = data.filter(item => item.name.includes(filterText))
-	} else {
-		tables = data;
-	}
+  if(filterText){
+    tables = data.filter(item => item.name.includes(filterText))
+  } else {
+    tables = data;
+  }
 
 };
 
@@ -79,14 +79,14 @@ const filter = () => {
 // ------------------------------------------------------------------------
 const filterInputKeyboardShortcut = (event) => {
 
-	if(event.key === 'Escape'){
-		filterText = '';
-		filter();
-	}
+  if(event.key === 'Escape'){
+    filterText = '';
+    filter();
+  }
 
-	if(event.key === 'Enter'){
-		container.querySelector('li:first-child a').click();
-	}
+  if(event.key === 'Enter'){
+    container.querySelector('li:first-child a').click();
+  }
 
 };
 
@@ -96,35 +96,35 @@ const filterInputKeyboardShortcut = (event) => {
 // ------------------------------------------------------------------------
 const listKeyboardShortcut = (event) => {
 
-	if(event.key === 'ArrowDown'){
-		if(container.contains(document.activeElement)){
-			event.preventDefault();
-			if(document.activeElement.matches('input')){
-				container.querySelector('a')?.focus();
-			} else {
-				document.activeElement?.parentElement?.nextElementSibling?.querySelector('a')?.focus();
-			}
-		}
-	}
+  if(event.key === 'ArrowDown'){
+    if(container.contains(document.activeElement)){
+      event.preventDefault();
+      if(document.activeElement.matches('input')){
+        container.querySelector('a')?.focus();
+      } else {
+        document.activeElement?.parentElement?.nextElementSibling?.querySelector('a')?.focus();
+      }
+    }
+  }
 
-	if(event.key === 'ArrowUp'){
-		if(container.contains(document.activeElement)){
-			event.preventDefault();
-			if(document.activeElement?.matches('li:first-child a')){
-				filterInput.focus();
-			} else {
-				document.activeElement?.parentElement?.previousElementSibling?.querySelector('a')?.focus();
-			}
-		}
-	}
+  if(event.key === 'ArrowUp'){
+    if(container.contains(document.activeElement)){
+      event.preventDefault();
+      if(document.activeElement?.matches('li:first-child a')){
+        filterInput.focus();
+      } else {
+        document.activeElement?.parentElement?.previousElementSibling?.querySelector('a')?.focus();
+      }
+    }
+  }
 
-	if(event.key === 'Escape'){
-		if(container.contains(document.activeElement)){
-			filterInput.focus();
-			filterText = '';
-			filter();
-		}
-	}
+  if(event.key === 'Escape'){
+    if(container.contains(document.activeElement)){
+      filterInput.focus();
+      filterText = '';
+      filter();
+    }
+  }
 
 };
 
@@ -136,96 +136,96 @@ const listKeyboardShortcut = (event) => {
 <style>
 
 aside {
-	width: 350px;
-	height: calc(100vh - 82px);
-	flex-shrink: 0;
-	overflow: auto;
+  width: 350px;
+  height: calc(100vh - 82px);
+  flex-shrink: 0;
+  overflow: auto;
 
-	border-inline-end: 1px solid var(--color-frame);
+  border-inline-end: 1px solid var(--color-frame);
 }
 
 nav {
-	padding-bottom: 1rem;
+  padding-bottom: 1rem;
 }
 
 a {
-	max-width: 100%;
-	margin: 0 1rem;
-	padding: .5rem 1rem;
-	display: block;
-	overflow: hidden;
+  max-width: 100%;
+  margin: 0 1rem;
+  padding: .5rem 1rem;
+  display: block;
+  overflow: hidden;
 
-	border-radius: .5rem;
+  border-radius: .5rem;
 
-	text-overflow: ellipsis;
+  text-overflow: ellipsis;
 }
 
 a:hover,
 a:focus-visible {
-	background-color: var(--color-background);
+  background-color: var(--color-background);
 
-	color: var(--color-interaction);
+  color: var(--color-interaction);
 }
 
 a.active {
-	background-color: var(--color-middleground);
+  background-color: var(--color-middleground);
 
-	font-weight: 500;
+  font-weight: 500;
 }
 
 .filter-container {
-	padding: 1rem 1rem 2rem;
-	position: sticky;
-	top: 0;
+  padding: 1rem 1rem 2rem;
+  position: sticky;
+  top: 0;
 
-	background-image: linear-gradient(to bottom, var(--color-page) 80%, rgba(var(--color-rgb-page), 0));
+  background-image: linear-gradient(to bottom, var(--color-page) 80%, rgba(var(--color-rgb-page), 0));
 }
 
 .filter {
-	width: 100%;
-	padding: .5rem .8rem;
-	display: flex;
-	align-items: center;
-	gap: .5rem;
+  width: 100%;
+  padding: .5rem .8rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
 
-	background-color: var(--color-background);
-	border-radius: .5rem;
+  background-color: var(--color-background);
+  border-radius: .5rem;
 
-	transition: background-color .1s linear;
+  transition: background-color .1s linear;
 }
 
 .filter:has(input:focus-visible) {
-	background-color: var(--color-middleground);
+  background-color: var(--color-middleground);
 }
 
 .filter input {
-	all: unset;
-	max-width: 185px;
+  all: unset;
+  max-width: 185px;
 }
 
 .filter button {
-	all: unset;
+  all: unset;
 
-	display: flex;
-	cursor: pointer;
+  display: flex;
+  cursor: pointer;
 
-	line-height: .2em;
+  line-height: .2em;
 }
 
 .filter button,
 .filter i {
-	margin-inline-end: .2em;
-	flex-shrink: 0;
+  margin-inline-end: .2em;
+  flex-shrink: 0;
 }
 
 .filter i {
-	position: relative;
-	top: 2px;
-	color: var(--color-text-secondary);
+  position: relative;
+  top: 2px;
+  color: var(--color-text-secondary);
 }
 
 .filter kbd:first-of-type {
-	margin-inline-start: auto;
+  margin-inline-start: auto;
 }
 
 </style>
@@ -235,42 +235,42 @@ a.active {
 <!-- ================================================================== -->
 <aside bind:this={container} on:keydown={listKeyboardShortcut}>
 
-	<div class="filter-container">
-		<div class="filter">
+  <div class="filter-container">
+    <div class="filter">
 
-			{#if filterText}
-				<button on:click={() => { filterText = null; filter(); } }>
-					<Icon icon="x" size="18" />
-				</button>
-			{:else}
-				<i>
-					<Icon icon="search" size="18" />
-				</i>
-			{/if}
+      {#if filterText}
+        <button on:click={() => { filterText = null; filter(); } }>
+          <Icon icon="x" size="18" />
+        </button>
+      {:else}
+        <i>
+          <Icon icon="search" size="18" />
+        </i>
+      {/if}
 
-			<input
-				type="text"
-				placeholder="Search tables"
-				bind:this={filterInput}
-				bind:value={filterText}
-				on:input={filter}
-				on:keydown={filterInputKeyboardShortcut}
-			>
+      <input
+        type="text"
+        placeholder="Search tables"
+        bind:this={filterInput}
+        bind:value={filterText}
+        on:input={filter}
+        on:keydown={filterInputKeyboardShortcut}
+      >
 
-			<kbd>Ctrl</kbd><kbd>K</kbd>
-		</div>
-	</div>
+      <kbd>Ctrl</kbd><kbd>K</kbd>
+    </div>
+  </div>
 
-	<nav>
-		<ul>
-			{#each tables as table, index}
-				<li in:fade={{ duration: 100, delay: 7 * index }}>
-					<a href="/database/table/{table.id}" class:active={table.id === $page.params.id}>
-						{table.name}
-					</a>
-				</li>
-			{/each}
-		</ul>
-	</nav>
+  <nav>
+    <ul>
+      {#each tables as table, index}
+        <li in:fade={{ duration: 100, delay: 7 * index }}>
+          <a href="/database/table/{table.id}" class:active={table.id === $page.params.id}>
+            {table.name}
+          </a>
+        </li>
+      {/each}
+    </ul>
+  </nav>
 
 </aside>

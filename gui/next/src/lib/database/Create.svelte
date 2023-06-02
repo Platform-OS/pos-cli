@@ -36,73 +36,73 @@ let dontParseStringedJson = false;
 // options: 	delay (int), duration (int)
 // ------------------------------------------------------------------------
 const appear = function(node, {
-	delay = 0,
-	duration = 150
+  delay = 0,
+  duration = 150
 }){
-	return {
-		delay,
-		duration,
-		css: (t) => {
-			const eased = quintOut(t);
+  return {
+    delay,
+    duration,
+    css: (t) => {
+      const eased = quintOut(t);
 
-			return `opacity: ${eased}; transform: scale(${eased});` }
-	}
+      return `opacity: ${eased}; transform: scale(${eased});` }
+  }
 };
 
 
 // purpose: 	use JS to open the modal on mount to get all of the <modal> benefits
 // ------------------------------------------------------------------------
 onMount(() => {
-	setTimeout(() => {
-		container.showModal();
-	}, 10);
+  setTimeout(() => {
+    container.showModal();
+  }, 10);
 });
 
 
 // purpose: 	handles keyboard shortcuts
 // ------------------------------------------------------------------------
 document.addEventListener('keydown', event => {
-	if(event.key === 'Escape'){
-		event.preventDefault();
+  if(event.key === 'Escape'){
+    event.preventDefault();
 
-		$state.record = null;
-	}
+    $state.record = null;
+  }
 }, { once: true });
 
 
 
 const save = async (event) => {
-	event.preventDefault();
+  event.preventDefault();
 
-	// create new record
-	if(!$state.record.id){
-		const create = await record.create({ table: $state.table.name, properties: new FormData(form) });
+  // create new record
+  if(!$state.record.id){
+    const create = await record.create({ table: $state.table.name, properties: new FormData(form) });
 
-		if(!create.errors){
-			state.clearFilters();
-			record.get({ table: $page.params.id, filters: $state.filters });
-			state.highlight('record', create.model_create.id);
-			state.notification.create('success', `Record ${create.model_create.id} created`);
-			$state.record = null;
-		} else {
-			errors = create.errors;
-		}
-	}
-	// edit existing record
-	else {
-		const edit = await record.edit({ table: $state.table.name, id: $state.record.id, properties: new FormData(form) });
+    if(!create.errors){
+      state.clearFilters();
+      record.get({ table: $page.params.id, filters: $state.filters });
+      state.highlight('record', create.model_create.id);
+      state.notification.create('success', `Record ${create.model_create.id} created`);
+      $state.record = null;
+    } else {
+      errors = create.errors;
+    }
+  }
+  // edit existing record
+  else {
+    const edit = await record.edit({ table: $state.table.name, id: $state.record.id, properties: new FormData(form) });
 
-		if(!edit.errors){
-			state.clearFilters();
-			record.get({table: $page.params.id, filters: $state.filters });
-			state.highlight('record', edit.model_update.id);
-			state.notification.create('success', `Record ${edit.model_update.id} updated`);
-			$state.record = null;
-		} else {
-			errors = edit.errors;
-		}
-	}
-	
+    if(!edit.errors){
+      state.clearFilters();
+      record.get({table: $page.params.id, filters: $state.filters });
+      state.highlight('record', edit.model_update.id);
+      state.notification.create('success', `Record ${edit.model_update.id} updated`);
+      $state.record = null;
+    } else {
+      errors = edit.errors;
+    }
+  }
+
 };
 
 </script>
@@ -112,86 +112,86 @@ const save = async (event) => {
 <style>
 
 dialog {
-	height: 100vh;
-	overflow: hidden;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	position: absolute;
-	inset: 0;
-	z-index: 100;	
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  inset: 0;
+  z-index: 100;
 }
 
-	dialog::backdrop {
-		background-color: rgba(var(--color-rgb-background), .6);
-	}
+  dialog::backdrop {
+    background-color: rgba(var(--color-rgb-background), .6);
+  }
 
 
 .content {
-	width: clamp(300px, 800px, 80vw);
-	max-height: 94vh;
-	overflow: auto;
+  width: clamp(300px, 800px, 80vw);
+  max-height: 94vh;
+  overflow: auto;
 
-	border-radius: 1rem;
+  border-radius: 1rem;
 }
 
 
 form {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-	padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem;
 }
 
 fieldset {
-	display: grid;
-	grid-template-columns: 1fr 2fr;
-	gap: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1rem;
 }
 
 fieldset + fieldset {
-	margin-block-start: 2rem;
+  margin-block-start: 2rem;
 }
 
 label {
-	word-break: break-all;
+  word-break: break-all;
 }
 
 .type {
-	margin-block-start: .2rem;
-	opacity: .5;
+  margin-block-start: .2rem;
+  opacity: .5;
 
-	font-size: .9em;
+  font-size: .9em;
 }
 
 textarea {
-	max-height: 40rem;
+  max-height: 40rem;
 }
 
 
 .footer {
-	padding: 1.5rem 0;
-	position: sticky;
-	bottom: 0;
-	gap: 1rem;
+  padding: 1.5rem 0;
+  position: sticky;
+  bottom: 0;
+  gap: 1rem;
 
-	background-color: var(--color-context);
+  background-color: var(--color-context);
 }
 
 .error li {
-	margin-block-end: 1rem;
-	padding: 1rem;
+  margin-block-end: 1rem;
+  padding: 1rem;
 
-	border-radius: 1rem;
-	background-color: var(--color-danger);
-	
-	color: var(--color-text-inverted);
+  border-radius: 1rem;
+  background-color: var(--color-danger);
+
+  color: var(--color-text-inverted);
 }
 
 .actions {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 </style>
@@ -201,68 +201,68 @@ textarea {
 <!-- ================================================================== -->
 <dialog bind:this={container} transition:appear>
 
-	<div class="content content-context">
+  <div class="content content-context">
 
-		<form bind:this={form} on:submit|preventDefault={save}>
+    <form bind:this={form} on:submit|preventDefault={save}>
 
-			<input type="hidden" name="tableName" value={$state.table.name}>
-			{#if editing.id}
-				<input type="hidden" name="recordId" value={editing.id}>
-			{/if}
+      <input type="hidden" name="tableName" value={$state.table.name}>
+      {#if editing.id}
+        <input type="hidden" name="recordId" value={editing.id}>
+      {/if}
 
-			{#each properties as property}
-				{@const value = editing.properties ? parseValue(editing.properties[property.name], property.attribute_type) : {type: property.attribute_type, value: ''}}
-				<fieldset>
-					<dir>
-						<label for="edit_{property.name}">
-							{property.name}<br>
-							<div class="type">
-								{#if property.attribute_type === 'string'}
-									<Toggle name="{property.name}[type]" options={[{ value: 'string', label: 'string' }, { value: 'json', label: 'json' }]} checked={value.type === 'json' ? 'json' : 'string'} />
-								{:else}
-									{property.attribute_type}
-									<input type="hidden" name="{property.name}[type]" value={property.attribute_type}>
-								{/if}
-								{#if property.attribute_type === 'upload'}
-									(non editable)
-								{/if}
-								<input type="hidden" name="{property.name}[parsedType]" value={value.type} />
-							</div>
-						</label>
-					</dir>
-					<textarea
-						rows="1"
-						name="{property.name}[value]"
-						id="edit_{property.name}"
-						use:autosize
-						disabled={property.attribute_type === 'upload'}
-					>{value.type === 'json' || value.type === 'jsonEscaped' && !dontParseStringedJson ? JSON.stringify(value.value, undefined, 2) : value.value}</textarea>
-				</fieldset>
-			{/each}
+      {#each properties as property}
+        {@const value = editing.properties ? parseValue(editing.properties[property.name], property.attribute_type) : {type: property.attribute_type, value: ''}}
+        <fieldset>
+          <dir>
+            <label for="edit_{property.name}">
+              {property.name}<br>
+              <div class="type">
+                {#if property.attribute_type === 'string'}
+                  <Toggle name="{property.name}[type]" options={[{ value: 'string', label: 'string' }, { value: 'json', label: 'json' }]} checked={value.type === 'json' ? 'json' : 'string'} />
+                {:else}
+                  {property.attribute_type}
+                  <input type="hidden" name="{property.name}[type]" value={property.attribute_type}>
+                {/if}
+                {#if property.attribute_type === 'upload'}
+                  (non editable)
+                {/if}
+                <input type="hidden" name="{property.name}[parsedType]" value={value.type} />
+              </div>
+            </label>
+          </dir>
+          <textarea
+            rows="1"
+            name="{property.name}[value]"
+            id="edit_{property.name}"
+            use:autosize
+            disabled={property.attribute_type === 'upload'}
+          >{value.type === 'json' || value.type === 'jsonEscaped' && !dontParseStringedJson ? JSON.stringify(value.value, undefined, 2) : value.value}</textarea>
+        </fieldset>
+      {/each}
 
-			<div class="footer">
-				<ul class="error" aria-live="assertive">
-					{#each errors as error}
-						<li>
-							{JSON.stringify(errors)}
-						</li>
-					{/each}
-				</ul>
-				<fieldset class="actions">
-					<button type="button" class="button" on:click={() => $state.record = null}>Cancel</button>
-					<button type="submit" class="button">
-						{#if editing.id}
-							Edit record
-						{:else}
-							Create record
-						{/if}
-						<Icon icon="arrowRight" />
-					</button>
-				</fieldset>
-			</div>
+      <div class="footer">
+        <ul class="error" aria-live="assertive">
+          {#each errors as error}
+            <li>
+              {JSON.stringify(errors)}
+            </li>
+          {/each}
+        </ul>
+        <fieldset class="actions">
+          <button type="button" class="button" on:click={() => $state.record = null}>Cancel</button>
+          <button type="submit" class="button">
+            {#if editing.id}
+              Edit record
+            {:else}
+              Create record
+            {/if}
+            <Icon icon="arrowRight" />
+          </button>
+        </fieldset>
+      </div>
 
-		</form>
+    </form>
 
-	</div>
+  </div>
 
 </dialog>

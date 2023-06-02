@@ -1,10 +1,10 @@
 /*
-	stores universally shared ulility classes and general page styling
+  stores universally shared ulility classes and general page styling
 
-	main page
-	context sections
-	links
-	utilities
+  main page
+  context sections
+  links
+  utilities
 */
 
 
@@ -12,28 +12,28 @@
 /* main page
 ============================================================================ */
 body {
-	background-color: var(--color-page);
+  background-color: var(--color-page);
 
-	font-family: var(--font-normal);
-	color: var(--color-text);
+  font-family: var(--font-normal);
+  color: var(--color-text);
 }
 
 
 /* context sections
 ============================================================================ */
 .content-context {
-	background-color: var(--color-context);
+  background-color: var(--color-context);
 
-	color: var(--color-text-inverted);
+  color: var(--color-text-inverted);
 }
 
 
 /* links
 ============================================================================ */
 a {
-	transition-property: color, background-color;
-	transition-duration: .1s;
-	transition-timing-function: ease-in-out;
+  transition-property: color, background-color;
+  transition-duration: .1s;
+  transition-timing-function: ease-in-out;
 }
 
 
@@ -41,18 +41,18 @@ a {
 ============================================================================ */
 /* used to indicate invisible labels important for screen readers */
 .stamp {
-	position: absolute;
-	left: -100vw;
+  position: absolute;
+  left: -100vw;
 }
 
 /* used to mark keyboard shortcuts */
 kbd {
-	padding: .4em .2em;
+  padding: .4em .2em;
 
-	border-radius: .2em;
-	background-color: var(--color-middleground);
+  border-radius: .2em;
+  background-color: var(--color-middleground);
 
-	text-transform: uppercase;
-	line-height: .6em;
-	font-family: monospace;
+  text-transform: uppercase;
+  line-height: .6em;
+  font-family: monospace;
 }

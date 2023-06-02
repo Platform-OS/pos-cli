@@ -17,28 +17,28 @@ export let value;
 <style>
 
 div :global(.root) {
-	display: none;
+  display: none;
 }
 
 div :global(.arrow) {
-	top: 2px;
-	cursor: pointer;
+  top: 2px;
+  cursor: pointer;
 }
 
 div :global(.indent) {
-	max-width: 600px;
-	overflow: hidden;
+  max-width: 600px;
+  overflow: hidden;
 
-	white-space: nowrap;
-	text-overflow: ellipsis;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 div :global(div > ul) {
-	margin-left: 0;
+  margin-left: 0;
 }
 
 div :global(div > ul > ul > .indent) {
-	padding-left: 0;
+  padding-left: 0;
 }
 
 </style>
@@ -48,17 +48,17 @@ div :global(div > ul > ul > .indent) {
 <!-- ================================================================== -->
 <div>
 
-	<JSONTree
-		value={value}
-		defaultExpandedLevel={2}
-		--json-tree-font-size="16px"
-		--json-tree-li-line-height="1.7"
-		--json-tree-font-family="monospace"
-		--json-tree-string-color="var(--color-text)"
-		--json-tree-label-color="var(--color-interaction)"
-		--json-tree-property-color="var(--color-interaction)"
-		--json-tree-number-color="var(--color-text-secondary)"
-		--json-tree-boolean-color="var(--color-text-secondary)"
-	/>
+  <JSONTree
+    value={value}
+    defaultExpandedLevel={2}
+    --json-tree-font-size="16px"
+    --json-tree-li-line-height="1.7"
+    --json-tree-font-family="monospace"
+    --json-tree-string-color="var(--color-text)"
+    --json-tree-label-color="var(--color-interaction)"
+    --json-tree-property-color="var(--color-interaction)"
+    --json-tree-number-color="var(--color-text-secondary)"
+    --json-tree-boolean-color="var(--color-text-secondary)"
+  />
 
 </div>

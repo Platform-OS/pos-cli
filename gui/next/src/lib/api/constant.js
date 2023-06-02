@@ -1,5 +1,5 @@
 /*
-	operation on instance constants
+  operation on instance constants
 */
 
 
@@ -14,50 +14,50 @@ import { graphql } from '$lib/api/graphql';
 // ------------------------------------------------------------------------
 const constant = {
 
-	get: () => {
-		const query = `
-			query {
-				constants(
-					per_page: 100
-				) {
-					results {
-						name,
-						value,
-						updated_at
-					}
-				}
-			}`;
+  get: () => {
+    const query = `
+      query {
+        constants(
+          per_page: 100
+        ) {
+          results {
+            name,
+            value,
+            updated_at
+          }
+        }
+      }`;
 
-		return graphql({ query }, false).then(data => data.constants.results);
-	},
+    return graphql({ query }, false).then(data => data.constants.results);
+  },
 
-	edit: (data) => {
-		data = Object.fromEntries(data.entries());
+  edit: (data) => {
+    data = Object.fromEntries(data.entries());
 
-		const query = `
-			mutation {
-				constant_set(name: "${data.name}", value: "${data.value}"){
-					name,
-					value
-				}
-			}`;
+    const query = `
+      mutation {
+        constant_set(name: "${data.name}", value: "${data.value}"){
+          name,
+          value
+        }
+      }`;
 
-		return graphql({ query }, false);
-	},
+    return graphql({ query }, false);
+  },
 
-	delete: (data) => {
-		data = Object.fromEntries(data.entries());
+  delete: (data) => {
+    data = Object.fromEntries(data.entries());
 
-		const query = `
-			mutation {
-				constant_unset(name: "${data.name}"){
-					name
-				}
-			}
-		`;
+    const query = `
+      mutation {
+        constant_unset(name: "${data.name}"){
+          name
+        }
+      }
+    `;
 
-		return graphql({ query }, false);
-	}
+    return graphql({ query }, false);
+  }
 
 };
 
