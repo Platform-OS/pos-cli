@@ -16,6 +16,7 @@
     "gui/liquid",
     "gui/graphql/public",
     "gui/admin/dist",
+    "gui/next/build",
     "scripts"
   ],
   "main": "./bin/pos-cli.js",
