@@ -15,9 +15,11 @@ pipeline {
       agent { kubernetes { yaml podTemplate("amd64") } }
 
       steps {
-        sh 'set -e'
-        sh 'npm ci'
-        sh 'npm test'
+        container(name: 'node') {
+          sh 'set -e'
+          sh 'npm ci'
+          sh 'npm test'
+        }
       }
     }
   }
@@ -29,7 +31,7 @@ def podTemplate(arch) {
           nodeSelector:
             beta.kubernetes.io/arch: "${arch}"
           containers:
-          - name: testcafe
+          - name: node
             resources:
               limits:
                 cpu: 2
