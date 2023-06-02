@@ -16,6 +16,7 @@ pipeline {
 
       steps {
         container(name: 'node') {
+          sh 'sleep 1d'
           sh 'set -e'
           sh 'npm ci'
           sh 'npm test'
