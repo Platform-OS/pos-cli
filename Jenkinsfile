@@ -1,13 +1,10 @@
-@Library('pipeline-utils')_
-
 def name = 'pos-cli'
 
 pipeline {
   agent any
 
   environment {
-    PROJECT_NAME = "${env.BRANCH_NAME}-${env.GIT_COMMIT[0..5]}-${env.BUILD_ID}"
-    MPKIT_TOKEN = credentials('POS_TOKEN')
+    MPKIT_TOKEN = credentials('MPKIT_TOKEN')
     MPKIT_EMAIL = "darek+ci@near-me.com"
     MPKIT_URL = "https://qa-17263.staging.oregon.platform-os.com"
     POS_PORTAL_PASSWORD = credentials('POS_PORTAL_PASSWORD')
@@ -15,48 +12,36 @@ pipeline {
 
   stages {
     stage('Test') {
-      agent { docker { image "node:16-alpine"; args "-u root" } }
+      agent { kubernetes { yaml podTemplate("amd64") } }
 
       steps {
-        sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
-      }
-      post {
-        always {
-          script {
-            sh "chown -R 995:993 * && chown 995:993 ."
-          }
+        container(name: 'node') {
+          sh 'set -e'
+          sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
         }
       }
     }
-
-    stage('Build') {
-      when { branch 'master' }
-      steps {
-        script {
-          docker.withRegistry('https://registry.hub.docker.com', 'posops-dockerhub') {
-            def image = docker.build("platformos/${name}")
-            image.push()
-          }
-        }
-      }
-    }
-
-    stage('Build testcafe-pos-cli') {
-      when { branch 'master' }
-      steps {
-        build job: 'platformOS/toolbelt/master/', parameters: [
-          string(name: 'force', value: 'testcafe-pos-cli')
-        ], quietPeriod: 0
-      }
-    }
   }
-  post {
-    success {
-      notify("${name}-pipeline ${env.PROJECT_NAME} Success after ${buildDuration()}.")
-    }
+}
 
-    failure {
-      alert("${name}-pipeline ${env.PROJECT_NAME} Failed after ${buildDuration()}.")
-    }
-  }
+def podTemplate(arch) {
+  return """
+        spec:
+          nodeSelector:
+            beta.kubernetes.io/arch: "${arch}"
+          containers:
+          - name: node
+            resources:
+              limits:
+                cpu: 2
+                memory: 2Gi
+              requests:
+                cpu: 2
+              memory: 2Gi
+            image: 'node:16-alpine'
+            imagePullPolicy: IfNotPresent
+            command:
+            - cat
+            tty: true
+"""
 }
