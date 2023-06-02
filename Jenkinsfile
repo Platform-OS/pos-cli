@@ -18,8 +18,7 @@ pipeline {
         container(name: 'node') {
           sh 'sleep 1d'
           sh 'set -e'
-          sh 'npm ci'
-          sh 'npm test'
+          sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
         }
       }
     }
