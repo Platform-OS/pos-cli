@@ -1,4 +1,4 @@
-The main focus of this release is to improve on speed and to eliminate some of the pain points of daily development.
+The main focus of this release is to improve on developement speed and to eliminate some of the pain points of daily development.
 
 ## Layout and design
 
@@ -6,7 +6,7 @@ The layout and design were completely updated but all of the old functionality s
 
 The app will check if it is connected to the instance (if the `pos-cli gui serve` is running) so you won't be surprised when trying to edit something just to see nothing happening after clicking save.
 
-New dark mode for all of you who prefer low contrast on their dev tools
+New dark mode for all of you who prefer low contrast on their dev tools.
 
 
 ## Database management
@@ -21,9 +21,9 @@ Completely redesigned database management with table-like view:
 
 ### Record editing improvements
 
-- Textareas autoresize to fit content (to an extend, they won't get super long)
-- You can save and edit JSONs saved with `value_json` using a switch between `string` and `json` for `string` types
 - You don't have to manually use quotes when editing string, they will be added and the JSONs will be escaped automatically
+- You can save and edit JSONs saved with `value_json` using a switch between `string` and `json` for `string` types
+- Textareas autoresize to fit content (to an extend, they won't get super long)
 
 
 ## Users

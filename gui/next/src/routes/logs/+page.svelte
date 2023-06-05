@@ -139,6 +139,7 @@ nav > div {
 .logs nav {
   position: sticky;
   top: 0;
+  left: 0;
   z-index: 10;
 }
 
