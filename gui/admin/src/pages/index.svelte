@@ -143,3 +143,22 @@
     </div>
   </div>
 </section>
+
+<hr>
+
+<div class="container flex flex-wrap py-8 mx-auto">
+  <section class="w-full p-8 border-2 border-gray-200 rounded-lg bg-no-repeat bg-right flex flex-col gap-14 md:flex-row items-center justify-center" style="min-height: 450px; background-color: #f5f6fc">
+    <div>
+      <h2 class="mb-3 text-2xl font-medium text-gray-900 title-font">Try the new pos-cli gui</h2>
+      <p class="mb-8">Fully operational public beta version available</p>
+
+      <a href="http://localhost:3334" class="px-4 py-2 inline-flex items-center gap-4 bg-blue-500 text-white rounded">
+        Try it
+        <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="w-4 h-4" viewBox="0 0 24 24">
+          <path d="M5 12h14M12 5l7 7-7 7"></path>
+        </svg>
+      </a>
+    </div>
+    <img src="/tryNew.png" alt="" width="473" height="309">
+  </section>
+</div>

@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "4.8.1",
+  "version": "4.9.0",
   "description": "Manage your platformOS application",
   "scripts": {
     "prepare": "npm run build:admin && npm run build:graphql",
@@ -16,6 +16,7 @@
     "gui/liquid",
     "gui/graphql/public",
     "gui/admin/dist",
+    "gui/next/build",
     "scripts"
   ],
   "main": "./bin/pos-cli.js",
