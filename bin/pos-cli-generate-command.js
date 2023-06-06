@@ -3,17 +3,26 @@
 const program = require("commander");
 
 const yeoman = require("yeoman-environment");
-const env = yeoman.createEnv();
+const yeomanEnv = yeoman.createEnv();
 const path = require("path");
 const chalk = require("chalk");
+const dir = require('../lib/directories');
 
-const runYeoman = (modelName, attributes) => {
-  const generatorName = 'command'
-  const generatorPath = path.join(__dirname, "..", "lib", "generators", generatorName);
+const runYeoman = (generatorPath, attributes) => {
+  // const generatorName = 'command'
+  // const generatorPath = path.join(__dirname, "..", "lib", "generators", generatorName);
 
   try {
-    env.register(generatorPath, generatorName);
-    env.run(`command ${modelName}`, {});
+    // yeomanEnv.register(path.join(__dirname, generatorPath), 'foo');
+    const appDirectory = dir.APP;
+    const generatorPathFull = `./${generatorPath}`;
+    yeomanEnv.register(generatorPathFull, 'command');
+    const generator = yeomanEnv.get('command');
+    const inst = yeomanEnv.instantiate(generator, ['']);
+    console.log('generator', inst.argumentsHelp());
+    // console.log(yeomanEnv.help('command'));
+    yeomanEnv.run(`command ${attributes}`, {});
+    // console.log('argumentsHelp', generator.arguments);
   } catch (e) {
     console.error(chalk.red("Error: "));
     console.error(e);
@@ -27,10 +36,10 @@ const description = `Generate files for command with build and check phase.
 program
   .name('pos-cli generate command')
   .description(description)
-  .arguments('<command_name>')
-  .usage("<command_name>")
-  .action(function (commandName) {
-    runYeoman(commandName);
+  .arguments('<generatorPath> <attributes>')
+  .usage("<generatorPath>")
+  .action(function (generatorPath, attributes) {
+    runYeoman(generatorPath, attributes);
   });
 
 program.parse(process.argv);
