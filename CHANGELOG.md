@@ -2,6 +2,9 @@
 
 ## master
 
+## 4.9
+* Add new `pos-cli gui serve` beta version
+
 ## 4.8.1
 * Fix `pos-cli sync` to not stop working when there were syntax in synced files
 
