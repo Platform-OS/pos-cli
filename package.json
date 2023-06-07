@@ -47,6 +47,7 @@
     "js-yaml": "^4.1.0",
     "livereload": "^0.9.3",
     "lodash.clonedeep": "^4.5.0",
+    "lodash.compact": "^3.0.1",
     "lodash.debounce": "^4.0.8",
     "lodash.flatten": "^4.4.0",
     "lodash.startcase": "^4.4.0",
