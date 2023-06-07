@@ -62,7 +62,7 @@ let choosen = (' ' + checked).slice(1);
   }
 
   .toggle input[type="radio"]:not(:checked) + label {
-    opacity: .7;
+    opacity: .5;
   }
 
   .toggle:has(.switcher + input[type="radio"]:checked) .switcher:before {
