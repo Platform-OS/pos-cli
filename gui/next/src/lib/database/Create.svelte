@@ -3,7 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount } from 'svelte';
+import { onMount, tick } from 'svelte';
 import { quintOut } from 'svelte/easing';
 import { page } from '$app/stores.js';
 import { state } from '$lib/state.js';
@@ -26,8 +26,10 @@ export let editing;
 let container;
 // edit form (dom node)
 let form;
-// list of errors for the current form (array of objects)
+// list of errors for the current form taken from back-end (array of objects)
 let errors = [];
+// list of inline validation errors for the current form (object)
+let validation = {};
 // if we should original values instead of parsed JSON for string types (bool)
 let dontParseStringedJson = false;
 
@@ -74,33 +76,58 @@ document.addEventListener('keydown', event => {
 const save = async (event) => {
   event.preventDefault();
 
-  // create new record
-  if(!$state.record.id){
-    const create = await record.create({ table: $state.table.name, properties: new FormData(form) });
+  // form data as object with properties
+  const properties = new FormData(form);
 
-    if(!create.errors){
-      state.clearFilters();
-      record.get({ table: $page.params.id, filters: $state.filters });
-      state.highlight('record', create.model_create.id);
-      state.notification.create('success', `Record ${create.model_create.id} created`);
-      $state.record = null;
-    } else {
-      errors = create.errors;
+  // validation
+  validation = {};
+
+  for(const property of properties.entries()){
+    if(property[0].endsWith('[type]') && property[1] === 'json'){
+      const propertyName = property[0].replace('[type]', '');
+      if(!tryParseJSON(properties.get(propertyName + '[value]'))){
+        validation[propertyName] = { property: propertyName, message: 'Not a valid JSON' };
+      }
     }
   }
-  // edit existing record
-  else {
-    const edit = await record.edit({ table: $state.table.name, id: $state.record.id, properties: new FormData(form) });
 
-    if(!edit.errors){
-      state.clearFilters();
-      record.get({table: $page.params.id, filters: $state.filters });
-      state.highlight('record', edit.model_update.id);
-      state.notification.create('success', `Record ${edit.model_update.id} updated`);
-      $state.record = null;
-    } else {
-      errors = edit.errors;
+  if(Object.keys(validation).length){
+
+    // if there is an inline validation error, scroll to it
+    await tick();
+    document.querySelector('[role="alert"]:not(:empty)').scrollIntoView({behavior: 'smooth', block: 'center'})
+
+  } else {
+
+    // create new record
+    if(!$state.record.id){
+      const create = await record.create({ table: $state.table.name, properties: properties });
+
+      if(!create.errors){
+        state.clearFilters();
+        record.get({ table: $page.params.id, filters: $state.filters });
+        state.highlight('record', create.model_create.id);
+        state.notification.create('success', `Record ${create.model_create.id} created`);
+        $state.record = null;
+      } else {
+        errors = create.errors;
+      }
     }
+    // edit existing record
+    else {
+      const edit = await record.edit({ table: $state.table.name, id: $state.record.id, properties: properties });
+
+      if(!edit.errors){
+        state.clearFilters();
+        record.get({table: $page.params.id, filters: $state.filters });
+        state.highlight('record', edit.model_update.id);
+        state.notification.create('success', `Record ${edit.model_update.id} updated`);
+        $state.record = null;
+      } else {
+        errors = edit.errors;
+      }
+    }
+
   }
 
 };
@@ -165,8 +192,31 @@ label {
 }
 
 textarea {
+  width: 100%;
   max-height: 40rem;
 }
+
+[role="alert"]:not(:empty) {
+  margin-block-start: .5em;
+  padding: .5em 1em .6em;
+  position: relative;
+
+  border-radius: 1rem;
+  background-color: var(--color-danger);
+}
+
+  [role="alert"]:not(:empty):before {
+    width: 1em;
+    height: .5em;
+    position: absolute;
+    top: -6px;
+    right: 1rem;
+
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    background-color: var(--color-danger);
+
+    content: '';
+  }
 
 
 .footer {
@@ -230,13 +280,20 @@ textarea {
               </div>
             </label>
           </dir>
-          <textarea
-            rows="1"
-            name="{property.name}[value]"
-            id="edit_{property.name}"
-            use:autosize
-            disabled={property.attribute_type === 'upload'}
-          >{value.type === 'json' || value.type === 'jsonEscaped' && !dontParseStringedJson ? JSON.stringify(value.value, undefined, 2) : value.value}</textarea>
+          <div>
+            <textarea
+              rows="1"
+              name="{property.name}[value]"
+              id="edit_{property.name}"
+              use:autosize
+              disabled={property.attribute_type === 'upload'}
+            >{value.type === 'json' || value.type === 'jsonEscaped' && !dontParseStringedJson ? JSON.stringify(value.value, undefined, 2) : value.value}</textarea>
+            <div role="alert">
+              {#if validation[property.name]}
+                {validation[property.name].message}
+              {/if}
+            </div>
+          </div>
         </fieldset>
       {/each}
 
