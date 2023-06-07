@@ -53,7 +53,6 @@ Completely redesigned database management with table-like view:
 - There is almost no responsiveness in the layout
 - The UI is not yet butter-smooth is some situations
 - Database management lacks the tiles view that the old solution is using
-- ESC doesn't close the edit form properly
 - No ability to view the actual string when saving an escaped JSON using `value` (yet)
 - Missing button to manually refresh logs
 - The home screen corresponds to the old one for now, but will be replaced in the future when more tools will be developed
