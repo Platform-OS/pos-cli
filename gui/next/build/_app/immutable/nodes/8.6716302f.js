@@ -1,1 +1,0 @@
-import{S as a,i as o,s as n,$ as c,h,K as e}from"../chunks/index.fee0118f.js";function r(s){return{c(){this.h()},l(t){c("svelte-x68257",document.head).forEach(h),this.h()},h(){document.title="Database | platformOS"},m:e,p:e,i:e,o:e,d:e}}class l extends a{constructor(t){super(),o(this,t,null,r,n,{})}}export{l as component};
