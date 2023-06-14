@@ -2,7 +2,7 @@
 
 ## master
 
-## 4.9.1
+## 4.9.2
 ### pos-cli gui next updates
 * Reloading subpaths does not return 404 anymore
 * More contrast on string-json toggle
