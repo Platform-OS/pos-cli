@@ -118,7 +118,6 @@ const save = async (event) => {
       const edit = await record.edit({ table: $state.table.name, id: $state.record.id, properties: properties });
 
       if(!edit.errors){
-        state.clearFilters();
         record.get({table: $page.params.id, filters: $state.filters });
         state.highlight('record', edit.model_update.id);
         state.notification.create('success', `Record ${edit.model_update.id} updated`);
