@@ -62,11 +62,20 @@ let choosen = (' ' + checked).slice(1);
   }
 
   .toggle input[type="radio"]:not(:checked) + label {
-    opacity: .7;
+    opacity: .5;
   }
 
   .toggle:has(.switcher + input[type="radio"]:checked) .switcher:before {
     translate: .85em 0;
+  }
+
+  /* focus state */
+  .toggle:has(input[type="radio"]:focus-visible) .switcher {
+    border-color: var(--color-interaction-hover);
+  }
+
+  .toggle:has(input[type="radio"]:focus-visible) .switcher:before {
+    background-color: var(--color-interaction-hover);
   }
 
 </style>
@@ -78,12 +87,26 @@ let choosen = (' ' + checked).slice(1);
 
   {#if options.length === 2}
 
-    <input type="radio" name={name} value={options[0].value} bind:group={choosen} id="toggle-{name}-{options[0].value}">
+    <input
+      type="radio"
+      name={name}
+      value={options[0].value}
+      bind:group={choosen}
+      id="toggle-{name}-{options[0].value}"
+      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); choosen = choosen === options[0].value ? options[1].value : options[0].value } } }
+    >
     <label for="toggle-{name}-{options[0].value}">{options[0].label}</label>
 
     <label for="toggle-{name}-{choosen === options[0].value ? options[1].value : options[0].value}" class="switcher"></label>
 
-    <input type="radio" name={name} value={options[1].value} bind:group={choosen} id="toggle-{name}-{options[1].value}">
+    <input
+      type="radio"
+      name={name}
+      value={options[1].value}
+      bind:group={choosen}
+      id="toggle-{name}-{options[1].value}"
+      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); choosen = choosen === options[0].value ? options[1].value : options[0].value } } }
+    >
     <label for="toggle-{name}-{options[1].value}">{options[1].label}</label>
 
   {/if}

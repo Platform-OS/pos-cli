@@ -3,9 +3,10 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { tick, afterUpdate, onMount } from 'svelte';
+import { tick, afterUpdate, onMount, beforeUpdate } from 'svelte';
 import { fade } from 'svelte/transition';
 import { quintOut } from 'svelte/easing';
+import { browser } from '$app/environment';
 import { state } from '$lib/state.js';
 
 import { tryParseJSON } from '$lib/tryParseJSON.js';
@@ -44,9 +45,19 @@ const isFiltered = (log) => {
 };
 
 
-// purpose:		scroll to bottom on load
+// purpose:		scroll to bottom on load and when new logs appear and the scrollbar position is on bottom
 // ------------------------------------------------------------------------
 let scrolled = false;
+
+beforeUpdate(() => {
+  if(browser){
+    const container = document.querySelector('.logs');
+
+    if(Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 10){
+      scrolled = false;
+    }
+  }
+});
 
 afterUpdate(async () => {
   if(!scrolled){
@@ -403,7 +414,7 @@ footer {
             </td>
             <td class="message">
               {#if message}
-                <JSONTree value={message} />
+                <JSONTree value={message} showFullLines={true} />
               {:else}
                 <div class="pre">
                   {#if log.showFull}
@@ -489,7 +500,7 @@ footer {
                 {/if}
                 <div class="message">
                   {#if message}
-                    <JSONTree value={message} />
+                    <JSONTree value={message} showFullLines={true} />
                   {:else}
                     <div class="pre">
                       {#if log.showFull}

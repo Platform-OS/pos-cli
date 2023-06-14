@@ -2,6 +2,17 @@
 
 ## master
 
+## 4.9.2
+### pos-cli gui next updates
+* Reloading subpaths does not return 404 anymore
+* More contrast on string-json toggle
+* Inline validation when editing JSON type
+* Enabled keyboard navigation for toggle switch in record edit form
+* Fixes showing 'false' value for bool attributes
+* Not clearing the filters after editing a record anymore
+* Showing full values in parsed JSON logs
+* Scrolling to bottom when new log appears and the page was scrolled to bottom before
+
 ## 4.9
 * Add new `pos-cli gui serve` beta version at `localhost:3334`
 
