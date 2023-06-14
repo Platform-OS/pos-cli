@@ -403,7 +403,7 @@ footer {
             </td>
             <td class="message">
               {#if message}
-                <JSONTree value={message} />
+                <JSONTree value={message} showFullLines={true} />
               {:else}
                 <div class="pre">
                   {#if log.showFull}
@@ -489,7 +489,7 @@ footer {
                 {/if}
                 <div class="message">
                   {#if message}
-                    <JSONTree value={message} />
+                    <JSONTree value={message} showFullLines={true} />
                   {:else}
                     <div class="pre">
                       {#if log.showFull}

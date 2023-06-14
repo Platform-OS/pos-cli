@@ -10,6 +10,8 @@ import JSONTree from 'svelte-json-tree';
 // ------------------------------------------------------------------------
 // JSON to show as a tree (object)
 export let value;
+// if you want to output the full value instead of trimming long lines (bool)
+export let showFullLines = false;
 
 </script>
 
@@ -33,6 +35,15 @@ div :global(.indent) {
   text-overflow: ellipsis;
 }
 
+div.showFullLines :global(.indent) {
+  max-width: auto;
+  overflow: visible;
+
+  white-space: normal;
+  word-wrap: break-word;
+  text-overflow: unset;
+}
+
 div :global(div > ul) {
   margin-left: 0;
 }
@@ -46,7 +57,7 @@ div :global(div > ul > ul > .indent) {
 
 
 <!-- ================================================================== -->
-<div>
+<div class:showFullLines>
 
   <JSONTree
     value={value}
