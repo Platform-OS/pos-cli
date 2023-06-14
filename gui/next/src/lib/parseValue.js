@@ -15,11 +15,18 @@ const parseValue = (value, type) => {
     type: type
   };
 
-
-  if(!value){
+  if(type !== 'boolean' && !value){
     parsed.value = null;
     parsed.type = 'null';
     return {...parsed};
+  }
+
+  if(type === 'boolean'){
+    if(value === true){
+      parsed.value = 'true';
+    } else {
+      parsed.value = 'false';
+    }
   }
 
   if(typeof value === 'object'){
