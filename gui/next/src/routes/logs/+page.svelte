@@ -53,7 +53,7 @@ beforeUpdate(() => {
   if(browser){
     const container = document.querySelector('.logs');
 
-    if(Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 10){
+    if(container && Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 10){
       scrolled = false;
     }
   }
