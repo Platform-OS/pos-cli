@@ -17,24 +17,27 @@ const backgroundJob = {
   get: async (filters) => {
 
     let idFilter = '';
-    if(filters?.id){
-      idFilter = `id: { value: "${filters.id}" }`;
+    if(filters?.attributes.id){
+      idFilter = `id: { value: "${filters.attributes.id}" }`;
     }
 
     let typeFilter = '';
-    if(filters?.type){
-      typeFilter = `type: ${filters.type}`;
+    if(filters?.attributes.type){
+      typeFilter = `type: ${filters.attributes.type}`;
     }
 
     const query = `
       query {
         admin_background_jobs(
           per_page: 100,
+          page: ${filters?.page || 1}
           filter: {
             ${idFilter}
             ${typeFilter}
           }
         ) {
+          has_next_page,
+          has_previous_page,
           results {
             id
             arguments

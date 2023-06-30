@@ -20,16 +20,23 @@ let contextMenu = {
   // job id for which the context menu is opened for
   id: null
 };
+// stores currently applied filters (object)
+let filters = {
+  page: 1
+}
+// main form with the filters (dom node)
+let form;
 
 
 // purpose:   get the fresh list of background jobs from database and start counter on when they run
+// arguments: filters to use for the query (FormData)
 // ------------------------------------------------------------------------
 let runsAtUpdateInterval;
-const getItems = async () => {
+const getItems = async (filters) => {
 
   clearInterval(runsAtUpdateInterval);
 
-  items = await backgroundJob.get();
+  items = await backgroundJob.get(filters);
 
   runsAtUpdateInterval = setInterval(() => {
     items.forEach(item => {
@@ -42,6 +49,15 @@ const getItems = async () => {
 onMount(() => {
   getItems();
 });
+
+
+// purpose:		parses the <form> and triggers background jobs reload
+// ------------------------------------------------------------------------
+const filter = () => {
+  filters = { page: 1, attributes: Object.fromEntries((new FormData(form)).entries()) };
+
+  getItems(filters);
+}
 
 </script>
 
@@ -57,8 +73,27 @@ onMount(() => {
 }
 
 
-table {
+.container > div {
   flex-grow: 1;
+}
+
+
+
+nav {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  border-bottom: 1px solid var(--color-frame);
+  background-color: rgba(var(--color-rgb-background), .8);
+  backdrop-filter: blur(17px);
+  -webkit-backdrop-filter: blur(17px);
+}
+
+
+table {
+  width: 100%;
 }
 
 thead {
@@ -79,15 +114,26 @@ td, th {
   vertical-align: top;
 
   border: 1px solid var(--color-frame);
+  border-block-start: 0;
 
   transition: background-color .2s linear;
 }
+
+  td:first-child,
+  th:first-child {
+    border-inline-start: 0;
+  }
+
+  td:last-child,
+  th:last-child {
+    border-inline-end: 0;
+  }
 
   th.id {
     padding-inline-start: 2.6rem;
   }
 
-  td.id {
+  td.id div {
     position: relative;
     display: flex;
     align-items: center;
@@ -173,53 +219,67 @@ menu :global(button:hover) {
 
 <div class="container">
 
-  <table>
+  <div>
 
-    <thead>
+    <nav>
+      <form bind:this={form}>
+        <label for="filter-type">Type:</label>
+        <select name="type" id="filter-type" on:change={filter}>
+          <option value="SCHEDULED">Scheduled</option>
+          <option value="DEAD">Failed</option>
+        </select>
+      </form>
+    </nav>
+
+
+    <table>
+
+      <thead>
+        <tr>
+          <th class="id">Name / id</th>
+          <th>Priority</th>
+          <th>URL</th>
+          <th>
+            Runs
+          </th>
+        </tr>
+      </thead>
+
+    {#each items as item}
+
       <tr>
-        <th class="id">Name / id</th>
-        <th>Priority</th>
-        <th>URL</th>
-        <th>
-          Runs
-        </th>
-        <th></th>
+        <td class="id" on:mouseleave={() => contextMenu.id = null}>
+          <div>
+
+            <button class="button compact more" on:click={() => contextMenu.id = item.id}>
+              <span class="label">More options</span>
+              <Icon icon="navigationMenuVertical" size="16" />
+            </button>
+
+            <menu class="content-context" class:active={contextMenu.id === item.id}>
+              <ul>
+                <li>
+                  <Delete id={item.id} on:itemsChanged={getItems} />
+                </li>
+              </ul>
+            </menu>
+
+            <a href="/backgroundJobs/{item.id}">
+              {item.source_name || item.id}
+            </a>
+
+          </div>
+        </td>
+        <td>{item.arguments.priority}</td>
+        <td>{item.arguments.context.location.href}</td>
+        <td>{ item.run_at_parsed || relativeTime(new Date(item.run_at)) }</td>
       </tr>
-    </thead>
 
-  {#each items as item}
+    {/each}
 
-    <tr>
-      <td class="id" on:mouseleave={() => contextMenu.id = null}>
+    </table>
 
-        <button class="button compact more" on:click={() => contextMenu.id = item.id}>
-          <span class="label">More options</span>
-          <Icon icon="navigationMenuVertical" size="16" />
-        </button>
-
-        <menu class="content-context" class:active={contextMenu.id === item.id}>
-          <ul>
-            <li>
-              <Delete id={item.id} on:itemsChanged={getItems} />
-            </li>
-          </ul>
-        </menu>
-
-        <a href="/backgroundJobs/{item.id}">
-          {item.source_name || item.id}
-        </a>
-
-      </td>
-      <td>{item.arguments.priority}</td>
-      <td>{item.arguments.context.location.href}</td>
-      <td>{ item.run_at_parsed || relativeTime(new Date(item.run_at)) }</td>
-      <td>{#if item.error}Failed{/if}</td>
-    </tr>
-
-  {/each}
-
-  </table>
-
+  </div>
 
   <slot />
 

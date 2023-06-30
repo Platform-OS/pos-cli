@@ -16,7 +16,7 @@ let item = {};
 
 // get background job details
 const load = async () => {
-  await backgroundJob.get({id: $page.params.id}).then(response => { response.length ? item = response[0] : item = null; });
+  await backgroundJob.get({attributes: { id: $page.params.id } }).then(response => { response.length ? item = response[0] : item = null; });
 };
 
 $: load($page.params.id);
@@ -31,7 +31,6 @@ aside {
   width: 50%;
   min-width: 400px;
   overflow: hidden;
-  margin-inline-start: -1px;
 
   border-inline-start: 1px solid var(--color-frame);
 }

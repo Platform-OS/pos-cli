@@ -179,6 +179,15 @@ a:hover .label {
         </li>
 
         <li>
+          <a href="/backgroundJobs" class:active={$page.url.pathname.startsWith('/backgroundJobs')}>
+            <Icon icon="backgroundJob" />
+            <span class="label">
+              Background Jobs
+            </span>
+          </a>
+        </li>
+
+        <li>
           <a href="/constants" class:active={$page.url.pathname.startsWith('/constants')}>
             <Icon icon="constant" />
             <span class="label">
