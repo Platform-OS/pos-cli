@@ -17,13 +17,13 @@ const backgroundJob = {
   get: async (filters) => {
 
     let idFilter = '';
-    if(filters?.attributes.id){
-      idFilter = `id: { value: "${filters.attributes.id}" }`;
+    if(filters?.id){
+      idFilter = `id: { value: "${filters.id}" }`;
     }
 
     let typeFilter = '';
-    if(filters?.attributes.type){
-      typeFilter = `type: ${filters.attributes.type}`;
+    if(filters?.type){
+      typeFilter = `type: ${filters.type}`;
     }
 
     const query = `

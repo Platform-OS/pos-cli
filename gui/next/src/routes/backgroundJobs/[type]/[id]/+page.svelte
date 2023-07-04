@@ -16,7 +16,7 @@ let item = {};
 
 // get background job details
 const load = async () => {
-  await backgroundJob.get({attributes: { id: $page.params.id } }).then(response => { response.length ? item = response[0] : item = null; });
+  await backgroundJob.get({ id: $page.params.id, type: $page.params.type.toUpperCase() }).then(response => { response.length ? item = response[0] : item = null; });
 };
 
 $: load($page.params.id);

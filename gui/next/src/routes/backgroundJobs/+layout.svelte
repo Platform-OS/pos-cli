@@ -3,7 +3,9 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
 import { backgroundJob } from '$lib/api/backgroundJob.js';
 import { relativeTime } from '$lib/relativeTime.js';
 
@@ -22,17 +24,17 @@ let contextMenu = {
 };
 // stores currently applied filters (object)
 let filters = {
-  page: 1
+  type: 'SCHEDULED',
+  ...Object.fromEntries($page.url.searchParams)
 }
 // main form with the filters (dom node)
 let form;
-
 
 // purpose:   get the fresh list of background jobs from database and start counter on when they run
 // arguments: filters to use for the query (FormData)
 // ------------------------------------------------------------------------
 let runsAtUpdateInterval;
-const getItems = async (filters) => {
+const getItems = async () => {
 
   clearInterval(runsAtUpdateInterval);
 
@@ -40,23 +42,31 @@ const getItems = async (filters) => {
 
   runsAtUpdateInterval = setInterval(() => {
     items.forEach(item => {
-      item.run_at_parsed = relativeTime(new Date(item.run_at));
+      if(filters.type === 'DEAD'){
+        item.dead_at_parsed = relativeTime(new Date(item.dead_at));
+      } else {
+        item.run_at_parsed = relativeTime(new Date(item.run_at));
+      }
     });
   }, 1000);
 
 };
 
-onMount(() => {
-  getItems();
+$: filters && getItems();
+
+onDestroy(() => {
+  clearInterval(runsAtUpdateInterval);
 });
 
 
 // purpose:		parses the <form> and triggers background jobs reload
 // ------------------------------------------------------------------------
 const filter = () => {
-  filters = { page: 1, attributes: Object.fromEntries((new FormData(form)).entries()) };
+  const formData = new FormData(form);
+  const asString = new URLSearchParams(formData).toString();
+  goto('?' + asString);
 
-  getItems(filters);
+  getItems();
 }
 
 </script>
@@ -67,6 +77,8 @@ const filter = () => {
 
 .container {
   width: 100%;
+  height: calc(100vh - 83px);
+  overflow-y: auto;
 
   display: flex;
   align-items: flex-start;
@@ -111,7 +123,7 @@ th {
 
 td, th {
   padding: .6rem;
-  vertical-align: top;
+  vertical-align: middle;
 
   border: 1px solid var(--color-frame);
   border-block-start: 0;
@@ -224,7 +236,7 @@ menu :global(button:hover) {
     <nav>
       <form bind:this={form}>
         <label for="filter-type">Type:</label>
-        <select name="type" id="filter-type" on:change={filter}>
+        <select name="type" id="filter-type" bind:value={filters.type} on:change={form.requestSubmit()}>
           <option value="SCHEDULED">Scheduled</option>
           <option value="DEAD">Failed</option>
         </select>
@@ -240,7 +252,11 @@ menu :global(button:hover) {
           <th>Priority</th>
           <th>URL</th>
           <th>
-            Runs
+            {#if filters.type === 'DEAD'}
+              Failed
+            {:else}
+              Runs
+            {/if}
           </th>
         </tr>
       </thead>
@@ -264,7 +280,7 @@ menu :global(button:hover) {
               </ul>
             </menu>
 
-            <a href="/backgroundJobs/{item.id}">
+            <a href="/backgroundJobs/{filters.type.toLowerCase()}/{item.id}?{$page.url.searchParams.toString()}">
               {item.source_name || item.id}
             </a>
 
@@ -272,7 +288,13 @@ menu :global(button:hover) {
         </td>
         <td>{item.arguments.priority}</td>
         <td>{item.arguments.context.location.href}</td>
-        <td>{ item.run_at_parsed || relativeTime(new Date(item.run_at)) }</td>
+        <td>
+          {#if filters.type === 'DEAD'}
+            { item.dead_at_parsed || relativeTime(new Date(item.de)) }
+          {:else}
+            { item.run_at_parsed || relativeTime(new Date(item.run_at)) }
+          {/if}
+        </td>
       </tr>
 
     {/each}
