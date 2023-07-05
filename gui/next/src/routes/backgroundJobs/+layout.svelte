@@ -3,13 +3,14 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount, onDestroy } from 'svelte';
+import { onDestroy } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { backgroundJob } from '$lib/api/backgroundJob.js';
 import { relativeTime } from '$lib/relativeTime.js';
 
 import Icon from '$lib/ui/Icon.svelte';
+import Retry from '$lib/backgroundJob/Retry.svelte';
 import Delete from '$lib/backgroundJob/Delete.svelte';
 
 
@@ -77,8 +78,6 @@ const filter = () => {
 
 .container {
   width: 100%;
-  height: calc(100vh - 83px);
-  overflow-y: auto;
 
   display: flex;
   align-items: flex-start;
@@ -86,6 +85,8 @@ const filter = () => {
 
 
 .container > div {
+  height: calc(100vh - 83px);
+  overflow-y: auto;
   flex-grow: 1;
 }
 
@@ -243,7 +244,6 @@ menu :global(button:hover) {
       </form>
     </nav>
 
-
     <table>
 
       <thead>
@@ -274,6 +274,11 @@ menu :global(button:hover) {
 
             <menu class="content-context" class:active={contextMenu.id === item.id}>
               <ul>
+                {#if item.dead_at}
+                  <li>
+                    <Retry id={item.id} on:itemsChanged={getItems} />
+                  </li>
+                {/if}
                 <li>
                   <Delete id={item.id} on:itemsChanged={getItems} />
                 </li>
@@ -290,7 +295,7 @@ menu :global(button:hover) {
         <td>{item.arguments.context.location.href}</td>
         <td>
           {#if filters.type === 'DEAD'}
-            { item.dead_at_parsed || relativeTime(new Date(item.de)) }
+            { item.dead_at_parsed || relativeTime(new Date(item.dead_at)) || '' }
           {:else}
             { item.run_at_parsed || relativeTime(new Date(item.run_at)) }
           {/if}

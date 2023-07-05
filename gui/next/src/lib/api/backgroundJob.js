@@ -80,10 +80,30 @@ const backgroundJob = {
     let properties = Object.fromEntries(args.properties.entries());
     const id = properties.id;
 
-
     const query = `
       mutation {
         admin_background_job_delete(id: "${id}") {
+          id
+        }
+      }
+    `;
+
+    return graphql({ query }, false);
+
+  },
+
+
+  // purpose:		runs the background job again
+  // arguments: id of the job to run (string)
+  // ------------------------------------------------------------------------
+  retry: async (args) => {
+
+    let properties = Object.fromEntries(args.properties.entries());
+    const id = properties.id;
+
+    const query = `
+      mutation {
+        admin_background_job_retry(id: "${id}"){
           id
         }
       }

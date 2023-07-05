@@ -64,6 +64,19 @@ dt {
   color: var(--color-text-secondary);
 }
 
+code {
+  margin-block-end: 2rem;
+  padding: 1rem;
+  display: block;
+
+  border-radius: 1rem;
+  border-start-start-radius: 0;
+  background-color: var(--color-middleground);
+
+  font-family: monospace;
+  font-size: 1rem;
+}
+
 </style>
 
 
@@ -97,12 +110,25 @@ dt {
             <dt>Run at:</dt>
             <dd>{(new Date(item.created_at)).toLocaleString()}</dd>
           </div>
+          {#if item.dead_at}
+            <div>
+              <dt>Dead at:</dt>
+              <dd>{(new Date(item.created_at)).toLocaleString()}</dd>
+            </div>
+          {/if}
           <div>
             <dt>URL:</dt>
             <dd>{item.arguments.context.location.href}</dd>
           </div>
         {/if}
       </dl>
+
+      {#if item.error_message}
+        <h2>Error message</h2>
+        <code>
+          {item.error_message}
+        </code>
+      {/if}
 
       {#if item.id}
         <h2>Background job code:</h2>
