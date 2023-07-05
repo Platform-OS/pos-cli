@@ -34,7 +34,6 @@ const load = async (id) => {
 }
 
 $: load($page.params.id);
-$: console.log(item);
 
 
 // transition: 	slides from right
