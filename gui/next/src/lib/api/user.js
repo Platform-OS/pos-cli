@@ -21,10 +21,11 @@ const user = {
   // returns:		array of users as they appear in the database (array of objects)
   // ------------------------------------------------------------------------
   get: (filters) => {
-    filters = Object.fromEntries(filters.entries());
-
     let filtersString = '';
-    if(filters.attribute && filters.value){
+
+    if(filters.attribute === 'email'){
+      filtersString += `${filters.attribute}: { contains: "${filters.value}" }`;
+    } else {
       filtersString += `${filters.attribute}: { value: "${filters.value}" }`;
     }
 

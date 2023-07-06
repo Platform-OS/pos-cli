@@ -22,19 +22,18 @@ let item;
 // attributes:	id of the user (int)
 // returns:		a single user data object from the database (object)
 // ------------------------------------------------------------------------
-const load = async (id) => {
-  if(id){
-    const params = new FormData();
-    params.set('attribute', 'id');
-    params.set('value', id);
+const load = async () => {
+  const filters = {
+    attribute: 'id',
+    value: $page.params.id
+  };
 
-    await user.get(params).then(response => {
-      item = response.results[0];
-    });
-  }
+  await user.get(filters).then(response => {
+    item = response.results[0];
+  });
 }
 
-$: load($page.params.id);
+$: $page.params.id && load();
 
 
 // transition: 	slides from right
