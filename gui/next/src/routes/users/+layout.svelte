@@ -4,6 +4,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { onMount } from 'svelte';
+import { quintOut } from 'svelte/easing';
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
 
@@ -11,6 +12,8 @@ import Icon from '$lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+// main filters form (dom node)
+let form;
 // list of users (array)
 let items = [];
 // default filters (object)
@@ -28,7 +31,8 @@ let filters = {
 let maxPage = 1;
 
 
-
+// purpose:   loads data
+// ------------------------------------------------------------------------
 const load = async () => {
   await user.get(filters).then(response => {
     items = response.results;
@@ -39,6 +43,24 @@ const load = async () => {
 onMount(() => {
   load()
 });
+
+
+// transition:    zooms from nothing to full size
+// options: 	delay (int), duration (int)
+// ------------------------------------------------------------------------
+const appear = function(node, {
+  delay = 0,
+  duration = 150
+}){
+  return {
+    delay,
+    duration,
+    css: (t) => {
+      const eased = quintOut(t);
+
+      return `scale: ${eased};` }
+  }
+};
 
 </script>
 
@@ -163,7 +185,7 @@ td:last-child, th:last-child {
   <section>
 
     <nav class="filters">
-      <form id="filters" on:submit={() => { filters.page = 1; load(); }}>
+      <form id="filters" bind:this={form} on:submit={() => { filters.page = 1; load(); }}>
         Filter by
         <select name="attribute" bind:value={filters.attribute} on:change={() => filters.value = ''}>
           <option value="email">email</option>
@@ -171,12 +193,14 @@ td:last-child, th:last-child {
         </select>
         <fieldset>
           <input type="text" name="value" bind:value={filters.value}>
-          <button type="submit" class="clear" class:disabled={!filters.value} on:click={() => filters = {...defaultFilters}}>
-            <span class="label">Clear filters</span>
-            <Icon icon="x" size=14 />
-          </button>
+          {#if filters.value}
+            <button type="button" class="clear" transition:appear on:click={() => { filters = {...defaultFilters}; form.requestSubmit(); }}>
+              <span class="label">Clear filters</span>
+              <Icon icon="x" size=14 />
+            </button>
+          {/if}
         </fieldset>
-        <button type="submit" class="button">
+        <button type="submit" class="button submit">
           <span class="label">Apply filter</span>
           <Icon icon="arrowRight" />
         </button>
