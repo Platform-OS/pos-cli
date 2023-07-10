@@ -102,7 +102,8 @@ li a {
   margin-block-start: .4rem;
   padding: .2rem .5rem;
   position: absolute;
-  top: 100%;
+  top: 105%;
+  right: 0;
   opacity: 0;
 
   border-radius: .2rem;
@@ -118,10 +119,9 @@ li a {
 .label:before {
   width: 10px;
   height: 6px;
-  margin-left: -5px;
   position: absolute;
   top: -6px;
-  left: 50%;
+  right: 1.25rem;
 
   background-color: var(--color-text);
   clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
@@ -151,6 +151,7 @@ a:hover .label {
 
     <nav>
       <ul>
+        {#if $state.header.includes('database')}
         <li>
           <a href="/database" class:active={$page.url.pathname.startsWith('/database')} on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
             <Icon icon="database" />
@@ -159,7 +160,9 @@ a:hover .label {
             </span>
           </a>
         </li>
+        {/if}
 
+        {#if $state.header.includes('users')}
         <li>
           <a href="/users" class:active={$page.url.pathname.startsWith('/users')}>
             <Icon icon="users" />
@@ -168,7 +171,9 @@ a:hover .label {
             </span>
           </a>
         </li>
+        {/if}
 
+        {#if $state.header.includes('logs')}
         <li>
           <a href="/logs" class:active={$page.url.pathname.startsWith('/logs')}>
             <Icon icon="log" />
@@ -177,7 +182,9 @@ a:hover .label {
             </span>
           </a>
         </li>
+        {/if}
 
+        {#if $state.header.includes('backgroundJobs')}
         <li>
           <a href="/backgroundJobs" class:active={$page.url.pathname.startsWith('/backgroundJobs')}>
             <Icon icon="backgroundJob" />
@@ -186,7 +193,9 @@ a:hover .label {
             </span>
           </a>
         </li>
+        {/if}
 
+        {#if $state.header.includes('constants')}
         <li>
           <a href="/constants" class:active={$page.url.pathname.startsWith('/constants')}>
             <Icon icon="constant" />
@@ -195,7 +204,9 @@ a:hover .label {
             </span>
           </a>
         </li>
+        {/if}
 
+        {#if $state.header.includes('liquid')}
         <li>
           <a href="http://localhost:3333/gui/liquid">
             <Icon icon="liquid" />
@@ -204,7 +215,9 @@ a:hover .label {
             </span>
           </a>
         </li>
+        {/if}
 
+        {#if $state.header.includes('graphiql')}
         <li>
           <a href="http://localhost:3333/gui/graphql/">
             <Icon icon="graphql" />
@@ -213,6 +226,8 @@ a:hover .label {
             </span>
           </a>
         </li>
+        {/if}
+
       </ul>
     </nav>
 
