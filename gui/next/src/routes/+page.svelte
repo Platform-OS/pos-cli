@@ -162,11 +162,13 @@ h2 {
   border-width: 0 0 1px 1px;
   border-radius: 0 1rem 0 1rem;
 
-  transition: opacity .1s linear;
+  transition: opacity .2s linear;
+  transition-delay: 0s;
 }
 
   .application:hover .actions {
     opacity: 1;
+    transition-delay: .5s;
   }
 
   .actions li + li {
