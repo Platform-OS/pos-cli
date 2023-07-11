@@ -11,7 +11,7 @@ import Icon from '$lib/ui/Icon.svelte';
 // properties
 // ------------------------------------------------------------------------
 // close button url (string)
-export let closeUrl = '/';
+export let closeUrl;
 // the panel title (string)
 export let title = '';
 // width of the whole document in pixels (int)
@@ -90,6 +90,14 @@ aside {
 }
 
 
+/* navigation */
+aside :global(nav:first-child) {
+  margin-block-start: -1rem;
+  margin-block-end: 2rem;
+  margin-inline: -1rem;
+}
+
+
 /* content */
 header {
   display: flex;
@@ -146,18 +154,20 @@ h2 {
 
   <div class="container">
 
-    <header>
-      {#if title}
-        <h2>{title}</h2>
-      {/if}
+    {#if title || closeUrl}
+      <header>
+        {#if title}
+          <h2>{title}</h2>
+        {/if}
 
-      {#if closeUrl}
-        <a href="{closeUrl}" class="close">
-          <span class="label">Close details</span>
-          <Icon icon="x" />
-        </a>
-      {/if}
-    </header>
+        {#if closeUrl}
+          <a href="{closeUrl}" class="close">
+            <span class="label">Close details</span>
+            <Icon icon="x" />
+          </a>
+        {/if}
+      </header>
+    {/if}
 
     <slot></slot>
 
