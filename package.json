@@ -83,7 +83,7 @@
     "pos-cli-sync": "bin/pos-cli-sync.js"
   },
   "repository": "mdyd-dev/pos-cli",
-  "license": "MIT",
+  "license": "CC BY 3.0",
   "bugs": {
     "url": "https://github.com/mdyd-dev/pos-cli/issues"
   },
