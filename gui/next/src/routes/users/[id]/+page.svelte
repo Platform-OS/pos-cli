@@ -59,46 +59,9 @@ const appear = function(node, {
 <!-- ================================================================== -->
 <style>
 
-aside {
-  width: 400px;
-  overflow: hidden;
-
-  border-inline-start: 1px solid var(--color-frame);
-}
-
-.container {
-  width: 400px;
-  height: calc(100vh - 83px);
-  padding: 1rem;
-  overflow: auto;
-}
-
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.label {
-  position: absolute;
-  left: -100vw;
-}
-
-h2 {
-  margin-block-end: .2em;
-
-  font-weight: 500;
-  font-size: 1.2rem;
-}
-
 .info {
   display: flex;
   gap: 1.2rem;
-}
-
-a:hover {
-  color: var(--color-interaction-hover);
 }
 
 time {
