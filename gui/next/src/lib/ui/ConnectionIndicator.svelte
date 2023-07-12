@@ -44,7 +44,6 @@ $: if($page.url.pathname.startsWith('/logs')){
 // returns:		updates the $state.online store (bool) and returns a boolean response
 // ------------------------------------------------------------------------
 const checkIfOnline = async () => {
-  console.log(checkIntervalTime);
   if(browser && document.visibilityState !== 'hidden'){
     const last = $state.logs.logs?.at(-1).id ?? null;
     const newLogs = await logs.get({ last: last });

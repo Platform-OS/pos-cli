@@ -442,7 +442,7 @@ footer {
 
     {#if !filter}
       <footer>
-        No newer logs to show<br>Checking every 7 seconds
+        No newer logs to show<br>Checking every 3 seconds
       </footer>
     {/if}
 

@@ -29,7 +29,7 @@ const backgroundJob = {
     const query = `
       query {
         admin_background_jobs(
-          per_page: 100,
+          per_page: 20,
           page: ${filters?.page || 1}
           filter: {
             ${idFilter}
@@ -38,6 +38,7 @@ const backgroundJob = {
         ) {
           has_next_page,
           has_previous_page,
+          total_pages,
           results {
             id
             arguments
@@ -67,7 +68,7 @@ const backgroundJob = {
         }
       }`;
 
-    return graphql({ query }, false).then(data => data.admin_background_jobs.results);
+    return graphql({ query }, false).then(data => data.admin_background_jobs);
 
   },
 

@@ -16,8 +16,10 @@ import Delete from '$lib/backgroundJob/Delete.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// list of background jobs (array)
-let items = [];
+// query results (object)
+let items = {
+  results: []
+};
 // the extended menu for the background job
 let contextMenu = {
   // job id for which the context menu is opened for
@@ -25,6 +27,7 @@ let contextMenu = {
 };
 // stores currently applied filters (object)
 let filters = {
+  page: 1,
   type: 'SCHEDULED',
   ...Object.fromEntries($page.url.searchParams)
 }
@@ -42,7 +45,7 @@ const getItems = async () => {
   items = await backgroundJob.get(filters);
 
   runsAtUpdateInterval = setInterval(() => {
-    items.forEach(item => {
+    items.results.forEach(item => {
       if(filters.type === 'DEAD'){
         item.dead_at_parsed = relativeTime(new Date(item.dead_at));
       } else {
@@ -86,8 +89,11 @@ const filter = () => {
 
 .container > div {
   height: calc(100vh - 83px);
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   flex-grow: 1;
+  position: relative;
 }
 
 
@@ -95,14 +101,28 @@ const filter = () => {
 nav {
   padding: 1rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: .5em;
 
-  border-bottom: 1px solid var(--color-frame);
   background-color: rgba(var(--color-rgb-background), .8);
   backdrop-filter: blur(17px);
   -webkit-backdrop-filter: blur(17px);
 }
+
+.filters {
+  border-bottom: 1px solid var(--color-frame);
+}
+
+  .filters form {
+    display: flex;
+    gap: 2rem;
+  }
+
+  .filters fieldset {
+    display: flex;
+    align-items: center;
+    gap: .5em;
+  }
 
 
 table {
@@ -220,6 +240,14 @@ menu :global(button:hover) {
   background-color: var(--color-context-button-background-hover);
 }
 
+
+.pagination {
+  margin-block-start: auto;
+  position: sticky;
+  inset-inline: 0;
+  inset-block-end: 0;
+}
+
 </style>
 
 
@@ -234,13 +262,25 @@ menu :global(button:hover) {
 
   <div>
 
-    <nav>
-      <form bind:this={form}>
-        <label for="filter-type">Type:</label>
-        <select name="type" id="filter-type" bind:value={filters.type} on:change={form.requestSubmit()}>
-          <option value="SCHEDULED">Scheduled</option>
-          <option value="DEAD">Failed</option>
-        </select>
+    <nav class="filters">
+      <form id="filters" bind:this={form}>
+        <fieldset>
+          <label for="filter-type">Type:</label>
+          <select name="type" id="filter-type" bind:value={filters.type} on:change={form.requestSubmit()}>
+            <option value="SCHEDULED">Scheduled</option>
+            <option value="DEAD">Failed</option>
+          </select>
+        </fieldset>
+        <!--
+        <fieldset>
+          <label for="filter-name">Name:</label>
+          <input type="text" id="filter-name" name="source_name" bind:value={filters.source_name}>
+          <button type="submit" class="button">
+            <span class="label">Filter jobs</span>
+            <Icon icon="arrowRight" />
+          </button>
+        </fieldset>
+        -->
       </form>
     </nav>
 
@@ -261,7 +301,7 @@ menu :global(button:hover) {
         </tr>
       </thead>
 
-    {#each items as item}
+    {#each items.results as item}
 
       <tr>
         <td class="id" on:mouseleave={() => contextMenu.id = null}>
@@ -305,6 +345,21 @@ menu :global(button:hover) {
     {/each}
 
     </table>
+
+    <nav class="pagination">
+      Page:
+      <input
+        type="number"
+        name="page"
+        min="1"
+        max={items.total_pages || 100}
+        step="1"
+        bind:value={filters.page}
+        form="filters"
+        on:change={form.requestSubmit()}
+      >
+      of {items.total_pages || ''}
+    </nav>
 
   </div>
 
