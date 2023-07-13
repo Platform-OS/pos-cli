@@ -3,34 +3,64 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { onMount } from 'svelte';
+import { quintOut } from 'svelte/easing';
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 
-
 // properties
 // ------------------------------------------------------------------------
-// main form with all the filters (dom node)
+// main filters form (dom node)
 let form;
-// string used for filtering (string)
-let filterString = null;
 // list of users (array)
 let items = [];
-// currently viewed page (int)
-let currentPage = 1;
+// default filters (object)
+let defaultFilters = {
+  page: 1,
+  attribute: 'email',
+  value: ''
+};
+// stores currently applied filters (object)
+let filters = {
+  ...defaultFilters,
+  ...Object.fromEntries($page.url.searchParams)
+};
 // number of pages (int)
 let maxPage = 1;
 
 
+// purpose:   loads data
+// ------------------------------------------------------------------------
 const load = async () => {
-  await user.get(new FormData(form)).then(response => {
+  await user.get(filters).then(response => {
     items = response.results;
     maxPage = response.total_pages
   });
 };
 
-load();
+onMount(() => {
+  load()
+});
+
+
+// transition:    zooms from nothing to full size
+// options: 	delay (int), duration (int)
+// ------------------------------------------------------------------------
+const appear = function(node, {
+  delay = 0,
+  duration = 150
+}){
+  return {
+    delay,
+    duration,
+    css: (t) => {
+      const eased = quintOut(t);
+
+      return `scale: ${eased};` }
+  }
+};
 
 </script>
 
@@ -155,20 +185,22 @@ td:last-child, th:last-child {
   <section>
 
     <nav class="filters">
-      <form id="filters" bind:this={form} on:submit|preventDefault={() => { currentPage = 1; load(); }}>
+      <form id="filters" bind:this={form} on:submit={() => { filters.page = 1; load(); }}>
         Filter by
-        <select name="attribute">
+        <select name="attribute" bind:value={filters.attribute} on:change={() => filters.value = ''}>
           <option value="email">email</option>
           <option value="id">id</option>
         </select>
         <fieldset>
-          <input type="text" name="value" bind:value={filterString}>
-          <button class="clear" class:disabled={!filterString} on:click={() => { currentPage = 1; filterString = null; load(); }}>
-            <span class="label">Clear filters</span>
-            <Icon icon="x" size=14 />
-          </button>
+          <input type="text" name="value" bind:value={filters.value}>
+          {#if filters.value}
+            <button type="button" class="clear" transition:appear on:click={() => { filters = {...defaultFilters}; form.requestSubmit(); }}>
+              <span class="label">Clear filters</span>
+              <Icon icon="x" size=14 />
+            </button>
+          {/if}
         </fieldset>
-        <button type="submit" class="button">
+        <button type="submit" class="button submit">
           <span class="label">Apply filter</span>
           <Icon icon="arrowRight" />
         </button>
@@ -205,7 +237,7 @@ td:last-child, th:last-child {
         min="1"
         max={maxPage || 100}
         step="1"
-        bind:value={currentPage}
+        bind:value={filters.page}
         on:input={load}
       >
       of {maxPage || ''}

@@ -9,6 +9,7 @@ import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
 
 import Icon from '$lib/ui/Icon.svelte';
+import Aside from '$lib/ui/Aside.svelte';
 
 
 // properties
@@ -21,20 +22,18 @@ let item;
 // attributes:	id of the user (int)
 // returns:		a single user data object from the database (object)
 // ------------------------------------------------------------------------
-const load = async (id) => {
-  if(id){
-    const params = new FormData();
-    params.set('attribute', 'id');
-    params.set('value', id);
+const load = async () => {
+  const filters = {
+    attribute: 'id',
+    value: $page.params.id
+  };
 
-    await user.get(params).then(response => {
-      item = response.results[0];
-    });
-  }
+  await user.get(filters).then(response => {
+    item = response.results[0];
+  });
 }
 
-$: load($page.params.id);
-$: console.log(item);
+$: $page.params.id && load();
 
 
 // transition: 	slides from right
@@ -60,46 +59,9 @@ const appear = function(node, {
 <!-- ================================================================== -->
 <style>
 
-aside {
-  width: 400px;
-  overflow: hidden;
-
-  border-inline-start: 1px solid var(--color-frame);
-}
-
-.container {
-  width: 400px;
-  height: calc(100vh - 83px);
-  padding: 1rem;
-  overflow: auto;
-}
-
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.label {
-  position: absolute;
-  left: -100vw;
-}
-
-h2 {
-  margin-block-end: .2em;
-
-  font-weight: 500;
-  font-size: 1.2rem;
-}
-
 .info {
   display: flex;
   gap: 1.2rem;
-}
-
-a:hover {
-  color: var(--color-interaction-hover);
 }
 
 time {
@@ -155,38 +117,30 @@ time {
   <title>{item?.email ?? 'Users'} | platformOS</title>
 </svelte:head>
 
+<Aside title={item?.email ?? item?.id ?? 'Loading…'} closeUrl="/users?{$page.url.searchParams.toString()}">
 
-<aside transition:appear>
-  <div class="container">
-    <header>
-      <div>
-        <h2>{item?.email ?? item?.id ?? 'Loading…'}</h2>
-        <div class="info">
-          {#if item?.id}ID: {item?.id}{/if}
-          <time datetime={item?.created_at}>
-            {(new Date(item?.created_at)).toLocaleDateString(undefined, {})}
-            {(new Date(item?.created_at)).toLocaleTimeString(undefined, {})}
-          </time>
-        </div>
-      </div>
-      <a href="/users">
-        <span class="label">Close user info</span>
-        <Icon icon="x" />
-      </a>
-    </header>
-
-    <dl class="tech">
-      {#if item?.external_id}<dt>External ID:</dt> <dd>{item?.external_id}</dd>{/if}
-      {#if item?.jwt_token}<dt>JWT:</dt> <dd>{item?.jwt_token}</dd>{/if}
-    </dl>
-
-    <dl class="personal">
-      {#if item?.name}<div><dt>First name:</dt> <dd>{item?.name}</dd></div>{/if}
-      {#if item?.first_name}<div><dt>First name:</dt> <dd>{item?.first_name}</dd></div>{/if}
-      {#if item?.middle_name}<div><dt>Middle name:</dt> <dd>{item?.middle_name}</dd></div>{/if}
-      {#if item?.last_name}<div><dt>Last name:</dt> <dd>{item?.last_name}</dd></div>{/if}
-      {#if item?.slug}<div><dt>Slug:</dt> <dd>{item?.slug}</dd></div>{/if}
-      {#if item?.language}<div><dt>Language:</dt> <dd>{item?.language}</dd></div>{/if}
-    </dl>
+  <div>
+    <div class="info">
+      {#if item?.id}ID: {item?.id}{/if}
+      <time datetime={item?.created_at}>
+        {(new Date(item?.created_at)).toLocaleDateString(undefined, {})}
+        {(new Date(item?.created_at)).toLocaleTimeString(undefined, {})}
+      </time>
+    </div>
   </div>
-</aside>
+
+  <dl class="tech">
+    {#if item?.external_id}<dt>External ID:</dt> <dd>{item?.external_id}</dd>{/if}
+    {#if item?.jwt_token}<dt>JWT:</dt> <dd>{item?.jwt_token}</dd>{/if}
+  </dl>
+
+  <dl class="personal">
+    {#if item?.name}<div><dt>First name:</dt> <dd>{item?.name}</dd></div>{/if}
+    {#if item?.first_name}<div><dt>First name:</dt> <dd>{item?.first_name}</dd></div>{/if}
+    {#if item?.middle_name}<div><dt>Middle name:</dt> <dd>{item?.middle_name}</dd></div>{/if}
+    {#if item?.last_name}<div><dt>Last name:</dt> <dd>{item?.last_name}</dd></div>{/if}
+    {#if item?.slug}<div><dt>Slug:</dt> <dd>{item?.slug}</dd></div>{/if}
+    {#if item?.language}<div><dt>Language:</dt> <dd>{item?.language}</dd></div>{/if}
+  </dl>
+
+</Aside>

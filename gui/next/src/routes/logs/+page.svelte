@@ -13,6 +13,7 @@ import { tryParseJSON } from '$lib/tryParseJSON.js';
 import JSONTree from '$lib/ui/JSONTree.svelte';
 
 import Icon from '$lib/ui/Icon.svelte';
+import Aside from '$lib/ui/Aside.svelte';
 
 
 // properties
@@ -294,34 +295,14 @@ footer {
 
 
 /* pinned logs panel */
-.pins {
-  width: 500px;
-  flex-shrink: 0;
-  overflow: hidden;
-  position: sticky;
-  top: 82px;
-}
-
-.pins > div {
-  width: 500px;
-  height: calc(100vh - 82px);
-  overflow: auto;
-  overflow-x: hidden;
-
-  border-inline-start: 1px solid var(--color-frame);
-}
-
-
-/* pinned logs panel */
 .pins nav {
   justify-content: flex-end;
 }
 
-.pins li {
-  padding: 1rem;
-}
-
 .pins li + li {
+  margin-block-start: 2rem;
+  padding-block-start: 2rem;
+
   border-block-start: 1px solid var(--color-frame);
 }
 
@@ -461,7 +442,7 @@ footer {
 
     {#if !filter}
       <footer>
-        No newer logs to show<br>Checking every 7 seconds
+        No newer logs to show<br>Checking every 3 seconds
       </footer>
     {/if}
 
@@ -469,10 +450,11 @@ footer {
 
 
   {#if pinnedPanel}
-    <section class="pins" transition:appear>
-      <div>
+    <Aside>
 
-        <nav>
+      <div class="pins">
+
+        <nav class="asideNav">
           <button type="button" class="button" on:click={() => { localStorage.pinnedLogs = []; pinned = []; }}>
             Clear pinned logs
           </button>
@@ -523,7 +505,8 @@ footer {
         {/if}
 
       </div>
-    </section>
+
+    </Aside>
   {/if}
 
 </div>

@@ -10,12 +10,44 @@ import { table } from '$lib/api/table';
 
 
 
+// properties
+// ------------------------------------------------------------------------
+// which applications to show the description for (array or strings)
+let showDescriptionFor = [];
+
+
 // purpose:		preload tables data into the state store for faster navigation
 // returns:		loads the tables into the $state.tables (array)
 // ------------------------------------------------------------------------
 const preloadTables = async () => {
   if(!$state.tables.length){
     $state.tables = await table.get();
+  }
+};
+
+
+// purpose:   toggles pinned items in the header
+// arguments: name of the navigation item to pin (string)
+// ------------------------------------------------------------------------
+const pin = what => {
+  if($state.header.indexOf(what) > -1){
+    $state.header = $state.header.filter(item => item !== what);
+  } else {
+    $state.header = [...$state.header, what];
+  }
+
+  localStorage.header = JSON.stringify($state.header);
+};
+
+
+// purpose:   toggles description for given application
+// arguments: name of the application to toggle description for
+// ------------------------------------------------------------------------
+const toggleDescription = what => {
+  if(showDescriptionFor.indexOf(what) > -1){
+    showDescriptionFor = showDescriptionFor.filter(item => item !== what);
+  } else {
+    showDescriptionFor = [...showDescriptionFor, what];
   }
 }
 
@@ -24,90 +56,150 @@ const preloadTables = async () => {
 
 <!-- ================================================================== -->
 <style>
-  nav {
-    max-width: 1400px;
-    margin-inline: auto;
-    margin-block-start: 2rem;
-    padding-inline: 2rem;
-  }
 
-  .applications {
-    display: flex;
-    gap: 2rem;
-    flex-wrap: wrap;
-  }
+nav {
+  margin-inline: auto;
+  margin-block-start: 2rem;
+  padding-inline: 2rem;
+}
+
+
+.applications {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 
   .applications + .applications {
     margin-top: 4rem;
-    padding-top: 4rem;
-    border-top: 1px solid var(--color-frame);
   }
 
-  .application {
-    width: calc(50% - 1rem);
-    padding: 2rem;
 
-    border-radius: 1rem;
-    background-color: var(--color-background);
-  }
+.application {
+  width: 200px;
+  position: relative;
+  display: flex;
+  overflow: hidden;
 
-    @media (max-width: 700px) {
-      .application {
-        width: 100%;
-      }
-    }
+  border-radius: 1rem;
+  background-color: var(--color-background);
 
-  .icon {
-    padding: .5rem;
+  transition: width .2s ease-in-out;
+}
+
+  .application > a {
+    width: 200px;
+    padding: 2.75rem 1rem 2rem;
     display: flex;
-
-    border-radius: .5rem;
-    background-color: var(--color-middleground);
-
-    color: var(--color-interaction);
-  }
-
-  .footer {
-    margin-top: 2rem;
-    margin-bottom: -1rem;
-  }
-
-  h2 {
-    margin: -1rem -2rem 1rem;
-    padding: 0 2rem 1rem;
-    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
     align-items: center;
+    justify-content: space-between;
     gap: 1rem;
-
-    border-bottom: 1px solid var(--color-page);
-
-    font-size: 1.1rem;
-    font-weight: 500;
   }
 
-  ul {
-    margin-block-end: 1rem;
+  .application.showDescription {
+    width: 500px;
   }
 
-  .application li + li {
-    margin-block-start: .4rem;
+.icon {
+  width: 100px;
+  height: 100px;
+  padding: .5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: .5rem;
+  background-color: var(--color-middleground);
+
+  color: var(--color-interaction);
+
+  transition: all .2s ease-in-out;
+}
+
+  .application > a:hover .icon {
+    border-radius: 1rem;
+
+    scale: 1.1;
   }
 
-  ul ul {
-    list-style-type: '– ';
-    list-style-position: inside;
+h2 {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.description {
+  width: 284px;
+  padding: 2.75rem 1rem 2rem 0;
+  flex-shrink: 0;
+}
+
+  .description li {
+    margin-inline-start: 1ch;
+    padding-inline-start: .4em;
+
+    list-style-type: '–';
   }
 
-  .links {
-    margin-block-start: 4rem;
-    padding-block-start: 3.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: end;
-    gap: 2rem;
-
-    border-block-start: 1px solid var(--color-frame);
+  .description li + li {
+    margin-block-start: .2em;
   }
+
+.actions {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  inset-inline-end: 0rem;
+  inset-block-start: 0rem;
+  overflow: hidden;
+
+  opacity: 0;
+
+  border: 1px solid var(--color-page);
+  border-width: 0 0 1px 1px;
+  border-radius: 0 1rem 0 1rem;
+
+  transition: opacity .2s linear;
+  transition-delay: 0s;
+}
+
+  .application:hover .actions {
+    opacity: 1;
+    transition-delay: .5s;
+  }
+
+  .actions li + li {
+    border-inline-start: 1px solid var(--color-page);
+  }
+
+  .actions button {
+    padding: .25em .5em;
+
+    color: var(--color-text-secondary);
+
+    transition: color .1s linear;
+  }
+
+  .actions button:hover,
+  .actions button:focus-visible {
+    color: var(--color-interaction-hover);
+  }
+
+
+.links {
+  margin-block-start: 4rem;
+  padding-block-start: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 2rem;
+
+  border-block-start: 1px solid var(--color-frame);
+}
+
 </style>
 
 
@@ -121,124 +213,216 @@ const preloadTables = async () => {
 
   <ul class="applications">
 
-    <li class="application">
-      <h2>
+
+    <li class="application" class:showDescription={showDescriptionFor.includes('database')}>
+      <a href="/database" on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
         <div class="icon">
-          <Icon icon="database" />
+          <Icon icon="database" size="48" />
         </div>
-        Manage database records in your application
-      </h2>
-      <ul>
-        <li>Inspect tables and schemas</li>
-        <li>Manage records (create, read, update, delete)</li>
+        <h2>
+          Database
+        </h2>
+      </a>
+      <ul class="description">
+        <li>Inspect tables and records</li>
+        <li>Create, edit or delete records</li>
+        <li>Filter and find any record</li>
       </ul>
-      <div class="footer">
-        <a href="/database" class="button" on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
-          Go to Records
-          <Icon icon="arrowRight" size="13" />
-        </a>
-      </div>
+      <ul class="actions">
+        <li>
+          <button title="More info" on:click={() => toggleDescription('database')}>
+            <Icon icon="info" size="14" />
+            <span class="label">Show more information</span>
+          </button>
+        </li>
+        <li>
+          <button title="{$state.header.includes('database') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('database')}>
+            <Icon icon="pin" size="14" />
+            <span class="label">{$state.header.includes('database') ? 'Unpin from' : 'Pin to'} header menu</span>
+          </button>
+        </li>
+      </ul>
     </li>
 
-    <li class="application">
-      <h2>
+    <li class="application" class:showDescription={showDescriptionFor.includes('users')}>
+      <a href="/users">
         <div class="icon">
-          <Icon icon="users" />
+          <Icon icon="users" size="48" />
         </div>
-        Manage users
-      </h2>
-      <ul>
-        <li>Inspect registered users</li>
-        <li>Manage users (create, read, update, delete)</li>
+        <h2>
+          Users
+        </h2>
+      </a>
+      <ul class="description">
+        <li>Inspect registered users and their personal data</li>
       </ul>
-      <div class="footer">
-        <a href="/users" class="button">
-          Go to Users
-          <Icon icon="arrowRight" size="13" />
-        </a>
-      </div>
+      <ul class="actions">
+        <li>
+          <button title="More info" on:click={() => toggleDescription('users')}>
+            <Icon icon="info" size="14" />
+            <span class="label">Show more information</span>
+          </button>
+        </li>
+        <li>
+          <button title="{$state.header.includes('users') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('users')}>
+            <Icon icon="pin" size="14" />
+            <span class="label">{$state.header.includes('users') ? 'Unpin from' : 'Pin to'} header menu</span>
+          </button>
+        </li>
+      </ul>
     </li>
 
-    <li class="application">
-      <h2>
+    <li class="application" class:showDescription={showDescriptionFor.includes('logs')}>
+      <a href="/logs">
         <div class="icon">
-          <Icon icon="log" />
+          <Icon icon="log" size="48" />
         </div>
-        Instance Logs
-      </h2>
-      <ul>
-        <li>View system logs about performance and others</li>
-        <li>View your own logs</li>
+        <h2>
+          Logs
+        </h2>
+      </a>
+      <ul class="description">
+        <li>View system logs</li>
+        <li>Inspect logs you've outputted yourself</li>
+        <li>Debug Liquid or GraphQL errors</li>
       </ul>
-      <div class="footer">
-        <a href="/logs" class="button">
-          Go to Logs
-          <Icon icon="arrowRight" size="13" />
-        </a>
-      </div>
+      <ul class="actions">
+        <li>
+          <button title="More info" on:click={() => toggleDescription('logs')}>
+            <Icon icon="info" size="14" />
+            <span class="label">Show more information</span>
+          </button>
+        </li>
+        <li>
+          <button title="{$state.header.includes('logs') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('logs')}>
+            <Icon icon="pin" size="14" />
+            <span class="label">{$state.header.includes('logs') ? 'Unpin from' : 'Pin to'} header menu</span>
+          </button>
+        </li>
+      </ul>
     </li>
 
-    <li class="application">
-      <h2>
+    <li class="application" class:showDescription={showDescriptionFor.includes('backgroundJobs')}>
+      <a href="/backgroundJobs">
         <div class="icon">
-          <Icon icon="constant" />
+          <Icon icon="backgroundJob" size="48" />
         </div>
-        Constants editor
-      </h2>
-      <ul>
+        <h2>
+          Background Jobs
+        </h2>
+      </a>
+      <ul class="description">
+        <li>List scheduled background jobs</li>
+        <li>Debug background jobs that failed to run</li>
+      </ul>
+      <ul class="actions">
+        <li>
+          <button title="More info" on:click={() => toggleDescription('backgroundJobs')}>
+            <Icon icon="info" size="14" />
+            <span class="label">Show more information</span>
+          </button>
+        </li>
+        <li>
+          <button title="{$state.header.includes('backgroundJobs') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('backgroundJobs')}>
+            <Icon icon="pin" size="14" />
+            <span class="label">{$state.header.includes('backgroundJobs') ? 'Unpin from' : 'Pin to'} header menu</span>
+          </button>
+        </li>
+      </ul>
+    </li>
+
+    <li class="application" class:showDescription={showDescriptionFor.includes('constants')}>
+      <a href="/constants">
+        <div class="icon">
+          <Icon icon="constant" size="48" />
+        </div>
+        <h2>
+          Constants
+        </h2>
+      </a>
+      <ul class="description">
         <li>Check all constants in one place</li>
-        <li>Create, delete, update</li>
+        <li>Create new constants</li>
+        <li>Edit or delete existing ones</li>
       </ul>
-      <div class="footer">
-        <a href="/constants" class="button">
-          Go to Constants
-          <Icon icon="arrowRight" size="13" />
-        </a>
-      </div>
+      <ul class="actions">
+        <li>
+          <button title="More info" on:click={() => toggleDescription('constants')}>
+            <Icon icon="info" size="14" />
+            <span class="label">Show more information</span>
+          </button>
+        </li>
+        <li>
+          <button title="{$state.header.includes('constants') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('constants')}>
+            <Icon icon="pin" size="14" />
+            <span class="label">{$state.header.includes('constants') ? 'Unpin from' : 'Pin to'} header menu</span>
+          </button>
+        </li>
+      </ul>
     </li>
 
   </ul>
 
   <ul class="applications">
 
-    <li class="application">
-      <h2>
+    <li class="application" class:showDescription={showDescriptionFor.includes('liquid')}>
+      <a href="http://localhost:3333/gui/liquid">
         <div class="icon" style="color: #aeb0b3;">
-          <Icon icon="liquid" />
+          <Icon icon="liquid" size="48" />
         </div>
-        Liquid Evaluator
-      </h2>
-      <ul>
+        <h2>
+          Liquid Evaluator
+        </h2>
+      </a>
+      <ul class="description">
         <li>Run Liquid code against your instance</li>
         <li>Test Liquid logic</li>
         <li>Quickly prototype your ideas</li>
       </ul>
-      <div class="footer">
-        <a href="http://localhost:3333/gui/liquid" class="button">
-          Go to Liquid Evaluator
-          <Icon icon="arrowRight" size="13" />
-        </a>
-      </div>
+      <ul class="actions">
+        <li>
+          <button title="More info" on:click={() => toggleDescription('liquid')}>
+            <Icon icon="info" size="14" />
+            <span class="label">Show more information</span>
+          </button>
+        </li>
+        <li>
+          <button title="{$state.header.includes('liquid') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('liquid')}>
+            <Icon icon="pin" size="14" />
+            <span class="label">{$state.header.includes('liquid') ? 'Unpin from' : 'Pin to'} header menu</span>
+          </button>
+        </li>
+      </ul>
     </li>
 
-    <li class="application">
-      <h2>
+    <li class="application" class:showDescription={showDescriptionFor.includes('graphiql')}>
+      <a href="http://localhost:3333/gui/graphql">
         <div class="icon" style="color: #f30e9c;">
-          <Icon icon="graphql" />
+          <Icon icon="graphql" size="48" />
         </div>
-        GraphiQL
-      </h2>
-      <ul>
+        <h2>
+          GraphiQL
+        </h2>
+      </a>
+      <ul class="description">
         <li>Run GraphQL against your instance</li>
         <li>Explore documentation</li>
         <li>Quickly prototype your queries and mutations</li>
       </ul>
-      <div class="footer">
-        <a href="http://localhost:3333/gui/graphql/" class="button">
-          Go to GraphiQL
-          <Icon icon="arrowRight" size="13" />
-        </a>
-      </div>
+      <ul class="actions">
+        <li>
+          <button title="More info" on:click={() => toggleDescription('graphiql')}>
+            <Icon icon="info" size="14" />
+            <span class="label">Show more information</span>
+          </button>
+        </li>
+        <li>
+          <button title="{$state.header.includes('graphiql') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('graphiql')}>
+            <Icon icon="pin" size="14" />
+            <span class="label">{$state.header.includes('graphiql') ? 'Unpin from' : 'Pin to'} header menu</span>
+          </button>
+        </li>
+      </ul>
     </li>
 
   </ul>

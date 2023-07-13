@@ -2,21 +2,49 @@
 <script>
 
 import { onMount } from 'svelte';
+import { browser } from '$app/environment';
+import { page } from '$app/stores';
 import { logs } from '$lib/api/logs';
 import { state } from '$lib/state';
 
-// purpose:		check if the app is connected to the instance every 7 seconds
+
+// properties
+// ------------------------------------------------------------------------
+// miliseconds between checks, set up later depending on the route (int)
+let checkIntervalTime = 7000;
+
+
+
+// purpose:		check if the app is connected to the instance every x seconds
+// ------------------------------------------------------------------------
+let onlineCheckInterval;
+
 onMount(async () => {
   checkIfOnline();
 
-  setInterval(checkIfOnline, 7000);
+  clearInterval(onlineCheckInterval);
+  onlineCheckInterval = setInterval(checkIfOnline, checkIntervalTime);
 });
+
+$: if($page.url.pathname.startsWith('/logs')){
+  clearInterval(onlineCheckInterval);
+
+  checkIntervalTime = 3000;
+  onlineCheckInterval = setInterval(checkIfOnline, checkIntervalTime);
+} else {
+  if(checkIntervalTime === 3000){
+    clearInterval(onlineCheckInterval);
+
+    checkIntervalTime = 7000;
+    onlineCheckInterval = setInterval(checkIfOnline, checkIntervalTime);
+  }
+}
 
 // purpose:		checks if the app is connected to the instance by getting some api data
 // returns:		updates the $state.online store (bool) and returns a boolean response
 // ------------------------------------------------------------------------
 const checkIfOnline = async () => {
-  if(!document.hidden){
+  if(browser && document.visibilityState !== 'hidden'){
     const last = $state.logs.logs?.at(-1).id ?? null;
     const newLogs = await logs.get({ last: last });
 

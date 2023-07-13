@@ -24,6 +24,8 @@ function createStore(){
   // store properties
   // ------------------------------------------------------------------------
   const state = {};
+    // list of items pinned to the header navigation (array of strings)
+    state.header = browser && localStorage.header ? JSON.parse(localStorage.header) : ['database', 'users', 'logs'];
     // if the app is connected to the instance (bool)
     state.online = undefined;
     // logs data (object)
@@ -55,6 +57,8 @@ function createStore(){
     };
     // list of notifications (array of objects)
     state.notifications = [];
+    // width of the aside panel in css units (string)
+    state.asideWidth = browser && localStorage.asideWidth ? localStorage.asideWidth : '30%';
 
 
 

@@ -2,7 +2,21 @@
 
 ## master
 
+## 4.10.0
+
+### pos-cli gui next updates
+* Added new tool - Background jobs manager
+* Added ability to resize sidepanels
+* New home screen design to fit more tools
+* Ability to customize the header navigation by adding and removing the tool shortcuts
+* Fixed hardcoded server port so multiple `pos-cli gui serve` can be run at once
+* Users can now be filtered by uncomplete email string
+* Fixed clearing filters and submitting form using keyboard when filtering Users
+* Logs are now updated every 3 seconds
+* The license changed to CC BY 3.0
+
 ## 4.9.2
+
 ### pos-cli gui next updates
 * Reloading subpaths does not return 404 anymore
 * More contrast on string-json toggle
