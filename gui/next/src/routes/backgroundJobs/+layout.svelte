@@ -44,6 +44,8 @@ const getItems = async () => {
 
   items = await backgroundJob.get(filters);
 
+  console.log(items);
+
   runsAtUpdateInterval = setInterval(() => {
     items.results.forEach(item => {
       if(filters.type === 'DEAD'){
@@ -332,7 +334,7 @@ menu :global(button:hover) {
           </div>
         </td>
         <td>{item.arguments.priority}</td>
-        <td>{item.arguments.context.location.href}</td>
+        <td>{item.arguments.context.location.href || '/'}</td>
         <td>
           {#if filters.type === 'DEAD'}
             { item.dead_at_parsed || relativeTime(new Date(item.dead_at)) || '' }

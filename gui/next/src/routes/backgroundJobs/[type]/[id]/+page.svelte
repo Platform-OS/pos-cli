@@ -113,17 +113,17 @@ code {
         </div>
         <div>
           <dt>Run at:</dt>
-          <dd>{(new Date(item.created_at)).toLocaleString()}</dd>
+          <dd>{(new Date(item.run_at)).toLocaleString()}</dd>
         </div>
         {#if item.dead_at}
           <div>
             <dt>Dead at:</dt>
-            <dd class="error">{(new Date(item.created_at)).toLocaleString()}</dd>
+            <dd class="error">{(new Date(item.dead_at)).toLocaleString()}</dd>
           </div>
         {/if}
         <div>
           <dt>URL:</dt>
-          <dd>{item.arguments.context.location.href}</dd>
+          <dd>{item.arguments.context.location.href || '/'}</dd>
         </div>
       {/if}
     </dl>
