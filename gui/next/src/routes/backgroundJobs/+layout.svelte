@@ -44,8 +44,6 @@ const getItems = async () => {
 
   items = await backgroundJob.get(filters);
 
-  console.log(items);
-
   runsAtUpdateInterval = setInterval(() => {
     items.results.forEach(item => {
       if(filters.type === 'DEAD'){
