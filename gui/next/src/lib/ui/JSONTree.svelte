@@ -12,6 +12,8 @@ import JSONTree from 'svelte-json-tree';
 export let value;
 // if you want to output the full value instead of trimming long lines (bool)
 export let showFullLines = false;
+// how many lines to expand by default (int)
+export let expandedLines = 2;
 
 </script>
 
@@ -61,7 +63,7 @@ div :global(div > ul > ul > .indent) {
 
   <JSONTree
     value={value}
-    defaultExpandedLevel={2}
+    defaultExpandedLevel={expandedLines}
     --json-tree-font-size="16px"
     --json-tree-li-line-height="1.7"
     --json-tree-font-family="monospace"

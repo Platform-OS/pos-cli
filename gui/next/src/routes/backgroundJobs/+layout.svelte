@@ -292,7 +292,6 @@ menu :global(button:hover) {
         <tr>
           <th class="id">Name / id</th>
           <th>Priority</th>
-          <th>URL</th>
           <th>
             {#if filters.type === 'DEAD'}
               Failed
@@ -333,8 +332,7 @@ menu :global(button:hover) {
 
           </div>
         </td>
-        <td>{item.arguments.priority}</td>
-        <td>{item.arguments.context.location.href || '/'}</td>
+        <td>{item.queue}</td>
         <td>
           {#if filters.type === 'DEAD'}
             { item.dead_at_parsed || relativeTime(new Date(item.dead_at)) || '' }
