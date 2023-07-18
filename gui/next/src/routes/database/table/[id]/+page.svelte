@@ -39,7 +39,7 @@ $: $page.params.id && state.clearFilters();
 // ------------------------------------------------------------------------
 const refresh = () => {
   refreshing = true;
-  record.get({ table: $page.params.id, filters: $state.filters }).then(() => refreshing = false);
+  record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort }).then(() => refreshing = false);
 };
 
 
@@ -156,7 +156,7 @@ nav {
         max={$state.records?.total_pages || 100}
         step="1"
         bind:value={$state.filters.page}
-        on:input={() => { record.get({ table: $page.params.id, filters: $state.filters }); } }
+        on:input={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort }); } }
       >
       of {$state.records?.total_pages || ''}
     </div>

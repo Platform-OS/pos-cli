@@ -36,7 +36,7 @@ const operations = {
 const filter = () => {
   $state.filters = { page: 1, attributes: [ Object.fromEntries((new FormData(form)).entries()) ] };
 
-  record.get({ table: $state.table.id, filters: $state.filters });
+  record.get({ table: $state.table.id, filters: $state.filters, sort: $state.sort });
 }
 
 </script>

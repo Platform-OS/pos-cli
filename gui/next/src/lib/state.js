@@ -55,6 +55,11 @@ function createStore(){
         { attribute_type: 'id', name: 'id', operation: 'value', value: '' }
       ]
     };
+    // sort order for the records (object)
+    state.sort = {
+      by: 'created_at',
+      order: 'DESC'
+    };
     // list of notifications (array of objects)
     state.notifications = [];
     // width of the aside panel in css units (string)
@@ -89,6 +94,11 @@ function createStore(){
         attributes: [
           { attribute_type: 'id', name: 'id', operation: 'value', value: '' }
         ]
+      };
+
+      state.sort = {
+        by: 'created_at',
+        order: 'DESC'
       };
 
       return state;

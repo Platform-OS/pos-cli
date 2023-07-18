@@ -24,7 +24,7 @@ const remove = async (event) => {
     const remove = await record.delete({ table: table.name, properties: new FormData(form) });
 
     if(!remove.errors){
-      record.get({ table: $page.params.id, filters: $state.filters });
+      record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort });
       state.notification.create('success', `Record ${remove.record_delete.id} deleted`);
     } else {
       state.notification.create('error', `Record ${remove.record_delete.id} could not be deleted`);

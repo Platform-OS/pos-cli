@@ -13,8 +13,6 @@ import Icon from '$lib/ui/Icon.svelte';
 // ------------------------------------------------------------------------
 // main sorting form (dom node)
 let form;
-// what order should be used to sort ('ASC' or 'DESC')
-let order = 'DESC';
 
 
 // purpose:		parses the <form>, saves new sorting to filters in the store and triggers records reload
@@ -83,7 +81,7 @@ select:focus-visible + label {
 
   {#if $state.table?.properties}
 
-    <select name="by" id="sort_by" on:change={() => form.requestSubmit()}>
+    <select name="by" id="sort_by" bind:value={$state.sort.by} on:change={() => form.requestSubmit()}>
       <option value="created_at">created at</option>
       <option value="updated_at">updated at</option>
       <option value="id">id</option>
@@ -94,13 +92,13 @@ select:focus-visible + label {
       {/each}
     </select>
 
-    <select name="order" id="sort_order" bind:value={order} on:change={() => form.requestSubmit()}>
+    <select name="order" id="sort_order" bind:value={$state.sort.order} on:change={() => form.requestSubmit()}>
       <option value="DESC">DESC [Z→A]</option>
       <option value="ASC">ASC [A→Z]</option>
     </select>
 
     <label for="sort_order" class="button">
-      {#if order === 'DESC'}
+      {#if $state.sort.order === 'DESC'}
         <Icon icon="sortZA" />
       {:else}
         <Icon icon="sortAZ" />
