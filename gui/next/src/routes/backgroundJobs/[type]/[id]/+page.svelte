@@ -8,6 +8,7 @@ import { backgroundJob } from '$lib/api/backgroundJob.js';
 
 import Aside from '$lib/ui/Aside.svelte';
 import Code from '$lib/ui/Code.svelte';
+import JSONTree from '$lib/ui/JSONTree.svelte';
 
 
 // properties
@@ -44,6 +45,7 @@ aside {
 }
 
 h2 {
+  margin-block-start: 2rem;
   margin-block-end: .2em;
 
   font-weight: 500;
@@ -70,8 +72,7 @@ dt {
 }
 
 code {
-  margin-block-end: 2rem;
-  padding: 1rem;
+  padding: 1rem 1.5rem;
   display: block;
 
   border-radius: 1rem;
@@ -113,18 +114,20 @@ code {
         </div>
         <div>
           <dt>Run at:</dt>
-          <dd>{(new Date(item.created_at)).toLocaleString()}</dd>
+          <dd>{(new Date(item.run_at)).toLocaleString()}</dd>
         </div>
         {#if item.dead_at}
           <div>
             <dt>Dead at:</dt>
-            <dd class="error">{(new Date(item.created_at)).toLocaleString()}</dd>
+            <dd class="error">{(new Date(item.dead_at)).toLocaleString()}</dd>
           </div>
         {/if}
-        <div>
-          <dt>URL:</dt>
-          <dd>{item.arguments.context.location.href}</dd>
-        </div>
+        {#if item.arguments.url}
+          <div>
+            <dt>URL:</dt>
+            <dd>{item.arguments.context.location.href || '/'}</dd>
+          </div>
+        {/if}
       {/if}
     </dl>
 
@@ -135,11 +138,18 @@ code {
       </code>
     {/if}
 
-    {#if item.id}
+    {#if item.liquid_body}
       <h2>Background job code:</h2>
       <Code language="liquid">
         {item.liquid_body}
       </Code>
+    {/if}
+
+    {#if item.arguments}
+      <h2>Arguments</h2>
+      <code>
+        <JSONTree value={item.arguments} expandedLines={1} showFullLines={true} />
+      </code>
     {/if}
 
   {/if}

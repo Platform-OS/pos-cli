@@ -237,7 +237,7 @@ h2 {
         </li>
         <li>
           <button title="{$state.header.includes('database') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('database')}>
-            <Icon icon="pin" size="14" />
+            <Icon icon={$state.header.includes('database') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{$state.header.includes('database') ? 'Unpin from' : 'Pin to'} header menu</span>
           </button>
         </li>
@@ -265,7 +265,7 @@ h2 {
         </li>
         <li>
           <button title="{$state.header.includes('users') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('users')}>
-            <Icon icon="pin" size="14" />
+            <Icon icon={$state.header.includes('users') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{$state.header.includes('users') ? 'Unpin from' : 'Pin to'} header menu</span>
           </button>
         </li>
@@ -295,7 +295,7 @@ h2 {
         </li>
         <li>
           <button title="{$state.header.includes('logs') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('logs')}>
-            <Icon icon="pin" size="14" />
+            <Icon icon={$state.header.includes('logs') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{$state.header.includes('logs') ? 'Unpin from' : 'Pin to'} header menu</span>
           </button>
         </li>
@@ -324,7 +324,7 @@ h2 {
         </li>
         <li>
           <button title="{$state.header.includes('backgroundJobs') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('backgroundJobs')}>
-            <Icon icon="pin" size="14" />
+            <Icon icon={$state.header.includes('backgroundJobs') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{$state.header.includes('backgroundJobs') ? 'Unpin from' : 'Pin to'} header menu</span>
           </button>
         </li>
@@ -354,7 +354,7 @@ h2 {
         </li>
         <li>
           <button title="{$state.header.includes('constants') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('constants')}>
-            <Icon icon="pin" size="14" />
+            <Icon icon={$state.header.includes('constants') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{$state.header.includes('constants') ? 'Unpin from' : 'Pin to'} header menu</span>
           </button>
         </li>
@@ -388,7 +388,7 @@ h2 {
         </li>
         <li>
           <button title="{$state.header.includes('liquid') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('liquid')}>
-            <Icon icon="pin" size="14" />
+            <Icon icon={$state.header.includes('liquid') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{$state.header.includes('liquid') ? 'Unpin from' : 'Pin to'} header menu</span>
           </button>
         </li>
@@ -418,7 +418,7 @@ h2 {
         </li>
         <li>
           <button title="{$state.header.includes('graphiql') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('graphiql')}>
-            <Icon icon="pin" size="14" />
+            <Icon icon={$state.header.includes('graphiql') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{$state.header.includes('graphiql') ? 'Unpin from' : 'Pin to'} header menu</span>
           </button>
         </li>

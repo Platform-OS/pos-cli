@@ -2,6 +2,18 @@
 
 ## master
 
+## 4.11.0
+* Feature: Ability to sort the records
+* Improvement: Pin icon on homescreen is now filled when the tool has been pinned for better UX
+* Improvement: Added `arguments` section in the background job details panel
+* Bug: Fixed showing `run_at` and `dead_at` dates in Background Jobs Manager
+* Bug: Fixed not showing `undefined` when there is no URL for a background job
+* Bug: Fixed app failure when using new background job syntax
+* Bug: Fixed a problem with text overflow on Users details panel
+
+
+### pos-cli gui next updates
+
 ## 4.10.0
 
 ### pos-cli gui next updates

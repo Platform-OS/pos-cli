@@ -3,12 +3,9 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { quintOut } from 'svelte/easing';
-
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
 
-import Icon from '$lib/ui/Icon.svelte';
 import Aside from '$lib/ui/Aside.svelte';
 
 
@@ -34,24 +31,6 @@ const load = async () => {
 }
 
 $: $page.params.id && load();
-
-
-// transition: 	slides from right
-// options: 	delay (int), duration (int)
-// ------------------------------------------------------------------------
-const appear = function(node, {
-  delay = 0,
-  duration = 150
-}){
-  return {
-    delay,
-    duration,
-    css: (t) => {
-      const eased = quintOut(t);
-
-      return `width: ${400 * eased}px;` }
-  }
-};
 
 </script>
 
@@ -102,9 +81,11 @@ time {
 
 .personal dd {
   margin-block-end: .5em;
-}
+  flex-grow: 0;
+  overflow: hidden;
 
-.personal dd {
+  word-wrap: break-all;
+  text-overflow: ellipsis;
   font-weight: 500;
 }
 
