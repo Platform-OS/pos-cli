@@ -47,8 +47,36 @@ const filter = () => {
 
 fieldset {
   display: flex;
-  gap: .2em;
+  gap: 2px;
   align-items: center;
+}
+
+label {
+  padding-inline-end: .5em;
+}
+
+select[name="name"] {
+  max-width: 20ch;
+
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+
+  text-overflow: ellipsis;
+}
+
+select[name="operation"] {
+  border-radius: 0;
+}
+
+input[name="value"] {
+  width: 20ch;
+
+  border-radius: 0;
+}
+
+button[type="submit"] {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
 }
 
 [type="number"] {
@@ -64,10 +92,10 @@ fieldset {
 
   {#if $state.table?.properties}
 
-    {#each $state.filters.attributes as attribute, i}
+    {#each $state.filters.attributes as attribute}
       <fieldset>
 
-        Filter by:
+        <label for="">Filter by:</label>
 
         <select name="name" bind:value={attribute.name} on:change={ () => { attribute.attribute_type = ($state.table.properties.find(property => property.name === attribute.name))?.attribute_type || 'id'; } }>
           <option value="id">id</option>
@@ -105,7 +133,7 @@ fieldset {
             </select>
             <input type="number" name="minFilterValue" value={attribute.minFilterValue}>
           {:else}
-            <input type="text" name="value" bind:value={attribute.value}>
+            <input type="text" name="value" bind:value={attribute.value} placeholder="filter value">
           {/if}
 
           <button type="submit" class="button">

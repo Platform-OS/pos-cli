@@ -3,13 +3,13 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount, onDestroy } from 'svelte';
 import { page } from '$app/stores';
 import { state } from '$lib/state';
 import { record } from '$lib/api/record';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Filters from '$lib/database/Filters.svelte';
+import Sort from '$lib/database/Sort.svelte';
 import Table from '$lib/database/Table.svelte';
 import RecordCreate from '$lib/database/Create.svelte';
 
@@ -75,12 +75,15 @@ nav {
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
-  justify-content: space-between;
   position: sticky;
   left: 0;
 
   background-color: var(--color-background);
 }
+
+  nav > :global(*:first-child) {
+    margin-inline-end: auto;
+  }
 
   .refreshing,
   .refreshing:hover {
@@ -128,6 +131,8 @@ nav {
 
     <Filters />
 
+    <Sort />
+
     <button class="button" title="Refresh current view (R)" class:refreshing on:click={refresh}>
       <span class="label">Refresh current view</span>
       <Icon icon="refresh" />
@@ -142,17 +147,19 @@ nav {
   {/if}
 
   <nav class="pagination">
-    Page:
-    <input
-      type="number"
-      name="page"
-      min="1"
-      max={$state.records?.total_pages || 100}
-      step="1"
-      bind:value={$state.filters.page}
-      on:input={() => { record.get({ table: $page.params.id, filters: $state.filters }); } }
-    >
-    of {$state.records?.total_pages || ''}
+    <div>
+      Page:
+      <input
+        type="number"
+        name="page"
+        min="1"
+        max={$state.records?.total_pages || 100}
+        step="1"
+        bind:value={$state.filters.page}
+        on:input={() => { record.get({ table: $page.params.id, filters: $state.filters }); } }
+      >
+      of {$state.records?.total_pages || ''}
+    </div>
 
     <div id="viewOptions">
 

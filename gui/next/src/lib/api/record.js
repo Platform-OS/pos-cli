@@ -153,6 +153,17 @@ const record = {
       idFilter = `id: { ${params.filters.attributes[idFilterIndex].operation}: ${params.filters.attributes[idFilterIndex].value} }`;
     }
 
+    let sort = '';
+    if(params.sort){
+      if(params.sort.by === 'id' || params.sort.by === 'created_at' || params.sort.by === 'updated_at'){
+        sort = `${params.sort.by}: { order: ${params.sort.order} }`;
+      } else {
+        sort = `properties: { name: "${params.sort.by}", order: ${params.sort.order} }`;
+      }
+    } else {
+      sort = `created_at: { order: DESC }`;
+    }
+
     const deletedFilter = params.deleted ? `deleted_at: { exists: true }` : '';
 
     const filters = params.filters?.attributes ? getFiltersString(params.filters.attributes) : '';
@@ -162,7 +173,7 @@ const record = {
         models(
           page: ${params.filters.page}
           per_page: 20,
-          sort: { created_at: { order: DESC } },
+          sort: { ${sort} },
           filter: {
             ${tableFilter}
             ${idFilter}
