@@ -230,15 +230,15 @@ h2 {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More info" on:click={() => toggleDescription('database')}>
+          <button title="More information" on:click={() => toggleDescription('database')}>
             <Icon icon="info" size="14" />
-            <span class="label">Show more information</span>
+            <span class="label">Show more information about Database tool</span>
           </button>
         </li>
         <li>
-          <button title="{$state.header.includes('database') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('database')}>
+          <button title="{$state.header.includes('database') ? 'Unpin Database from' : 'Pin Database to'} header menu" on:click={() => pin('database')}>
             <Icon icon={$state.header.includes('database') ? 'pinFilled' : 'pin'} size="14" />
-            <span class="label">{$state.header.includes('database') ? 'Unpin from' : 'Pin to'} header menu</span>
+            <span class="label">{$state.header.includes('database') ? 'Unpin Database from' : 'Pin Database to'} header menu</span>
           </button>
         </li>
       </ul>
@@ -258,15 +258,15 @@ h2 {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More info" on:click={() => toggleDescription('users')}>
+          <button title="More information" on:click={() => toggleDescription('users')}>
             <Icon icon="info" size="14" />
-            <span class="label">Show more information</span>
+            <span class="label">Show more information about Users tool</span>
           </button>
         </li>
         <li>
-          <button title="{$state.header.includes('users') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('users')}>
+          <button title="{$state.header.includes('users') ? 'Unpin Users from' : 'Pin Users to'} header menu" on:click={() => pin('users')}>
             <Icon icon={$state.header.includes('users') ? 'pinFilled' : 'pin'} size="14" />
-            <span class="label">{$state.header.includes('users') ? 'Unpin from' : 'Pin to'} header menu</span>
+            <span class="label">{$state.header.includes('users') ? 'Unpin Users from' : 'Pin Users to'} header menu</span>
           </button>
         </li>
       </ul>
@@ -288,15 +288,15 @@ h2 {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More info" on:click={() => toggleDescription('logs')}>
+          <button title="More information" on:click={() => toggleDescription('logs')}>
             <Icon icon="info" size="14" />
-            <span class="label">Show more information</span>
+            <span class="label">Show more information about Logs tool</span>
           </button>
         </li>
         <li>
-          <button title="{$state.header.includes('logs') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('logs')}>
+          <button title="{$state.header.includes('logs') ? 'Unpin Logs from' : 'Pin Logs to'} header menu" on:click={() => pin('logs')}>
             <Icon icon={$state.header.includes('logs') ? 'pinFilled' : 'pin'} size="14" />
-            <span class="label">{$state.header.includes('logs') ? 'Unpin from' : 'Pin to'} header menu</span>
+            <span class="label">{$state.header.includes('logs') ? 'Unpin Logs from' : 'Pin Logs to'} header menu</span>
           </button>
         </li>
       </ul>
@@ -317,15 +317,15 @@ h2 {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More info" on:click={() => toggleDescription('backgroundJobs')}>
+          <button title="More information" on:click={() => toggleDescription('backgroundJobs')}>
             <Icon icon="info" size="14" />
-            <span class="label">Show more information</span>
+            <span class="label">Show more information about Background Jobs tool</span>
           </button>
         </li>
         <li>
-          <button title="{$state.header.includes('backgroundJobs') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('backgroundJobs')}>
+          <button title="{$state.header.includes('backgroundJobs') ? 'Unpin Background Jobs from' : 'Pin Background Jobs to'} header menu" on:click={() => pin('backgroundJobs')}>
             <Icon icon={$state.header.includes('backgroundJobs') ? 'pinFilled' : 'pin'} size="14" />
-            <span class="label">{$state.header.includes('backgroundJobs') ? 'Unpin from' : 'Pin to'} header menu</span>
+            <span class="label">{$state.header.includes('backgroundJobs') ? 'Unpin Background Jobs from' : 'Pin Background Jobs to'} header menu</span>
           </button>
         </li>
       </ul>
@@ -347,15 +347,15 @@ h2 {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More info" on:click={() => toggleDescription('constants')}>
+          <button title="More information" on:click={() => toggleDescription('constants')}>
             <Icon icon="info" size="14" />
-            <span class="label">Show more information</span>
+            <span class="label">Show more information about Constants tool</span>
           </button>
         </li>
         <li>
-          <button title="{$state.header.includes('constants') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('constants')}>
+          <button title="{$state.header.includes('constants') ? 'Unpin Constants from' : 'Pin Constants to'} header menu" on:click={() => pin('constants')}>
             <Icon icon={$state.header.includes('constants') ? 'pinFilled' : 'pin'} size="14" />
-            <span class="label">{$state.header.includes('constants') ? 'Unpin from' : 'Pin to'} header menu</span>
+            <span class="label">{$state.header.includes('constants') ? 'Unpin Constants from' : 'Pin Constants to'} header menu</span>
           </button>
         </li>
       </ul>
@@ -381,15 +381,15 @@ h2 {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More info" on:click={() => toggleDescription('liquid')}>
+          <button title="More information" on:click={() => toggleDescription('liquid')}>
             <Icon icon="info" size="14" />
-            <span class="label">Show more information</span>
+            <span class="label">Show more information about Liquid Evaluator</span>
           </button>
         </li>
         <li>
-          <button title="{$state.header.includes('liquid') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('liquid')}>
+          <button title="{$state.header.includes('liquid') ? 'Unpin Liquid Evaluator from' : 'Pin Liquid Evaluator to'} header menu" on:click={() => pin('liquid')}>
             <Icon icon={$state.header.includes('liquid') ? 'pinFilled' : 'pin'} size="14" />
-            <span class="label">{$state.header.includes('liquid') ? 'Unpin from' : 'Pin to'} header menu</span>
+            <span class="label">{$state.header.includes('liquid') ? 'Unpin Liquid Evaluator from' : 'Pin Liquid Evaluator to'} header menu</span>
           </button>
         </li>
       </ul>
@@ -411,15 +411,15 @@ h2 {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More info" on:click={() => toggleDescription('graphiql')}>
+          <button title="More information" on:click={() => toggleDescription('graphiql')}>
             <Icon icon="info" size="14" />
-            <span class="label">Show more information</span>
+            <span class="label">Show more information about GraphiQL</span>
           </button>
         </li>
         <li>
-          <button title="{$state.header.includes('graphiql') ? 'Unpin from' : 'Pin to'} header menu" on:click={() => pin('graphiql')}>
+          <button title="{$state.header.includes('graphiql') ? 'Unpin GraphiQL from' : 'Pin GraphiQL to'} header menu" on:click={() => pin('graphiql')}>
             <Icon icon={$state.header.includes('graphiql') ? 'pinFilled' : 'pin'} size="14" />
-            <span class="label">{$state.header.includes('graphiql') ? 'Unpin from' : 'Pin to'} header menu</span>
+            <span class="label">{$state.header.includes('graphiql') ? 'Unpin GraphiQL from' : 'Pin GraphiQL to'} header menu</span>
           </button>
         </li>
       </ul>

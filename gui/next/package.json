@@ -6,8 +6,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "playwright test",
-    "test:unit": "vitest"
+    "test": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.33.0",
