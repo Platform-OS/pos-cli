@@ -1,13 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 
-const url = 'http://localhost:4173';
-
-
-
 
 test('see home screen', async ({ page }) => {
-  await page.goto(url);
+  await page.goto('./');
 
   await expect(page).toHaveTitle('platformOS Instance Admin');
   await expect(page.locator('body')).toContainText('Partner Portal');
@@ -15,7 +11,7 @@ test('see home screen', async ({ page }) => {
 
 
 test('pin and unpin tools to header navigation', async ({ page }) => {
-  await page.goto(url);
+  await page.goto('./');
 
   // pin
   await page.getByRole('button', { name: 'Pin GraphiQL to header menu'}).click();
@@ -28,7 +24,7 @@ test('pin and unpin tools to header navigation', async ({ page }) => {
 
 
 test('showing tools info', async ({ page }) => {
-  await page.goto(url);
+  await page.goto('./');
 
   // show additional info
   await page.getByRole('button', { name: 'Show more information about Database tool'}).click();
@@ -37,4 +33,12 @@ test('showing tools info', async ({ page }) => {
   // hide additional info
   await page.getByRole('button', { name: 'Show more information about Database tool'}).click();
   await expect(page.locator('.application').getByText('Inspect tables and records')).not.toHaveClass('showDescription');
+});
+
+
+test('showing documentation and partner portal links', async ({ page }) => {
+  await page.goto('./');
+
+  await expect(page.getByRole('link', { name: 'Documentation' })).toBeVisible();
+  await expect(page.getByRole('link' , { name: 'Partner Portal' })).toBeVisible();
 });
