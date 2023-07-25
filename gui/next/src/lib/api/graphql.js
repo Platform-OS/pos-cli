@@ -29,29 +29,7 @@ const graphql = (body) => {
 };
 
 
-const graphqlnew = (body) => {
-  return fetch('http://localhost:3333/api/graph', {
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST',
-    body: JSON.stringify(body),
-    mode: 'no-cors'
-  })
-  .then((res) => res.text())
-  .then((res) => {
-    if(res.errors) {
-      res.errors.forEach(error => {
-        console.log(body.query);
-        console.info(error);
-      });
-      return res;
-    }
-
-    return res && res.data;
-  });
-};
-
-
 
 // exports
 // ------------------------------------------------------------------------
-export { graphql, graphqlnew }
+export { graphql }

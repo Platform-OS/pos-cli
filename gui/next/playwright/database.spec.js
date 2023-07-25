@@ -13,7 +13,7 @@ test('see home screen', async ({ page }) => {
 });
 
 
-test('see tables list', async ({ page }) => {
+test('viewing tables list', async ({ page }) => {
   await page.goto(url);
 
   await expect(page.getByText('qa_table_1')).toBeVisible();
@@ -34,4 +34,17 @@ test('ability to see table details', async ({ page }) => {
 
   await page.getByText('qa_table_2', { exact: true }).click();
   await expect(page.getByRole('cell', { name: 'qa_table_2_array' })).toBeVisible();
+});
+
+
+test('filtering the tables', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByPlaceholder('Search tables').type('qa_table_2');
+  await expect(page.getByRole('link', { name: 'qa_table_1' })).toBeHidden();
+  await expect(page.getByRole('link', { name: 'qa_table_2' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reset filter' }).click();
+  await expect(page.getByPlaceholder('Search tables')).toHaveValue('');
+  await expect(page.getByRole('link', { name: 'qa_table_1' })).toBeVisible();
 });
