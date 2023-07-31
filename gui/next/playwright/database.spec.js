@@ -48,3 +48,45 @@ test('filtering the tables', async ({ page }) => {
   await expect(page.getByPlaceholder('Search tables')).toHaveValue('');
   await expect(page.getByRole('link', { name: 'qa_table_1' })).toBeVisible();
 });
+
+
+test('filtering records by id', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByText('qa_table_1').click();
+
+  await page.getByPlaceholder('filter value').type('2');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array2_item1"'})).toBeVisible();
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array1_item1"'})).toBeHidden();
+});
+
+
+test('filtering record array by array_contains', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByText('qa_table_1').click();
+
+  await page.locator('select[name="name"]').selectOption('qa_table_1_array');
+  await page.locator('select[name="operation"]').selectOption('array_contains');
+  await page.getByPlaceholder('filter value').fill('qa_table_1_array2_item1');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array2_item1"'})).toBeVisible();
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array1_item1"'})).toBeHidden();
+});
+
+
+test('filtering record array by value_in', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByText('qa_table_1').click();
+
+  await page.locator('select[name="name"]').selectOption('qa_table_1_array');
+  await page.locator('select[name="operation"]').selectOption('value_in');
+  await page.getByPlaceholder('filter value').fill('["qa_table_1_array3_item1", "another_item"]');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array3_item1"'})).toBeVisible();
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array1_item1"'})).toBeHidden();
+});
