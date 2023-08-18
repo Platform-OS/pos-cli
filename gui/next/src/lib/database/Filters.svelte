@@ -21,7 +21,7 @@ const operations = {
   id: ['value'],
   string: ['value', 'exists', 'contains', 'ends_with', 'not_contains', 'not_ends_with', 'not_starts_with', 'not_value', 'starts_with'],
   text: ['value', 'exists', 'not_value'],
-  array: ['array_contains', 'value_in', 'exists', 'array_overlaps', 'not_array_contains', 'not_array_overlaps', 'not_value_array', 'not_value_in', 'value_array'],
+  array: ['array_contains', 'value_array', 'value_in', 'exists', 'array_overlaps', 'not_array_contains', 'not_array_overlaps', 'not_value_array', 'not_value_in'],
   boolean: ['value_boolean', 'exists', 'not_value_boolean'],
   integer: ['value_int', 'exists', 'not_value_int', 'range'],
   float: ['value_float', 'exists', 'not_value_float', 'range'],
@@ -71,6 +71,14 @@ select[name="operation"] {
 input[name="value"] {
   width: 20ch;
 
+  border-radius: 0;
+}
+
+select[name="value"],
+select[name="minFilter"],
+select[name="maxFilter"],
+input[name="minFilterValue"],
+input[name="maxFilterValue"] {
   border-radius: 0;
 }
 

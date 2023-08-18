@@ -88,7 +88,7 @@ const getFiltersString = (filters) => {
   let filtersString = '';
 
   const operation_types = {
-    string: ['array_contains', 'contains', 'ends_with', 'not_contains', 'not_ends_with', 'not_starts_with', 'not_value', 'not_value_array', 'starts_with', 'value'],
+    string: ['array_contains', 'not_array_contains', 'contains', 'ends_with', 'not_contains', 'not_ends_with', 'not_starts_with', 'not_value', 'starts_with', 'value'],
     range: ['range']
   };
 
