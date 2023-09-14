@@ -25,6 +25,7 @@ program
   .command('gui', 'gui for content editor, graphql, logs')
   .command('init', 'initialize directory structure')
   .command('logs <environment>', 'display logs and errors').alias('l')
+  .command('logsv2', 'display logs and errors').alias('l2')
   .command('migrations', 'manage migrations')
   .command('modules', 'manage modules')
   .command('pull', 'export app data to a zip file')

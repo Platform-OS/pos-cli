@@ -61,6 +61,7 @@
     "request": "^2.88.2",
     "request-promise": "^4.2.6",
     "semver": "^7.3.7",
+    "swagger-client": "^3.19",
     "shelljs": "^0.8.5",
     "update-notifier": "^5.1.0",
     "uuid": "^8.3.2",
@@ -78,6 +79,8 @@
     "pos-cli-gui-serve": "bin/pos-cli-gui-serve.js",
     "pos-cli-init": "bin/pos-cli-init.js",
     "pos-cli-logs": "bin/pos-cli-logs.js",
+    "pos-cli-logsv2": "bin/pos-cli-logsv2.js",
+    "pos-cli-logsv2-search": "bin/pos-cli-logsv2-search.js",
     "pos-cli-migrations": "bin/pos-cli-migrations.js",
     "pos-cli-modules": "bin/pos-cli-modules.js",
     "pos-cli-sync": "bin/pos-cli-sync.js"

@@ -35,7 +35,14 @@ class LogStream extends EventEmitter {
       for (let k in logs) {
         const row = logs[k];
         const filter = !!program.filter && program.filter.toLowerCase();
-        const errorType = (row.error_type || 'error').toLowerCase();
+
+        try {
+          const errorType = (row.error_type || 'error').toLowerCase();
+        }
+        catch(e) {
+          logger.Error(`${row.error_type} error`)
+          const errorType = "weird-error-type"
+        }
 
         if (!!program.filter && filter !== errorType) continue;
 

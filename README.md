@@ -96,6 +96,25 @@ Example:
 
     pos-cli logs staging --filter debug
 
+### Logs V2
+
+#### LOGS
+
+examples:
+
+    pos-cli logsv2 search stg --size 5 --from 0
+
+    pos-cli logsv2 search stg --sql "select *  from logs" --json | jq
+
+    pos-cli logsv2 search stg --sql "select message,type  from logs" --json | jq
+
+    pos-cli logsv2 search stg --sql "select * from logs where str_match(message, 'com')" --start_time 1694694303000000 --size 5 | jq
+
+#### ALERTS
+
+    TBD
+
+
 ### Listing environments
 
 If you forgot what your environments are called or the URL that corresponds to any name, use:
