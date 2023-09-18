@@ -431,4 +431,99 @@ test('reordering records', async ({ page }) => {
 });
 
 
-// refreshing, adding, editing, deleting, pagination, expanded view
+test('adding a record successfully', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByText('qa_table_1').click();
+  await page.getByRole('button', { name: 'Create new record' }).click();
+
+  await page.getByLabel('qa_table_1_array').fill('["new_array_item_1", "new_array_item_2"]');
+  await page.getByLabel('qa_table_1_int').fill('2137');
+  await page.getByText('json', { exact: true }).first().click();
+  await page.getByLabel('qa_table_1_json').fill('{"new_json_element_1": "new_json_value_1", "new_json_element_2": "new_json_value_2"}');
+  await page.getByLabel('qa_table_1_string').fill('This is a new string to be tested');
+
+  await page.getByRole('button', { name: 'Create record' }).click();
+
+  await expect(page.getByRole('cell', { name: '["new_array_item_1"' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: '2137' }).first()).toBeVisible();
+  await expect(page.getByRole('cell', { name: '{"new_json_element_1"' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'This is a new' })).toBeVisible();
+});
+
+test('adding a record with broken JSON and expecting validation error', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByText('qa_table_1').click();
+  await page.getByRole('button', { name: 'Create new record' }).click();
+
+  await page.getByLabel('qa_table_1_array').fill('["new_array_item_3", "new_array_item_4"]');
+  await page.getByText('json', { exact: true }).first().click();
+  await page.getByLabel('qa_table_1_json').fill('{new_json_element_3: "new_json_value_3", new_json_element_4: "new_json_value_4"}');
+
+  await page.getByRole('button', { name: 'Create record' }).click();
+
+  await expect(page.getByText('Not a valid JSON')).toBeVisible();
+});
+
+test('adding a record with broken array and expecting validation error', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByText('qa_table_1').click();
+  await page.getByRole('button', { name: 'Create new record' }).click();
+
+  await page.getByLabel('qa_table_1_array').fill('["new_array_item_3", new_array_item_4]');
+
+  await page.getByRole('button', { name: 'Create record' }).click();
+
+  await expect(page.getByText('has an invalid value')).toBeVisible();
+});
+
+
+test('editing a record', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByText('qa_table_1').click();
+
+  await page.getByRole('button', { name: 'Create new record' }).click();
+  await page.getByLabel('qa_table_1_array').fill('["new_array_item_3", "new_array_item_4"]');
+
+  await page.getByRole('button', { name: 'Create record' }).click();
+
+  await expect(page.getByRole('cell', { name: '["new_array_item_3"' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Edit record' }).first().click();
+  await page.getByLabel('qa_table_1_array').fill('["edited_array_item_3", "edited_array_item_4"]');
+  const dialog = page.locator('dialog');
+  await dialog.getByRole('button', { name: 'Edit record' }).first().click();
+
+  await expect(page.getByRole('cell', { name: '["new_array_item_3"' })).toBeHidden();
+  await expect(page.getByRole('cell', { name: '["edited_array_item_3"' })).toBeVisible();
+});
+
+
+test('deleting a record', async ({ page }) => {
+  page.on('dialog', async dialog => {
+    expect(dialog.message()).toEqual('Are you sure you want to delete this record?');
+    await dialog.accept();
+  });
+
+  await page.goto(url);
+  await page.getByText('qa_table_1').click();
+
+  await page.getByRole('button', { name: 'Create new record' }).click();
+  await page.getByLabel('qa_table_1_array').fill('["to_be_deleted_array"]');
+
+  await page.getByRole('button', { name: 'Create record' }).click();
+
+  await expect(page.getByRole('cell', { name: '["to_be_deleted_array"' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'More options' }).first().click();
+  await page.getByRole('button', { name: 'Delete record' }).click();
+
+  await expect(page.getByRole('cell', { name: '["to_be_deleted_array"' })).toBeHidden();
+});
+
+
+
+// refreshing, pagination, expanded view
