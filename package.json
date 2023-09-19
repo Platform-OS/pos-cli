@@ -96,5 +96,8 @@
     "commander",
     "degit",
     "shelljs"
-  ]
+  ],
+  "jest": {
+    "testPathIgnorePatterns": ["gui/next"]
+  }
 }
