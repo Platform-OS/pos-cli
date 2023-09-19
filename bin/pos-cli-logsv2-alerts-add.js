@@ -12,21 +12,23 @@ program
   .option('--keyword <keyword>', 'alert keyword trigger')
   .option('--operator <operator>', 'operator', "Contains")
   .option('--column <column>', 'column', "message")
+  .option('--channel <channel>')
   .option('--json', 'output as json')
   .action(async (environment) => {
-    // try {
-      const client = await swagger.SwaggerProxy.client(environment);
+    try {
+      if (!program.channel) {
+        throw Error("--channel is required")
+      }
 
-      client
-        .createAlert(program)
-        .then(response => {
-          if (!program.json)
-            console.log(response.body)
-          else
-            console.log(response.body)
-        })
-        .catch(logger.Error)
-    // } catch(e) { logger.Error(e.message) }
+      const client = await swagger.SwaggerProxy.client(environment);
+      const response = await client.createAlert(program)
+
+      if (!program.json)
+        console.log(response.body)
+      else
+        console.log(response.body)
+
+    } catch(e) { logger.Error(e) }
   });
 
 program.parse(process.argv);
