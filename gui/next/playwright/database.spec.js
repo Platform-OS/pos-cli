@@ -417,7 +417,7 @@ test('reordering records', async ({ page }) => {
 
   await page.getByText('qa_table_1').click();
 
-  await expect(page.locator('table > tr:first-of-type td:first-child')).toContainText('5');
+  await expect(page.locator('table > tr:first-of-type td:first-child')).toContainText('4');
 
   await page.locator('select[name="by"]').selectOption('id');
   await page.locator('select[name="order"]').selectOption('ASC');
@@ -525,5 +525,24 @@ test('deleting a record', async ({ page }) => {
 });
 
 
+test('pagination', async ({ page }) => {
+  await page.goto(url);
+  await page.getByText('qa_table_3').click();
 
-// refreshing, pagination, expanded view
+  await expect(page.getByText('of 2')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Twenty five' })).toBeVisible();
+
+  await page.getByLabel('Page:').fill('2');
+
+  await expect(page.getByRole('cell', { name: 'Twenty five' })).toBeHidden();
+  await expect(page.getByRole('cell', { name: 'Five', exact: true })).toBeVisible();
+});
+
+
+test('expanded view', async ({ page }) => {
+  await page.goto(url);
+  await page.getByText('qa_table_1').click();
+
+  await page.getByRole('button', { name: 'Expand values'}).click();
+  await expect(page.getByRole('cell', { name: 'Aliquam condimentum condimentum ultricies. Aenean mollis posuere purus, non gravida tortor congue non.', exact: true })).toBeVisible();
+});

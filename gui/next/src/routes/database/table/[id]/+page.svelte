@@ -148,10 +148,13 @@ nav {
 
   <nav class="pagination">
     <div>
-      Page:
+      <label for="page">
+        Page:
+      </label>
       <input
         type="number"
         name="page"
+        id="page"
         min="1"
         max={$state.records?.total_pages || 100}
         step="1"
@@ -175,8 +178,10 @@ nav {
           on:click|preventDefault={$state.view.tableStyle === 'collapsed' ? state.setView({ tableStyle: 'expanded' }) : state.setView({ tableStyle: 'collapsed' })}
         >
           {#if $state.view.tableStyle === 'collapsed'}
+            <span class="label">Expand values</span>
             <Icon icon="expand" />
           {:else}
+            <span class="label">Collapse values</span>
             <Icon icon="collapse" />
           {/if}
 
