@@ -5,23 +5,23 @@ const program = require('commander'),
       swagger = require('../lib/swagger-client');
 
 program
-  .name('pos-cli logsv2 search')
+  .name('pos-cli logsv2 alerts add')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .option('--sql <sql>', 'SQL query to fetch logs')
-  .option('--size <size>', 'rows size', 10)
-  .option('--from <from>', 'start from', 0)
-  .option('--start_time <st>', 'starttime')
-  .option('--end_time <et>', 'endtime')
+  .option('--url <url>', 'post alarms to this url')
+  .option('--name <name>', 'alert name')
+  .option('--keyword <keyword>', 'alert keyword trigger')
+  .option('--operator <operator>', 'operator', "Contains")
+  .option('--column <column>', 'column', "message")
   .option('--json', 'output as json')
   .action(async (environment) => {
     // try {
       const client = await swagger.SwaggerProxy.client(environment);
 
       client
-        .getLogs(program)
+        .createAlert(program)
         .then(response => {
           if (!program.json)
-            swagger.search.printLogs(response)
+            console.log(response.body)
           else
             console.log(response.body)
         })
