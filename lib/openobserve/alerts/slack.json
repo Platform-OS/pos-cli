@@ -1,0 +1,39 @@
+{
+  "blocks": [
+    {
+      "type": "header",
+      "text": {
+        "type": "plain_text",
+        "text": "Alert {alert_name} is active.",
+        "emoji": true
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {
+          "type": "mrkdwn",
+          "text": "*Stream:*\n{stream_name}"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Timestamp:*\n{timestamp}"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "To get logs around the event run:\n`pos-cli logsv2 searchAround --key {timestamp} ENV_NAME`"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "ALTERNATIVELY please run `pos-cli gui serv ENV` and open the link http://localhost:3333/LogsV2/search?key={timestamp}"
+      }
+    }
+  ]
+}
