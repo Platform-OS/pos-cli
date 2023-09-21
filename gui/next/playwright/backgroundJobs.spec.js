@@ -41,7 +41,7 @@ test('viewing background job details', async ({ page }) => {
 
 
 test('deleting scheduled background job', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'background_job');
+  await page.goto(triggerLogUrl + 'background_job_to_delete');
 
   page.on('dialog', async dialog => {
     expect(dialog.message()).toEqual('Are you sure you want to delete this background job?');
@@ -50,10 +50,10 @@ test('deleting scheduled background job', async ({ page }) => {
 
   await page.goto(url);
 
-  page.getByRole('cell', { name: 'in 10 minutes' });
+  const job = await page.locator('tr:has-text("background job to delete")');
 
-  await page.getByRole('button', { name: 'More options' }).last().click();
-  await page.getByRole('button', { name: 'Delete background job' }).last().click();
+  await page.locator('tr:has-text("background job to delete")').getByRole('button', { name: 'More options' }).click();
+  await page.locator('tr:has-text("background job to delete")').getByRole('button', { name: 'Delete background job' }).click();
 
-  await expect(page.getByRole('cell', { name: 'in 10 minutes' })).toBeHidden();
+  await expect(page.locator('tr:has-text("background job to delete")')).toBeHidden();
 });

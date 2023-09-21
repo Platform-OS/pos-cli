@@ -39,7 +39,7 @@ test('deleting a constant', async ({ page }) => {
   await page.getByRole('button', { name: 'Add' }).click();
 
   await expect(page.getByText('Constant TEST_CONSTANT_2 created')).toBeVisible();
-  await page.getByRole('button', { name: 'Delete constant' }).last().click();
+  await page.locator('li:has-text("TEST_CONSTANT_2")').getByRole('button', { name: 'Delete constant' }).click();
 
   await expect(page.getByText('Constant TEST_CONSTANT_2 deleted')).toBeVisible();
   await expect(page.getByLabel('TEST_CONSTANT_2')).toBeHidden();
