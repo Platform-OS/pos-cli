@@ -42,6 +42,7 @@ jobs:
         shell: sh
         run: |
           set -eu
+          pos-cli deploy
           pos-cli data clean --auto-confirm
           pos-cli data import --path=seed/data.zip --zip
       - name: Checkout pos-cli code
