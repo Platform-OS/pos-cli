@@ -31,19 +31,28 @@ jobs:
       MPKIT_URL: ${{ secrets.MPKIT_URL }}
       CI: true
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout test instance code
+        uses: actions/checkout@v4
+        with:
+          repository: Platform-OS/pos-cli-gui-qa
+          path: instance
       - name: Seed the test instance with test data
+        working-directory: ./instance
         timeout-minutes: 6
         shell: sh
         run: |
           set -eu
           pos-cli data clean --auto-confirm
           pos-cli data import --path=seed/data.zip --zip
+      - name: Checkout pos-cli code
+        uses: actions/checkout@v4
+        with:
+          path: pos-cli
       - name: Build GUI
+        working-directory: ./pos-cli/gui/next
         shell: sh
         run: |
           set -eu
-          cd gui/next
           npm install
           npm run build
       - name: Run express server, vite preview server and tests
