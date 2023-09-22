@@ -22,6 +22,7 @@ jobs:
     needs: ["pre_job"]
     if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
+    container: platformos/testcafe:4.7.2-2.1.0
     timeout-minutes: 15
     env:
       MPKIT_EMAIL: ${{ secrets.MPKIT_EMAIL }}
@@ -32,9 +33,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-      - name: Install pos-cli
-        run: |
-          npm install -g @platformos/pos-cli
       - name: Checkout test instance code
         uses: actions/checkout@v4
         with:
