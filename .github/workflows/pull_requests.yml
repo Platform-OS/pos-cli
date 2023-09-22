@@ -19,7 +19,7 @@ jobs:
           paths_ignore: '["gui/next/README.md"]'
 
   tests:
-    needs: ["reserve-ci-instance"]
+    needs: ["pre_job"]
     runs-on: ubuntu-latest
     container: platformos/testcafe:4.7.2-2.1.0
     timeout-minutes: 35
