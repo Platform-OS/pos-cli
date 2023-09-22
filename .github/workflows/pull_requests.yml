@@ -32,12 +32,6 @@ jobs:
       CI: true
     steps:
       - uses: actions/checkout@v4
-      - name: Build pos-cli GUI
-        shell: sh
-        run: |
-          set -eu
-          cd gui/next
-          npm run build
       - name: Seed the test instance with test data
         timeout-minutes: 6
         shell: sh
@@ -56,4 +50,6 @@ jobs:
         shell: sh
         run: |
           set -eu
-          pos-cli gui serve && npm run preview && sleep 5 && npx playwright test
+          pos-cli gui serve &
+          npm run preview &
+          sleep 5 && npx playwright test
