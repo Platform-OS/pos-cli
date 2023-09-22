@@ -50,6 +50,7 @@ jobs:
         run: |
           set -eu
           cd gui/next
+          npm install
           npm run build
       - name: Run express server, vite preview server and tests
         shell: sh
