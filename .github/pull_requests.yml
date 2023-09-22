@@ -1,0 +1,58 @@
+name: Automated tests for pos-cli GUI
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+
+jobs:
+  pre_job:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          github_token: ${{ github.token }}
+          paths: '["gui/next/**"]'
+          paths_ignore: '["gui/next/README.md"]'
+
+  tests:
+    needs: ["reserve-ci-instance"]
+    runs-on: ubuntu-latest
+    container: platformos/testcafe:4.7.2-2.1.0
+    timeout-minutes: 35
+    strategy:
+      max-parallel: 1
+    env:
+      MPKIT_EMAIL: ${{ secrets.MPKIT_EMAIL }}
+      MPKIT_TOKEN: ${{ secrets.MPKIT_TOKEN }}
+      MPKIT_URL: ${{ secrets.MPKIT_URL }}
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pos-cli GUI
+        shell: sh
+        run: |
+          set -eu
+          cd gui/next
+          npm run build
+      - name: Seed the test instance with test data
+        timeout-minutes: 6
+        shell: sh
+        run: |
+          set -eu
+          pos-cli data clean --auto-confirm
+          pos-cli data import --path=seed/data.zip --zip
+      - name: Build GUI
+        shell: sh
+        run: |
+          set -eu
+          cd gui/next
+          npm run build
+      - name: Run express server, vite preview server and tests
+        shell: sh
+        run: |
+          set -eu
+          pos-cli gui serve && npm run preview && sleep 5 && npx playwright test
