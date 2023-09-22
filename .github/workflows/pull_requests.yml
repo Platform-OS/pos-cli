@@ -57,6 +57,7 @@ jobs:
           npm install
           npm run build
       - name: Run express server, vite preview server and tests
+        working-directory: ./pos-cli/gui/next
         shell: sh
         run: |
           set -eu
