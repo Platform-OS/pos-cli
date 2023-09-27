@@ -22,6 +22,10 @@ describe('Happy path', () => {
   test('App directory + modules', async () => {
     const { stdout } = await run('correct');
 
+    stdout.on('data', (data) => {
+      console.log(data.toString());
+    });
+
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch(/^Deploy.+succeeded/);
 
