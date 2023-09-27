@@ -16,13 +16,14 @@ const extract = (source, options = {}) => {
   return extractZip(source, options);
 };
 
-jest.setTimeout(30000); // default jasmine timeout is 5 seconds - we need more.
+jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
 
 describe('Happy path', () => {
   test('App directory + modules', async () => {
     const { stdout } = await run('correct');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
+    expect(stdout).toMatch('- Deploying to: ' + process.env.MPKIT_URL);
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
