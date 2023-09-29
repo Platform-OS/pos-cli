@@ -22,12 +22,8 @@ describe('Happy path', () => {
   test('App directory + modules', async () => {
     const { stdout } = await run('correct');
 
-    stdout.on('data', (data) => {
-      console.log(data.toString());
-    });
-
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch(/^Deploy.+succeeded/);
+    expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
     await extract(`${deployDir}/tmp/release.zip`, { dir: `${deployDir}/tmp/release` });
