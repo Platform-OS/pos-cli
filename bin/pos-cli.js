@@ -13,6 +13,7 @@ updateNotifier({
   isGlobal: true
 });
 
+program.showHelpAfterError();
 program
   .name('pos-cli')
   .version(version, '-v, --version')
@@ -33,11 +34,3 @@ program
   .command('uploads', 'manage uploads files')
   .parse(process.argv);
 
-const commandList = Object.keys(program._execs);
-
-if (!commandList.includes(program.args[0])) {
-  program.outputHelp();
-  logger.Error(`unknown command: ${program.args[0]}`);
-}
-
-if (!program.args.length) program.help();

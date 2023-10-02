@@ -13,7 +13,7 @@ program
   .option('--start_time <st>', 'starttime')
   .option('--end_time <et>', 'endtime')
   .option('--json', 'output as json')
-  .action(async (environment) => {
+  .action(async (environment, program) => {
     try {
       const client = await swagger.SwaggerProxy.client(environment);
       const response = await client.searchSQL(program)
@@ -21,7 +21,7 @@ program
       if (!program.json)
         swagger.search.printLogs(response)
       else
-        console.log(response.body)
+        console.log(response.text)
 
     } catch(e) { console.error(e) }
   });

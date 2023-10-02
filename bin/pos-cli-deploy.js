@@ -16,7 +16,7 @@ const runAudit = async () => {
 
 program
   .name('pos-cli deploy')
-  .arguments('[environment]', 'name of environment. Example: staging')
+  .argument('[environment]', 'name of environment. Example: staging')
   .option('-f --force', 'deprecated')
   .option('-d --direct-assets-upload', 'deprecated, this is default strategy')
   .option('-o --old-assets-upload', 'use old assets upload strategy')

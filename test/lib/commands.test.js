@@ -13,7 +13,7 @@ const run = async args => exec(`${cliPath} ${args}`, { env: getEnvs() });
 
 test('should return error for missing command on stdout', async () => {
   let { stderr, code } = await run('missing');
-  expect(stderr).toMatch('unknown command: missing');
+  expect(stderr).toMatch("error: unknown command 'missing'");
   expect(code).toEqual(1);
 });
 
@@ -24,87 +24,91 @@ test('should show help on stdout', async () => {
 });
 
 test('should run help on deploy', async () => {
-  const { stdout, stderr, code } = await run('deploy');
-  expect(stdout).toMatch('Usage: pos-cli deploy [options] [environment]');
+  const { stderr, code } = await run('deploy');
   expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]`');
   expect(code).toEqual(1);
 });
 
 test('should run help on data import', async () => {
-  const { stdout, code } = await run('data import');
-  expect(stdout).toMatch('Usage: pos-cli data import [options] [environment]');
+  const { stderr, code } = await run('data import');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
   expect(code).toEqual(1);
 });
 
 test('should run help on data update', async () => {
-  const { stdout } = await run('data update');
-  expect(stdout).toMatch('Usage: pos-cli data update [options] [environment]');
+  const { stderr } = await run('data update');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
 });
 
 test('should run help on data export', async () => {
-  const { stdout, code } = await run('data export');
-  expect(stdout).toMatch('Usage: pos-cli data export [options] [environment]');
+  const { stderr, code } = await run('data export');
+  expect(stderr).toMatch("error: required option '-p --path <export-file-path>' not specified");
   expect(code).toEqual(1);
 });
 
 test('should run env list', async () => {
-  const { stderr, code } = await run('env list');
-  expect(stderr).toMatch('No environments registered yet, please see pos-cli env add');
+  const { stdout, code } = await run('env list');
+  expect(stdout).toMatch('No environments registered yet, please see pos-cli env add');
   expect(code).toEqual(0);
 });
 
 test('should run help on env add', async () => {
-  const { stdout, code } = await run('env add');
-  expect(stdout).toMatch('Usage: pos-cli env add [options] [environment]');
+  const { stderr, code } = await run('env add --email email@example.com --url http://instance.com');
+  expect(stderr).toMatch("error: missing required argument 'environment'");
   expect(code).toEqual(1);
 });
 
 test('should run help on gui serve', async () => {
-  const { stdout, code } = await run('gui serve');
-  expect(stdout).toMatch('Usage: pos-cli gui serve [options] [environment]');
+  const { stderr, code } = await run('gui serve');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
   expect(code).toEqual(1);
 });
 
 test('should run help on logs', async () => {
-  const { stdout, code } = await run('logs');
-  expect(stdout).toMatch('Usage: pos-cli logs [options] [environment]');
+  const { stderr, code } = await run('logs');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
   expect(code).toEqual(1);
 });
 
 test('should run help on migrations run', async () => {
-  const { stdout, code } = await run('migrations run');
-  expect(stdout).toMatch('Usage: pos-cli migrations run [options] [environment]');
+  const { stderr, code } = await run('migrations run');
+  expect(stderr).toMatch("error: missing required argument 'timestamp'")
+  expect(code).toEqual(1);
+});
+
+test('should run help on migrations run with timestamp', async () => {
+  const { stderr, code } = await run('migrations run 900000000');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]')
   expect(code).toEqual(1);
 });
 
 test('should run help on migrations list', async () => {
-  const { stdout, code } = await run('migrations list');
-  expect(stdout).toMatch('Usage: pos-cli migrations list [options] [environment]');
+  const { stderr, code } = await run('migrations list');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]')
   expect(code).toEqual(1);
 });
 
 test('should run help on modules list', async () => {
-  const { stdout, code } = await run('modules list');
-  expect(stdout).toMatch('Usage: pos-cli modules list [options] [environment]');
+  const { stderr, code } = await run('modules list');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]')
   expect(code).toEqual(1);
 });
 
-// TODO: Implement
-test.skip('should run help on modules remove', async () => {
-  const { stdout, code } = await run('modules remove');
-  expect(stdout).toMatch('Usage: pos-cli modules remove [environment] <name>');
+test('should run help on modules remove', async () => {
+  const { stderr, code } = await run('modules remove');
+  expect(stderr).toMatch('Usage: pos-cli modules remove [options] [environment] <name>');
   expect(code).toEqual(1);
 });
 
 test('should run help on modules push', async () => {
-  const { stdout, code } = await run('modules push');
-  expect(stdout).toMatch('Usage: pos-cli modules push [options]');
+  const { stderr, code } = await run('modules push');
+  expect(stderr).toMatch('Usage: pos-cli modules push [options]');
   expect(code).toEqual(1);
 });
 
 test('should run help on sync', async () => {
-  const { stdout, code } = await run('sync');
-  expect(stdout).toMatch('Usage: pos-cli sync [options] [environment]');
+  const { stderr, code } = await run('sync');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]')
   expect(code).toEqual(1);
 });
 

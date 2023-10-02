@@ -15,7 +15,7 @@ const getPassword = () => {
     reader.stdoutMuted = true;
     reader.question('Password: ', password => {
       reader.close();
-      logger.Info('');
+      logger.Log('');
       resolve(password);
     });
 
@@ -43,35 +43,23 @@ const storeEnvironment = settings => {
   fs.writeFileSync(configPath, JSON.stringify(newSettings, null, 2));
 };
 
-const help = () => {
-  program.outputHelp();
-  process.exit(1);
-}
-
-const checkParams = params => {
-  validate.existence({ argumentValue: params.email, argumentName: 'email', fail: help });
-  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: help });
-  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: help });
+const checkParams = (environment, params) => {
   validate.email(params.email);
-
-  if (params.url.slice(-1) != '/') {
-    params.url = params.url + '/';
-  }
-
   validate.url(params.url);
 };
 
+program.showHelpAfterError();
 program
   .name('pos-cli env add')
-  .arguments('[environment]', 'name of environment. Example: staging')
-  .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
-  .option('--url <url>', 'marketplace url. Example: https://example.com')
+  .argument('<environment>', 'name of environment. Example: staging')
+  .requiredOption('--email <email>', 'Partner Portal account email. Example: admin@example.com')
+  .requiredOption('--url <url>', 'marketplace url. Example: https://example.com')
   .option(
     '--token <token>',
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
   .action((environment, params) => {
-    checkParams(params);
+    checkParams(environment, params);
     const settings = { url: params.url, endpoint: environment, email: params.email };
 
     if (params.token) {
@@ -81,8 +69,7 @@ program
     }
 
     logger.Info(
-      `Please make sure that you have a permission to deploy. \n
-      You can verify it here: ${Portal.HOST}/me/permissions`,
+      `Please make sure that you have a permission to deploy. \nYou can verify it here: ${Portal.HOST}/me/permissions`,
       { hideTimestamp: true }
     );
 
@@ -98,13 +85,7 @@ program
             logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
           }
         })
-        .catch(e => {
-          if (e.statusCode === 401) {
-            logger.Error('Either email or password is incorrect.');
-          } else {
-            logger.Error(e.message);
-          }
-        });
+        // .catch(e) { //wont fire, there is a default error handler
     });
   });
 

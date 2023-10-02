@@ -12,46 +12,47 @@ const fetchAuthData = require('../lib/settings').fetchSettings,
   Gateway = require('../lib/proxy');
 
 class LogStream extends EventEmitter {
-  constructor(authData) {
+  constructor(authData, interval) {
     super();
     this.authData = authData;
     this.gateway = new Gateway(authData);
+    this.interval = interval
   }
 
   start() {
     const t = this;
-    setInterval(() => t.fetchData(), program.interval);
-    logger.Info('Starting live logging...');
+    setInterval(() => t.fetchData(), t.interval);
+    logger.Debug('Starting live logging...');
   }
 
   fetchData() {
-    this.gateway.logs({ lastId: storage.lastId }).then((response) => {
-      const logs = response && response.logs;
-      if (!logs) {
-        return false;
-      }
-
-
-      for (let k in logs) {
-        const row = logs[k];
-        const filter = !!program.filter && program.filter.toLowerCase();
-
-        try {
-          const errorType = (row.error_type || 'error').toLowerCase();
-        }
-        catch(e) {
-          logger.Error(`${row.error_type} error`)
-          const errorType = "weird-error-type"
+    this.gateway.logs({ lastId: storage.lastId })
+      .then((response) => {
+        const logs = response && response.logs;
+        if (!logs) {
+          return false;
         }
 
-        if (!!program.filter && filter !== errorType) continue;
+        for (let k in logs) {
+          const row = logs[k];
+          const filter = !!program.filter && program.filter.toLowerCase();
 
-        if (!storage.exists(row.id)) {
-          storage.add(row);
-          this.emit('message', row);
+          try {
+            const errorType = (row.error_type || 'error').toLowerCase();
+          }
+          catch(e) {
+            logger.Error(`${row.error_type} error`)
+            const errorType = "weird-error-type"
+          }
+
+          if (!!program.filter && filter !== errorType) continue;
+
+          if (!storage.exists(row.id)) {
+            storage.add(row);
+            this.emit('message', row);
+          }
         }
-      }
-    });
+      })
   }
 }
 
@@ -69,13 +70,13 @@ const isError = (msg) => /error/.test(msg.error_type);
 
 program
   .name('pos-cli logs')
-  .arguments('[environment]', 'name of environment. Example: staging')
-  .option('--interval <interval>', 'time to wait between updates in ms', 3000)
+  .argument('[environment]', 'name of environment. Example: staging')
+  .option('-i, --interval <interval>', 'time to wait between updates in ms', 3000)
   .option('--filter <log type>', 'display only logs of given type, example: error')
   .option('-q, --quiet', 'show only log message, without context')
-  .action((environment) => {
+  .action((environment, program, argument) => {
     const authData = fetchAuthData(environment, program);
-    const stream = new LogStream(authData);
+    const stream = new LogStream(authData, program.interval);
 
     stream.on('message', ({ created_at, error_type, message, data }) => {
       if (message == null) message = '';
@@ -92,7 +93,7 @@ program
           'app-name': 'pos-cli',
         });
 
-        logger.Error(text, options);
+        logger.Info(text, options);
       } else {
         logger.Info(text, options);
         if (!program.quiet && data) {
@@ -106,7 +107,7 @@ program
           if (data.page) parts.push(`page: ${data.page}`);
           if (data.partial) parts.push(`partial: ${data.partial}`);
           if (data.user && data.user.email) parts.push(`email: ${data.user.email}`);
-          if (parts.length > 0) logger.Quiet(parts.join(' '), options);
+          if (parts.length > 0) logger.Info(parts.join(' '), options);
         }
       }
     });
@@ -114,4 +115,5 @@ program
     stream.start();
   });
 
+program.showHelpAfterError();
 program.parse(process.argv);

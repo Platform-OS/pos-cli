@@ -11,7 +11,7 @@ program
   .option('--key <key>', 'key')
   .option('--size <size>', 'rows size', 10)
   .option('--json', 'output as json')
-  .action(async (environment) => {
+  .action(async (environment, program) => {
     try {
       const client = await swagger.SwaggerProxy.client(environment);
       const response = await client.searchAround(program)

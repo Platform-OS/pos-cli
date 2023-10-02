@@ -14,7 +14,7 @@ const listEnvironments = () => {
       logger.Info(`- [${env}] ${settings[env].url}`, { hideTimestamp: true });
     }
   } else {
-    logger.Error('No environments registered yet, please see pos-cli env add', { exit: false });
+    logger.Info('No environments registered yet, please see pos-cli env add', { exit: false });
   }
 };
 
