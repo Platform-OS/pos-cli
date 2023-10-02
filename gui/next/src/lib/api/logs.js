@@ -26,10 +26,6 @@ const logs = {
       .then(data => {
         // add a timestamp to each log to know when was it downloaded
         data.logs.forEach(log => {
-          // the message can be a object parsed to string, but it also can be an object so let's make sure everything is the same
-          if(typeof log.message !== 'string'){
-            log.message = JSON.stringify(log.message);
-          }
           log.downloaded_at = Date.now();
         });
         return data;

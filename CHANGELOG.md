@@ -1,7 +1,6 @@
 # Changelog
 
-## 4.11.2
-* Bug: Fixed showing logs when the logged message is not a string
+## master
 
 ## 4.11.0
 * Feature: Ability to sort the records
