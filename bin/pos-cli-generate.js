@@ -7,28 +7,42 @@ const path = require("path");
 const chalk = require("chalk");
 const dir = require('../lib/directories');
 const compact = require('lodash.compact');
+const spawn = require('execa');
+
+const registerGenerator = (generatorPath) => {
+  const generatorName = path.basename(generatorPath);
+  const generatorPathFull = `./${generatorPath}/index.js`;
+  yeomanEnv.register(generatorPathFull, generatorName);
+
+  try {
+    const generator = yeomanEnv.get(generatorName);
+  } catch(e) {
+    if (e.message.includes('Cannot find module')){
+      installModulesAndLoadGenerator(generatorName);
+    }
+  }
+  return generatorName;
+}
+
+const installModulesAndLoadGenerator = (generatorName) => {
+  console.log('# Trying to install missing packages');
+  spawnCommand('npm', ['install'], { cwd: './modules/core' });
+  const generator = yeomanEnv.get(generatorName);
+}
 
 const runYeoman = (generatorPath, attributes) => {
   try {
-    const generatorName = path.basename(generatorPath);
-    const generatorPathFull = `./${generatorPath}/index.js`;
-    yeomanEnv.register(generatorPathFull, generatorName);
-
+    const generatorName = registerGenerator(generatorPath);
     const generatorArgs = compact([generatorName, attributes]);
     yeomanEnv.run(generatorArgs, {});
   } catch (e) {
-    // TODO: catch the error from yeoman?
-    console.log('foo');
     console.error(chalk.red("Error: "));
     console.error(e);
   }
 }
 
 const showHelpForGenerator = (generatorPath) => {
-  const generatorName = path.basename(generatorPath);
-  const generatorPathFull = `./${generatorPath}/index.js`;
-  yeomanEnv.register(generatorPathFull, generatorName);
-
+  const generatorName = registerGenerator(generatorPath);
   const generator = yeomanEnv.get(generatorName);
   const generatorInstance = yeomanEnv.instantiate(generator, ['']);
   console.log(`Generator: ${generatorName}`);
@@ -42,6 +56,14 @@ const showHelpForGenerator = (generatorPath) => {
   console.log(generatorInstance.argumentsHelp());
   console.log('');
 }
+
+spawnCommand = (command, args, opt) => {
+  return spawn.sync(command, args, {
+    stdio: 'inherit',
+    cwd: '',
+    ...opt
+  });
+};
 
 const description = `Run generator
   Example:
