@@ -321,7 +321,11 @@ To open a page where you can experiment with Liquid and evaluate it on your Inst
 In order to quickly create files you can use generators. They are provided by modules. 
 For example `core` module provide `command` generator. You can use it like this:
 
-      pos-cli 
+      pos-cli generate modules/core/generators/command users/create
+      
+You can also display help for generator with this command:
+
+      pos-cli generate modules/core/generators/command --generator-help
 
 
 ## Development
