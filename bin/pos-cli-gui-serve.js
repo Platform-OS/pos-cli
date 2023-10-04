@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const swagger = require('../lib/swagger-client');
 
 const program = require('commander'),
   watch = require('../lib/watch'),
@@ -28,7 +29,8 @@ program
     });
 
     try {
-      await server.start(env);
+      const client = await swagger.SwaggerProxy.client(environment);
+      server.start(env, client);
       if (params.open) {
         await open(`http://localhost:${params.port}`);
       }
@@ -37,6 +39,7 @@ program
         watch.start(env, true, false);
       }
     } catch (e) {
+      console.log(e);
       logger.Error('✖ Failed.');
     }
   });

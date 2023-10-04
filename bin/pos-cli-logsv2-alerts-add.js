@@ -14,16 +14,16 @@ program
   .option('--column <column>', 'column', "message")
   .option('--channel <channel>')
   .option('--json', 'output as json')
-  .action(async (environment) => {
+  .action(async (environment, params) => {
     try {
-      if (!program.channel) {
+      if (!params.channel) {
         throw Error("--channel is required")
       }
 
       const client = await swagger.SwaggerProxy.client(environment);
-      const response = await client.createAlert(program)
+      const response = await client.createAlert(params)
 
-      if (!program.json)
+      if (!params.json)
         console.log(response.body)
       else
         console.log(response.body)

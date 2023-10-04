@@ -9,12 +9,12 @@ program
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('--name <name>', 'alert name')
   .option('--json', 'output as json')
-  .action(async (environment) => {
+  .action(async (environment, params) => {
     try {
       const client = await swagger.SwaggerProxy.client(environment);
-      const response = await client.triggerAlert(program)
+      const response = await client.triggerAlert(params)
 
-      if (!program.json)
+      if (!params.json)
         console.log(response.body)
       else
         console.log(response.body)
