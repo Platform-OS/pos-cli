@@ -1,6 +1,0 @@
-mutation delete($id: ID!) {
-  record: record_delete(
-    table: "<%= modelName %>"
-    id: $id
-  ){ id }
-}
