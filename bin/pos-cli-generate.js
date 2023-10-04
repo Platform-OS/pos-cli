@@ -18,15 +18,17 @@ const registerGenerator = (generatorPath) => {
     const generator = yeomanEnv.get(generatorName);
   } catch(e) {
     if (e.message.includes('Cannot find module')){
-      installModulesAndLoadGenerator(generatorName);
+      installModulesAndLoadGenerator(generatorPath, generatorName);
     }
   }
   return generatorName;
 }
 
-const installModulesAndLoadGenerator = (generatorName) => {
+const installModulesAndLoadGenerator = (generatorPath, generatorName) => {
   console.log('# Trying to install missing packages');
-  spawnCommand('npm', ['install'], { cwd: './modules/core' });
+  const modulePath = generatorPath.match(/modules\/\w+/)
+  const moduleDir = `./${modulePath[0]}`;
+  spawnCommand('npm', ['install'], { cwd: moduleDir });
   const generator = yeomanEnv.get(generatorName);
 }
 
