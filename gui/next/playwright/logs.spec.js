@@ -59,7 +59,9 @@ test('pinning a log message and managing pinned logs', async ({ page }) => {
 
 test('filtering log messages', async ({ page }) => {
   await page.goto(triggerLogUrl + 'log');
+  await expect(page.getByText('Registering a log')).toBeVisible();
   await page.goto(triggerLogUrl + 'log_error');
+  await expect(page.getByText('Registering an error log')).toBeVisible();
 
   await page.goto(url);
 

@@ -438,7 +438,7 @@ test('reordering records', async ({ page }) => {
   await page.getByText('qa_table_1').click();
   await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
-  await expect(page.locator('table > tr:first-of-type td:first-child')).not.toContainText('4');
+  await expect(page.locator('table > tr:first-of-type td:first-child')).not.toContainText('1');
 
   await page.locator('select[name="by"]').selectOption('id');
   await page.locator('select[name="order"]').selectOption('ASC');
