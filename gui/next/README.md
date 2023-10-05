@@ -50,6 +50,8 @@ npm run build
 ### Update and run the tests
 When making changes and developing new functions, please make sure you will modify or add automated test scenarios placed in the `playwright` directory.
 
+#### Manually run tests
+
 To manually run the tests, you would require a test instance that has the testing code deployed and test data seeded.
 
 1. Clone the test repository to an empty folder:
@@ -85,6 +87,20 @@ npx playwright test --ui
 ```
 
 This will run the Playwright interface, where you can run previously available test scenarios and see your changes when modifying the `.spec.js` test files.
+
+
+#### Use a script to run tests
+
+There is an **experimental** script prepared to run tests if you can run Bash commands. To use the script just run the following command from the `/gui/next` directory:
+
+```bash
+sh sh playwright/run.sh
+```
+
+Keep in mind that, by default, it uses an shared instance so if more than one person is running the tests, it might fail. You can change the instance it uses by editing the script.
+
+The output would be a HTML report showing the tests results.
+
 
 ### Publish new version
 When you are ready to publish the new GUI version:
