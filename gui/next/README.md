@@ -67,7 +67,15 @@ To manually run the tests, you would require a test instance that has the testin
     ```
 4. Seed the test data to the instance
     ```bash
-    pos-cli data import <instance alias> --path seed/data.zip
+    pos-cli data import <instance alias> --path seed/data.zip --zip
+    ```
+5. Build the production-ready code
+    ```bash
+    npm run build
+    ```
+6. Run the preview server
+    ```bash
+    npm run preview
     ```
 
 Finally, to run Playwright with an interface use the following command from `gui/next` directory:
