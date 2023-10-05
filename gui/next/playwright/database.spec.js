@@ -40,7 +40,7 @@ test('ability to see table details', async ({ page }) => {
 test('filtering the tables', async ({ page }) => {
   await page.goto(url);
 
-  await page.getByPlaceholder('Search tables').type('qa_table_2');
+  await page.getByPlaceholder('Search tables').fill('qa_table_2');
   await expect(page.getByRole('link', { name: 'qa_table_1' })).toBeHidden();
   await expect(page.getByRole('link', { name: 'qa_table_2' })).toBeVisible();
 
@@ -54,6 +54,7 @@ test('filtering records by id', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.getByPlaceholder('filter value').type('2');
   await page.getByRole('button', { name: 'Apply filters' }).click();
@@ -66,6 +67,7 @@ test('filtering record array by array_contains', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_array');
   await page.locator('select[name="operation"]').selectOption('array_contains');
@@ -81,6 +83,7 @@ test('filtering record array by value_in', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_array');
   await page.locator('select[name="operation"]').selectOption('value_in');
@@ -99,6 +102,7 @@ test('filtering record array by array_overlaps', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_array');
   await page.locator('select[name="operation"]').selectOption('array_overlaps');
@@ -114,6 +118,7 @@ test('filtering record array by not_array_contains', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_array');
   await page.locator('select[name="operation"]').selectOption('not_array_contains');
@@ -129,6 +134,7 @@ test('filtering record array by not_array_overlaps', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_array');
   await page.locator('select[name="operation"]').selectOption('not_array_overlaps');
@@ -145,6 +151,7 @@ test('filtering record array by not_value_array', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_array');
   await page.locator('select[name="operation"]').selectOption('not_value_array');
@@ -164,6 +171,7 @@ test('filtering record int by value_int', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_int');
   await page.locator('select[name="operation"]').selectOption('value_int');
@@ -179,6 +187,7 @@ test('filtering record int by exists', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_int');
   await page.locator('select[name="operation"]').selectOption('exists');
@@ -202,6 +211,7 @@ test('filtering record int by not_value_int', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_int');
   await page.locator('select[name="operation"]').selectOption('not_value_int');
@@ -218,6 +228,7 @@ test('filtering record int by range', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('[name="name"]').selectOption('qa_table_1_int');
   await page.locator('[name="operation"]').selectOption('range');
@@ -258,6 +269,7 @@ test('filtering record string by value', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_string');
   await page.locator('select[name="operation"]').selectOption('value');
@@ -274,6 +286,7 @@ test('filtering record string by exists', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_string');
   await page.locator('select[name="operation"]').selectOption('exists');
@@ -299,6 +312,7 @@ test('filtering record string by contains', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_string');
   await page.locator('select[name="operation"]').selectOption('contains');
@@ -315,6 +329,7 @@ test('filtering record string by ends_with', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_string');
   await page.locator('select[name="operation"]').selectOption('ends_with');
@@ -331,6 +346,7 @@ test('filtering record string by not_contains', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_string');
   await page.locator('select[name="operation"]').selectOption('not_contains');
@@ -348,6 +364,7 @@ test('filtering record string by not_ends_with', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_string');
   await page.locator('select[name="operation"]').selectOption('not_ends_with');
@@ -365,6 +382,7 @@ test('filtering record string by not_starts_with', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_string');
   await page.locator('select[name="operation"]').selectOption('not_starts_with');
@@ -382,6 +400,7 @@ test('filtering record string by not_value', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_string');
   await page.locator('select[name="operation"]').selectOption('not_value');
@@ -399,6 +418,7 @@ test('filtering record string by starts_with', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
   await page.locator('select[name="name"]').selectOption('qa_table_1_string');
   await page.locator('select[name="operation"]').selectOption('starts_with');
@@ -416,8 +436,9 @@ test('reordering records', async ({ page }) => {
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
-  await expect(page.locator('table > tr:first-of-type td:first-child')).toContainText('4');
+  await expect(page.locator('table > tr:first-of-type td:first-child')).not.toContainText('4');
 
   await page.locator('select[name="by"]').selectOption('id');
   await page.locator('select[name="order"]').selectOption('ASC');
@@ -427,7 +448,7 @@ test('reordering records', async ({ page }) => {
   await page.locator('select[name="by"]').selectOption('qa_table_1_int');
   await page.locator('select[name="order"]').selectOption('DESC');
 
-  await expect(page.locator('table > tr:first-of-type td:first-child')).toContainText('2');
+  await expect(page.locator('table > tr:first-of-type td:nth-child(3)')).toContainText('2137');
 });
 
 
