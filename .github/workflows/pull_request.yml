@@ -30,7 +30,7 @@ jobs:
           node-version: 18
       - name: Install pos-cli
         run: |
-          sudo npm install -g @platformos/pos-cli
+          npm install -g @platformos/pos-cli
       - name: Seed the test instance with test data
         working-directory: ./instance
         timeout-minutes: 6
