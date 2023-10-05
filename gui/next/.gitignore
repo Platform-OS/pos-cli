@@ -10,3 +10,4 @@ vite.config.ts.timestamp-*
 /test-results/
 /playwright-report/
 /playwright/.cache/
+/playwright/pos-cli-gui-qa/
