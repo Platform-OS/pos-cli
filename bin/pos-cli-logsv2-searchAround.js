@@ -11,12 +11,12 @@ program
   .option('--key <key>', 'key')
   .option('--size <size>', 'rows size', 10)
   .option('--json', 'output as json')
-  .action(async (environment, program) => {
+  .action(async (environment, params) => {
     try {
       const client = await swagger.SwaggerProxy.client(environment);
-      const response = await client.searchAround(program)
+      const response = await client.searchAround(params)
 
-      if (!program.json)
+      if (!params.json)
         swagger.search.printLogs(response)
       else
         console.log(response.body)
