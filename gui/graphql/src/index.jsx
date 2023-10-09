@@ -84,7 +84,6 @@ function App() {
     }).then(result => {
       setSchema(buildClientSchema(result.data));
       // this.setState({ cleanSchema: buildClientSchema(cleanSchema(result.data)) });
-      console.log('didmount');
     });
   }, []);
 
