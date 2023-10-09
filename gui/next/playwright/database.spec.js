@@ -26,9 +26,9 @@ test('ability to see table details', async ({ page }) => {
 
   await page.getByText('qa_table_1').click();
   await expect(page).toHaveURL(/.*table/);
-  await expect(page.getByRole('cell', { name: 'id' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'qa_table_1_array' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'created at' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'id' }).and(page.locator('th'))).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'qa_table_1_array' }).and(page.locator('th'))).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'created at' }).and(page.locator('th'))).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Aliquam condimentum condimentum'})).toBeVisible();
   await expect(page.getByRole('cell', { name: '["qa_table_1_array2_item1"'})).toBeVisible();
 

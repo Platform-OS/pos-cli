@@ -17,7 +17,6 @@ test('see home screen', async ({ page }) => {
 test('viewing scheduled background jobs', async ({ page }) => {
   await page.goto(triggerLogUrl + 'background_job');
   await expect(page.getByText('background job scheduled')).toBeVisible();
-  await page.waitForTimeout(4000);
 
   await page.goto(url);
 
@@ -30,7 +29,6 @@ test('viewing scheduled background jobs', async ({ page }) => {
 test('viewing background job details', async ({ page }) => {
   await page.goto(triggerLogUrl + 'background_job');
   await expect(page.getByText('background job scheduled')).toBeVisible();
-  await page.waitForTimeout(4000);
 
   await page.goto(url);
 
@@ -47,7 +45,6 @@ test('viewing background job details', async ({ page }) => {
 test('deleting scheduled background job', async ({ page }) => {
   await page.goto(triggerLogUrl + 'background_job_to_delete');
   await expect(page.getByText('background job scheduled')).toBeVisible();
-  await page.waitForTimeout(4000);
 
   page.on('dialog', async dialog => {
     expect(dialog.message()).toEqual('Are you sure you want to delete this background job?');
