@@ -18,6 +18,7 @@ test('see home screen', async ({ page }) => {
 
 test('viewing logs', async ({ page }) => {
   await page.goto(triggerLogUrl + 'log');
+  await expect(page.getByText('Registering a log')).toBeVisible();
 
   await page.goto(url);
 
@@ -77,6 +78,7 @@ test('filtering log messages', async ({ page }) => {
 
 test('clearing logs from the screen', async ({ page }) => {
   await page.goto(triggerLogUrl + 'log');
+  await expect(page.getByText('Registering a log')).toBeVisible();
 
   await page.goto(url);
 
