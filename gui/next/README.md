@@ -55,7 +55,7 @@ To manually run the tests, you would require a test instance that has the testin
 
 1. If not done previously, [install Playwright browsers](https://playwright.dev/docs/browsers)
     ```bash
-    npx playwright install
+    npx playwright install --with-deps
     ```
 2. Clone the test repository to an empty folder:
     ```bash
