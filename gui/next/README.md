@@ -4,7 +4,6 @@ pos-cli gui is an interface built to manage your platformOS instance and related
 - [SvelteKit](https://kit.svelte.dev) as front-end framework
 - [Vite](https://vitejs.dev) as a development environment
 - [Playwright](https://playwright.dev) for end-to-end testing
-- [Jenkins](https://www.jenkins.io) for CI/CD
 
 ## Development
 Prerequisites: [GIT](https://git-scm.com), [Node.js](https://nodejs.org/en), [pos-cli](https://github.com/mdyd-dev/pos-cli) installed and a [platformOS instance](https://documentation.platformos.com/get-started) configured.
@@ -29,11 +28,11 @@ To run the dev server you just need to run the following command from `gui/next`
 npm run dev
 ```
 
-By default, it runs the server at [http://localhost:5173](http://localhost:5173) and you should be able to view the GUI  under this URL. You need to leave the server running in the terminal.
+By default, it runs the server at [http://localhost:5173](http://localhost:5173) and you should be able to view the GUI under this URL. You need to leave the server running in the terminal.
 
 To test things out though, you would like to **connect to an instance** to have some test data appearing in the GUI.
 
-In a new terminal instance, run `pos-cli gui serve [instance alias]` from the [authenticated directory](https://documentation.platformos.com/get-started/working-with-the-code-and-files/) where you have your test instance code. The same as you would normally use to run the GUI on daily development.
+In a new terminal window, run `pos-cli gui serve [instance alias]` from the [authenticated directory](https://documentation.platformos.com/get-started/working-with-the-code-and-files/) where you have your test instance code. The same as you would normally use to run the GUI on daily development.
 
 ### Make your changes
 You can edit the source code at `gui/next` and while the development server is running, it will refresh the changes in the browser automatically.
@@ -54,28 +53,32 @@ When making changes and developing new functions, please make sure you will modi
 
 To manually run the tests, you would require a test instance that has the testing code deployed and test data seeded.
 
-1. Clone the test repository to an empty folder:
+1. If not done previously, [install Playwright browsers](https://playwright.dev/docs/browsers)
+    ```bash
+    npx playwright install
+    ```
+2. Clone the test repository to an empty folder:
     ```bash
     git clone https://github.com/Platform-OS/pos-cli-gui-qa.git
     ```
-2. [Authenticate the directory](https://documentation.platformos.com/get-started/working-with-the-code-and-files/#authenticate-your-environment) to work with platformOS
-3. Navigate to that directory and run the following to deploy the code:
+3. [Authenticate the directory](https://documentation.platformos.com/get-started/working-with-the-code-and-files/#authenticate-your-environment) to work with platformOS
+4. Navigate to that directory and run the following to deploy the code:
     ```bash
     pos-cli deploy <instance alias>
     ```
-4. If the instance data was previously modified, you would have to clean the data to start fresh
+5. If the instance data was previously modified, you would have to clean the data to start fresh
     ```bash
     pos-cli data clean <instance alias>
     ```
-4. Seed the test data to the instance
+6. Seed the test data to the instance
     ```bash
     pos-cli data import <instance alias> --path seed/data.zip --zip
     ```
-5. Build the production-ready code
+7. Build the production-ready code
     ```bash
     npm run build
     ```
-6. Run the preview server
+8. Run the preview server
     ```bash
     npm run preview
     ```
@@ -91,7 +94,7 @@ This will run the Playwright interface, where you can run previously available t
 
 #### Use a script to run tests
 
-There is an **experimental** script prepared to run tests if you can run Bash commands. To use the script just run the following command from the `/gui/next` directory:
+There is a Bash script prepared to run all the steps needed for automated testing. To use the script just run the following command from the `/gui/next` directory:
 
 ```bash
 sh sh playwright/run.sh
