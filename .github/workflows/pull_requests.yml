@@ -1,4 +1,4 @@
-name: Automated tests for pos-cli GUI
+name: Pos-cli GUI tests
 on:
   pull_request:
     branches: [ master ]
