@@ -6,8 +6,23 @@ on:
     branches: [ master ]
 
 jobs:
-  tests:
+  pre_job:
     runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          github_token: ${{ github.token }}
+          paths: '["gui/next/**"]'
+          paths_ignore: '["gui/next/README.md"]'
+
+  tests:
+    needs: ["pre_job"]
+    if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     container:
       image: mcr.microsoft.com/playwright:v1.38.0-jammy
     env:
