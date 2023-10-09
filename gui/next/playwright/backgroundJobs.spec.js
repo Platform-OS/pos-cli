@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 
 const url = './backgroundJobs';
-const triggerLogUrl = 'https://qa-poscli-gui.staging.oregon.platform-os.com/';
+const triggerLogUrl = 'https://qa-poscli-gui-ci.staging.oregon.platform-os.com/';
 
 
 test('see home screen', async ({ page }) => {
