@@ -49,6 +49,8 @@ npm run build
 ### Update and run the tests
 When making changes and developing new functions, please make sure you will modify or add automated test scenarios placed in the `playwright` directory.
 
+The one rule to follow here is that each test scenario should be completely independent. You cannot rely on the previous tests to prepare any data as each test can be ran in parallel in a random order. The initial data is seeded using the public repository: https://github.com/Platform-OS/pos-cli-gui-qa
+
 #### Manually run tests
 
 To manually run the tests, you would require a test instance that has the testing code deployed and test data seeded.
