@@ -1,6 +1,8 @@
 # Changelog
 
 ## master
+* Added command for running generators from modules `pos-cli generate`
+* Update graphiql
 
 ## 4.11.0
 * Feature: Ability to sort the records
