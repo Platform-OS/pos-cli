@@ -1,10 +1,11 @@
-import { explorerPlugin } from '@graphiql/plugin-explorer';
 import GraphiQL from "graphiql";
 import { buildClientSchema, getIntrospectionQuery } from "graphql";
 import { useEffect, useState } from "react";
 import { createRoot } from 'react-dom/client';
-import '@graphiql/plugin-explorer/dist/style.css';
+import React from "react";
 import "graphiql/graphiql.css";
+// import { explorerPlugin } from '@graphiql/plugin-explorer';
+// import '@graphiql/plugin-explorer/dist/style.css';
 
 let printConnectionInfo = env => {
   document.querySelector(
@@ -18,6 +19,7 @@ fetch("/info")
   .catch(console.error);
 
 const fetcher = params => {
+
   return fetch("/graphql", {
     method: "POST",
     headers: {
@@ -91,12 +93,12 @@ function App() {
   const [query, setQuery] = useState(getInitialQuery());
   const Logo = () =>  <span></span>;
   GraphiQL.Logo = Logo;
-  const explorer = explorerPlugin();
+  // const explorer = explorerPlugin();
   return (
     <div className="graphiql-container">
       <GraphiQL
         fetcher={fetcher}
-        plugins={[explorer]}
+        /* plugins={[explorer]} */
         schema={schema} // we might want to use cleanSchema() to not show deprecated parts
         query={query}
         onEditQuery={handleEditQuery}
