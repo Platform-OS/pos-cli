@@ -5,6 +5,7 @@
 * Update graphiql
 * Improvement: Accessibility improvements in pos-cli GUI
 * Bug: Fixed pos-cli GUI crashing for fresh instances without logs
+* Bug: Unhardcoded the API URL in new pos-cli GUI to enable using it on different ports
 
 ## 4.11.0
 * Feature: Ability to sort the records
