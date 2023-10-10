@@ -316,6 +316,18 @@ In the right sidebar there is a schema documentation should you need it.
 To open a page where you can experiment with Liquid and evaluate it on your Instance, open [http://localhost:3333/gui/liquid](http://localhost:3333/gui/liquid) in your browser.
 
 
+### Generators
+
+In order to quickly create files you can use generators. They are provided by modules. 
+For example `core` module provide `command` generator. You can use it like this:
+
+      pos-cli generate modules/core/generators/command users/create
+      
+You can also display help for generator with this command:
+
+      pos-cli generate modules/core/generators/command --generator-help
+
+
 ## Development
 
 `pos-cli gui serve` (graphiql) has its own build process. You will find it in `gui/editor/graphql`.
