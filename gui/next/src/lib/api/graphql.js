@@ -9,7 +9,7 @@
 // returns:		data returned from the database (object)
 // ------------------------------------------------------------------------
 const graphql = (body) => {
-  return fetch('http://localhost:3333/api/graph', {
+  return fetch('/api/graph', {
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
     body: JSON.stringify(body),
