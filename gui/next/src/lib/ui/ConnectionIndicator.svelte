@@ -45,7 +45,7 @@ $: if($page.url.pathname.startsWith('/logs')){
 // ------------------------------------------------------------------------
 const checkIfOnline = async () => {
   if(browser && document.visibilityState !== 'hidden'){
-    const last = $state.logs.logs?.at(-1).id ?? null;
+    const last = $state.logs.logs?.at(-1)?.id ?? null;
     const newLogs = await logs.get({ last: last });
 
     // if already showing logs, just append the new ones

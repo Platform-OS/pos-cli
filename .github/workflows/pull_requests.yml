@@ -1,0 +1,80 @@
+name: Pos-cli GUI tests
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+
+jobs:
+  pre_job:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          github_token: ${{ github.token }}
+          paths: '["gui/next/**"]'
+          paths_ignore: '["gui/next/README.md"]'
+
+  tests:
+    needs: ["pre_job"]
+    if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.38.0-jammy
+    env:
+      MPKIT_EMAIL: ${{ secrets.MPKIT_EMAIL }}
+      MPKIT_TOKEN: ${{ secrets.MPKIT_TOKEN }}
+      MPKIT_URL: ${{ secrets.MPKIT_URL }}
+      CI: true
+    steps:
+      - name: Checkout test instance code
+        uses: actions/checkout@v4
+        with:
+          repository: Platform-OS/pos-cli-gui-qa
+          path: instance
+      - name: Checkout pos-cli code
+        uses: actions/checkout@v4
+        with:
+          path: pos-cli
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install pos-cli
+        run: |
+          npm install -g @platformos/pos-cli
+      - name: Seed the test instance with test data
+        working-directory: ./instance
+        timeout-minutes: 6
+        shell: sh
+        run: |
+          set -eu
+          pos-cli deploy
+          pos-cli data clean --auto-confirm
+          pos-cli data import --path=seed/data.zip --zip
+      - name: Build GUI
+        working-directory: ./pos-cli/gui/next
+        shell: sh
+        run: |
+          set -eu
+          npm install
+          npm run build
+      # - name: Install Playwright browsers
+      #   run: npx playwright install --with-deps
+      - name: Run express server, vite preview server and tests
+        working-directory: ./pos-cli/gui/next
+        shell: sh
+        run: |
+          set -eu
+          pos-cli gui serve &
+          npm run preview &
+          sleep 5 && npx playwright test
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: ./pos-cli/gui/next/test-results/
+          retention-days: 4

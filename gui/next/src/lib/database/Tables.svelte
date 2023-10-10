@@ -240,6 +240,7 @@ a.active {
 
       {#if filterText}
         <button on:click={() => { filterText = null; filter(); } }>
+          <span class="label">Reset filter</span>
           <Icon icon="x" size="18" />
         </button>
       {:else}

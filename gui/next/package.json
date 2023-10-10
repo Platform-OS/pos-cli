@@ -6,11 +6,10 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "playwright test",
-    "test:unit": "vitest"
+    "test": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.33.0",
+    "@playwright/test": "^1.38.0",
     "@sveltejs/adapter-auto": "^2.0.1",
     "@sveltejs/adapter-static": "^2.0.2",
     "@sveltejs/kit": "^1.16.2",
