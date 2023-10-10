@@ -1,4 +1,4 @@
-import{g as o}from"./graphql.b64cf78b.js";const _={get:async e=>{let t="";e!=null&&e.id&&(t=`id: { value: "${e.id}" }`);let a="";e!=null&&e.type&&(a=`type: ${e.type}`);const r=`
+import{g as o}from"./graphql.c66310bb.js";const _={get:async e=>{let t="";e!=null&&e.id&&(t=`id: { value: "${e.id}" }`);let a="";e!=null&&e.type&&(a=`type: ${e.type}`);const r=`
       query {
         admin_background_jobs(
           per_page: 20,

@@ -1,4 +1,4 @@
-import{g as s}from"./graphql.b64cf78b.js";const m={get:e=>{const t=`
+import{g as s}from"./graphql.c66310bb.js";const m={get:e=>{const t=`
       query {
         admin_model_schemas(
           per_page: 100

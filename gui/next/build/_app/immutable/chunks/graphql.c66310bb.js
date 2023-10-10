@@ -1,0 +1,1 @@
+const e=n=>{const t=typeof window<"u"&&window.location.port!=="4173"&&window.location.port!=="5173"?"/api/graph":"http://localhost:3333/api/graph";return fetch(t,{headers:{"Content-Type":"application/json"},method:"POST",body:JSON.stringify(n)}).then(o=>o.json()).then(o=>o.errors?(o.errors.forEach(r=>{console.log(n.query),console.info(r)}),o):o&&o.data)};export{e as g};
