@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createRoot } from 'react-dom/client';
 import React from "react";
 import "graphiql/graphiql.css";
+import './index.css'
 // import { explorerPlugin } from '@graphiql/plugin-explorer';
 // import '@graphiql/plugin-explorer/dist/style.css';
 
