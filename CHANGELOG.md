@@ -3,6 +3,7 @@
 ## master
 * Added command for running generators from modules `pos-cli generate`
 * Update graphiql
+* Improvement: Accessibility improvements in pos-cli GUI
 * Bug: Fixed pos-cli GUI crashing for fresh instances without logs
 
 ## 4.11.0
