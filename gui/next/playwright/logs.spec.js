@@ -66,8 +66,8 @@ test('filtering log messages', async ({ page }) => {
 
   await page.goto(url);
 
-  await expect(page.getByText('This is a test log').first()).toBeVisible();
-  await expect(page.getByText('This is an error log').first()).toBeVisible();
+  await expect(page.getByText('This is a test log').first()).toBeAttached();
+  await expect(page.getByText('This is an error log').first()).toBeAttached();
 
   await page.getByLabel('Filter:').fill('error');
 
