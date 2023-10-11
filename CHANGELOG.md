@@ -1,6 +1,8 @@
 # Changelog
 
 ## master
+
+## 4.12.0
 * Added command for running generators from modules `pos-cli generate`
 * Update graphiql
 * Improvement: Accessibility improvements in pos-cli GUI
