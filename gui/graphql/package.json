@@ -14,6 +14,7 @@
     "esbuild": "^0.19.4"
   },
   "dependencies": {
+    "@graphiql/plugin-explorer": "^0.3.5",
     "assert": "^2.0.0",
     "graphiql": "^3.0.6",
     "graphql": "^15.8.0",

@@ -5,8 +5,8 @@ import { createRoot } from 'react-dom/client';
 import React from "react";
 import "graphiql/graphiql.css";
 import './index.css'
-// import { explorerPlugin } from '@graphiql/plugin-explorer';
-// import '@graphiql/plugin-explorer/dist/style.css';
+import { explorerPlugin } from '@graphiql/plugin-explorer';
+import '@graphiql/plugin-explorer/dist/style.css';
 
 let printConnectionInfo = env => {
   document.querySelector(
@@ -94,12 +94,12 @@ function App() {
   const [query, setQuery] = useState(getInitialQuery());
   const Logo = () =>  <span></span>;
   GraphiQL.Logo = Logo;
-  // const explorer = explorerPlugin();
+  const explorer = explorerPlugin();
   return (
     <div className="graphiql-container">
       <GraphiQL
         fetcher={fetcher}
-        /* plugins={[explorer]} */
+        plugins={[explorer]}
         schema={schema} // we might want to use cleanSchema() to not show deprecated parts
         query={query}
         onEditQuery={handleEditQuery}
