@@ -1,9 +1,9 @@
 const dependencies = require('../../../lib/modules/dependencies');
 const isEqual = require('lodash.isequal');
 
-test('returns empty hash if there is a problem loading configuration file', () => {
+test('returns empty hash if there is a problem loading configuration file', async () => {
   const core = {"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}, "1.6.0":{"dependencies":{}}, "1.8.0":{"dependencies":{}}}};
-  const modulesVersions = (modulesNames) => {
+  const modulesVersions = async (modulesNames) => {
     // console.log('hit');
     if(isEqual(modulesNames, ['payments_stripe', 'tests', 'a'])) {
       return [
@@ -29,7 +29,7 @@ test('returns empty hash if there is a problem loading configuration file', () =
     "a": "1.0.0"
   };
 
-  const data = dependencies.resolveDependencies(rootModules, modulesVersions);
+  const data = await dependencies.resolveDependencies(rootModules, modulesVersions);
 
   expect(data).toEqual(
     {
