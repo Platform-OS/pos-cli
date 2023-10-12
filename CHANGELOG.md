@@ -1,6 +1,7 @@
 # Changelog
 
 ## master
+* Bug: Unhardcoded the API URL in new pos-cli GUI to enable using it on different ports
 
 ## 4.12.1
 * Bring back schema explorer to the graphiql
