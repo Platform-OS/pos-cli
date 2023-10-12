@@ -53,10 +53,11 @@ test('deleting scheduled background job', async ({ page }) => {
 
   await page.goto(url);
 
-  const job = await page.locator('tr:has-text("background job to delete")');
+  await expect(page.locator('tr:has-text("background job to delete")').first()).toBeVisible();
 
-  await page.locator('tr:has-text("background job to delete")').getByRole('button', { name: 'More options' }).click();
-  await page.locator('tr:has-text("background job to delete")').getByRole('button', { name: 'Delete background job' }).click();
-
-  await expect(page.locator('tr:has-text("background job to delete")')).toBeHidden();
+  for(const job of await page.locator('tr:has-text("background job to delete")').all()){
+    await job.getByRole('button', { name: 'More options' }).click();
+    await job.getByRole('button', { name: 'Delete background job' }).click();
+    await expect(job).toBeHidden();
+  }
 });
