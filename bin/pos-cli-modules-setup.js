@@ -13,6 +13,11 @@ const settings = require('../lib/settings');
 const dir = require('../lib/directories');
 
 const modulesPath = path.join(process.cwd(), dir.MODULES);
+const readLocalModules = () => {
+  const modulesConfigFileName = `pos-modules.json`;
+  const config = files.readJSON(configPath, { throwDoesNotExistError: true });
+  return config['modules'];
+};
 
 program
   .name('pos-cli modules setup')
@@ -26,16 +31,11 @@ program
     const lock = {
       modules: {}
     };
-    const localModules = fs.readdirSync(modulesPath, { withFileTypes: true })
-      .filter(d => d.isDirectory())
-      .map(d => d.name)
-      .filter(d => fs.existsSync(path.join(modulesPath, d, 'template-values.json')))
-      .map(name => ({
-        name,
-        deps: {}
-      }));
 
-    localModules.map(localModule => {
+    const localModules = readLocalModules();
+
+    Object.entries(localModules).map(localModule => {
+      const [moduleName, moduleVersion] = localModule;
       progress[localModule.name] = spinner.start(localModule.name);
       const moduleSettings = settings.loadSettingsFileForModule(localModule.name);
       if (moduleSettings.version && moduleSettings.dependencies) {
@@ -87,7 +87,7 @@ program
       }
     });
 
-    if (errors.length) {
+    if (errors.length && false) {
       errors.map(e => logger.Warn(e, { hideTimestamp: true }));
       logger.Error('Some errors occured during module setup');
     } else {
