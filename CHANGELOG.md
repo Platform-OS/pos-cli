@@ -2,6 +2,9 @@
 
 ## master
 
+## 4.12.1
+* Bring back schema explorer to the graphiql
+
 ## 4.12.0
 * Added command for running generators from modules `pos-cli generate`
 * Update graphiql
