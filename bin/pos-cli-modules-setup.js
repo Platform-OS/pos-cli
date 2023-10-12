@@ -9,13 +9,13 @@ const Gateway = require('../lib/proxy');
 const logger = require('../lib/logger');
 const fetchAuthData = require('../lib/settings').fetchSettings;
 const spinner = ora({ text: 'Setup', stream: process.stdout, spinner: 'bouncingBar' });
-const settings = require('../lib/settings');
-const dir = require('../lib/directories');
+const files = require('../lib/files');
+const { resolveDependencies } = require('../lib/modules/dependencies')
 
-const modulesPath = path.join(process.cwd(), dir.MODULES);
 const readLocalModules = () => {
   const modulesConfigFileName = `pos-modules.json`;
-  const config = files.readJSON(configPath, { throwDoesNotExistError: true });
+  const config = files.readJSON(modulesConfigFileName, { throwDoesNotExistError: true });
+  console.log('config', config);
   return config['modules'];
 };
 
@@ -26,66 +26,18 @@ program
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
     const progress = {};
-    const dependencies = {};
     const errors = [];
     const lock = {
       modules: {}
     };
 
-    const localModules = readLocalModules();
-
-    Object.entries(localModules).map(localModule => {
-      const [moduleName, moduleVersion] = localModule;
-      progress[localModule.name] = spinner.start(localModule.name);
-      const moduleSettings = settings.loadSettingsFileForModule(localModule.name);
-      if (moduleSettings.version && moduleSettings.dependencies) {
-        localModule.version = moduleSettings.version;
-        localModule.deps = moduleSettings.dependencies;
-
-        dependencies[localModule.name] = dependencies[localModule.name] || [];
-        dependencies[localModule.name].push(localModule.version);
-        for (dep of Object.keys(moduleSettings.dependencies)) {
-          dependencies[dep] = dependencies[dep] || [];
-          dependencies[dep].push(moduleSettings.dependencies[dep]);
-        }
-      }
-    });
-
-    // query module info
     progress.__moduleInfo = spinner.start('Loading module version info');
-    let moduleVersions;
-    try {
-      moduleVersions = await gateway.getModuleVersions(Object.keys(dependencies));
-      progress.__moduleInfo.succeed();
-    } catch (e) {
-      progress.__moduleInfo.fail();
-      logger.Error('An error occured during module version request');
-    }
+    const localModules = readLocalModules();
+    // const rootModules = Object.keys(localModules);
+    // console.log('rootModules', rootModules);
 
     logger.Info('Resolving module dependencies', { hideTimestamp: true })
-    // find fixed version for semver ranges
-    Object.keys(dependencies).forEach(dep => {
-      progress[dep] = spinner.start(dep);
-      const maxSatisfying = [];
-      const availableVersions = moduleVersions.find(m => m.module === dep)?.versions;
-      if (availableVersions) {
-        const availableVersionsList = Object.keys(availableVersions);
-        for (d of dependencies[dep]) {
-          const foundMaxVersion = semver.maxSatisfying(availableVersionsList, d);
-          if (!foundMaxVersion) {
-            progress[dep].fail();
-            errors.push(`No available version of "${dep}" for range "${d}"`);
-            continue;
-          }
-          maxSatisfying.push(foundMaxVersion);
-        }
-        lock.modules[dep] = maxSatisfying.sort(semver.compare)[0];
-        lock.modules[dep] && progress[dep].succeed(`${dep} v${lock.modules[dep]}`);
-      } else {
-        progress[dep].fail(dep);
-        errors.push(`No available versions of "${dep}"`);
-      }
-    });
+    lock['modules'] = await resolveDependencies(localModules, (list) => gateway.getModuleVersions(list));
 
     if (errors.length && false) {
       errors.map(e => logger.Warn(e, { hideTimestamp: true }));
@@ -97,3 +49,5 @@ program
   });
 
 program.parse(process.argv);
+
+    // moduleVersions = await gateway.getModuleVersions(rootModules);
