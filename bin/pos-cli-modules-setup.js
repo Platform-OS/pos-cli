@@ -15,7 +15,6 @@ const { resolveDependencies } = require('../lib/modules/dependencies')
 const readLocalModules = () => {
   const modulesConfigFileName = `pos-modules.json`;
   const config = files.readJSON(modulesConfigFileName, { throwDoesNotExistError: true });
-  console.log('config', config);
   return config['modules'];
 };
 
@@ -33,9 +32,6 @@ program
 
     progress.__moduleInfo = spinner.start('Loading module version info');
     const localModules = readLocalModules();
-    // const rootModules = Object.keys(localModules);
-    // console.log('rootModules', rootModules);
-
     logger.Info('Resolving module dependencies', { hideTimestamp: true })
     lock['modules'] = await resolveDependencies(localModules, (list) => gateway.getModuleVersions(list));
 
@@ -45,9 +41,8 @@ program
     } else {
       fs.writeFileSync(path.join(process.cwd(), 'pos-modules.lock.json'), JSON.stringify(lock, null, 2));
       logger.Info('Modules lock file created');
+      progress.__moduleInfo.succeed(`Modules installed`);
     }
   });
 
 program.parse(process.argv);
-
-    // moduleVersions = await gateway.getModuleVersions(rootModules);
