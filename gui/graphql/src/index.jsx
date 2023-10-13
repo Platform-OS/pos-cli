@@ -1,12 +1,11 @@
+import { explorerPlugin } from '@graphiql/plugin-explorer';
+import '@graphiql/plugin-explorer/dist/style.css';
 import GraphiQL from "graphiql";
+import "graphiql/graphiql.css";
 import { buildClientSchema, getIntrospectionQuery } from "graphql";
 import { useEffect, useState } from "react";
 import { createRoot } from 'react-dom/client';
-import React from "react";
-import "graphiql/graphiql.css";
-import './index.css'
-import { explorerPlugin } from '@graphiql/plugin-explorer';
-import '@graphiql/plugin-explorer/dist/style.css';
+import './index.css';
 
 let printConnectionInfo = env => {
   document.querySelector(
@@ -14,13 +13,7 @@ let printConnectionInfo = env => {
   ).textContent = `platformOS - ${env.MPKIT_URL}`;
 };
 
-fetch("/info")
-  .then(response => response.json())
-  .then(printConnectionInfo)
-  .catch(console.error);
-
 const fetcher = params => {
-
   return fetch("/graphql", {
     method: "POST",
     headers: {
@@ -58,18 +51,16 @@ mutation CreateSession {
 }`;
 
 
-// const cleanSchema = schema => {
-//   debugger;
-//   const types = schema.__schema.types.map(type => {
-//     if (type.fields) {
-//       type.fields = type.fields.filter(field => !field.isDeprecated);
-//     }
+const cleanSchema = schema => {
+  const types = schema.__schema.types.map(type => {
+    if (type.fields) {
+      type.fields = type.fields.filter(field => !field.isDeprecated);
+    }
+    return type;
+  });
 
-//     return type;
-//   });
-
-//   return { ...schema, types };
-// };
+  return { ...schema, types };
+};
 
 function App() {
   const getInitialQuery = () => {
@@ -85,8 +76,7 @@ function App() {
     fetcher({
       query: getIntrospectionQuery()
     }).then(result => {
-      setSchema(buildClientSchema(result.data));
-      // this.setState({ cleanSchema: buildClientSchema(cleanSchema(result.data)) });
+      setSchema(buildClientSchema(cleanSchema(result.data)));
     });
   }, []);
 
@@ -100,13 +90,19 @@ function App() {
       <GraphiQL
         fetcher={fetcher}
         plugins={[explorer]}
-        schema={schema} // we might want to use cleanSchema() to not show deprecated parts
+        schema={schema}
         query={query}
         onEditQuery={handleEditQuery}
       />
     </div>
   );
 }
+
+
+fetch("/info")
+  .then(response => response.json())
+  .then(printConnectionInfo)
+  .catch(console.error);
 
 const root = createRoot(document.getElementById("graphiql"));
 root.render(<App />);
