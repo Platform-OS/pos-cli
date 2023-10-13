@@ -2,6 +2,9 @@
 
 ## master
 
+## 4.12.3
+* Bug: fix graphiql build
+
 ## 4.12.2
 * Improvement: filter out deprecated queries and mutations in Graphiql
 * Bug: Unhardcoded the API URL in new pos-cli GUI to enable using it on different ports

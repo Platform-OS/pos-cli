@@ -3,6 +3,7 @@ import '@graphiql/plugin-explorer/dist/style.css';
 import GraphiQL from "graphiql";
 import "graphiql/graphiql.css";
 import { buildClientSchema, getIntrospectionQuery } from "graphql";
+import React from "react"; // This import is required!!!
 import { useEffect, useState } from "react";
 import { createRoot } from 'react-dom/client';
 import './index.css';
