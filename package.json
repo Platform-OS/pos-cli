@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "4.12.0-beta.3",
+  "version": "4.12.3-beta.3",
   "description": "Manage your platformOS application",
   "scripts": {
     "prepare": "npm run build:admin && npm run build:graphql",
@@ -47,14 +47,17 @@
     "js-yaml": "^4.1.0",
     "livereload": "^0.9.3",
     "lodash.clonedeep": "^4.5.0",
+    "lodash.compact": "^3.0.1",
     "lodash.debounce": "^4.0.8",
     "lodash.flatten": "^4.4.0",
+    "lodash.startcase": "^4.4.0",
     "mime": "^3.0.0",
     "multer": "^1.4.4",
     "mustache": "^4.2.0",
     "node-notifier": "^10.0.1",
     "open": "^8.4.0",
     "ora": "^5.1.0",
+    "pluralize": "^8.0.0",
     "prompts": "^2.4.2",
     "raygun": "^0.13.1",
     "readdirp": "^3.6.0",
@@ -65,7 +68,9 @@
     "shelljs": "^0.8.5",
     "update-notifier": "^5.1.0",
     "uuid": "^8.3.2",
-    "valid-url": "^1.0.9"
+    "valid-url": "^1.0.9",
+    "yeoman-environment": "^3.19.3",
+    "yeoman-generator": "^5.9.0"
   },
   "preferGlobal": true,
   "bin": {
@@ -99,5 +104,10 @@
     "commander",
     "degit",
     "shelljs"
-  ]
+  ],
+  "jest": {
+    "testPathIgnorePatterns": [
+      "gui/next"
+    ]
+  }
 }

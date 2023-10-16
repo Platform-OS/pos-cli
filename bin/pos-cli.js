@@ -24,6 +24,7 @@ program
   .command('deploy <environment>', 'deploy code to environment').alias('d')
   .command('env', 'manage environments')
   .command('gui', 'gui for content editor, graphql, logs')
+  .command('generate', 'generates files')
   .command('init', 'initialize directory structure')
   .command('logs <environment>', 'display logs and errors').alias('l')
   .command('logsv2', 'display logs and errors').alias('l2')

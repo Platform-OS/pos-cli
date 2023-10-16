@@ -2,6 +2,23 @@
 
 ## master
 
+## 4.12.3
+* Bug: fix graphiql build
+
+## 4.12.2
+* Improvement: filter out deprecated queries and mutations in Graphiql
+* Bug: Unhardcoded the API URL in new pos-cli GUI to enable using it on different ports
+
+## 4.12.1
+* Bring back schema explorer to the graphiql
+
+## 4.12.0
+* Added command for running generators from modules `pos-cli generate`
+* Update graphiql
+* Improvement: Accessibility improvements in pos-cli GUI
+* Bug: Fixed pos-cli GUI crashing for fresh instances without logs
+* Bug: Unhardcoded the API URL in new pos-cli GUI to enable using it on different ports
+
 ## 4.11.0
 * Feature: Ability to sort the records
 * Improvement: Pin icon on homescreen is now filled when the tool has been pinned for better UX
