@@ -2,6 +2,10 @@
 
 ## master
 
+## 4.12.4
+* Bug: graphql - fix error on deprecated types
+* Improvement: graphql - update default query and mutation
+
 ## 4.12.3
 * Bug: fix graphiql build
 

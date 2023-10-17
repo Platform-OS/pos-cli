@@ -36,31 +36,37 @@ const fetcher = params => {
     });
 };
 
-const DEFAULT_QUERY = `query GetModel {
-  models(per_page: 10) {
+const DEFAULT_QUERY = `
+query search {
+  records(per_page: 10) {
     results {
       id
-      model_schema_name
     }
   }
 }
 
-mutation CreateSession {
-  user_session_create(email: "test@example.com", password: "s3cretp@ssw0rd1337") {
+mutation create {
+  user_create(
+    user: {
+      email: "foo@example.com"
+    }
+  ) {
     id
   }
-}`;
+}
+`;
 
 
 const cleanSchema = schema => {
   const types = schema.__schema.types.map(type => {
-    if (type.fields) {
+    if ((type.name === 'RootQuery' || type.name === 'RootMutation') && type.fields && type.fields.length > 0) {
       type.fields = type.fields.filter(field => !field.isDeprecated);
     }
     return type;
-  });
+  })
+  schema.__schema.types = types;
 
-  return { ...schema, types };
+  return schema;
 };
 
 function App() {
