@@ -9,6 +9,7 @@ import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
 
 import Icon from '$lib/ui/Icon.svelte';
+import Number from '$lib/ui/forms/Number.svelte';
 
 // properties
 // ------------------------------------------------------------------------
@@ -229,18 +230,22 @@ td:last-child, th:last-child {
     </table>
 
     <nav class="pagination">
-      Page:
-      <input
+      <label for="page">
+        Page:
+      </label>
+      <Number
         form="filters"
-        type="number"
         name="page"
-        min="1"
-        max={maxPage || 100}
-        step="1"
         bind:value={filters.page}
+        min={1}
+        max={maxPage}
+        step={1}
+        decreaseLabel="Previous page"
+        increaseLabel="Next page"
+        style="navigation"
         on:input={load}
-      >
-      of {maxPage || ''}
+      />
+      of {maxPage || 1}
     </nav>
 
   </section>

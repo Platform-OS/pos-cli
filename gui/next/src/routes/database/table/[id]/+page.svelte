@@ -163,7 +163,7 @@ nav {
         style="navigation"
         on:input={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort }); } }
       />
-      of {$state.records?.total_pages || ''}
+      of {$state.records?.total_pages || 1}
     </div>
 
     <div id="viewOptions">

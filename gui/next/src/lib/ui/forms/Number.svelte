@@ -10,6 +10,8 @@ import Icon from '$lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+// form name that the input belongs to (string)
+export let form;
 // name of the input (string)
 export let name;
 // minimal value (int)
@@ -112,6 +114,7 @@ const dispatch = createEventDispatcher();
   </button>
 
   <input
+    form={form}
     type="number"
     name={name}
     id={name}
@@ -120,7 +123,7 @@ const dispatch = createEventDispatcher();
     step={step}
     bind:value={value}
     on:input
-    style="--max: {max.toString().length || 3}ch"
+    style="--max: {max?.toString().length || 1}ch"
   >
 
   <button
