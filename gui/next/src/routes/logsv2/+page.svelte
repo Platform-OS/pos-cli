@@ -22,6 +22,65 @@ onMount(async () => {
 <!-- ================================================================== -->
 <style>
 
+/* shared */
+.container {
+  width: 100%;
+  display: flex;
+}
+
+/* logs */
+.logs {
+  height: calc(100vh - 82px);
+  overflow: auto;
+  position: sticky;
+
+  flex-grow: 1;
+}
+
+table {
+  width: 100%;
+  max-width: 100vw;
+}
+
+  th, td {
+    padding: 1rem;
+
+    border-block-end: 1px solid var(--color-frame);
+  }
+
+  .time,
+  .type {
+    font-family: monospace;
+    font-size: 1rem;
+  }
+
+  .time {
+    white-space: nowrap;
+  }
+
+  .message {
+    width: 100%;
+    position: relative;
+  }
+
+  .message > div {
+    padding: 1rem;
+    position: absolute;
+    inset: 0;
+  }
+
+  .message > div > div {
+    max-width: 100%;
+    overflow: hidden;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .error {
+    color: var(--color-danger);
+  }
+
 </style>
 
 
@@ -42,17 +101,23 @@ onMount(async () => {
       <table>
         <thead>
           <tr>
-            <th>Timestamp</th>
+            <th>Time</th>
             <th>Type</th>
-            <th>Message</th>
+            <th class="message">Message</th>
           </tr>
         </thead>
         <tbody>
           {#each logs.body.hits as log}
-            <tr>
-              <td>{log.options_at}</td>
-              <td>{log.type}</td>
-              <td>{log.message}</td>
+            <tr class:error={log.type.match(/error/i)}>
+              <td class="time">{new Date(log.options_at / 1000).toLocaleString()}</td>
+              <td class="type">{log.type}</td>
+              <td class="message">
+                <div>
+                  <div>
+                    {log.message}
+                  </div>
+                </div>
+              </td>
             </tr>
           {/each}
         </tbody>
