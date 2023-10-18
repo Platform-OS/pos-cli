@@ -1,1 +1,0 @@
-import{s,I as a,d as n,A as e}from"../chunks/scheduler.6383dfcf.js";import{S as r,i as c}from"../chunks/index.34af7ec1.js";function d(o){return{c(){this.h()},l(t){a("svelte-165emge",document.head).forEach(n),this.h()},h(){document.title="Users | platformOS"},m:e,p:e,i:e,o:e,d:e}}class l extends r{constructor(t){super(),c(this,t,null,d,s,{})}}export{l as component};
