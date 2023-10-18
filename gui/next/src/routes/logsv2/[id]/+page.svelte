@@ -15,6 +15,14 @@ let log;
 
 $: item = $state.logv2;
 
+let messageIsJSON;
+
+$: try {
+  messageIsJSON = JSON.parse(item.message.replaceAll('\\n', '').replaceAll('\\t', ''));
+} catch(e) {
+  messageIsJSON = false;
+}
+
 </script>
 
 
@@ -39,8 +47,8 @@ $: item = $state.logv2;
 
   {#if item?.message}
     <h2>Message:</h2>
-    {#if tryParseJSON(JSON.parse(item.message.replaceAll('\\n', '').replaceAll('\\t', '')))}
-      <JSONTree value={JSON.parse(JSON.parse(item.message.replaceAll('\\n', '').replaceAll('\\t', '')))} showFullLines={true} />
+    {#if messageIsJSON}
+      <JSONTree value={JSON.parse(messageIsJSON)} showFullLines={true} />
     {:else}
       {item.message.replaceAll('\\n', '').replaceAll('\\t', '')}
     {/if}
