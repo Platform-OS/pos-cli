@@ -21,7 +21,8 @@ onMount(async () => {
 });
 
 $: if($page.params.id){
-  $state.logv2 = items?.body.hits.find(log => log.uuid === $page.params.id);
+  $state.logv2 = items?.body.hits.find(log => log._timestamp == $page.params.id);
+  console.log(items?.body.hits);
 }
 
 </script>
@@ -116,17 +117,17 @@ table {
           {#each logs.body.hits as log}
             <tr class:error={log.type.match(/error/i)}>
               <td class="time">
-                <a href="/logsv2/{log.uuid}">
+                <a href="/logsv2/{log._timestamp}">
                   {new Date(log.options_at / 1000).toLocaleString()}
                 </a>
               </td>
               <td class="type">
-                <a href="/logsv2/{log.uuid}">
+                <a href="/logsv2/{log._timestamp}">
                   {log.type}
                 </a>
               </td>
               <td class="message">
-                <a href="/logsv2/{log.uuid}">
+                <a href="/logsv2/{log._timestamp}">
                   <div>
                     {log.message}
                   </div>

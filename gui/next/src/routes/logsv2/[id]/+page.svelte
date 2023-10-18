@@ -9,6 +9,7 @@ import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Aside from '$lib/ui/Aside.svelte';
 import Code from '$lib/ui/Code.svelte';
+import JSONTree from '$lib/ui/JSONTree.svelte';
 
 let log;
 
@@ -38,12 +39,10 @@ $: item = $state.logv2;
 
   {#if item?.message}
     <h2>Message:</h2>
-    {#if tryParseJSON(item.message)}
-      <Code language="javascript">
-        {item.message}
-      </Code>
+    {#if tryParseJSON(JSON.parse(item.message.replaceAll('\\n', '').replaceAll('\\t', '')))}
+      <JSONTree value={JSON.parse(JSON.parse(item.message.replaceAll('\\n', '').replaceAll('\\t', '')))} showFullLines={true} />
     {:else}
-      {item.message}
+      {item.message.replaceAll('\\n', '').replaceAll('\\t', '')}
     {/if}
   {/if}
 
