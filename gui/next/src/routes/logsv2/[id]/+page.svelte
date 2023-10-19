@@ -10,6 +10,7 @@ import { tryParseJSON } from '$lib/tryParseJSON.js';
 import Aside from '$lib/ui/Aside.svelte';
 import Code from '$lib/ui/Code.svelte';
 import JSONTree from '$lib/ui/JSONTree.svelte';
+import Icon from '$lib/ui/Icon.svelte';
 
 let log;
 
@@ -29,6 +30,56 @@ $: try {
 <!-- ================================================================== -->
 <style>
 
+dl {
+  margin-block-start: 1rem;
+  display: grid;
+  grid-template-columns: min-content auto;
+  gap: .5em;
+  column-gap: .5em;
+}
+
+  dd {
+    text-align: end;
+  }
+
+h2 {
+  margin-block: .5em;
+  display: flex;
+  justify-content: space-between;
+}
+
+a:hover {
+  color: var(--color-interaction-hover);
+}
+
+.code {
+  padding: .6em .8em .6em .8em;
+
+  border-radius: 0 1rem 1rem;
+  background-color: var(--color-background);
+
+  word-wrap: break-word;
+}
+
+  .json {
+    padding-inline-start: 2rem;
+  }
+
+button {
+  display: flex;
+  align-items: center;
+  gap: .2em;
+}
+
+  button :global(svg) {
+    position: relative;
+    top: .05em;
+  }
+
+  button:hover {
+    color: var(--color-interaction-hover);
+  }
+
 </style>
 
 
@@ -46,12 +97,20 @@ $: try {
   </dl>
 
   {#if item?.message}
-    <h2>Message:</h2>
-    {#if messageIsJSON}
-      <JSONTree value={JSON.parse(messageIsJSON)} showFullLines={true} />
-    {:else}
-      {item.message.replaceAll('\\n', '').replaceAll('\\t', '')}
-    {/if}
+    <h2>
+      Message:
+      <button on:click={navigator.clipboard.writeText(item.message)}>
+        <Icon icon="copy" size="16" />
+        Copy
+      </button>
+    </h2>
+    <div class="code" class:json={messageIsJSON}>
+      {#if messageIsJSON}
+        <JSONTree value={JSON.parse(messageIsJSON)} showFullLines={true} />
+      {:else}
+        {item.message.replaceAll('\\n', '').replaceAll('\\t', '')}
+      {/if}
+    </div>
   {/if}
 
 </Aside>

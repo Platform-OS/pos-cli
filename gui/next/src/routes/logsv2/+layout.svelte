@@ -141,6 +141,8 @@ table {
     {/await}
   </section>
 
-  <slot></slot>
+  {#if $page.params.id}
+    <slot></slot>
+  {/if}
 
 </div>
