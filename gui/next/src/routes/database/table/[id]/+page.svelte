@@ -12,6 +12,7 @@ import Filters from '$lib/database/Filters.svelte';
 import Sort from '$lib/database/Sort.svelte';
 import Table from '$lib/database/Table.svelte';
 import RecordCreate from '$lib/database/Create.svelte';
+import Number from '$lib/ui/forms/Number.svelte';
 
 
 // properties
@@ -105,7 +106,7 @@ nav {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 20;
+  z-index: 30;
 }
 
 #viewOptions {
@@ -151,17 +152,18 @@ nav {
       <label for="page">
         Page:
       </label>
-      <input
-        type="number"
+      <Number
         name="page"
-        id="page"
-        min="1"
-        max={$state.records?.total_pages || 100}
-        step="1"
         bind:value={$state.filters.page}
+        min={1}
+        max={$state.records?.total_pages}
+        step={1}
+        decreaseLabel="Previous page"
+        increaseLabel="Next page"
+        style="navigation"
         on:input={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort }); } }
-      >
-      of {$state.records?.total_pages || ''}
+      />
+      of {$state.records?.total_pages || 1}
     </div>
 
     <div id="viewOptions">

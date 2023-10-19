@@ -10,6 +10,7 @@ import { backgroundJob } from '$lib/api/backgroundJob.js';
 import { relativeTime } from '$lib/relativeTime.js';
 
 import Icon from '$lib/ui/Icon.svelte';
+import Number from '$lib/ui/forms/Number.svelte';
 import Retry from '$lib/backgroundJob/Retry.svelte';
 import Delete from '$lib/backgroundJob/Delete.svelte';
 
@@ -43,6 +44,7 @@ const getItems = async () => {
   clearInterval(runsAtUpdateInterval);
 
   items = await backgroundJob.get(filters);
+  console.log(items);
 
   runsAtUpdateInterval = setInterval(() => {
     items.results.forEach(item => {
@@ -345,18 +347,22 @@ menu :global(button:hover) {
     </table>
 
     <nav class="pagination">
-      Page:
-      <input
-        type="number"
-        name="page"
-        min="1"
-        max={items.total_pages || 100}
-        step="1"
-        bind:value={filters.page}
+      <label for="page">
+        Page:
+      </label>
+      <Number
         form="filters"
-        on:change={form.requestSubmit()}
-      >
-      of {items.total_pages || ''}
+        name="page"
+        bind:value={filters.page}
+        min={1}
+        max={items.total_pages}
+        step={1}
+        decreaseLabel="Previous page"
+        increaseLabel="Next page"
+        style="navigation"
+        on:input={form.requestSubmit()}
+      />
+      of {items.total_pages || 1}
     </nav>
 
   </div>

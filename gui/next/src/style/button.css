@@ -35,7 +35,7 @@ button:not([disabled]) {
   cursor: pointer;
 }
 
-.button:hover {
+.button:not(:disabled):hover {
   background-color: rgba(var(--color-rgb-interaction-hover), .2);
 }
 
@@ -76,12 +76,16 @@ button:not([disabled]) {
   pointer-events: none;
 }
 
-.button:hover svg {
+.button:not(:disabled):hover svg {
   color: var(--color-interaction);
 }
 
 .button:has(svg) {
   padding-block: .64rem;
+}
+
+.button:disabled svg {
+  color: var(--color-text-secondary);
 }
 
 
