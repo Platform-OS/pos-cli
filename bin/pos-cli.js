@@ -34,7 +34,6 @@ program
   .parse(process.argv);
 
 const commandList = Object.keys(program._execs);
-
 if (!commandList.includes(program.args[0])) {
   program.outputHelp();
   logger.Error(`unknown command: ${program.args[0]}`);
