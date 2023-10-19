@@ -1,6 +1,7 @@
 # Changelog
 
 ## master
+* Improvement: Improved UX of pagination in Next GUI
 
 ## 4.12.4
 * Bug: graphql - fix error on deprecated types

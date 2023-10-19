@@ -554,7 +554,14 @@ test('pagination', async ({ page }) => {
   await expect(page.getByRole('cell', { name: 'Twenty five' })).toBeVisible();
 
   await page.getByLabel('Page:').fill('2');
+  await expect(page.getByRole('cell', { name: 'Twenty five' })).toBeHidden();
+  await expect(page.getByRole('cell', { name: 'Five', exact: true })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Previous page'}).click();
+  await expect(page.getByRole('cell', { name: 'Twenty five' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Five', exact: true })).toBeHidden();
+
+  await page.getByRole('button', { name: 'Next page'}).click();
   await expect(page.getByRole('cell', { name: 'Twenty five' })).toBeHidden();
   await expect(page.getByRole('cell', { name: 'Five', exact: true })).toBeVisible();
 });
