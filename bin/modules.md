@@ -1,6 +1,6 @@
 # Modules
 
-## modules setup
+## modules install
 
 ```mermaid
 sequenceDiagram
@@ -16,7 +16,7 @@ sequenceDiagram
 ```
 
 
-## maybe modules install
+## modules install <module_name>
 
 ```mermaid
 sequenceDiagram
