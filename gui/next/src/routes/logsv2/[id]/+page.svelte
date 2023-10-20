@@ -9,9 +9,14 @@ import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Aside from '$lib/ui/Aside.svelte';
 import JSONTree from '$lib/ui/JSONTree.svelte';
-import Icon from '$lib/ui/Icon.svelte';
+import Copy from '$lib/ui/Copy.svelte';
 
+
+// properties
+// ------------------------------------------------------------------------
+// log details (object)
 $: item = $state.logv2;
+// message parsed to JSON if available (string or object)
 $: message = item && tryParseJSON(item.message);
 
 </script>
@@ -55,21 +60,6 @@ a:hover {
     padding-inline-start: 2rem;
   }
 
-button {
-  display: flex;
-  align-items: center;
-  gap: .2em;
-}
-
-  button :global(svg) {
-    position: relative;
-    top: .05em;
-  }
-
-  button:hover {
-    color: var(--color-interaction-hover);
-  }
-
 </style>
 
 
@@ -89,10 +79,7 @@ button {
   {#if item?.message}
     <h2>
       Message:
-      <button on:click={navigator.clipboard.writeText(item.message)}>
-        <Icon icon="copy" size="16" />
-        Copy
-      </button>
+      <Copy text={item.message} />
     </h2>
     <div class="code" class:json={message}>
       {#if message}
