@@ -44,3 +44,29 @@ test('returns empty hash if there is a problem loading configuration file', asyn
   );
 });
 
+
+test('find module with newest version', async () => {
+  const modulesVersions = async (modulesNames) => {
+    return [{"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}}}];
+  };
+
+  const data = await dependencies.findModuleVersion("core", null, modulesVersions);
+
+  expect(data).toEqual({ "core": "1.5.0" });
+});
+
+test('find module with requested version', async () => {
+  const modulesVersions = async (modulesNames) => [{"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}}}];
+
+  const data = await dependencies.findModuleVersion("core", "1.0.0", modulesVersions);
+
+  expect(data).toEqual({ "core": "1.0.0" });
+});
+
+test('can not find module with requested version', async () => {
+  const modulesVersions = async (modulesNames) => [{"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}}}];
+
+  const data = await dependencies.findModuleVersion("core", "1.0.1", modulesVersions);
+
+  expect(data).toEqual(null);
+});

@@ -10,20 +10,31 @@ const logger = require('../lib/logger');
 const fetchAuthData = require('../lib/settings').fetchSettings;
 const spinner = ora({ text: 'Setup', stream: process.stdout, spinner: 'bouncingBar' });
 const files = require('../lib/files');
-const { resolveDependencies } = require('../lib/modules/dependencies')
+const { findModuleVersion, resolveDependencies } = require('../lib/modules/dependencies')
 
 const posModulesFilePath = 'app/pos-modules.json';
 const posModulesLockFilePath = 'app/pos-modules.lock.json';
 
 const readLocalModules = () => {
   const config = files.readJSON(posModulesFilePath, { throwDoesNotExistError: true });
-  return config['modules'];
+  return config['modules'] || {};
+};
+
+const addNewModule = async (moduleName, moduleVersion, localModules, getVersions) => {
+  const newModule = await findModuleVersion(moduleName, moduleVersion, getVersions);
+  if(newModule){
+    const modules = {...newModule, ...localModules};
+    return modules;
+  } else {
+    throw new Error(`Can't find module ${moduleName} with version ${moduleVersion}`);
+  }
 };
 
 program
   .name('pos-cli modules setup')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .action(async (environment) => {
+  .arguments('[moduleNameWithVersion]', 'name of the module. Example: core. You can also pass version number: core@1.0.0')
+  .action(async (environment, moduleNameWithVersion) => {
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
     const progress = {};
@@ -31,26 +42,44 @@ program
     const lock = {
       modules: {}
     };
+    const spinner = ora({ text: "Modules install", stream: process.stdout, spinner: 'bouncingBar' }).start();
 
-    progress.__moduleInfo = spinner.start('Loading module version info');
-    const localModules = readLocalModules();
-    if(!localModules) {
-        progress.__moduleInfo.stop();
-    } else {
-      logger.Info('Resolving module dependencies', { hideTimestamp: true })
-      lock['modules'] = await resolveDependencies(localModules, (list) => gateway.getModuleVersions(list));
-
-      if (errors.length) {
-        errors.map(e => logger.Warn(e, { hideTimestamp: true }));
-        logger.Error('Some errors occured during module setup');
-      } else {
+    try{
+      const getVersions = async (list) => gateway.getModuleVersions(list);
+      let localModules = readLocalModules();
+      if(moduleNameWithVersion){
+        const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
+        localModules = await addNewModule(moduleName, moduleVersion, localModules, getVersions);
         fs.writeFileSync(
-          path.join(process.cwd(), posModulesLockFilePath),
-          JSON.stringify(lock, null, 2)
+          path.join(process.cwd(), posModulesFilePath),
+          JSON.stringify({ modules: localModules }, null, 2)
         );
-        logger.Info('Modules lock file created');
-        progress.__moduleInfo.succeed(`Modules installed`);
+
+        spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]}`);
       }
+
+      if(!localModules) {
+          spinner.stop();
+      } else {
+        spinner.start('Resolving module dependencies');
+        lock['modules'] = await resolveDependencies(localModules, getVersions);
+
+        if (errors.length) {
+          errors.map(e => logger.Warn(e, { hideTimestamp: true }));
+          logger.Error('Some errors occured during module setup');
+        } else {
+          fs.writeFileSync(
+            path.join(process.cwd(), posModulesLockFilePath),
+            JSON.stringify(lock, null, 2)
+          );
+          spinner.succeed(`Modules lock file generated: ${posModulesLockFilePath}`);
+        }
+      }
+    } catch(e) {
+      // throw e;
+      logger.Debug(e);
+      spinner.stopAndPersist();
+      spinner.fail(e.message);
     }
   });
 
