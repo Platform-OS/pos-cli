@@ -45,7 +45,7 @@ program
     const spinner = ora({ text: "Modules install", stream: process.stdout, spinner: 'bouncingBar' }).start();
 
     try{
-      const getVersions = async (list) => gateway.getModuleVersions(list);
+      const getVersions = async (list) => gateway.moduleVersions(list);
       let localModules = readLocalModules();
       if(moduleNameWithVersion){
         const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
