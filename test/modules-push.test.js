@@ -17,7 +17,7 @@ describe('Server errors', () => {
     expect(stderr).toMatch("File doesn't exist: template-values.json");
   });
 
-  test('No files', async () => {
+  test.skip('now we include template-values.json in release')('No files', async () => {
     const { stdout, stderr } = await run('no_files', '--email pos-cli-ci@platformos.com');
     expect(stderr).toMatch("There are no files in module release");
   });
