@@ -2,6 +2,7 @@
 
 ## master
 * Improvement: Improved UX of pagination in Next GUI
+* Feature: add command `pos-cli modules install`
 
 ## 4.12.4
 * Bug: graphql - fix error on deprecated types
