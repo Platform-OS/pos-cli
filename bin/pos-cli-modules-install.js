@@ -30,6 +30,20 @@ const addNewModule = async (moduleName, moduleVersion, localModules, getVersions
   }
 };
 
+const writePosModules = (modules) => {
+  fs.writeFileSync(
+    path.join(process.cwd(), posModulesFilePath),
+    JSON.stringify({ modules: modules }, null, 2)
+  );
+}
+
+const writePosModulesLock = (modules) => {
+  fs.writeFileSync(
+    path.join(process.cwd(), posModulesLockFilePath),
+    JSON.stringify({ modules: modules }, null, 2)
+  );
+}
+
 program
   .name('pos-cli modules setup')
   .arguments('[environment]', 'name of the environment. Example: staging')
@@ -37,11 +51,6 @@ program
   .action(async (environment, moduleNameWithVersion) => {
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
-    const progress = {};
-    const errors = [];
-    const lock = {
-      modules: {}
-    };
     const spinner = ora({ text: "Modules install", stream: process.stdout, spinner: 'bouncingBar' }).start();
 
     try{
@@ -50,30 +59,17 @@ program
       if(moduleNameWithVersion){
         const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
         localModules = await addNewModule(moduleName, moduleVersion, localModules, getVersions);
-        fs.writeFileSync(
-          path.join(process.cwd(), posModulesFilePath),
-          JSON.stringify({ modules: localModules }, null, 2)
-        );
-
+        writePosModules(localModules);
         spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]}`);
       }
 
       if(!localModules) {
-          spinner.stop();
+        spinner.stop();
       } else {
         spinner.start('Resolving module dependencies');
-        lock['modules'] = await resolveDependencies(localModules, getVersions);
-
-        if (errors.length) {
-          errors.map(e => logger.Warn(e, { hideTimestamp: true }));
-          logger.Error('Some errors occured during module setup');
-        } else {
-          fs.writeFileSync(
-            path.join(process.cwd(), posModulesLockFilePath),
-            JSON.stringify(lock, null, 2)
-          );
-          spinner.succeed(`Modules lock file generated: ${posModulesLockFilePath}`);
-        }
+        const modulesLocked = await resolveDependencies(localModules, getVersions);
+        writePosModulesLock(modulesLocked);
+        spinner.succeed(`Modules lock file generated: ${posModulesLockFilePath}`);
       }
     } catch(e) {
       // throw e;
