@@ -8,21 +8,11 @@ import { state } from '$lib/state';
 import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Aside from '$lib/ui/Aside.svelte';
-import Code from '$lib/ui/Code.svelte';
 import JSONTree from '$lib/ui/JSONTree.svelte';
 import Icon from '$lib/ui/Icon.svelte';
 
-let log;
-
 $: item = $state.logv2;
-
-let messageIsJSON;
-
-$: try {
-  messageIsJSON = JSON.parse(item.message.replaceAll('\\n', '').replaceAll('\\t', ''));
-} catch(e) {
-  messageIsJSON = false;
-}
+$: message = item && tryParseJSON(item.message);
 
 </script>
 
@@ -104,11 +94,11 @@ button {
         Copy
       </button>
     </h2>
-    <div class="code" class:json={messageIsJSON}>
-      {#if messageIsJSON}
-        <JSONTree value={JSON.parse(messageIsJSON)} showFullLines={true} />
+    <div class="code" class:json={message}>
+      {#if message}
+        <JSONTree value={message} showFullLines={true} />
       {:else}
-        {item.message.replaceAll('\\n', '').replaceAll('\\t', '')}
+        {item.message}
       {/if}
     </div>
   {/if}
