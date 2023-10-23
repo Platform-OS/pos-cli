@@ -5,12 +5,12 @@ const ora = require('ora');
 const semver = require('semver');
 const fs = require('fs');
 const path = require('path');
-const Gateway = require('../lib/proxy');
 const logger = require('../lib/logger');
 const fetchAuthData = require('../lib/settings').fetchSettings;
 const spinner = ora({ text: 'Setup', stream: process.stdout, spinner: 'bouncingBar' });
 const files = require('../lib/files');
 const { findModuleVersion, resolveDependencies } = require('../lib/modules/dependencies')
+const Portal = require('../lib/portal');
 
 const posModulesFilePath = 'app/pos-modules.json';
 const posModulesLockFilePath = 'app/pos-modules.lock.json';
@@ -46,19 +46,15 @@ const writePosModulesLock = (modules) => {
 
 program
   .name('pos-cli modules setup')
-  .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('[moduleNameWithVersion]', 'name of the module. Example: core. You can also pass version number: core@1.0.0')
-  .action(async (environment, moduleNameWithVersion) => {
-    const authData = fetchAuthData(environment, program);
-    const gateway = new Gateway(authData);
+  .action(async (moduleNameWithVersion) => {
     const spinner = ora({ text: "Modules install", stream: process.stdout, spinner: 'bouncingBar' }).start();
 
     try{
-      const getVersions = async (list) => gateway.moduleVersions(list);
       let localModules = readLocalModules();
       if(moduleNameWithVersion){
         const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
-        localModules = await addNewModule(moduleName, moduleVersion, localModules, getVersions);
+        localModules = await addNewModule(moduleName, moduleVersion, localModules, Portal.moduleVersions);
         writePosModules(localModules);
         spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]}`);
       }
@@ -67,7 +63,7 @@ program
         spinner.stop();
       } else {
         spinner.start('Resolving module dependencies');
-        const modulesLocked = await resolveDependencies(localModules, getVersions);
+        const modulesLocked = await resolveDependencies(localModules, Portal.moduleVersions);
         writePosModulesLock(modulesLocked);
         spinner.succeed(`Modules lock file generated: ${posModulesLockFilePath}`);
       }
