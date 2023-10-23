@@ -27,7 +27,7 @@ const storeNewVersion = (config, version) => {
   files.writeJSON(configPath, config);
 };
 
-const validateVersions = (config, version) => {
+const validateVersions = (config, version, moduleName) => {
   // Validate versions.
   if (!semver.valid(config.version)) {
     report('[ERR] The current version is not valid');
@@ -48,7 +48,7 @@ function crateNewVersion(version, options) {
   const moduleName = config['machine_name'];
 
   if (options.package) version = readVersionFromPackage(options);
-  if (!validateVersions(config, version)) return;
+  if (!validateVersions(config, version, moduleName)) return;
 
   storeNewVersion(config, version);
 }
