@@ -1,6 +1,6 @@
 # Changelog
 
-## master
+## 4.12.5
 * Improvement: Improved UX of pagination in Next GUI
 * Feature: add command `pos-cli modules install`
 
