@@ -7,8 +7,10 @@ const program = require('commander'),
   validate = require('../lib/validators'),
   files = require('../lib/files'),
   Portal = require('../lib/portal');
+const waitForStatus = require('../lib/data/waitForStatus');
+const open = require('open');
 
-// turn to promise
+// TODO: extract to module
 const getPassword = () => {
   return new Promise((resolve, reject) => {
     const reader = rl.createInterface({ input: process.stdin, output: process.stdout });
@@ -25,6 +27,7 @@ const getPassword = () => {
   });
 };
 
+// TODO: extract to module
 const storeEnvironment = settings => {
   logger.Debug(`[storeEnvironment] ${JSON.stringify(settings, null, 2)}`);
 
@@ -43,23 +46,83 @@ const storeEnvironment = settings => {
   fs.writeFileSync(configPath, JSON.stringify(newSettings, null, 2));
 };
 
+const saveToken = (settings, token) => {
+  storeEnvironment(Object.assign(settings, { token: token }));
+  logger.Success(`Environment ${settings.url} as ${settings.environment} has been added successfuly.`);
+};
+
 const help = () => {
   program.outputHelp();
   process.exit(1);
 }
 
 const checkParams = params => {
-  validate.existence({ argumentValue: params.email, argumentName: 'email', fail: help });
-  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: help });
-  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: help });
-  validate.email(params.email);
+  // validate.existence({ argumentValue: params.email, argumentName: 'email', fail: help });
+  if (params.email) validate.email(params.email);
 
+  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: help });
+
+  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: help });
   if (params.url.slice(-1) != '/') {
     params.url = params.url + '/';
   }
-
   validate.url(params.url);
 };
+
+// TODO: extract to module
+const waitForAccessToken = async (deviceCode, interval) => {
+  const tokenResponse = await waitForStatus(
+    () => {
+      return Portal.fetchDeviceAccessToken(deviceCode).then(response => {
+        let token;
+        if (response['access_token']) {
+          token = { ...response, status: 'success' };
+        } else {
+          // TODO: use node-fetch instead of request-promise
+          const responseBody = response.response.body;
+          switch(response.response.statusCode){
+            case 400:
+              token = { status: responseBody.error };
+              break;
+            case 200:
+              token = { ...responseBody, status: 'success' };
+              break;
+            default:
+              throw `Unhandled response: ${response.statusCode}`
+          }
+        }
+
+        return Promise.resolve(token);
+      })
+    }, 'authorization_pending', 'success', interval
+  );
+
+  return tokenResponse['access_token'];
+};
+
+// TODO: extract to module
+const deviceAuthorizationFlow = async (instanceUrl) => {
+  const instanceDomain = (new URL(instanceUrl)).hostname;
+  const deviceAuthorizationResponse = await Portal.requestDeviceAuthorization(instanceDomain);
+  logger.Debug('deviceAuthorizationResponse', deviceAuthorizationResponse);
+
+  const deviceAuthorization = JSON.parse(deviceAuthorizationResponse);
+  const verificationUrl = deviceAuthorization['verification_uri_complete'];
+  const deviceCode = deviceAuthorization['device_code']
+  const interval = (deviceAuthorization['interval'] || 5) * 1000;
+
+  await open(verificationUrl);
+
+  const accessToken = await waitForAccessToken(deviceCode, interval);
+  return accessToken;
+};
+
+const login = async (email, password, url) => {
+  return Portal.login(email, password, url)
+    .then(response => {
+      if (response) Promise.resolve(response[0].token);
+    })
+}
 
 program
   .name('pos-cli env add')
@@ -70,42 +133,27 @@ program
     '--token <token>',
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
-  .action((environment, params) => {
+  .action(async (environment, params) => {
     checkParams(params);
     const settings = { url: params.url, endpoint: environment, email: params.email };
 
     if (params.token) {
-      storeEnvironment(Object.assign(settings, { token: params.token }));
-      logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
-      process.exit(0);
-    }
+      token = params.token;
+    } else if (!params.email){
+      token = await deviceAuthorizationFlow(params.url);
+    } else {
+      logger.Info(
+        `Please make sure that you have a permission to deploy. \n You can verify it here: ${Portal.HOST}/me/permissions`,
+        { hideTimestamp: true }
+      );
 
-    logger.Info(
-      `Please make sure that you have a permission to deploy. \n
-      You can verify it here: ${Portal.HOST}/me/permissions`,
-      { hideTimestamp: true }
-    );
-
-    getPassword().then(password => {
+      const password = await getPassword();
       logger.Info(`Asking ${Portal.HOST} for access token...`);
 
-      Portal.login(params.email, password, params.url)
-        .then(response => {
-          const token = response[0].token;
+      token = await login(params.email, password, params.url);
+    }
 
-          if (token) {
-            storeEnvironment(Object.assign(settings, { token }));
-            logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
-          }
-        })
-        .catch(e => {
-          if (e.statusCode === 401) {
-            logger.Error('Either email or password is incorrect.');
-          } else {
-            logger.Error(e.message);
-          }
-        });
-    });
+    if (token) saveToken(settings, token);
   });
 
 program.parse(process.argv);
