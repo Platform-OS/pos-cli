@@ -1,46 +1,16 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
-  fs = require('fs'),
-  rl = require('readline'),
-  logger = require('../lib/logger'),
-  validate = require('../lib/validators'),
-  files = require('../lib/files'),
-  Portal = require('../lib/portal');
+const program = require('commander');
+const logger = require('../lib/logger');
+const validate = require('../lib/validators');
+const Portal = require('../lib/portal');
+const waitForStatus = require('../lib/data/waitForStatus');
+const { readPassword } = require('../lib/utils/password');
+const { storeEnvironment, deviceAuthorizationFlow } = require('../lib/environments');
 
-// turn to promise
-const getPassword = () => {
-  return new Promise((resolve, reject) => {
-    const reader = rl.createInterface({ input: process.stdin, output: process.stdout });
-    reader.stdoutMuted = true;
-    reader.question('Password: ', password => {
-      reader.close();
-      logger.Info('');
-      resolve(password);
-    });
-
-    reader._writeToOutput = stringToWrite => {
-      (reader.stdoutMuted && reader.output.write('*')) || reader.output.write(stringToWrite);
-    };
-  });
-};
-
-const storeEnvironment = settings => {
-  logger.Debug(`[storeEnvironment] ${JSON.stringify(settings, null, 2)}`);
-
-  const environmentSettings = {
-    [settings.endpoint]: {
-      url: settings.url,
-      token: settings.token,
-      email: settings.email
-    }
-  };
-
-  const configPath = files.getConfigPath();
-  logger.Debug(`[storeEnvironment] Current config path: ${configPath}`);
-
-  const newSettings = Object.assign({}, files.getConfig(), environmentSettings);
-  fs.writeFileSync(configPath, JSON.stringify(newSettings, null, 2));
+const saveToken = (settings, token) => {
+  storeEnvironment(Object.assign(settings, { token: token }));
+  logger.Success(`Environment ${settings.url} as ${settings.environment} has been added successfuly.`);
 };
 
 const help = () => {
@@ -49,17 +19,25 @@ const help = () => {
 }
 
 const checkParams = params => {
-  validate.existence({ argumentValue: params.email, argumentName: 'email', fail: help });
-  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: help });
-  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: help });
-  validate.email(params.email);
+  // validate.existence({ argumentValue: params.email, argumentName: 'email', fail: help });
+  if (params.email) validate.email(params.email);
 
+  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: help });
+
+  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: help });
   if (params.url.slice(-1) != '/') {
     params.url = params.url + '/';
   }
-
   validate.url(params.url);
 };
+
+
+const login = async (email, password, url) => {
+  return Portal.login(email, password, url)
+    .then(response => {
+      if (response) Promise.resolve(response[0].token);
+    })
+}
 
 program
   .name('pos-cli env add')
@@ -70,42 +48,27 @@ program
     '--token <token>',
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
-  .action((environment, params) => {
+  .action(async (environment, params) => {
     checkParams(params);
     const settings = { url: params.url, endpoint: environment, email: params.email };
 
     if (params.token) {
-      storeEnvironment(Object.assign(settings, { token: params.token }));
-      logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
-      process.exit(0);
-    }
+      token = params.token;
+    } else if (!params.email){
+      token = await deviceAuthorizationFlow(params.url);
+    } else {
+      logger.Info(
+        `Please make sure that you have a permission to deploy. \n You can verify it here: ${Portal.HOST}/me/permissions`,
+        { hideTimestamp: true }
+      );
 
-    logger.Info(
-      `Please make sure that you have a permission to deploy. \n
-      You can verify it here: ${Portal.HOST}/me/permissions`,
-      { hideTimestamp: true }
-    );
-
-    getPassword().then(password => {
+      const password = await readPassword();
       logger.Info(`Asking ${Portal.HOST} for access token...`);
 
-      Portal.login(params.email, password, params.url)
-        .then(response => {
-          const token = response[0].token;
+      token = await login(params.email, password, params.url);
+    }
 
-          if (token) {
-            storeEnvironment(Object.assign(settings, { token }));
-            logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
-          }
-        })
-        .catch(e => {
-          if (e.statusCode === 401) {
-            logger.Error('Either email or password is incorrect.');
-          } else {
-            logger.Error(e.message);
-          }
-        });
-    });
+    if (token) saveToken(settings, token);
   });
 
 program.parse(process.argv);
