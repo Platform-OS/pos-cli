@@ -1,5 +1,8 @@
 # Changelog
 
+## master
+* Bug: Fixed success message for `env add` command
+
 ## 4.12.6
 
 * Authorize adding new env with portal website when passing only `--url`

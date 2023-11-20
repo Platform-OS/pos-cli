@@ -50,7 +50,7 @@ program
   )
   .action(async (environment, params) => {
     checkParams(params);
-    const settings = { url: params.url, endpoint: environment, email: params.email };
+    const settings = { url: params.url, environment: environment, email: params.email };
 
     if (params.token) {
       token = params.token;
