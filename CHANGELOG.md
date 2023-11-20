@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.12.6
+
+* Authorize adding new env with portal website when passing only `--url`
+
 ## 4.12.5
 * Improvement: Improved UX of pagination in Next GUI
 * Feature: add command `pos-cli modules install`
