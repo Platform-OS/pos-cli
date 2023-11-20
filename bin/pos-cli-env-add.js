@@ -10,7 +10,6 @@ const { storeEnvironment, deviceAuthorizationFlow } = require('../lib/environmen
 
 const saveToken = (settings, token) => {
   storeEnvironment(Object.assign(settings, { token: token }));
-  console.log('env2', settings.environment);
   logger.Success(`Environment ${settings.url} as ${settings.environment} has been added successfuly.`);
 };
 
@@ -52,7 +51,6 @@ program
   .action(async (environment, params) => {
     checkParams(params);
     const settings = { url: params.url, environment: environment, email: params.email };
-    console.log('environment', environment);
 
     if (params.token) {
       token = params.token;
