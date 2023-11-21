@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+<<<<<<< HEAD
 const program = require('commander'),
   fs = require('fs'),
   rl = require('readline'),
@@ -49,6 +50,47 @@ const checkParams = (environment, params) => {
 };
 
 program.showHelpAfterError();
+=======
+const program = require('commander');
+const logger = require('../lib/logger');
+const validate = require('../lib/validators');
+const Portal = require('../lib/portal');
+const waitForStatus = require('../lib/data/waitForStatus');
+const { readPassword } = require('../lib/utils/password');
+const { storeEnvironment, deviceAuthorizationFlow } = require('../lib/environments');
+
+const saveToken = (settings, token) => {
+  storeEnvironment(Object.assign(settings, { token: token }));
+  logger.Success(`Environment ${settings.url} as ${settings.environment} has been added successfuly.`);
+};
+
+const help = () => {
+  program.outputHelp();
+  process.exit(1);
+}
+
+const checkParams = params => {
+  // validate.existence({ argumentValue: params.email, argumentName: 'email', fail: help });
+  if (params.email) validate.email(params.email);
+
+  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: help });
+
+  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: help });
+  if (params.url.slice(-1) != '/') {
+    params.url = params.url + '/';
+  }
+  validate.url(params.url);
+};
+
+
+const login = async (email, password, url) => {
+  return Portal.login(email, password, url)
+    .then(response => {
+      if (response) return Promise.resolve(response[0].token);
+    })
+}
+
+>>>>>>> master
 program
   .name('pos-cli env add')
   .argument('<environment>', 'name of environment. Example: staging')
@@ -58,6 +100,7 @@ program
     '--token <token>',
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
+<<<<<<< HEAD
   .action((environment, params) => {
     checkParams(environment, params);
     const settings = { url: params.url, endpoint: environment, email: params.email };
@@ -74,12 +117,29 @@ program
     );
 
     getPassword().then(password => {
+=======
+  .action(async (environment, params) => {
+    checkParams(params);
+    const settings = { url: params.url, environment: environment, email: params.email };
+
+    if (params.token) {
+      token = params.token;
+    } else if (!params.email){
+      token = await deviceAuthorizationFlow(params.url);
+    } else {
+      logger.Info(
+        `Please make sure that you have a permission to deploy. \n You can verify it here: ${Portal.HOST}/me/permissions`,
+        { hideTimestamp: true }
+      );
+
+      const password = await readPassword();
+>>>>>>> master
       logger.Info(`Asking ${Portal.HOST} for access token...`);
 
-      Portal.login(params.email, password, params.url)
-        .then(response => {
-          const token = response[0].token;
+      token = await login(params.email, password, params.url);
+    }
 
+<<<<<<< HEAD
           if (token) {
             storeEnvironment(Object.assign(settings, { token }));
             logger.Success(`Environment ${params.url} as ${environment} has been added successfuly.`);
@@ -87,6 +147,9 @@ program
         })
         // .catch(e) { //wont fire, there is a default error handler
     });
+=======
+    if (token) saveToken(settings, token);
+>>>>>>> master
   });
 
 program.parse(process.argv);
