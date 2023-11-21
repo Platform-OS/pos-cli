@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.12.8
+* Bug: fix adding env with `--email` option
+
 ## 4.12.7
 * Bug: Fixed success message for `env add` command
 * Bug: fix storing env in file

@@ -35,7 +35,7 @@ const checkParams = params => {
 const login = async (email, password, url) => {
   return Portal.login(email, password, url)
     .then(response => {
-      if (response) Promise.resolve(response[0].token);
+      if (response) return Promise.resolve(response[0].token);
     })
 }
 
