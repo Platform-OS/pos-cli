@@ -1,7 +1,8 @@
 # Changelog
 
-## master
+## 4.12.7
 * Bug: Fixed success message for `env add` command
+* Bug: fix storing env in file
 
 ## 4.12.6
 
