@@ -53,8 +53,8 @@ test('should run env list', async () => {
 });
 
 test('should run help on env add', async () => {
-  const { stderr, code } = await run('env add --email email@example.com --url http://instance.com');
-  expect(stderr).toMatch("error: missing required argument 'environment'");
+  const { stdout, code } = await run('env add');
+  expect(stdout).toMatch('Usage: pos-cli env add [options] [environment]');
   expect(code).toEqual(1);
 });
 
