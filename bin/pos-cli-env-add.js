@@ -13,12 +13,24 @@ const saveToken = (settings, token) => {
   logger.Success(`Environment ${settings.url} as ${settings.environment} has been added successfuly.`);
 };
 
-const checkParams = (environment, params) => {
+const help = () => {
+  program.outputHelp();
+  process.exit(1);
+}
+
+const checkParams = params => {
+  // validate.existence({ argumentValue: params.email, argumentName: 'email', fail: help });
   if (params.email) validate.email(params.email);
-  validate.existence({ argumentValue: program.args[0], argumentName: 'environment' });
-  validate.existence({ argumentValue: params.url, argumentName: 'URL' });
+
+  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: help });
+
+  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: help });
+  if (params.url.slice(-1) != '/') {
+    params.url = params.url + '/';
+  }
   validate.url(params.url);
 };
+
 
 const login = async (email, password, url) => {
   return Portal.login(email, password, url)
@@ -27,18 +39,17 @@ const login = async (email, password, url) => {
     })
 }
 
-program.showHelpAfterError();
 program
   .name('pos-cli env add')
-  .argument('<environment>', 'name of environment. Example: staging')
-  .requiredOption('--url <url>', 'marketplace url. Example: https://example.com')
+  .arguments('[environment]', 'name of environment. Example: staging')
   .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
+  .option('--url <url>', 'marketplace url. Example: https://example.com')
   .option(
     '--token <token>',
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
   .action(async (environment, params) => {
-    checkParams(environment, params);
+    checkParams(params);
     const settings = { url: params.url, environment: environment, email: params.email };
 
     if (params.token) {
