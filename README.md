@@ -191,12 +191,19 @@ This command will not list modules that you deployed via the `modules/` director
 Create a new module based on module starter repository.
 
     pos-cli modules init <module name>
+    
+#### Installation
+
+You can install modules that are published in modules marketplace by adding them to `app/pos-modules.json`. To make that you can use `pos-cli modules install`
+
+    pos-cli modules install <env> [module name]
 
 #### Remove
 
 Removes a module from your application.
 
     pos-cli modules remove [environment] <module name>
+    
 
 ##### module templates
 

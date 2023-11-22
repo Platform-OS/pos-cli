@@ -1,7 +1,19 @@
 # Changelog
 
-## master
+## 4.12.8
+* Bug: fix adding env with `--email` option
+
+## 4.12.7
+* Bug: Fixed success message for `env add` command
+* Bug: fix storing env in file
+
+## 4.12.6
+
+* Authorize adding new env with portal website when passing only `--url`
+
+## 4.12.5
 * Improvement: Improved UX of pagination in Next GUI
+* Feature: add command `pos-cli modules install`
 
 ## 4.12.4
 * Bug: graphql - fix error on deprecated types

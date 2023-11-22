@@ -34,4 +34,3 @@ program
   .command('sync <environment>', 'update environment on file change').alias('s')
   .command('uploads', 'manage uploads files')
   .parse(process.argv);
-
