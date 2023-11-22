@@ -15,10 +15,8 @@ const saveToken = (settings, token) => {
 
 const checkParams = (environment, params) => {
   if (params.email) validate.email(params.email);
-
-  validate.existence({ argumentValue: program.args[0], argumentName: 'environment', fail: help });
-
-  validate.existence({ argumentValue: params.url, argumentName: 'URL', fail: help });
+  validate.existence({ argumentValue: program.args[0], argumentName: 'environment' });
+  validate.existence({ argumentValue: params.url, argumentName: 'URL' });
   validate.url(params.url);
 };
 
@@ -33,14 +31,14 @@ program.showHelpAfterError();
 program
   .name('pos-cli env add')
   .argument('<environment>', 'name of environment. Example: staging')
-  .requiredOption('--email <email>', 'Partner Portal account email. Example: admin@example.com')
   .requiredOption('--url <url>', 'marketplace url. Example: https://example.com')
+  .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
   .option(
     '--token <token>',
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
   .action(async (environment, params) => {
-    checkParams(params);
+    checkParams(environment, params);
     const settings = { url: params.url, environment: environment, email: params.email };
 
     if (params.token) {
