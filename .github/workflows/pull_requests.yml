@@ -34,7 +34,7 @@ jobs:
         # this step was not needed before, I don't know what happened yet
       - name: Install missing build tools
         run: |
-          apt update && sudo apt upgrade -y
+          apt update && apt upgrade -y
       - name: Install make
         run: |
           apt install -y make
