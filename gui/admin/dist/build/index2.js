@@ -193,7 +193,7 @@ function create_fragment(ctx) {
 			t5 = text("Manage records (create, read, update, delete)");
 			t6 = space();
 			a0 = element("a");
-			t7 = text("Go to Records\r\n              ");
+			t7 = text("Go to Records\n              ");
 			svg1 = svg_element("svg");
 			path1 = svg_element("path");
 			t8 = space();
@@ -215,7 +215,7 @@ function create_fragment(ctx) {
 			t14 = text("Manage users (create, read, update, delete)");
 			t15 = space();
 			a1 = element("a");
-			t16 = text("Go to Users\r\n              ");
+			t16 = text("Go to Users\n              ");
 			svg3 = svg_element("svg");
 			path3 = svg_element("path");
 			t17 = space();
@@ -237,7 +237,7 @@ function create_fragment(ctx) {
 			t23 = text("View your own logs");
 			t24 = space();
 			a2 = element("a");
-			t25 = text("Go to Logs\r\n              ");
+			t25 = text("Go to Logs\n              ");
 			svg5 = svg_element("svg");
 			path5 = svg_element("path");
 			t26 = space();
@@ -259,7 +259,7 @@ function create_fragment(ctx) {
 			t32 = text("Create, delete, update");
 			t33 = space();
 			a3 = element("a");
-			t34 = text("Go to Constants editor\r\n              ");
+			t34 = text("Go to Constants editor\n              ");
 			svg7 = svg_element("svg");
 			path7 = svg_element("path");
 			t35 = space();
@@ -287,7 +287,7 @@ function create_fragment(ctx) {
 			t44 = text("Quickly prototype your ideas");
 			t45 = space();
 			a4 = element("a");
-			t46 = text("Go to Liquid Evaluator\r\n              ");
+			t46 = text("Go to Liquid Evaluator\n              ");
 			svg8 = svg_element("svg");
 			path8 = svg_element("path");
 			t47 = space();
@@ -310,7 +310,7 @@ function create_fragment(ctx) {
 			t55 = text("Quickly prototype your queries and mutations");
 			t56 = space();
 			a5 = element("a");
-			t57 = text("Go to GraphiQL\r\n              ");
+			t57 = text("Go to GraphiQL\n              ");
 			svg9 = svg_element("svg");
 			path9 = svg_element("path");
 			t58 = space();
@@ -326,7 +326,7 @@ function create_fragment(ctx) {
 			t62 = text("Fully operational public beta version available");
 			t63 = space();
 			a6 = element("a");
-			t64 = text("Try it\r\n        ");
+			t64 = text("Try it\n        ");
 			svg10 = svg_element("svg");
 			path10 = svg_element("path");
 			t65 = space();
@@ -390,7 +390,7 @@ function create_fragment(ctx) {
 			t6 = claim_space(div1_nodes);
 			a0 = claim_element(div1_nodes, "A", { href: true, class: true });
 			var a0_nodes = children(a0);
-			t7 = claim_text(a0_nodes, "Go to Records\r\n              ");
+			t7 = claim_text(a0_nodes, "Go to Records\n              ");
 
 			svg1 = claim_element(
 				a0_nodes,
@@ -466,7 +466,7 @@ function create_fragment(ctx) {
 			t15 = claim_space(div5_nodes);
 			a1 = claim_element(div5_nodes, "A", { href: true, class: true });
 			var a1_nodes = children(a1);
-			t16 = claim_text(a1_nodes, "Go to Users\r\n              ");
+			t16 = claim_text(a1_nodes, "Go to Users\n              ");
 
 			svg3 = claim_element(
 				a1_nodes,
@@ -542,7 +542,7 @@ function create_fragment(ctx) {
 			t24 = claim_space(div9_nodes);
 			a2 = claim_element(div9_nodes, "A", { href: true, class: true });
 			var a2_nodes = children(a2);
-			t25 = claim_text(a2_nodes, "Go to Logs\r\n              ");
+			t25 = claim_text(a2_nodes, "Go to Logs\n              ");
 
 			svg5 = claim_element(
 				a2_nodes,
@@ -618,7 +618,7 @@ function create_fragment(ctx) {
 			t33 = claim_space(div13_nodes);
 			a3 = claim_element(div13_nodes, "A", { href: true, class: true });
 			var a3_nodes = children(a3);
-			t34 = claim_text(a3_nodes, "Go to Constants editor\r\n              ");
+			t34 = claim_text(a3_nodes, "Go to Constants editor\n              ");
 
 			svg7 = claim_element(
 				a3_nodes,
@@ -688,7 +688,7 @@ function create_fragment(ctx) {
 			t45 = claim_space(div18_nodes);
 			a4 = claim_element(div18_nodes, "A", { href: true, target: true, class: true });
 			var a4_nodes = children(a4);
-			t46 = claim_text(a4_nodes, "Go to Liquid Evaluator\r\n              ");
+			t46 = claim_text(a4_nodes, "Go to Liquid Evaluator\n              ");
 
 			svg8 = claim_element(
 				a4_nodes,
@@ -747,7 +747,7 @@ function create_fragment(ctx) {
 			t56 = claim_space(div21_nodes);
 			a5 = claim_element(div21_nodes, "A", { href: true, target: true, class: true });
 			var a5_nodes = children(a5);
-			t57 = claim_text(a5_nodes, "Go to GraphiQL\r\n              ");
+			t57 = claim_text(a5_nodes, "Go to GraphiQL\n              ");
 
 			svg9 = claim_element(
 				a5_nodes,
@@ -796,7 +796,7 @@ function create_fragment(ctx) {
 			t63 = claim_space(div26_nodes);
 			a6 = claim_element(div26_nodes, "A", { href: true, class: true });
 			var a6_nodes = children(a6);
-			t64 = claim_text(a6_nodes, "Try it\r\n        ");
+			t64 = claim_text(a6_nodes, "Try it\n        ");
 
 			svg10 = claim_element(
 				a6_nodes,

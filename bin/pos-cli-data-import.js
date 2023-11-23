@@ -83,19 +83,19 @@ const dataImport = async (filename, rawIds, isZipFile) => {
 
 program
   .name('pos-cli data import')
-  .argument('[environment]', 'name of the environment. Example: staging')
+  .arguments('[environment]', 'name of the environment. Example: staging')
   .option(
     '-p --path <import-file-path>',
     'path of import .json or .zip file. Example: data.json, data.zip',
     'data.json'
   )
-  .option('--raw-ids <raw-ids>', 'do not remap ids after import', false)
-  .option('-z --zip', 'import from zip archive', false)
+  .option('--raw-ids <raw-ids>', 'do not remap ids after import', 'false')
+  .option('-z --zip', 'import from zip archive', 'false')
   .action((environment, params) => {
     const filename = params.path;
     const rawIds = params.rawIds;
     const zip = params.zip;
-    const authData = fetchAuthData(environment);
+    const authData = fetchAuthData(environment, program);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url,

@@ -11,13 +11,13 @@ const DEFAULT_CONCURRENCY = 3;
 
 program
   .name('pos-cli sync')
-  .argument('[environment]', 'Name of environment. Example: staging')
+  .arguments('[environment]', 'Name of environment. Example: staging')
   .option('-c, --concurrency <number>', 'Maximum concurrent connections to the server', DEFAULT_CONCURRENCY)
   .option('-d, --direct-assets-upload', 'deprecated, this is the default strategy', true)
   .option('-o, --open', 'When ready, open default browser with instance')
   .option('-l, --livereload', 'Use livereload')
   .action(async (environment, params) => {
-    const authData = fetchAuthData(environment);
+    const authData = fetchAuthData(environment, program);
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,

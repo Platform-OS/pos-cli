@@ -1,8 +1,5 @@
 # Changelog
 
-## 4.13.0
-* Feature: Initial alpha implementation of new logs API
-
 ## 4.12.8
 * Bug: fix adding env with `--email` option
 

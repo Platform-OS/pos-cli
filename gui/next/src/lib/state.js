@@ -30,10 +30,6 @@ function createStore(){
     state.online = undefined;
     // logs data (object)
     state.logs = {};
-    // new logs data (object)
-    state.logsv2 = {};
-    // currently active log (object)
-    state.logv2 = {};
     // tables for current instance (array)
     state.tables = [];
     // currently active table (object)

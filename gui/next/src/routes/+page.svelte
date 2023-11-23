@@ -288,11 +288,6 @@ h2 {
       </ul>
       <ul class="actions">
         <li>
-          <a href="/logsv2" style="padding-inline: .5em; font-size: .75rem; position: relative; top: -2px;">
-            V2 β
-          </a>
-        </li>
-        <li>
           <button title="More information" on:click={() => toggleDescription('logs')}>
             <Icon icon="info" size="14" />
             <span class="label">Show more information about Logs tool</span>

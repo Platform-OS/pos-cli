@@ -22,18 +22,16 @@ jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
 
 describe('Happy path', () => {
   test('sync assets', async () => {
-
     const steps = async (child) => {
       await sleep(stepTimeout); //wait for sync to start
       exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for syncing the file
       child.kill();
     }
-
-    const { stdout, stderr } = await run('correct_with_assets', null, steps);
+    const { stdout } = await run('correct_with_assets', null, steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
+    expect(stdout).toMatch('[Sync] Synced: assets/bar.js');
   });
 
   test('sync with direct assets upload', async () => {
@@ -45,6 +43,7 @@ describe('Happy path', () => {
     }
     const { stdout, stderr } = await run('correct_with_assets', '-d', steps);
 
+    expect(stderr).toMatch('');
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
   });
@@ -67,7 +66,7 @@ properties:
       await sleep(stepTimeout); //wait for deleting the file
       child.kill();
     }
-    const { stderr, stdout } = await run('correct_with_assets', null, steps);
+    const { stdout } = await run('correct_with_assets', null, steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch(`[Sync] Synced: ${fileName}`);

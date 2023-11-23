@@ -23,5 +23,4 @@ program
       .catch(error => logger.Error(`Failed to remove the module ${error}`));
   });
 
-program.showHelpAfterError();
 program.parse(process.argv);
