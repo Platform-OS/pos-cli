@@ -31,13 +31,6 @@ jobs:
       MPKIT_URL: ${{ secrets.MPKIT_URL }}
       CI: true
     steps:
-        # this step was not needed before, I don't know what happened yet
-      - name: Install missing build tools
-        run: |
-          apt update && apt upgrade -y
-      - name: Install make
-        run: |
-          apt install -y make
       - name: Checkout test instance code
         uses: actions/checkout@v4
         with:
@@ -49,7 +42,7 @@ jobs:
           path: pos-cli
       - uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
       - name: Install pos-cli
         run: |
           npm install -g @platformos/pos-cli
