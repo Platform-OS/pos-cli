@@ -7,9 +7,9 @@ const program = require('commander'),
 
 program
   .name('pos-cli migrations run')
-  .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<timestamp>', 'timestamp the migration. Example: 20180701182602')
-  .action((environment, timestamp) => {
+  .arguments('[environment]', 'name of the environment. Example: staging')
+  .action((timestamp, environment) => {
     const authData = fetchAuthData(environment, program);
     const gateway = new Gateway(authData);
     const formData = { timestamp: timestamp };

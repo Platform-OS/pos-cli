@@ -13,6 +13,7 @@ updateNotifier({
   isGlobal: true
 });
 
+program.showHelpAfterError();
 program
   .name('pos-cli')
   .version(version, '-v, --version')
@@ -26,17 +27,10 @@ program
   .command('generate', 'generates files')
   .command('init', 'initialize directory structure')
   .command('logs <environment>', 'display logs and errors').alias('l')
+  .command('logsv2', 'display logs and errors').alias('l2')
   .command('migrations', 'manage migrations')
   .command('modules', 'manage modules')
   .command('pull', 'export app data to a zip file')
   .command('sync <environment>', 'update environment on file change').alias('s')
   .command('uploads', 'manage uploads files')
   .parse(process.argv);
-
-const commandList = Object.keys(program._execs);
-if (!commandList.includes(program.args[0])) {
-  program.outputHelp();
-  logger.Error(`unknown command: ${program.args[0]}`);
-}
-
-if (!program.args.length) program.help();

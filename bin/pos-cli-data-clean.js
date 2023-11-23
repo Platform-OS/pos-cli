@@ -7,67 +7,68 @@ const program = require('commander'),
   waitForStatus = require('../lib/data/waitForStatus'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   logger = require('../lib/logger'),
+  ServerError = require('../lib/ServerError'),
   report = require('../lib/logger/report');
 
 const confirmationText = 'CLEAN DATA';
-const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 
-const clean = (gateway, includeSchema) => {
-  logger.Info('Going to clean data');
-  gateway
-    .dataClean(confirmationText, includeSchema)
-    .then((cleanTask) => {
-      spinner.stopAndPersist().succeed('Clean started').start(`Cleaning instance`);
-      waitForStatus(() => gateway.dataCleanStatus(cleanTask.id), 'pending', 'done')
-        .then(() => {
-          spinner.stopAndPersist().succeed('Cleaning done');
-        })
-        .catch((error) => {
-          logger.Debug(error);
-          spinner.fail('Data clean failed');
-          logger.Error(`Unable to clean instance ${error.error}`);
-        });
-    })
-    .catch({ statusCode: 404 }, () => {
-      logger.Error('[404] Data clean is not supported by the server');
-      report('[Err] Data: Clean - Not supported');
-    });
-};
+const confirmCleanup = async (autoConfirm, includeSchema, url) => {
+  if (autoConfirm) return true;
+  try {
+    let schemaText = includeSchema ? 'and database schemas ' : '';
 
-const promptConfirmation = async confirmationText => {
-  const message = `If you still want to continue please type: '${confirmationText}' `;
+    logger.Warn('');
+    logger.Warn(`WARNING!!! You are going to REMOVE your data ${schemaText}from instance: ${url}`);
+    logger.Warn('There is no coming back.');
+    logger.Warn('');
 
-  const response = await prompts({ type: 'text', name: 'confirmation', message: message });
-  return response.confirmation;
-};
+    const message = `If you still want to continue please type: '${confirmationText}' `;
+    const response = await prompts({ type: 'text', name: 'confirmation', message: message });
 
-const confirmCleanup = async (gateway, inlineConfirmation, includeSchema) => {
-  let schemaText = includeSchema ? 'and database schemas ' : '';
-
-  logger.Warn('');
-  logger.Warn(`WARNING!!! You are going to REMOVE your data ${schemaText}from instance: ${gateway.url}`);
-  logger.Warn('There is no coming back.');
-  logger.Warn('');
-  const confirmed = inlineConfirmation || (await promptConfirmation(confirmationText)) == confirmationText;
-  if (confirmed) {
-    clean(gateway, includeSchema);
-
-    report('[OK] Data: Clean');
-  } else {
-    logger.Error('Wrong confirmation. Closed without cleaning instance data.');
-    report('[ERR] Data: Clean - Wrong confirmation');
+    return response.confirmation == confirmationText;
+  }
+  catch(e) {
+    logger.Error(e)
+    return false;
   }
 };
 
 program
   .name('pos-cli data clean')
-  .arguments('[environment]', 'name of the environment. Example: staging')
+  .argument('[environment]', 'name of the environment. Example: staging')
   .option('--auto-confirm', 'auto confirm instance clean without prompt')
   .option('-i, --include-schema', 'also remove instance files: pages, schemas etc.')
-  .action((environment, params) => {
-    const gateway = new Gateway(fetchAuthData(environment, program));
+  .action(async (environment, params) => {
+    const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
+    try {
+      const gateway = new Gateway(fetchAuthData(environment));
+      const confirmed = await confirmCleanup(params.autoConfirm, params.includeSchema, gateway.url)
+      if (confirmed) {
+        spinner.start(`Cleaning instance`);
 
-    confirmCleanup(gateway, params.autoConfirm, params.includeSchema);
+        const response = await gateway.dataClean(confirmationText, params.includeSchema)
+        logger.Debug(`Cleanup request id: ${response}`);
+
+        const checkDataCleanJobStatus = () => { return gateway.dataCleanStatus(response.id) }
+        await waitForStatus(checkDataCleanJobStatus, 'pending', 'done')
+
+        spinner.stopAndPersist().succeed("DONE. Instance cleaned")
+      }
+      else logger.Error('Wrong confirmation. Closed without cleaning instance data.');
+
+    }
+    catch(e) {
+      spinner.fail(`Instance cleanup has failed.`);
+      console.log(e.name);
+
+      // custom handle 422
+      if (e.statusCode == 422)
+        logger.Error('[422] Data clean is either not supported by the server or has been disabled.');
+      else if (ServerError.isNetworkError(e))
+        ServerError.handler(e)
+      else
+        logger.Error(e)
+    }
   });
 
 program.parse(process.argv);

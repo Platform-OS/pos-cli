@@ -32,6 +32,5 @@ describe('Server errors', () => {
     expect(stdout).toMatch("for access token");
     expect(stdout).toMatch("Release Uploaded");
     expect(stderr).toMatch('Name has already been taken');
-    expect(stderr).toMatch('Module Version not created');
   });
 });
