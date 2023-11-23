@@ -24,17 +24,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
-      image: mcr.microsoft.com/playwright:v1.40.0-jammy
+      image: mcr.microsoft.com/playwright:v1.13.0-jammy
     env:
       MPKIT_EMAIL: ${{ secrets.MPKIT_EMAIL }}
       MPKIT_TOKEN: ${{ secrets.MPKIT_TOKEN }}
       MPKIT_URL: ${{ secrets.MPKIT_URL }}
       CI: true
     steps:
-      # this step was not needed before, I don't know what happened yet
-      - name: Install missing build tools
-        run: |
-          sudo apt-get install build-essential
       - name: Checkout test instance code
         uses: actions/checkout@v4
         with:
