@@ -34,7 +34,10 @@ jobs:
         # this step was not needed before, I don't know what happened yet
       - name: Install missing build tools
         run: |
-          apt-get install build-essentials
+          apt update && sudo apt upgrade -y
+      - name: Install make
+        run: |
+          apt install -y make
       - name: Checkout test instance code
         uses: actions/checkout@v4
         with:
