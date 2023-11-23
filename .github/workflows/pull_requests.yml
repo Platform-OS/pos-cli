@@ -34,7 +34,7 @@ jobs:
         # this step was not needed before, I don't know what happened yet
       - name: Install missing build tools
         run: |
-          apt-get install build-essential
+          apt-get install build-essentials
       - name: Checkout test instance code
         uses: actions/checkout@v4
         with:
