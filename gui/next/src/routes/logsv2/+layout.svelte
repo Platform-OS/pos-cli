@@ -22,7 +22,6 @@ onMount(async () => {
 
 $: if($page.params.id){
   $state.logv2 = items?.body.hits.find(log => log._timestamp == $page.params.id);
-  console.log(items?.body.hits);
 }
 
 </script>

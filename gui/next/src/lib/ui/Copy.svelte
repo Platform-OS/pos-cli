@@ -19,7 +19,7 @@ let error = false;
 
 
 // purpose:   copy text to clipboard
-// returns:   triggers the button animation
+// returns:   sets the state in variables
 // ------------------------------------------------------------------------
 const copy = () => {
   copying = true;
