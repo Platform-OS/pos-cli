@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.13.2
+* Chore: Recreated package-lock
+
 ## 4.13.1
 * Bug: Fix `data import` request
 * Bug: Fix `modules push` command
