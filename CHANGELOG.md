@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.13.1
+* Bug: Fix `data import` request
+* Bug: Fix `modules push` command
+
 ## 4.13.0
 * Feature: Initial alpha implementation of new logs API
 

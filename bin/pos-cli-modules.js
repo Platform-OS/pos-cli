@@ -3,6 +3,7 @@
 const program = require('commander');
 const logger = require('../lib/logger');
 
+program.showHelpAfterError();
 program
   .name('pos-cli modules')
   .command('list [environment]', 'list installed modules on the instance')
@@ -13,9 +14,3 @@ program
   .command('version [version] --package', 'create a new version of the module')
   .command('push', 'publish module version')
   .parse(process.argv);
-
-const commandList = Object.keys(program._execs);
-if (!commandList.includes(program.args[0])) {
-  program.outputHelp();
-  logger.Error(`unknown command: ${program.args[0]}`);
-}
