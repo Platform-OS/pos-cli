@@ -21,7 +21,7 @@ program
       if (!program.json)
         swagger.search.printLogs(response)
       else
-        console.log(response.text)
+        console.log(response)
 
     } catch(e) { console.error(e) }
   });
