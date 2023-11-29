@@ -1,0 +1,1 @@
+const e=t=>fetch("http://localhost:3333/api/graph",{headers:{"Content-Type":"application/json"},method:"POST",body:JSON.stringify(t)}).then(o=>o.json()).then(o=>o.errors?(o.errors.forEach(r=>{console.log(t.query),console.info(r)}),o):o&&o.data);export{e as g};

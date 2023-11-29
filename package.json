@@ -26,6 +26,7 @@
     "pOS"
   ],
   "dependencies": {
+    "@platformos/pos-cli": "file:C:/Users/zx/AppData/Roaming/npm/node_modules/@platformos/pos-cli",
     "archiver": "^5.3.0",
     "archiver-promise": "^1.0.0",
     "async": "^3.2.3",
