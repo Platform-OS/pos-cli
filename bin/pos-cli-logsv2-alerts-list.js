@@ -14,9 +14,9 @@ program
       const response = await client.alerts(program)
 
       if (!program.json)
-        console.log(response.body)
+        console.log(response)
       else
-        console.log(response.body)
+        console.log(response)
     }
     catch(e) { logger.Error(e) }
   })

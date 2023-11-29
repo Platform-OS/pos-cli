@@ -3,9 +3,6 @@
   "version": "4.13.2",
   "description": "Manage your platformOS application",
   "scripts": {
-    "prepare": "npm run build:admin && npm run build:graphql",
-    "build:admin": "npm ci -C gui/admin && npm run build -C gui/admin",
-    "build:graphql": "npm ci -C gui/graphql && npm run build -C gui/graphql",
     "test": "jest --runInBand",
     "test-watch": "jest --watchAll --runInBand",
     "postinstall": "node ./scripts/check-node-version.js"
@@ -66,7 +63,6 @@
     "request": "^2.88.2",
     "request-promise": "^4.2.6",
     "semver": "^7.3.7",
-    "swagger-client": "^3.19",
     "shelljs": "^0.8.5",
     "update-notifier": "^5.1.0",
     "uuid": "^8.3.2",
