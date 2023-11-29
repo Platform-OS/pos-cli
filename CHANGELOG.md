@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.13.3
+* Bug: Cleaned up Python and build tools dependencies that were blocking install on some configurations
+
 ## 4.13.2
 * Chore: Recreated package-lock
 

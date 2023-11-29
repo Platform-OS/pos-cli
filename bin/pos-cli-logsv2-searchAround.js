@@ -19,7 +19,7 @@ program
       if (!params.json)
         swagger.search.printLogs(response)
       else
-        console.log(response.body)
+        console.log(response)
 
     } catch(e) { console.log(e) }
   });
