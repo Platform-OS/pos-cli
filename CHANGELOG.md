@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.14.2
+* Bug: Fixed new logs response structure so /logsv2 would work for selected instances
+
 ## 4.14.1
 * Bug: Fixed old GUI not being able to connect to the API
 
