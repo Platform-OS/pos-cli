@@ -31,7 +31,7 @@ const getPropertiesFilter = (f) => {
 };
 
 const graph = (body, successMessage = "Success") => {
-  return fetch('/api/graph', {
+  return fetch('http://localhost:3333/api/graph', {
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
     body: JSON.stringify(body),
