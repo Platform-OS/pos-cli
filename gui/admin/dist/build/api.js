@@ -252,7 +252,7 @@ var api = {
     return graph({ query }, false);
   },
   getLogs() {
-    return fetch("/api/logs").then((res) => res.json());
+    return fetch("http://localhost:3333/api/logs").then((res) => res.json());
   },
   getConstants() {
     const query = `query getConstants {

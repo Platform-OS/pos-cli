@@ -11,7 +11,7 @@ export default function () {
   // Make sure first load is always done (middle button click) by checking for cachedLastId
   if (!isBrowserTabFocused() && get(cachedLastId)) return;
 
-  return fetch(`/api/logs?lastId=${get(lastId)}`)
+  return fetch(`http://localhost:3333/api/logs?lastId=${get(lastId)}`)
     .then((res) => res.json())
     .then((res) => {
       if (!res.logs.length) return res;
