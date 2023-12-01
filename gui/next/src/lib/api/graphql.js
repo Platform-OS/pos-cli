@@ -9,8 +9,7 @@
 // returns:		data returned from the database (object)
 // ------------------------------------------------------------------------
 const graphql = (body) => {
-  // the URL to use to connect to the API, in development or preview mode we are using the default pos-cli gui serve port
-  const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)-1}/api/graph` : 'http://localhost:3333/api/graph';
+  const url = 'http://localhost:3333/api/graph';
 
   return fetch(url, {
     headers: { 'Content-Type': 'application/json' },

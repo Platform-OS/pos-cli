@@ -190,6 +190,7 @@ nav {
         </button>
       {/if}
 
+      <!--
       <div class="combo">
 
         <button
@@ -215,6 +216,7 @@ nav {
         </button>
 
       </div>
+      -->
 
     </div>
   </nav>

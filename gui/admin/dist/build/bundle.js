@@ -1327,7 +1327,7 @@ var app = (function () {
     }
 
     /**
-     * @param {string} url 
+     * @param {string} url
      * @return {ClientNode}
      */
     function urlToRoute(url) {
@@ -1562,8 +1562,8 @@ var app = (function () {
      * @typedef {Object} RoutifyContext
      * @prop {ClientNode} component
      * @prop {ClientNode} layout
-     * @prop {any} componentFile 
-     * 
+     * @prop {any} componentFile
+     *
      *  @returns {import('svelte/store').Readable<RoutifyContext>} */
     function getRoutifyContext() {
       return getContext('routify') || rootContext
@@ -1572,7 +1572,7 @@ var app = (function () {
     /**
      * @callback AfterPageLoadHelper
      * @param {function} callback
-     * 
+     *
      * @typedef {import('svelte/store').Readable<AfterPageLoadHelper> & {_hooks:Array<function>}} AfterPageLoadHelperStore
      * @type {AfterPageLoadHelperStore}
      */
@@ -1581,7 +1581,7 @@ var app = (function () {
       subscribe: hookHandler
     };
 
-    /** 
+    /**
      * @callback BeforeUrlChangeHelper
      * @param {function} callback
      *
@@ -1602,7 +1602,7 @@ var app = (function () {
 
     /**
      * We have to grab params and leftover from the context and not directly from the store.
-     * Otherwise the context is updated before the component is destroyed. * 
+     * Otherwise the context is updated before the component is destroyed. *
      * @typedef {Object.<string, *>} ParamsHelper
      * @typedef {import('svelte/store').Readable<ParamsHelper>} ParamsHelperStore
      * @type {ParamsHelperStore}
@@ -1622,7 +1622,7 @@ var app = (function () {
      * @return {String}
      *
      * @typedef {import('svelte/store').Readable<UrlHelper>} UrlHelperStore
-     * @type {UrlHelperStore} 
+     * @type {UrlHelperStore}
      * */
     const url = {
       subscribe(listener) {
@@ -1636,10 +1636,10 @@ var app = (function () {
       }
     };
 
-    /** 
-     * @param {{component: ClientNode}} $ctx 
-     * @param {RouteNode} $oldRoute 
-     * @param {RouteNode[]} $routes 
+    /**
+     * @param {{component: ClientNode}} $ctx
+     * @param {RouteNode} $oldRoute
+     * @param {RouteNode[]} $routes
      * @param {{base: string, path: string}} $location
      * @returns {UrlHelper}
      */
@@ -1678,9 +1678,9 @@ var app = (function () {
     }
 
     /**
-     * 
-     * @param {string} path 
-     * @param {object} params 
+     *
+     * @param {string} path
+     * @param {object} params
      */
     function _getQueryString(path, params) {
       if (!defaultConfig.queryHandler) return ""
@@ -1831,7 +1831,7 @@ var app = (function () {
         store.set(true);
         return true
       }));
-      
+
       afterPageLoad.subscribe(fn => fn(event => store.set(false)));
 
       return store
@@ -1942,7 +1942,7 @@ var app = (function () {
     	};
     }
 
-    // (132:36) 
+    // (132:36)
     function create_if_block_3$2(ctx) {
     	let each_blocks = [];
     	let each_1_lookup = new Map();
@@ -2923,7 +2923,7 @@ var app = (function () {
     	}
     }
 
-    /** 
+    /**
      * Node payload
      * @typedef {Object} NodePayload
      * @property {RouteNode=} file current node
@@ -2934,7 +2934,7 @@ var app = (function () {
      * State Object
      * @typedef {Object} StateObject
      * @prop {TreePayload=} treePayload payload from the tree
-     * 
+     *
      * Node walker proxy
      * @callback NodeWalkerProxy
      * @param {NodePayload} NodePayload
@@ -2945,11 +2945,11 @@ var app = (function () {
      * Node middleware
      * @description Walks through the nodes of a tree
      * @example middleware = createNodeMiddleware(payload => {payload.file.name = 'hello'})(treePayload))
-     * @param {NodeWalkerProxy} fn 
+     * @param {NodeWalkerProxy} fn
      */
     function createNodeMiddleware(fn) {
 
-        /**    
+        /**
          * NodeMiddleware payload receiver
          * @param {TreePayload} payload
          */
@@ -2957,7 +2957,7 @@ var app = (function () {
             return await nodeMiddleware(payload.tree, fn, { state: { treePayload: payload } })
         };
 
-        /**    
+        /**
          * NodeMiddleware sync payload receiver
          * @param {TreePayload} payload
          */
@@ -2972,7 +2972,7 @@ var app = (function () {
      * Node walker
      * @param {Object} file mutable file
      * @param {NodeWalkerProxy} fn function to be called for each file
-     * @param {NodePayload=} payload 
+     * @param {NodePayload=} payload
      */
     async function nodeMiddleware(file, fn, payload) {
         const { state, scope, parent } = payload || {};
@@ -2996,7 +2996,7 @@ var app = (function () {
      * Node walker (sync version)
      * @param {Object} file mutable file
      * @param {NodeWalkerProxy} fn function to be called for each file
-     * @param {NodePayload=} payload 
+     * @param {NodePayload=} payload
      */
     function nodeMiddlewareSync(file, fn, payload) {
         const { state, scope, parent } = payload || {};
@@ -3019,7 +3019,7 @@ var app = (function () {
 
     /**
      * Clone with JSON
-     * @param {T} obj 
+     * @param {T} obj
      * @returns {T} JSON cloned object
      * @template T
      */
@@ -3077,9 +3077,9 @@ var app = (function () {
     }
 
     /**
-     * 
-     * @param {RouteNode} file 
-     * @param {Number} direction 
+     *
+     * @param {RouteNode} file
+     * @param {Number} direction
      */
     function _getSibling(file, direction) {
         if (!file.root) {
@@ -3112,7 +3112,7 @@ var app = (function () {
         createNodeMiddleware(payload => {
             if (payload.file.isPage || payload.file.isFallback)
             payload.state.treePayload.routes.push(payload.file);
-        }).sync(treePayload);    
+        }).sync(treePayload);
         treePayload.routes.sort((c, p) => (c.ranking >= p.ranking ? -1 : 1));
     };
 
@@ -3184,7 +3184,7 @@ var app = (function () {
         get prev() { return _navigate(this, -1) }
         preload() {
             this.__file.layouts.forEach(file => file.component());
-            this.__file.component(); 
+            this.__file.component();
         }
     }
 
@@ -6440,7 +6440,7 @@ var app = (function () {
     			attr(svg10, "stroke-width", "2");
     			attr(svg10, "class", "w-4 h-4");
     			attr(svg10, "viewBox", "0 0 24 24");
-    			attr(a6, "href", "http://localhost:3334");
+    			attr(a6, "href", "http://localhost:3333");
     			attr(a6, "class", "px-4 py-2 inline-flex items-center gap-4 bg-blue-500 text-white rounded");
     			if (img2.src !== (img2_src_value = "/tryNew.png")) attr(img2, "src", img2_src_value);
     			attr(img2, "alt", "");
@@ -15943,7 +15943,7 @@ var app = (function () {
 
     	const handleUpdateModel = ({ id }) => {
     		api.updateModel({ id, props: formCache[id] }).then(data => {
-    			
+
     		});
     	};
 
