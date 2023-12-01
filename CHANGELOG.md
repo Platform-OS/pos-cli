@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.14.1
+* Bug: Fixed old GUI not being able to connect to the API
+
 ## 4.14.0
 * Feature: Updated pos-cli gui interface with the 'Next' version, hidden the old pos-cli gui under localhost:3334
 

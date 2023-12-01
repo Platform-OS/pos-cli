@@ -105,7 +105,7 @@ const getPropertiesFilter = (f) => {
   return filterString;
 };
 const graph = (body, successMessage = "Success") => {
-  return fetch("/api/graph", {
+  return fetch(`http://localhost:${parseInt(window.location.port)-1}/api/graph`, {
     headers: { "Content-Type": "application/json" },
     method: "POST",
     body: JSON.stringify(body)
@@ -252,7 +252,7 @@ var api = {
     return graph({ query }, false);
   },
   getLogs() {
-    return fetch("/api/logs").then((res) => res.json());
+    return fetch(`http://localhost:${parseInt(window.location.port)-1}/api/logs`).then((res) => res.json());
   },
   getConstants() {
     const query = `query getConstants {
