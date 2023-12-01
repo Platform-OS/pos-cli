@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.12.3
+* Chore: New package build
+
 ## 4.14.2
 * Bug: Fixed new logs response structure so /logsv2 would work for selected instances
 
