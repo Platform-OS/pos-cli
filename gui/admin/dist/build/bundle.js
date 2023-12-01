@@ -4746,7 +4746,7 @@ var app = (function () {
       return filterString;
     };
     const graph = (body, successMessage = "Success") => {
-      return fetch("http://localhost:3333/api/graph", {
+      return fetch(`http://localhost:${parseInt(window.location.port)-1}/api/graph`, {
         headers: { "Content-Type": "application/json" },
         method: "POST",
         body: JSON.stringify(body)
@@ -4893,7 +4893,7 @@ var app = (function () {
         return graph({ query }, false);
       },
       getLogs() {
-        return fetch("http://localhost:3333/api/logs").then((res) => res.json());
+        return fetch(`http://localhost:${parseInt(window.location.port)-1}/api/logs`).then((res) => res.json());
       },
       getConstants() {
         const query = `query getConstants {
@@ -6739,8 +6739,7 @@ var app = (function () {
     };
     function fetchLogs() {
       if (!isBrowserTabFocused() && get_store_value(cachedLastId))
-        return;
-      return fetch(`http://localhost:3333/api/logs?lastId=${get_store_value(lastId)}`).then((res) => res.json()).then((res) => {
+      return fetch(`http://localhost:${parseInt(window.location.port)-1}/api/logs?lastId=${get_store_value(lastId)}`).then((res) => res.json()).then((res) => {
         if (!res.logs.length)
           return res;
         const newLogs = res.logs.map((item) => new LogEntry(item));

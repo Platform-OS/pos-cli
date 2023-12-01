@@ -31,7 +31,7 @@ const getPropertiesFilter = (f) => {
 };
 
 const graph = (body, successMessage = "Success") => {
-  return fetch('http://localhost:3333/api/graph', {
+  return fetch(`http://localhost:${parseInt(window.location.port)-1}/api/graph`, {
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
     body: JSON.stringify(body),
@@ -194,7 +194,7 @@ export default {
     return graph({ query }, false);
   },
   getLogs() {
-    return fetch('http://localhost:3333/api/logs').then(res => res.json());
+    return fetch(`http://localhost:${parseInt(window.location.port)-1}/api/logs`).then(res => res.json());
   },
   getConstants() {
     const query = `query getConstants {

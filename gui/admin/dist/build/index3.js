@@ -14,7 +14,7 @@ const scrollToBottom = () => {
 function fetchLogs() {
   if (!isBrowserTabFocused() && get_store_value(cachedLastId))
     return;
-  return fetch(`http://localhost:3333/api/logs?lastId=${get_store_value(lastId)}`).then((res) => res.json()).then((res) => {
+  return fetch(`http://localhost:${parseInt(window.location.port)-1}/api/logs?lastId=${get_store_value(lastId)}`).then((res) => res.json()).then((res) => {
     if (!res.logs.length)
       return res;
     const newLogs = res.logs.map((item) => new LogEntry(item));
