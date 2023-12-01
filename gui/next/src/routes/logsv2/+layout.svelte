@@ -21,7 +21,7 @@ onMount(async () => {
 });
 
 $: if($page.params.id){
-  $state.logv2 = items?.body.hits.find(log => log._timestamp == $page.params.id);
+  $state.logv2 = items?.hits.find(log => log._timestamp == $page.params.id);
 }
 
 </script>
@@ -113,7 +113,7 @@ table {
           </tr>
         </thead>
         <tbody>
-          {#each logs.body.hits as log}
+          {#each logs.hits as log}
             <tr class:error={log.type.match(/error/i)}>
               <td class="time">
                 <a href="/logsv2/{log._timestamp}">
