@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.14.0
+* Feature: Updated pos-cli gui interface with the 'Next' version, hidden the old pos-cli gui under localhost:3334
+
 ## 4.13.3
 * Bug: Cleaned up Python and build tools dependencies that were blocking install on some configurations
 
