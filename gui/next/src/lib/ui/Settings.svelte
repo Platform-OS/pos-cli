@@ -60,7 +60,8 @@ function changeFontSize(event){
 <style>
 
 .container {
-  min-width: 300px;
+  min-width: 18.75rem;
+  max-width: 50%;
   padding: var(--space-page);
   position: absolute;
   inset-inline-start: calc(var(--space-page) / -2);

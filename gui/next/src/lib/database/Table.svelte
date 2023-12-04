@@ -11,7 +11,6 @@
 // ------------------------------------------------------------------------
 import { state } from '$lib/state.js';
 import { parseValue } from '$lib/parseValue.js'
-import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Delete from '$lib/database/Delete.svelte';

@@ -60,9 +60,13 @@ const toggleDescription = what => {
 <style>
 
 nav {
+  height: calc(100vh - 5.125rem);
   margin-inline: auto;
-  margin-block-start: 2rem;
+  padding-block-start: 2rem;
   padding-inline: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
 }
 
 
@@ -72,11 +76,6 @@ nav {
   flex-wrap: wrap;
   justify-content: center;
 }
-
-  .applications + .applications {
-    margin-top: 4rem;
-  }
-
 
 .application {
   width: 200px;
@@ -197,7 +196,7 @@ h2 {
 
 
 .links {
-  margin-block-start: 4rem;
+  margin-block-start: auto;
   padding-block: 3.5rem;
   display: flex;
   align-items: center;

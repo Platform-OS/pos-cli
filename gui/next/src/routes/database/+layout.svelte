@@ -37,7 +37,7 @@ onMount(() => {
 
 .container {
   display: grid;
-  grid-template-columns: 350px auto;
+  grid-template-columns: clamp(100px, 21.87rem, 40%) auto;
 
   transition: grid-template-columns .2s ease-in-out;
 }

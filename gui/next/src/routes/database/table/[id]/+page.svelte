@@ -62,7 +62,7 @@ const keyboardShortcuts = event => {
 <style>
 
 section {
-  height: calc(100vh - 82px);
+  height: calc(100vh - 5.125rem);
   flex-grow: 1;
   display: flex;
   flex-direction: column;
@@ -141,11 +141,7 @@ nav {
 
   </nav>
 
-  {#if $state.view.database !== 'tiles'}
-    <Table />
-  {:else}
-    Work in progress :)
-  {/if}
+  <Table />
 
   <nav class="pagination">
     <div>
@@ -189,34 +185,6 @@ nav {
 
         </button>
       {/if}
-
-      <!--
-      <div class="combo">
-
-        <button
-          class="button"
-          class:active={$state.view.database === 'table'}
-          title="Table view"
-          on:click={() => $state.view.database = 'table'}
-          disabled={$state.view.database === 'table'}
-        >
-          <Icon icon="list" />
-          <span class="label">Table view</span>
-        </button>
-
-        <button
-          class="button"
-          class:active={$state.view.database === 'tiles'}
-          title="Tiles view"
-          on:click={() => $state.view.database = 'tiles'}
-          disabled={$state.view.database === 'tiles'}
-        >
-          <Icon icon="tiles" />
-          <span class="label">Tiles view</span>
-        </button>
-
-      </div>
-      -->
 
     </div>
   </nav>
