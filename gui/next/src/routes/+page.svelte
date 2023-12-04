@@ -4,7 +4,9 @@
 // imports
 // ------------------------------------------------------------------------
 import Icon from '$lib/ui/Icon.svelte';
+import Settings from '$lib/ui/Settings.svelte';
 
+import { page } from '$app/stores';
 import { state } from '$lib/state';
 import { table } from '$lib/api/table';
 
@@ -191,7 +193,7 @@ h2 {
 
 .links {
   margin-block-start: 4rem;
-  padding-block-start: 3.5rem;
+  padding-block: 3.5rem;
   display: flex;
   align-items: center;
   justify-content: end;
@@ -199,6 +201,14 @@ h2 {
 
   border-block-start: 1px solid var(--color-frame);
 }
+
+  .links li {
+    position: relative;
+  }
+
+  .links li:first-child {
+    margin-inline-end: auto;
+  }
 
 </style>
 
@@ -434,6 +444,14 @@ h2 {
 
   <ul class="links">
 
+    <li>
+      {#if $page.url.searchParams.get('settings') === 'true'}
+        <Settings />
+      {/if}
+      <a href="?settings={$page.url.searchParams.get('settings') === 'true' ? 'false' : 'true'}" class="button">
+        <Icon icon="settings" />
+      </a>
+    </li>
     <li>
       <a href="https://documentation.platformos.com" class="button">
         <Icon icon="book" />

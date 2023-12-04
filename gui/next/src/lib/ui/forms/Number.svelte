@@ -133,7 +133,7 @@ const dispatch = createEventDispatcher();
     aria-hidden={value >= max}
   >
     <span class="label">{increaseLabel}</span>
-    <Icon icon={style === 'navigation' ? 'arrowRight' : 'minus' } />
+    <Icon icon={style === 'navigation' ? 'arrowRight' : 'plus' } />
   </button>
 
 </div>
