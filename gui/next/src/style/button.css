@@ -112,6 +112,11 @@ button .label {
   border-radius: 0 .5rem .5rem 0;
 }
 
+.combo button:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
 
 
 /* small variant

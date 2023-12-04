@@ -11,7 +11,7 @@ import Icon from '$lib/ui/Icon.svelte';
 // properties
 // ------------------------------------------------------------------------
 // form name that the input belongs to (string)
-export let form;
+export let form = false;
 // name of the input (string)
 export let name;
 // minimal value (int)
@@ -23,7 +23,7 @@ export let step = 1;
 // current input value (int)
 export let value = '';
 // if you want an alternative looks (undefined or 'navigation')
-export let style;
+export let style = undefined;
 // label for the decreasing button (string)
 export let decreaseLabel = `Decrease ${name} value`;
 // label for the increase button (string)

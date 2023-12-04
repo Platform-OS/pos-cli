@@ -1,26 +1,46 @@
 <!-- ================================================================== -->
 <script>
 
+// imports
+// ------------------------------------------------------------------------
+import { page } from '$app/stores';
+import { goto } from '$app/navigation';
+import { quartInOut } from 'svelte/easing';
+
 import Icon from '$lib/ui/Icon.svelte';
 import Number from '$lib/ui/forms/Number.svelte';
 
-import { quartInOut } from 'svelte/easing';
 
 
+// purpose:   handles closing the popup with esc key
+// ------------------------------------------------------------------------
+function handleKeyboardShortcuts(event){
+  if(event.key === 'Escape'){
+    let params = new URLSearchParams($page.url.searchParams.toString());
+    params.set('settings', false);
+
+    goto(`?${params.toString()}`);
+  }
+}
+
+
+// purpose:   custom transition when the popup appears
+// ------------------------------------------------------------------------
 function appear(node, { duration }) {
   return {
-    duration: 300,
+    duration: duration || 300,
     css: (t) => {
       const eased = quartInOut(t);
 
       return `
         opacity: ${eased};
         scale: ${eased};
-        translate: calc(${1 - eased} * -7rem) calc(${1 - eased} * 7rem);
+        translate: calc(${1 - eased} * 2.5rem) calc(${1 - eased} * 1rem);
+        transform-origin: bottom left;
       `;
     }
   };
-}
+};
 
 </script>
 
@@ -70,7 +90,9 @@ li {
 
 
 <!-- ================================================================== -->
-<section class="container" transition:appear>
+<svelte:document on:keydown={handleKeyboardShortcuts} />
+
+<dialog class="container" transition:appear open autofocus>
   <ul>
 
     <li>
@@ -100,4 +122,4 @@ li {
       />
     </li>
   </ul>
-</section>
+</dialog>
