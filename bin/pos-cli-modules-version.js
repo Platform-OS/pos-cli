@@ -8,11 +8,7 @@ const files = require('../lib/files');
 const logger = require('../lib/logger');
 const report = require('../lib/logger/report');
 const settings = require('../lib/settings');
-
-const configPath = `template-values.json`;
-const moduleConfig = () => {
-  return files.readJSON(configPath, { throwDoesNotExistError: true });
-};
+const { moduleConfig, moduleConfigFilePath } = require('../lib/modules');
 
 const readVersionFromPackage = (options, version) => {
   let packageJSONPath = `package.json`;
@@ -22,9 +18,10 @@ const readVersionFromPackage = (options, version) => {
   return files.readJSON(packageJSONPath, { throwDoesNotExistError: true }).version;
 };
 
-const storeNewVersion = (config, version) => {
+const storeNewVersion = async (config, version) => {
   config.version = version;
-  files.writeJSON(configPath, config);
+  const filePath = await moduleConfigFilePath();
+  files.writeJSON(filePath, config);
 };
 
 const validateVersions = (config, version, moduleName) => {
@@ -43,14 +40,14 @@ const validateVersions = (config, version, moduleName) => {
   return true;
 };
 
-function crateNewVersion(version, options) {
-  let config = moduleConfig();
+async function crateNewVersion(version, options) {
+  let config = await moduleConfig();
   const moduleName = config['machine_name'];
 
   if (options.package) version = readVersionFromPackage(options);
   if (!validateVersions(config, version, moduleName)) return;
 
-  storeNewVersion(config, version);
+  await storeNewVersion(config, version);
 }
 
 program
@@ -58,9 +55,9 @@ program
   .arguments('[version]', 'a valid semver version')
   .option('-p, --package [file]', 'use version from file as latest release, default: package.json')
   .option('--path <path>', 'module root directory, default is current directory')
-  .action((version, options) => {
+  .action(async (version, options) => {
     if (options.path) process.chdir(options.path);
-    crateNewVersion(version, options);
+    await crateNewVersion(version, options);
   });
 
 program.parse(process.argv);
