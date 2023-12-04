@@ -177,6 +177,14 @@
 ============================================================================ */
 :root {
   --space-page: 2rem;
+  --space-navigation: 1rem;
+  --space-data: .6rem;
+}
+
+:root.condensed {
+  --space-page: 1rem;
+  --space-navigation: .5rem;
+  --space-data: .2rem;
 }
 
 

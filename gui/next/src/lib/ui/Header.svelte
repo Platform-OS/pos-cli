@@ -27,8 +27,8 @@ const preloadTables = async () => {
 <style>
 
 header {
-  padding-block: 1rem;
-  height: 5.125rem;
+  padding-block: var(--space-navigation);
+  height: calc(3.125rem + var(--space-navigation) * 2);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -43,7 +43,7 @@ header {
 
 .wrapper {
   margin-inline: auto;
-  padding-inline: 2rem;
+  padding-inline: var(--space-page);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -67,7 +67,7 @@ h1 {
 
 ul {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-navigation);
 }
 
 li a {

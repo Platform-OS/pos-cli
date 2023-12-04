@@ -54,13 +54,18 @@ th {
   }
 
 td, th {
-  padding: .6rem;
+  padding: var(--space-data);
   vertical-align: top;
 
   border: 1px solid var(--color-frame);
 
   transition: background-color .2s linear;
 }
+
+  :global(.condensed) td,
+  :global(.condensed) th {
+    padding: var(--space-data) calc(var(--space-data) * 2);
+  }
 
   .collapsed td {
     max-width: 300px;

@@ -38,7 +38,7 @@ function appear(node, { duration }) {
       return `
         opacity: ${eased};
         scale: ${eased};
-        translate: calc(${1 - eased} * 2.5rem) calc(${1 - eased} * 1rem);
+        translate: calc(${1 - eased} * (var(--space-page) + .5rem)) calc(${1 - eased} * var(--space-navigation));
         transform-origin: bottom left;
       `;
     }
@@ -65,15 +65,15 @@ function changeFontSize(event){
   padding: var(--space-page);
   position: absolute;
   inset-inline-start: calc(var(--space-page) / -2);
-  inset-block-end: calc(100% + 1rem);
+  inset-block-end: calc(100% + var(--space-data));
 
   border-radius: 1rem;
   background-color: var(--color-background);
 }
 
   .container:after {
-    width: 1rem;
-    height: .7rem;
+    width: var(--space-navigation);
+    height: calc(var(--space-navigation) - var(--space-data));
     position: absolute;
     inset-block-start: 100%;
     inset-inline-start: calc(var(--space-page) + 1px);
@@ -110,14 +110,27 @@ li {
     <li>
       Layout density:
       <div class="combo">
-        <button class="button active combo">
+
+        <button
+          title="Relaxed layout"
+          class="button combo"
+          class:active={browser && localStorage.layoutType !== 'condensed'}
+          on:click={() => { localStorage.layoutType = 'relaxed'; document.location.reload(); } }
+        >
           <Icon icon="layoutHeadline" />
           <span class="label">Relaxed</span>
         </button>
-        <button class="button combo">
+
+        <button
+          title="Condensed layout"
+          class="button combo"
+          class:active={browser && localStorage.layoutType === 'condensed'}
+          on:click={() => { localStorage.layoutType = 'condensed'; document.location.reload(); } }
+        >
           <Icon icon="navigationMenu" />
           <span class="label">Condensed</span>
         </button>
+
       </div>
     </li>
 

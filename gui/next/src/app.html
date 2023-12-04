@@ -9,6 +9,9 @@
       if(localStorage.fontSize){
         document.documentElement.style.cssText = `--font-base-size: ${localStorage.fontSize}px`;
       }
+      if(localStorage.layoutType === 'condensed'){
+        document.documentElement.classList.add('condensed');
+      }
     </script>
   </head>
   <body>
