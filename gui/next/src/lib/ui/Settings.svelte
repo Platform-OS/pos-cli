@@ -5,11 +5,14 @@
 // ------------------------------------------------------------------------
 import { page } from '$app/stores';
 import { goto } from '$app/navigation';
+import { browser } from '$app/environment';
 import { quartInOut } from 'svelte/easing';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Number from '$lib/ui/forms/Number.svelte';
 
+
+let fontSize = browser ? parseInt(getComputedStyle(document.body).getPropertyValue('font-size')) : 16;
 
 
 // purpose:   handles closing the popup with esc key
@@ -28,7 +31,7 @@ function handleKeyboardShortcuts(event){
 // ------------------------------------------------------------------------
 function appear(node, { duration }) {
   return {
-    duration: duration || 300,
+    duration: duration || 200,
     css: (t) => {
       const eased = quartInOut(t);
 
@@ -41,6 +44,14 @@ function appear(node, { duration }) {
     }
   };
 };
+
+
+// purpose:   set the base font size in local storage
+// ------------------------------------------------------------------------
+function changeFontSize(event){
+  localStorage.fontSize = event.target.value;
+  document.documentElement.style.cssText = `--font-base-size: ${event.target.value}px`;
+}
 
 </script>
 
@@ -113,9 +124,10 @@ li {
       Base font size:
       <Number
         name="fontSize"
-        value={16}
-        min={1}
-        max={40}
+        bind:value={fontSize}
+        on:input={changeFontSize}
+        min={10}
+        max={36}
         step={1}
         decreaseLabel="Smaller font"
         increaseLabel="Larger font"

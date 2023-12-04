@@ -127,6 +127,11 @@ nav {
     scale: 1.1;
   }
 
+  .icon :global(svg){
+    width: 3rem;
+    height: 3rem;
+  }
+
 h2 {
   text-align: center;
   font-size: 1.1rem;
@@ -227,7 +232,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('database')}>
       <a href="/database" on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
         <div class="icon">
-          <Icon icon="database" size="48" />
+          <Icon icon="database" />
         </div>
         <h2>
           Database
@@ -257,7 +262,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('users')}>
       <a href="/users">
         <div class="icon">
-          <Icon icon="users" size="48" />
+          <Icon icon="users" />
         </div>
         <h2>
           Users
@@ -285,7 +290,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('logs')}>
       <a href="/logs">
         <div class="icon">
-          <Icon icon="log" size="48" />
+          <Icon icon="log" />
         </div>
         <h2>
           Logs
@@ -320,7 +325,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('backgroundJobs')}>
       <a href="/backgroundJobs">
         <div class="icon">
-          <Icon icon="backgroundJob" size="48" />
+          <Icon icon="backgroundJob" />
         </div>
         <h2>
           Background Jobs
@@ -349,7 +354,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('constants')}>
       <a href="/constants">
         <div class="icon">
-          <Icon icon="constant" size="48" />
+          <Icon icon="constant" />
         </div>
         <h2>
           Constants

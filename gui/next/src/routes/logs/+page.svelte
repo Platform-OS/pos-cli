@@ -98,24 +98,6 @@ const togglePinnedPanel = () => {
   }
 };
 
-
-// transition: 	slides from right
-// options: 	delay (int), duration (int)
-// ------------------------------------------------------------------------
-const appear = function(node, {
-  delay = 0,
-  duration = 150
-}){
-  return {
-    delay,
-    duration,
-    css: (t) => {
-      const eased = quintOut(t);
-
-      return `width: ${500 * eased}px;` }
-  }
-};
-
 </script>
 
 
@@ -472,7 +454,7 @@ footer {
                   </time>
                   <button type="button" title="Remove log from pinned panel" on:click={() => pin(log)}>
                     <span class="label">Remove log from pinned panel</span>
-                    <Icon icon="trash" size="18" />
+                    <Icon icon="trash" size="16" />
                   </button>
                 </div>
                 {#if log.data?.url}

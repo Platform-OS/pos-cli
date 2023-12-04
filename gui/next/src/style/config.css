@@ -4,6 +4,7 @@
   colors
   spacings
   fonts
+  sizes
 */
 
 
@@ -183,4 +184,11 @@
 ============================================================================ */
 :root {
   --font-normal: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+}
+
+
+/* sizes
+============================================================================ */
+:root {
+  --font-base-size: 1rem;
 }

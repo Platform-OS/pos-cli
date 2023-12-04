@@ -69,8 +69,8 @@ button:not([disabled]) {
 /* icon
 ============================================================================ */
 .button svg {
-  width: 18px;
-  height: 18px;
+  width: 1.12em;
+  height: 1.12em;
   margin-block: -.04rem;
 
   pointer-events: none;

@@ -224,8 +224,17 @@ a.active {
   color: var(--color-text-secondary);
 }
 
+.filter kbd {
+  font-size: .8em;
+}
+
 .filter kbd:first-of-type {
   margin-inline-start: auto;
+}
+
+.filter :global(svg) {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 </style>
@@ -241,11 +250,11 @@ a.active {
       {#if filterText}
         <button on:click={() => { filterText = null; filter(); } }>
           <span class="label">Reset filter</span>
-          <Icon icon="x" size="18" />
+          <Icon icon="x" />
         </button>
       {:else}
         <i>
-          <Icon icon="search" size="18" />
+          <Icon icon="search" />
         </i>
       {/if}
 

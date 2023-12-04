@@ -3,7 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { createEventDispatcher } from 'svelte';
+import { createEventDispatcher, tick } from 'svelte';
 
 import Icon from '$lib/ui/Icon.svelte';
 
@@ -12,6 +12,8 @@ import Icon from '$lib/ui/Icon.svelte';
 // ------------------------------------------------------------------------
 // form name that the input belongs to (string)
 export let form = false;
+// main number input (dom node)
+let input;
 // name of the input (string)
 export let name;
 // minimal value (int)
@@ -105,7 +107,7 @@ const dispatch = createEventDispatcher();
 
   <button
     class="button"
-    on:click|preventDefault={() => { value = value-1; dispatch('input'); }}
+    on:click|preventDefault={async () => { value = value-1; await tick(); input.dispatchEvent(new Event('input')); }}
     disabled={value <= min}
     aria-hidden={value <= min}
   >
@@ -114,6 +116,7 @@ const dispatch = createEventDispatcher();
   </button>
 
   <input
+    bind:this={input}
     form={form}
     type="number"
     name={name}
@@ -128,7 +131,7 @@ const dispatch = createEventDispatcher();
 
   <button
     class="button"
-    on:click|preventDefault={() => { value = value+1; dispatch('input'); }}
+    on:click|preventDefault={async () => { value = value+1; await tick(); input.dispatchEvent(new Event('input')); }}
     disabled={value >= max}
     aria-hidden={value >= max}
   >

@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
     %sveltekit.head%
+    <script>
+      if(localStorage.fontSize){
+        document.documentElement.style.cssText = `--font-base-size: ${localStorage.fontSize}px`;
+      }
+    </script>
   </head>
   <body>
     <div style="display: contents">%sveltekit.body%</div>

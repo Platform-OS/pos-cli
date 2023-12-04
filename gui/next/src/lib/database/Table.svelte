@@ -184,6 +184,11 @@ menu li:last-child :global(button) {
   padding-block-end: .6rem;
 }
 
+menu :global(svg) {
+  width: 1.38rem;
+  height: 1.38rem;
+}
+
 </style>
 
 
