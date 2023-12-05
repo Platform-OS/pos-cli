@@ -3,6 +3,7 @@
 const program = require('commander'),
       logger = require('../lib/logger'),
       swagger = require('../lib/swagger-client');
+const ServerError = require('../lib/ServerError');
 
 program
   .name('pos-cli logsv2 search')
@@ -23,7 +24,9 @@ program
       else
         console.log(response)
 
-    } catch(e) { console.error(e) }
+    } catch(e) {
+      logger.Error(e);
+    }
   });
 
 program.parse(process.argv);
