@@ -64,7 +64,7 @@ function changeFontSize(event){
   max-width: 50%;
   padding: var(--space-page);
   position: absolute;
-  inset-inline-start: calc(var(--space-page) / -2);
+  inset-inline-start: 0;
   inset-block-end: calc(100% + var(--space-data));
 
   border-radius: 1rem;
@@ -76,7 +76,7 @@ function changeFontSize(event){
     height: calc(var(--space-navigation) - var(--space-data));
     position: absolute;
     inset-block-start: 100%;
-    inset-inline-start: calc(var(--space-page) + 1px);
+    inset-inline-start: 1.1rem;
 
     background-color: var(--color-background);
     clip-path: polygon(50% 100%, 0 0, 100% 0);

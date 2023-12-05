@@ -97,10 +97,8 @@ const checkIfOnline = async () => {
 .connectionIndicator:after {
   width: .8rem;
   height: .8rem;
-  margin-inline-end: -.5em;
   display: block;
   position: relative;
-  top: 1px;
 
   border-radius: 100%;
   background-color: var(--color-text-inverted);

@@ -101,7 +101,7 @@ td, th {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: .7em;
+    gap: var(--space-button-block);
   }
 
   .date span {
@@ -173,19 +173,17 @@ menu li + li {
 
 menu :global(button) {
   width: 100%;
-  padding: .5rem 1rem;
+  padding: var(--space-button-block) var(--space-button-inline);
   display: flex;
   align-items: center;
   gap: .5em;
+
   line-height: 0;
+  leading-trim: both;
 }
 
 menu :global(button:hover) {
   background-color: var(--color-context-button-background-hover);
-}
-
-menu li:last-child :global(button) {
-  padding-block-end: .6rem;
 }
 
 menu :global(svg) {

@@ -111,7 +111,7 @@ const togglePinnedPanel = () => {
 }
 
 nav {
-  padding: 1rem;
+  padding: var(--space-navigation);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -181,7 +181,7 @@ table {
   }
 
   td {
-    padding: 1rem;
+    padding: var(--space-data);
 
     border-block-end: 1px solid var(--color-frame);
   }

@@ -137,7 +137,7 @@ const listKeyboardShortcut = (event) => {
 
 aside {
   width: 100%;
-  height: calc(100vh - 5.125rem);
+  height: calc(100vh - 3.125rem - var(--space-navigation) * 2);
   flex-shrink: 0;
   overflow: auto;
 
@@ -145,19 +145,21 @@ aside {
 }
 
 nav {
-  padding-bottom: 1rem;
+  padding-bottom: var(--space-navigation);
 }
 
 a {
   max-width: 100%;
-  margin: 0 1rem;
-  padding: .5rem 1rem;
+  margin: 1px var(--space-navigation);
+  padding: var(--space-data) var(--space-navigation);
   display: block;
   overflow: hidden;
 
   border-radius: .5rem;
 
   text-overflow: ellipsis;
+  leading-trim: both;
+  line-height: 1.5em;
 }
 
 a:hover,
@@ -174,16 +176,16 @@ a.active {
 }
 
 .filter-container {
-  padding: 1rem 1rem 2rem;
+  padding: var(--space-navigation) var(--space-navigation) calc(var(--space-navigation) * 2);
   position: sticky;
-  top: 0;
+  inset-block-start: 0;
 
   background-image: linear-gradient(to bottom, var(--color-page) 80%, rgba(var(--color-rgb-page), 0));
 }
 
 .filter {
   width: 100%;
-  padding: .5rem .8rem;
+  padding: var(--space-data) var(--space-button-inline);
   display: flex;
   align-items: center;
   gap: .5rem;
@@ -225,7 +227,7 @@ a.active {
 }
 
 .filter kbd {
-  font-size: .8em;
+  font-size: .8rem;
 }
 
 .filter kbd:first-of-type {

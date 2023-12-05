@@ -221,8 +221,6 @@ h2 {
   align-items: center;
   justify-content: end;
   gap: var(--space-navigation);
-
-  border-block-start: 1px solid var(--color-frame);
 }
 
   .links li {

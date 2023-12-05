@@ -62,7 +62,7 @@ const keyboardShortcuts = event => {
 <style>
 
 section {
-  height: calc(100vh - 5.125rem);
+  height: calc(100vh - 3.125rem - var(--space-navigation) * 2);
   flex-grow: 1;
   display: flex;
   flex-direction: column;
@@ -71,7 +71,7 @@ section {
 }
 
 nav {
-  padding: 1rem;
+  padding: var(--space-navigation);
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;

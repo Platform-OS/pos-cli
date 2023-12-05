@@ -176,15 +176,21 @@
 /* spacings
 ============================================================================ */
 :root {
-  --space-page: 2rem;
+  --space-page: 1rem;
   --space-navigation: 1rem;
   --space-data: .6rem;
+
+  --space-button-block: .7rem;
+  --space-button-inline: 1rem;
 }
 
 :root.condensed {
   --space-page: 1rem;
-  --space-navigation: .5rem;
-  --space-data: .2rem;
+  --space-navigation: .6rem;
+  --space-data: .3rem;
+
+  --space-button-block: .5rem;
+  --space-button-inline: .7rem;
 }
 
 
