@@ -24,6 +24,9 @@ const parseValue = (value, type) => {
   if(type === 'boolean'){
     if(value === true){
       parsed.value = 'true';
+    } else if(value === undefined) {
+      parsed.value = null;
+      parsed.type = 'null';
     } else {
       parsed.value = 'false';
     }
