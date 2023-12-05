@@ -11,7 +11,6 @@
 // ------------------------------------------------------------------------
 import { state } from '$lib/state.js';
 import { parseValue } from '$lib/parseValue.js'
-import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Delete from '$lib/database/Delete.svelte';
@@ -55,13 +54,18 @@ th {
   }
 
 td, th {
-  padding: .6rem;
+  padding: var(--space-data);
   vertical-align: top;
 
   border: 1px solid var(--color-frame);
 
   transition: background-color .2s linear;
 }
+
+  :global(.condensed) td,
+  :global(.condensed) th {
+    padding: var(--space-data) calc(var(--space-data) * 2);
+  }
 
   .collapsed td {
     max-width: 300px;
@@ -97,7 +101,7 @@ td, th {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: .7em;
+    gap: var(--space-button-block);
   }
 
   .date span {
@@ -169,19 +173,22 @@ menu li + li {
 
 menu :global(button) {
   width: 100%;
-  padding: .5rem 1rem;
+  padding: var(--space-button-block) var(--space-button-inline);
   display: flex;
   align-items: center;
   gap: .5em;
+
   line-height: 0;
+  leading-trim: both;
 }
 
 menu :global(button:hover) {
   background-color: var(--color-context-button-background-hover);
 }
 
-menu li:last-child :global(button) {
-  padding-block-end: .6rem;
+menu :global(svg) {
+  width: 1.38rem;
+  height: 1.38rem;
 }
 
 </style>

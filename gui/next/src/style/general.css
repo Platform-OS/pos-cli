@@ -11,6 +11,10 @@
 
 /* main page
 ============================================================================ */
+html {
+  font-size: var(--font-base-size);
+}
+
 body {
   background-color: var(--color-page);
 

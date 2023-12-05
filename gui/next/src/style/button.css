@@ -69,8 +69,8 @@ button:not([disabled]) {
 /* icon
 ============================================================================ */
 .button svg {
-  width: 18px;
-  height: 18px;
+  width: 1.12em;
+  height: 1.12em;
   margin-block: -.04rem;
 
   pointer-events: none;
@@ -110,6 +110,11 @@ button .label {
 
 .combo button:last-child {
   border-radius: 0 .5rem .5rem 0;
+}
+
+.combo button:focus-visible {
+  position: relative;
+  z-index: 1;
 }
 
 

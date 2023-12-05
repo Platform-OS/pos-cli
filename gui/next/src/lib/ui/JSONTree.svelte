@@ -64,7 +64,7 @@ div :global(div > ul > ul > .indent) {
   <JSONTree
     value={value}
     defaultExpandedLevel={expandedLines}
-    --json-tree-font-size="16px"
+    --json-tree-font-size="var(--font-base-size)"
     --json-tree-li-line-height="1.7"
     --json-tree-font-family="monospace"
     --json-tree-string-color="var(--color-text)"

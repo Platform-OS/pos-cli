@@ -27,8 +27,8 @@ const preloadTables = async () => {
 <style>
 
 header {
-  padding-block: 1rem;
-  height: 82px;
+  padding-block: var(--space-navigation);
+  height: calc(3.125rem + var(--space-navigation) * 2);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -43,7 +43,7 @@ header {
 
 .wrapper {
   margin-inline: auto;
-  padding-inline: 2rem;
+  padding-inline: var(--space-page);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -57,12 +57,17 @@ header {
   }
 
 h1 {
-  line-height: .5em;
+  line-height: 0;
 }
+
+  h1 svg {
+    width: auto;
+    height: 1.56rem;
+  }
 
 ul {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-navigation);
 }
 
 li a {
@@ -78,7 +83,6 @@ li a {
   background-color: var(--color-background);
 
   text-transform: uppercase;
-  font-size: .9rem;
   color: var(--color-text-secondary);
 
   transition-property: background-color, border-radius;
@@ -97,6 +101,11 @@ li a {
     color: var(--color-text);
   }
 
+  li :global(svg) {
+    width: 1.5em;
+    height: 1.5em;
+  }
+
 /* tooltip appearing on hover */
 .label {
   margin-block-start: .4rem;
@@ -110,6 +119,8 @@ li a {
   background-color: var(--color-text);
 
   white-space: nowrap;
+  leading-trim: both;
+  font-size: .9em;
   font-weight: 500;
   color: var(--color-page);
 

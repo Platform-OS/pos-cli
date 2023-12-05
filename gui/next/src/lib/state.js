@@ -40,7 +40,6 @@ function createStore(){
     state.table = {};
     // type of view for the records ('table' or 'tiles')
     state.view = {
-      database: view?.database ? view.database : 'table',
       tableStyle: view?.tableStyle ? view.tableStyle : 'collapsed'
     };
     // currently viewed records list (object)

@@ -4,7 +4,9 @@
 // imports
 // ------------------------------------------------------------------------
 import Icon from '$lib/ui/Icon.svelte';
+import Settings from '$lib/ui/Settings.svelte';
 
+import { page } from '$app/stores';
 import { state } from '$lib/state';
 import { table } from '$lib/api/table';
 
@@ -58,26 +60,34 @@ const toggleDescription = what => {
 <style>
 
 nav {
+  height: calc(100vh - 3.125rem - var(--space-navigation) * 2);
   margin-inline: auto;
-  margin-block-start: 2rem;
-  padding-inline: 2rem;
+  padding-block-start: var(--space-navigation);
+  padding-inline: var(--space-page);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-navigation) * 2);
 }
 
 
 .applications {
   display: flex;
-  gap: 2rem;
+  gap: calc(var(--space-navigation) * 2);
   flex-wrap: wrap;
   justify-content: center;
 }
 
-  .applications + .applications {
-    margin-top: 4rem;
+  .applications:first-child {
+    margin-block-start: auto;
   }
 
+  .applications:nth-child(2) {
+    margin-block-end: auto;
+  }
 
 .application {
-  width: 200px;
+  width: calc(12.5 * var(--space-navigation));
+  min-width: 120px;
   position: relative;
   display: flex;
   overflow: hidden;
@@ -89,24 +99,25 @@ nav {
 }
 
   .application > a {
-    width: 200px;
-    padding: 2.75rem 1rem 2rem;
+    width: calc(12.5 * var(--space-navigation));
+    min-width: 120px;
+    padding: 2.75rem var(--space-navigation) calc(var(--space-navigation));
     display: flex;
     flex-shrink: 0;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-navigation);
   }
 
   .application.showDescription {
-    width: 500px;
+    width: calc(21.25rem + var(--space-navigation) * 10);
   }
 
 .icon {
-  width: 100px;
-  height: 100px;
-  padding: .5rem;
+  width: calc(var(--space-navigation) * 6.25);
+  height: calc(var(--space-navigation) * 6.25);
+  padding: var(--space-navigation);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -125,15 +136,25 @@ nav {
     scale: 1.1;
   }
 
+  .icon :global(svg){
+    width: 3rem;
+    height: 3rem;
+  }
+
 h2 {
+  margin-block: auto;
+
   text-align: center;
   font-size: 1.1rem;
   font-weight: 500;
 }
 
 .description {
-  width: 284px;
-  padding: 2.75rem 1rem 2rem 0;
+  width: calc(7.5rem + var(--space-navigation) * 8);
+  padding-inline-end: var(--space-navigation);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -176,7 +197,7 @@ h2 {
   }
 
   .actions button {
-    padding: .25em .5em;
+    padding: .15rem .5rem;
 
     color: var(--color-text-secondary);
 
@@ -188,17 +209,27 @@ h2 {
     color: var(--color-interaction-hover);
   }
 
+  .actions :global(svg) {
+    width: .875rem;
+  }
+
 
 .links {
-  margin-block-start: 4rem;
-  padding-block-start: 3.5rem;
+  margin-block-start: auto;
+  padding-block: var(--space-navigation);
   display: flex;
   align-items: center;
   justify-content: end;
-  gap: 2rem;
-
-  border-block-start: 1px solid var(--color-frame);
+  gap: var(--space-navigation);
 }
+
+  .links li {
+    position: relative;
+  }
+
+  .links li:first-child {
+    margin-inline-end: auto;
+  }
 
 </style>
 
@@ -217,7 +248,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('database')}>
       <a href="/database" on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
         <div class="icon">
-          <Icon icon="database" size="48" />
+          <Icon icon="database" />
         </div>
         <h2>
           Database
@@ -231,13 +262,13 @@ h2 {
       <ul class="actions">
         <li>
           <button title="More information" on:click={() => toggleDescription('database')}>
-            <Icon icon="info" size="14" />
+            <Icon icon="info" />
             <span class="label">Show more information about Database tool</span>
           </button>
         </li>
         <li>
           <button title="{$state.header.includes('database') ? 'Unpin Database from' : 'Pin Database to'} header menu" on:click={() => pin('database')}>
-            <Icon icon={$state.header.includes('database') ? 'pinFilled' : 'pin'} size="14" />
+            <Icon icon={$state.header.includes('database') ? 'pinFilled' : 'pin'} />
             <span class="label">{$state.header.includes('database') ? 'Unpin Database from' : 'Pin Database to'} header menu</span>
           </button>
         </li>
@@ -247,7 +278,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('users')}>
       <a href="/users">
         <div class="icon">
-          <Icon icon="users" size="48" />
+          <Icon icon="users" />
         </div>
         <h2>
           Users
@@ -259,13 +290,13 @@ h2 {
       <ul class="actions">
         <li>
           <button title="More information" on:click={() => toggleDescription('users')}>
-            <Icon icon="info" size="14" />
+            <Icon icon="info" />
             <span class="label">Show more information about Users tool</span>
           </button>
         </li>
         <li>
           <button title="{$state.header.includes('users') ? 'Unpin Users from' : 'Pin Users to'} header menu" on:click={() => pin('users')}>
-            <Icon icon={$state.header.includes('users') ? 'pinFilled' : 'pin'} size="14" />
+            <Icon icon={$state.header.includes('users') ? 'pinFilled' : 'pin'} />
             <span class="label">{$state.header.includes('users') ? 'Unpin Users from' : 'Pin Users to'} header menu</span>
           </button>
         </li>
@@ -275,7 +306,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('logs')}>
       <a href="/logs">
         <div class="icon">
-          <Icon icon="log" size="48" />
+          <Icon icon="log" />
         </div>
         <h2>
           Logs
@@ -294,13 +325,13 @@ h2 {
         </li>
         <li>
           <button title="More information" on:click={() => toggleDescription('logs')}>
-            <Icon icon="info" size="14" />
+            <Icon icon="info" />
             <span class="label">Show more information about Logs tool</span>
           </button>
         </li>
         <li>
           <button title="{$state.header.includes('logs') ? 'Unpin Logs from' : 'Pin Logs to'} header menu" on:click={() => pin('logs')}>
-            <Icon icon={$state.header.includes('logs') ? 'pinFilled' : 'pin'} size="14" />
+            <Icon icon={$state.header.includes('logs') ? 'pinFilled' : 'pin'} />
             <span class="label">{$state.header.includes('logs') ? 'Unpin Logs from' : 'Pin Logs to'} header menu</span>
           </button>
         </li>
@@ -310,7 +341,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('backgroundJobs')}>
       <a href="/backgroundJobs">
         <div class="icon">
-          <Icon icon="backgroundJob" size="48" />
+          <Icon icon="backgroundJob" />
         </div>
         <h2>
           Background Jobs
@@ -323,13 +354,13 @@ h2 {
       <ul class="actions">
         <li>
           <button title="More information" on:click={() => toggleDescription('backgroundJobs')}>
-            <Icon icon="info" size="14" />
+            <Icon icon="info" />
             <span class="label">Show more information about Background Jobs tool</span>
           </button>
         </li>
         <li>
           <button title="{$state.header.includes('backgroundJobs') ? 'Unpin Background Jobs from' : 'Pin Background Jobs to'} header menu" on:click={() => pin('backgroundJobs')}>
-            <Icon icon={$state.header.includes('backgroundJobs') ? 'pinFilled' : 'pin'} size="14" />
+            <Icon icon={$state.header.includes('backgroundJobs') ? 'pinFilled' : 'pin'} />
             <span class="label">{$state.header.includes('backgroundJobs') ? 'Unpin Background Jobs from' : 'Pin Background Jobs to'} header menu</span>
           </button>
         </li>
@@ -339,7 +370,7 @@ h2 {
     <li class="application" class:showDescription={showDescriptionFor.includes('constants')}>
       <a href="/constants">
         <div class="icon">
-          <Icon icon="constant" size="48" />
+          <Icon icon="constant" />
         </div>
         <h2>
           Constants
@@ -353,13 +384,13 @@ h2 {
       <ul class="actions">
         <li>
           <button title="More information" on:click={() => toggleDescription('constants')}>
-            <Icon icon="info" size="14" />
+            <Icon icon="info" />
             <span class="label">Show more information about Constants tool</span>
           </button>
         </li>
         <li>
           <button title="{$state.header.includes('constants') ? 'Unpin Constants from' : 'Pin Constants to'} header menu" on:click={() => pin('constants')}>
-            <Icon icon={$state.header.includes('constants') ? 'pinFilled' : 'pin'} size="14" />
+            <Icon icon={$state.header.includes('constants') ? 'pinFilled' : 'pin'} />
             <span class="label">{$state.header.includes('constants') ? 'Unpin Constants from' : 'Pin Constants to'} header menu</span>
           </button>
         </li>
@@ -387,13 +418,13 @@ h2 {
       <ul class="actions">
         <li>
           <button title="More information" on:click={() => toggleDescription('liquid')}>
-            <Icon icon="info" size="14" />
+            <Icon icon="info" />
             <span class="label">Show more information about Liquid Evaluator</span>
           </button>
         </li>
         <li>
           <button title="{$state.header.includes('liquid') ? 'Unpin Liquid Evaluator from' : 'Pin Liquid Evaluator to'} header menu" on:click={() => pin('liquid')}>
-            <Icon icon={$state.header.includes('liquid') ? 'pinFilled' : 'pin'} size="14" />
+            <Icon icon={$state.header.includes('liquid') ? 'pinFilled' : 'pin'} />
             <span class="label">{$state.header.includes('liquid') ? 'Unpin Liquid Evaluator from' : 'Pin Liquid Evaluator to'} header menu</span>
           </button>
         </li>
@@ -417,13 +448,13 @@ h2 {
       <ul class="actions">
         <li>
           <button title="More information" on:click={() => toggleDescription('graphiql')}>
-            <Icon icon="info" size="14" />
+            <Icon icon="info" />
             <span class="label">Show more information about GraphiQL</span>
           </button>
         </li>
         <li>
           <button title="{$state.header.includes('graphiql') ? 'Unpin GraphiQL from' : 'Pin GraphiQL to'} header menu" on:click={() => pin('graphiql')}>
-            <Icon icon={$state.header.includes('graphiql') ? 'pinFilled' : 'pin'} size="14" />
+            <Icon icon={$state.header.includes('graphiql') ? 'pinFilled' : 'pin'} />
             <span class="label">{$state.header.includes('graphiql') ? 'Unpin GraphiQL from' : 'Pin GraphiQL to'} header menu</span>
           </button>
         </li>
@@ -434,6 +465,14 @@ h2 {
 
   <ul class="links">
 
+    <li>
+      {#if $page.url.searchParams.get('settings') === 'true'}
+        <Settings />
+      {/if}
+      <a href="?settings={$page.url.searchParams.get('settings') === 'true' ? 'false' : 'true'}" class="button">
+        <Icon icon="settings" />
+      </a>
+    </li>
     <li>
       <a href="https://documentation.platformos.com" class="button">
         <Icon icon="book" />

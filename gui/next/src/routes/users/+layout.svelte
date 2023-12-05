@@ -77,7 +77,7 @@ const appear = function(node, {
 
 nav {
   width: 100%;
-  padding: 1rem;
+  padding: var(--space-navigation);
 
   background-color: var(--color-background);
 }
@@ -140,7 +140,7 @@ th {
 }
 
 td, th {
-  padding: .6rem;
+  padding: var(--space-data);
   vertical-align: top;
 
   border: 1px solid var(--color-frame);

@@ -32,7 +32,8 @@ afterUpdate(() => {
   flex-direction: column;
   align-items: flex-start;
   position: fixed;
-  top: 100%;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
 
   translate: 0 var(--height);
 
@@ -41,7 +42,7 @@ afterUpdate(() => {
 
 .notification {
   margin-block-start: .5rem;
-  padding: .7rem 2rem .8rem 1.5rem;
+  padding: var(--space-button-block) calc(var(--space-button-inline) * 1.5) var(--space-button-block) calc(var(--space-button-inline) * 1.5);
   display: flex;
   gap: 1em;
   align-items: center;
@@ -49,6 +50,8 @@ afterUpdate(() => {
 
   border-radius: 1rem;
 
+  leading-trim: both;
+  line-height: 1em;
   color: var(--color-text-inverted);
 }
 
