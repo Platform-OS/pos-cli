@@ -5,15 +5,18 @@
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
     
-		<link rel="modulepreload" href="/_app/immutable/entry/start.69563e8f.js">
+		<link rel="modulepreload" href="/_app/immutable/entry/start.4116a455.js">
 		<link rel="modulepreload" href="/_app/immutable/chunks/scheduler.bed694a1.js">
-		<link rel="modulepreload" href="/_app/immutable/chunks/singletons.41a810d3.js">
+		<link rel="modulepreload" href="/_app/immutable/chunks/singletons.8af9d385.js">
 		<link rel="modulepreload" href="/_app/immutable/chunks/index.95c2a168.js">
-		<link rel="modulepreload" href="/_app/immutable/entry/app.cf91d78a.js">
+		<link rel="modulepreload" href="/_app/immutable/entry/app.87054f7f.js">
 		<link rel="modulepreload" href="/_app/immutable/chunks/index.606d5641.js">
     <script>
       if(localStorage.fontSize){
         document.documentElement.style.cssText = `--font-base-size: ${localStorage.fontSize}px`;
+      }
+      if(localStorage.layoutType === 'condensed'){
+        document.documentElement.classList.add('condensed');
       }
     </script>
   </head>
@@ -21,7 +24,7 @@
     <div style="display: contents">
 			<script>
 				{
-					__sveltekit_1cdi66w = {
+					__sveltekit_5r2m9n = {
 						base: "",
 						env: {}
 					};
@@ -29,8 +32,8 @@
 					const element = document.currentScript.parentElement;
 
 					Promise.all([
-						import("/_app/immutable/entry/start.69563e8f.js"),
-						import("/_app/immutable/entry/app.cf91d78a.js")
+						import("/_app/immutable/entry/start.4116a455.js"),
+						import("/_app/immutable/entry/app.87054f7f.js")
 					]).then(([kit, app]) => {
 						kit.start(app, element);
 					});
