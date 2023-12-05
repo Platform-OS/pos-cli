@@ -199,6 +199,9 @@ menu li:last-child :global(button) {
           {/each}
         <th>created at</th>
         <th>updated at</th>
+        {#if $state.filters.deleted === 'true'}
+          <th>deleted at</th>
+        {/if}
       </tr>
     </thead>
     {#if $state.records?.results?.length}
@@ -254,6 +257,12 @@ menu li:last-child :global(button) {
             {(new Date(record?.updated_at)).toLocaleDateString(undefined, {})}
             <span>{(new Date(record?.updated_at)).toLocaleTimeString(undefined, {})}</span>
           </td>
+          {#if $state.filters.deleted === 'true'}
+            <td class="date">
+              {(new Date(record?.deleted_at)).toLocaleDateString(undefined, {})}
+              <span>{(new Date(record?.deleted_at)).toLocaleTimeString(undefined, {})}</span>
+            </td>
+          {/if}
         </tr>
       {/each}
     {/if}

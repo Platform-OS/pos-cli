@@ -164,7 +164,7 @@ const record = {
       sort = `created_at: { order: DESC }`;
     }
 
-    const deletedFilter = params.deleted ? `deleted_at: { exists: true }` : '';
+    const deletedFilter = params.deleted === 'true' ? `deleted_at: { exists: true }` : '';
 
     const filters = params.filters?.attributes ? getFiltersString(params.filters.attributes) : '';
 
