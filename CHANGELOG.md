@@ -1,7 +1,8 @@
 # Changelog
 
 ## master
-* Improvement: allow to push modules with new directory structure `modules/<module_name>/public` 
+* Improvement: allow to push modules with new directory structure `modules/<module_name>/public`
+* Bug: Properly parse boolean values in GUI
 
 ## 4.12.3
 * Chore: New package build
