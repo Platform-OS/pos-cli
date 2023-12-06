@@ -15,6 +15,7 @@ import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Delete from '$lib/database/Delete.svelte';
+import Restore from '$lib/database/Restore.svelte';
 import JSONTree from '$lib/ui/JSONTree.svelte';
 
 
@@ -228,7 +229,11 @@ menu li:last-child :global(button) {
                     </button>
                   </li>
                   <li>
-                    <Delete table={$state.table} id={record.id} />
+                    {#if $state.filters.deleted === 'true'}
+                      <Restore table={$state.table} id={record.id} />
+                    {:else}
+                      <Delete table={$state.table} id={record.id} />
+                    {/if}
                   </li>
                 </ul>
               </menu>

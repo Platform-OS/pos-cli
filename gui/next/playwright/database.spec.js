@@ -609,3 +609,40 @@ test('expanded view', async ({ page }) => {
   await page.getByRole('button', { name: 'Expand values'}).click();
   await expect(page.getByRole('cell', { name: 'Aliquam condimentum condimentum ultricies. Aenean mollis posuere purus, non gravida tortor congue non.', exact: true })).toBeVisible();
 });
+
+
+test('restoring deleted record', async ({ page }) => {
+  page.on('dialog', async dialog => {
+    expect(dialog.message()).toEqual('Are you sure you want to delete this record?');
+    await dialog.accept();
+  });
+
+  await page.goto(url);
+  await page.getByText('qa_table_4').click();
+
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
+
+  await page.getByTitle('Show deleted records').click();
+
+  await expect(page.getByRole('cell', { name: 'deleted at' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden();
+
+  await page.getByTitle('Show current database state').click();
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'More options' }).first().click();
+  await page.getByRole('button', { name: 'Delete record' }).click();
+
+  await page.getByTitle('Show deleted records').click();
+  await expect(page.getByRole('cell', { name: 'deleted at' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'More options' }).first().click();
+  await page.getByRole('button', { name: 'Restore record' }).click();
+
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden();
+
+  await page.getByTitle('Show current database state').click();
+  await expect(page.getByRole('cell', { name: 'deleted at' })).toBeHidden();
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
+});
