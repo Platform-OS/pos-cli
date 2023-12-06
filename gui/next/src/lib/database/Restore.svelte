@@ -15,7 +15,7 @@ export let id;
 
 let form;
 
-const remove = async (event) => {
+const restore = async (event) => {
 
   event.preventDefault();
 
@@ -35,7 +35,7 @@ const remove = async (event) => {
 
 
 <!-- ================================================================== -->
-<form bind:this={form} on:submit={remove}>
+<form bind:this={form} on:submit={restore}>
   <input type="hidden" name="tableName" value={table.name}>
   <input type="hidden" name="recordId" value={id}>
   <button>
