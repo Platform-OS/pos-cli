@@ -117,3 +117,23 @@ test('should run help on init', async () => {
   expect(stdout).toMatch('Usage: pos-cli init [options]');
   expect(code).toEqual(0);
 });
+
+// LOGSV2
+//
+test('should run help on logsv2', async () => {
+  const { stderr, code } = await run('logsv2');
+  expect(stderr).toMatch('Usage: pos-cli logsv2 [options] [command]');
+  expect(code).toEqual(1);
+});
+
+test('should run help logsv2 search', async () => {
+  const { stderr, code } = await run('logsv2 search');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]`');
+  expect(code).toEqual(1);
+});
+
+test('should run help logsv2 search', async () => {
+  const { stderr, code } = await run('logsv2 search');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]`');
+  expect(code).toEqual(1);
+});

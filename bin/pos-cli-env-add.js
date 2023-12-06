@@ -7,6 +7,7 @@ const Portal = require('../lib/portal');
 const waitForStatus = require('../lib/data/waitForStatus');
 const { readPassword } = require('../lib/utils/password');
 const { storeEnvironment, deviceAuthorizationFlow } = require('../lib/environments');
+const ServerError = require('../lib/ServerError');
 
 const saveToken = (settings, token) => {
   storeEnvironment(Object.assign(settings, { token: token }));
@@ -49,26 +50,34 @@ program
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
   .action(async (environment, params) => {
-    checkParams(params);
-    const settings = { url: params.url, environment: environment, email: params.email };
+    try {
+      checkParams(params);
+      const settings = { url: params.url, environment: environment, email: params.email };
 
-    if (params.token) {
-      token = params.token;
-    } else if (!params.email){
-      token = await deviceAuthorizationFlow(params.url);
-    } else {
-      logger.Info(
-        `Please make sure that you have a permission to deploy. \n You can verify it here: ${Portal.HOST}/me/permissions`,
-        { hideTimestamp: true }
-      );
+      if (params.token) {
+        token = params.token;
+      } else if (!params.email){
+        token = await deviceAuthorizationFlow(params.url);
+      } else {
+        logger.Info(
+          `Please make sure that you have a permission to deploy. \n You can verify it here: ${Portal.HOST}/me/permissions`,
+          { hideTimestamp: true }
+        );
 
-      const password = await readPassword();
-      logger.Info(`Asking ${Portal.HOST} for access token...`);
+        const password = await readPassword();
+        logger.Info(`Asking ${Portal.HOST} for access token...`);
 
-      token = await login(params.email, password, params.url);
+        token = await login(params.email, password, params.url);
+      }
+
+      if (token) saveToken(settings, token);
+    } catch (e) {
+      if (ServerError.isNetworkError(e))
+        ServerError.handler(e)
+      else
+        logger.Error('Error');
+      process.exit(1);
     }
-
-    if (token) saveToken(settings, token);
   });
 
 program.parse(process.argv);
