@@ -1,10 +1,11 @@
 # Changelog
 
-## master
+## 4.14.4
 * Improvement: allow to push modules with new directory structure `modules/<module_name>/public`
 * Bug: Properly parse boolean values in GUI
+* Bug: Fix adding env with `url` only
 
-## 4.12.3
+## 4.14.3
 * Chore: New package build
 
 ## 4.14.2
