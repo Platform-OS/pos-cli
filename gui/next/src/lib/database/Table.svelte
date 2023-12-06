@@ -15,6 +15,7 @@ import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Delete from '$lib/database/Delete.svelte';
+import Restore from '$lib/database/Restore.svelte';
 import JSONTree from '$lib/ui/JSONTree.svelte';
 
 
@@ -199,6 +200,9 @@ menu li:last-child :global(button) {
           {/each}
         <th>created at</th>
         <th>updated at</th>
+        {#if $state.filters.deleted === 'true'}
+          <th>deleted at</th>
+        {/if}
       </tr>
     </thead>
     {#if $state.records?.results?.length}
@@ -225,7 +229,11 @@ menu li:last-child :global(button) {
                     </button>
                   </li>
                   <li>
-                    <Delete table={$state.table} id={record.id} />
+                    {#if $state.filters.deleted === 'true'}
+                      <Restore table={$state.table} id={record.id} />
+                    {:else}
+                      <Delete table={$state.table} id={record.id} />
+                    {/if}
                   </li>
                 </ul>
               </menu>
@@ -254,6 +262,12 @@ menu li:last-child :global(button) {
             {(new Date(record?.updated_at)).toLocaleDateString(undefined, {})}
             <span>{(new Date(record?.updated_at)).toLocaleTimeString(undefined, {})}</span>
           </td>
+          {#if $state.filters.deleted === 'true'}
+            <td class="date">
+              {(new Date(record?.deleted_at)).toLocaleDateString(undefined, {})}
+              <span>{(new Date(record?.deleted_at)).toLocaleTimeString(undefined, {})}</span>
+            </td>
+          {/if}
         </tr>
       {/each}
     {/if}

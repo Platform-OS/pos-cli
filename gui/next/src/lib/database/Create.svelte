@@ -105,7 +105,7 @@ const save = async (event) => {
 
       if(!create.errors){
         state.clearFilters();
-        record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort });
+        record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
         state.highlight('record', create.model_create.id);
         state.notification.create('success', `Record ${create.model_create.id} created`);
         $state.record = null;
@@ -118,7 +118,7 @@ const save = async (event) => {
       const edit = await record.edit({ table: $state.table.name, id: $state.record.id, properties: properties });
 
       if(!edit.errors){
-        record.get({table: $page.params.id, filters: $state.filters, sort: $state.sort });
+        record.get({table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
         state.highlight('record', edit.model_update.id);
         state.notification.create('success', `Record ${edit.model_update.id} updated`);
         $state.record = null;

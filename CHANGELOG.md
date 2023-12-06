@@ -1,5 +1,8 @@
 # Changelog
 
+## master
+* Feature: Ability to list and restore deleted records through the UI
+
 ## 4.14.4
 * Improvement: allow to push modules with new directory structure `modules/<module_name>/public`
 * Bug: Properly parse boolean values in GUI

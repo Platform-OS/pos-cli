@@ -34,9 +34,9 @@ const operations = {
 // purpose:		parses the <form>, saves new filters to the store and triggers records reload
 // ------------------------------------------------------------------------
 const filter = () => {
-  $state.filters = { page: 1, attributes: [ Object.fromEntries((new FormData(form)).entries()) ] };
+  $state.filters = { page: 1, attributes: [ Object.fromEntries((new FormData(form)).entries()) ], deleted: $state.filters.deleted };
 
-  record.get({ table: $state.table.id, filters: $state.filters, sort: $state.sort });
+  record.get({ table: $state.table.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
 }
 
 </script>

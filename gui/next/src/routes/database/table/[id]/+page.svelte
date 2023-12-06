@@ -40,7 +40,7 @@ $: $page.params.id && state.clearFilters();
 // ------------------------------------------------------------------------
 const refresh = () => {
   refreshing = true;
-  record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort }).then(() => refreshing = false);
+  record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted }).then(() => refreshing = false);
 };
 
 
@@ -115,6 +115,11 @@ nav {
   gap: 1rem;
 }
 
+.combo input {
+  position: absolute;
+  inset-inline-start: -100vw;
+}
+
 </style>
 
 
@@ -161,7 +166,7 @@ nav {
         decreaseLabel="Previous page"
         increaseLabel="Next page"
         style="navigation"
-        on:input={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort }); } }
+        on:input={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted }); } }
       />
       of {$state.records?.total_pages || 1}
     </div>
@@ -190,33 +195,49 @@ nav {
         </button>
       {/if}
 
-      <!--
       <div class="combo">
 
-        <button
-          class="button"
-          class:active={$state.view.database === 'table'}
-          title="Table view"
-          on:click={() => $state.view.database = 'table'}
-          disabled={$state.view.database === 'table'}
+        <input
+          type="radio"
+          name="deleted"
+          id="deletedTrue"
+          bind:group={$state.filters.deleted}
+          value="false"
+          disabled={$state.filters.deleted === 'false'}
+          on:change={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted }); } }
         >
-          <Icon icon="list" />
-          <span class="label">Table view</span>
-        </button>
+        <label
+          for="deletedTrue"
+          class="button"
+          class:active={$state.filters.deleted === 'false'}
+          class:disabled={$state.filters.deleted === 'false'}
+          title="Show{$state.filters.deleted === 'false' ? 'ing' : ''} current database state"
+        >
+          <Icon icon="leaf" />
+          <span class="label">Show{$state.filters.deleted === 'false' ? 'ing' : ''} current database state</span>
+        </label>
 
-        <button
+        <label
+          for="deletedFalse"
           class="button"
-          class:active={$state.view.database === 'tiles'}
-          title="Tiles view"
-          on:click={() => $state.view.database = 'tiles'}
-          disabled={$state.view.database === 'tiles'}
+          class:active={$state.filters.deleted === 'true'}
+          class:disabled={$state.filters.deleted === 'true'}
+          title="Show{$state.filters.deleted === 'true' ? 'ing' : ''} deleted records"
         >
-          <Icon icon="tiles" />
-          <span class="label">Tiles view</span>
-        </button>
+          <Icon icon="recycle" />
+          <span class="label">Show{$state.filters.deleted === 'true' ? 'ing' : ''} deleted records</span>
+        </label>
+        <input
+          type="radio"
+          name="deleted"
+          id="deletedFalse"
+          bind:group={$state.filters.deleted}
+          value="true"
+          disabled={$state.filters.deleted === 'true'}
+          on:change={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted }); } }
+        >
 
       </div>
-      -->
 
     </div>
   </nav>

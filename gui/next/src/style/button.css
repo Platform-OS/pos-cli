@@ -31,11 +31,13 @@
   transition: all .1s linear;
 }
 
-button:not([disabled]) {
-  cursor: pointer;
+button:not(:disabled),
+.button:not(.disabled) {
+  cursor: pointer
 }
 
-.button:not(:disabled):hover {
+button:not(:disabled):hover,
+.button:not(.disabled):hover {
   background-color: rgba(var(--color-rgb-interaction-hover), .2);
 }
 
@@ -91,6 +93,7 @@ button:not([disabled]) {
 
 /* invisible label in button for screen readers
 ============================================================================ */
+.button .label,
 button .label {
   position: absolute;
   left: -100vw;
@@ -104,11 +107,11 @@ button .label {
   gap: 1px;
 }
 
-.combo button:first-child {
+.combo .button:first-of-type {
   border-radius: .5rem 0 0 .5rem;
 }
 
-.combo button:last-child {
+.combo .button:last-of-type {
   border-radius: 0 .5rem .5rem 0;
 }
 

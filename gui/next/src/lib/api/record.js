@@ -81,7 +81,7 @@ const getPropertiesString = (props) => {
 
 // purpose:		build the filters string to pass to GraphQL
 // arguments:	list of attributes to filter the data with (array of objects) that icludes:
-//				attribute_type, property, operation, value
+//				    attribute_type, property, operation, value
 // returns:		GraphQL string with filtering properties (string)
 // ------------------------------------------------------------------------
 const getFiltersString = (filters) => {
@@ -129,9 +129,9 @@ const record = {
 
   // purpose:		gets records from the database for fiven table id
   // arguments:	(object)
-  //				id of the table that you need the records for (int)
-  //				filters to the graphql query (object)
-  //				if you want to get also the deleted items (bool)
+  //				    id of the table that you need the records for (int)
+  //				    filters to the graphql query (object)
+  //				    if you want to get also the deleted items (bool)
   // returns:		array of records as they appear in the database (array)
   // ------------------------------------------------------------------------
   get: (args) => {
@@ -164,7 +164,7 @@ const record = {
       sort = `created_at: { order: DESC }`;
     }
 
-    const deletedFilter = params.deleted ? `deleted_at: { exists: true }` : '';
+    const deletedFilter = params.deleted === 'true' ? `deleted_at: { exists: true }` : '';
 
     const filters = params.filters?.attributes ? getFiltersString(params.filters.attributes) : '';
 
@@ -199,8 +199,8 @@ const record = {
 
   // purpose:		creates new record in the database
   // arguments:	(object)
-  //				tableName (string) - name of the table that you are adding the record in
-  //				properties (FormData) - key-value pairs for the record
+  //				    tableName (string) - name of the table that you are adding the record in
+  //				    properties (FormData) - key-value pairs for the record
   // returns:		id of the newly created record (int)
   // ------------------------------------------------------------------------
   create: (args) => {
@@ -225,9 +225,9 @@ const record = {
 
   // purpose:		edits record in the database
   // arguments:	(object)
-  //				tableName (string) - name of the table that you are adding the record in
-  //				id (int) - id of the record to edit
-  //				properties (FormData) - key-value pairs for the record
+  //				    tableName (string) - name of the table that you are adding the record in
+  //				    id (int) - id of the record to edit
+  //				    properties (FormData) - key-value pairs for the record
   // returns:		id of the edited record (int)
   // ------------------------------------------------------------------------
   edit: (args) => {
@@ -257,8 +257,8 @@ const record = {
 
   // purpose:		deletes record in the database
   // arguments:	(object)
-  //				tableName (string) - name of the table that you are deleting the record from
-  //				id (int) - id of the record to delete
+  //				    tableName (string) - name of the table that you are deleting the record from
+  //				    id (int) - id of the record to delete
   // returns:		id of the deleted record (int)
   // ------------------------------------------------------------------------
   delete: (args) => {
@@ -274,8 +274,35 @@ const record = {
       }`;
 
     return graphql({ query });
-  }
+  },
 
+
+  // purpose:		restores record from the deleted state back to the fresh
+  // arguments:	(object)
+  //				    tableName (string) - name of the table that you are deleting the record from
+  //				    id (int) - id of the record to delete
+  // returns:		id of the deleted record (int)
+  // ------------------------------------------------------------------------
+  restore: (args) => {
+    let properties = Object.fromEntries(args.properties.entries());
+    const table = properties.tableName;
+    const id = properties.recordId;
+
+    const query = `
+      mutation {
+        record_update(
+          id: ${id},
+          record: {
+            table: "${table}",
+            deleted_at: null
+          }
+        ) {
+          id
+        }
+      }`;
+
+    return graphql({ query });
+  }
 
 };
 

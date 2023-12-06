@@ -57,7 +57,8 @@ function createStore(){
       page: 1,
       attributes: [
         { attribute_type: 'id', name: 'id', operation: 'value', value: '' }
-      ]
+      ],
+      deleted: 'false'
     };
     // sort order for the records (object)
     state.sort = {
@@ -97,13 +98,15 @@ function createStore(){
         page: 1,
         attributes: [
           { attribute_type: 'id', name: 'id', operation: 'value', value: '' }
-        ]
+        ],
+        deleted: 'false'
       };
 
       state.sort = {
         by: 'created_at',
         order: 'DESC'
       };
+
 
       return state;
     });

@@ -20,7 +20,7 @@ let form;
 const filter = () => {
   $state.filters.page = 1;
 
-  record.get({ table: $state.table.id, filters: $state.filters, sort: Object.fromEntries((new FormData(form)).entries()) });
+  record.get({ table: $state.table.id, filters: $state.filters, sort: Object.fromEntries((new FormData(form)).entries()), deleted: $state.filters.deleted });
 }
 
 </script>
