@@ -93,7 +93,8 @@ button:not(:disabled):hover,
 
 /* invisible label in button for screen readers
 ============================================================================ */
-.button .label {
+.button .label,
+button .label {
   position: absolute;
   left: -100vw;
 }
