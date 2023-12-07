@@ -32,7 +32,7 @@
       "type": "section",
       "text": {
         "type": "mrkdwn",
-        "text": "ALTERNATIVELY please run `pos-cli gui serv ENV` and open the link http://localhost:3333/LogsV2/search?key={timestamp}"
+        "text": "ALTERNATIVELY please run `pos-cli gui serv ENV` and open the link http://localhost:3333/logsv2/{timestamp}?key={timestamp}"
       }
     }
   ]
