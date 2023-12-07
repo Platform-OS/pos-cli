@@ -2,6 +2,7 @@
 
 ## master
 * Feature: Ability to list and restore deleted records through the UI
+* Feature: (PoC) Ability to search for given log timestamp and showing logs before and after it
 
 ## 4.14.4
 * Improvement: allow to push modules with new directory structure `modules/<module_name>/public`
