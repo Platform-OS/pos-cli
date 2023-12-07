@@ -16,13 +16,12 @@ let container;
 
 let items;
 
-onMount(async () => {
-  items = await logs.get();
-});
+let filters = {};
+$: filters = Object.fromEntries($page.url.searchParams)
 
-$: if($page.params.id){
-  $state.logv2 = items?.hits.find(log => log._timestamp == $page.params.id);
-}
+onMount(async () => {
+  items = await logs.get(filters);
+});
 
 </script>
 
@@ -49,6 +48,10 @@ table {
   width: 100%;
   max-width: 100vw;
 }
+
+  thead {
+    background-color: var(--color-background);
+  }
 
   th, td {
     padding: 1rem;
@@ -89,6 +92,14 @@ table {
     color: var(--color-danger);
   }
 
+  .highlight td {
+    background-color: var(--color-highlight);
+  }
+
+  .active .time {
+    font-weight: 800;
+  }
+
 </style>
 
 
@@ -102,8 +113,6 @@ table {
 <div class="container" bind:this={container}>
 
   <section class="logs">
-    {#await logs.get() then logs}
-
       <table>
         <thead>
           <tr>
@@ -112,32 +121,36 @@ table {
             <th class="message">Message</th>
           </tr>
         </thead>
-        <tbody>
-          {#each logs.hits as log}
-            <tr class:error={log.type.match(/error/i)}>
-              <td class="time">
-                <a href="/logsv2/{log._timestamp}">
-                  {new Date(log.options_at / 1000).toLocaleString()}
-                </a>
-              </td>
-              <td class="type">
-                <a href="/logsv2/{log._timestamp}">
-                  {log.type}
-                </a>
-              </td>
-              <td class="message">
-                <a href="/logsv2/{log._timestamp}">
-                  <div>
-                    {log.message}
-                  </div>
-                </a>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
+        {#if items}
+          <tbody>
+            {#each items.hits as log}
+              <tr
+                class:error={log.type.match(/error/i)}
+                class:highlight={filters.key == log._timestamp}
+                class:active={$page.params.id == log._timestamp}
+              >
+                <td class="time">
+                  <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
+                    {new Date(log.options_at / 1000).toLocaleString()}
+                  </a>
+                </td>
+                <td class="type">
+                  <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
+                    {log.type}
+                  </a>
+                </td>
+                <td class="message">
+                  <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
+                    <div>
+                      {log.message}
+                    </div>
+                  </a>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        {/if}
       </table>
-
-    {/await}
   </section>
 
   {#if $page.params.id}

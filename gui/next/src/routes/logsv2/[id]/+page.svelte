@@ -4,7 +4,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { page } from '$app/stores';
-import { state } from '$lib/state';
+import { logs } from '$lib/api/logsv2';
 import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Aside from '$lib/ui/Aside.svelte';
@@ -15,9 +15,22 @@ import Copy from '$lib/ui/Copy.svelte';
 // properties
 // ------------------------------------------------------------------------
 // log details (object)
-$: item = $state.logv2;
+let item = {};
 // message parsed to JSON if available (string or object)
 $: message = item && tryParseJSON(item.message);
+
+const load = async () => {
+  const filters = {
+    size: 1,
+    sql: `select * from logs where _timestamp = ${$page.params.id}`
+  };
+
+  await logs.get(filters).then(response => {
+    item = response.hits[0];
+  });
+}
+
+$: $page.params.id && load();
 
 </script>
 
