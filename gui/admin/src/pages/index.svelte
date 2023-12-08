@@ -112,7 +112,7 @@
               <li>Test Liquid logic</li>
               <li>Quickly prototype your ideas</li>
             </ul>
-            <a  href="/gui/liquid" target="_blank" class="inline-flex items-center mt-3 text-blue-500">Go to Liquid Evaluator
+            <a  href="http://localhost:3333/gui/liquid" target="_blank" class="inline-flex items-center mt-3 text-blue-500">Go to Liquid Evaluator
               <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="w-4 h-4 ml-2" viewBox="0 0 24 24">
                 <path d="M5 12h14M12 5l7 7-7 7"></path>
               </svg>
@@ -132,7 +132,7 @@
               <li>Explore documentation</li>
               <li>Quickly prototype your queries and mutations</li>
             </ul>
-            <a  href="/gui/graphql" target="_blank" class="inline-flex items-center mt-3 text-blue-500">Go to GraphiQL
+            <a  href="http://localhost:3333/gui/graphql" target="_blank" class="inline-flex items-center mt-3 text-blue-500">Go to GraphiQL
               <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="w-4 h-4 ml-2" viewBox="0 0 24 24">
                 <path d="M5 12h14M12 5l7 7-7 7"></path>
               </svg>

@@ -945,7 +945,7 @@ function create_fragment(ctx) {
 			attr(svg8, "stroke-width", "2");
 			attr(svg8, "class", "w-4 h-4 ml-2");
 			attr(svg8, "viewBox", "0 0 24 24");
-			attr(a4, "href", "/gui/liquid");
+			attr(a4, "href", "http://localhost:3333/gui/liquid");
 			attr(a4, "target", "_blank");
 			attr(a4, "class", "inline-flex items-center mt-3 text-blue-500");
 			attr(div18, "class", "flex-grow");
@@ -964,7 +964,7 @@ function create_fragment(ctx) {
 			attr(svg9, "stroke-width", "2");
 			attr(svg9, "class", "w-4 h-4 ml-2");
 			attr(svg9, "viewBox", "0 0 24 24");
-			attr(a5, "href", "/gui/graphql");
+			attr(a5, "href", "http://localhost:3333/gui/graphql");
 			attr(a5, "target", "_blank");
 			attr(a5, "class", "inline-flex items-center mt-3 text-blue-500");
 			attr(div21, "class", "flex-grow");
