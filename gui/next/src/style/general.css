@@ -12,6 +12,10 @@
 /* main page
 ============================================================================ */
 body {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: min-content 1fr;
+
   background-color: var(--color-page);
 
   font-family: var(--font-normal);

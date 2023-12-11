@@ -124,8 +124,10 @@ const appear = function(node, {
 
 /* shared */
 .container {
-  width: 100%;
-  display: flex;
+  height: 100%;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr min-content;
 }
 
 nav {
@@ -324,6 +326,7 @@ footer {
   }
 
   .pins .info button:hover {
+    background-color: transparent;
     color: var(--color-danger);
   }
 

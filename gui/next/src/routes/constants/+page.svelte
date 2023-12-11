@@ -315,68 +315,71 @@ li {
   <title>Constants | platformOS</title>
 </svelte:head>
 
+<div class="container">
 
-<nav>
-  <form>
-    <label for="filter">Find:</label>
-    <input type="text" id="filter" bind:value={filter} autofocus>
-    {#if filter}
-      <button class="clearFilter" on:click={() => filter = ''}>
-        <span class="label">Clear filter</span>
-        <Icon icon="x" size=12 />
-      </button>
-    {/if}
-  </form>
-</nav>
-
-<section class="create">
-  <form on:submit|preventDefault={create}>
-    <fieldset>
-      <label for="newName">Name</label>
-      <input type="text" name="name" id="newName" placeholder="MY_NEW_CONSTANT">
-    </fieldset>
-    <fieldset>
-      <label for="newValue">Value</label>
-      <input type="text" name="value" id="newValue">
-    </fieldset>
-    <button class="button">
-      Add
-      <Icon icon="arrowRight" />
-    </button>
-  </form>
-</section>
-
-<ul>
-
-  {#each items as item, index}
-    <li class:hidden={filter && isFiltered(item)} class:highlighted={$state.highlighted.constant === item.name} in:fade={{ duration: 100, delay: 10 * index }}>
-      <form class="delete" on:submit|preventDefault={event => remove(event)}>
-        <input type="hidden" name="name" value={item.name}>
-        <button type="submit" title="Delete constant">
-          <span class="label">Delete constant</span>
-          <Icon icon="x" size="14" />
+  <nav>
+    <form>
+      <label for="filter">Find:</label>
+      <input type="text" id="filter" bind:value={filter} autofocus>
+      {#if filter}
+        <button class="clearFilter" on:click={() => filter = ''}>
+          <span class="label">Clear filter</span>
+          <Icon icon="x" size=12 />
         </button>
-      </form>
-      <form class="edit"on:submit|preventDefault={event => update(event, index)}>
-        <label for={item.name}>{item.name}</label>
-        <input type="hidden" name="name" value={item.name}>
-        <fieldset>
-          <input class:exposed={item.exposed} disabled={!item.exposed} name="value" value={item.value} id={item.name} on:input={() => item.changed = true}>
-          <button
-            type="button"
-            class="toggleExposition"
-            title={item.exposed ? 'Hide value' : 'Show value'}
-            on:click={() => item.exposed = item.exposed ? false : true}
-          >
-            <span class="label">
-              {item.exposed ? 'Hide value' : 'Show value'}
-            </span>
-            <Icon icon={item.exposed ? 'eyeStriked' : 'eye'} />
-          </button>
-        </fieldset>
-        <button type="submit" class="button" class:needed={items[index].changed}>Save</button>
-      </form>
-    </li>
-  {/each}
+      {/if}
+    </form>
+  </nav>
 
-</ul>
+  <section class="create">
+    <form on:submit|preventDefault={create}>
+      <fieldset>
+        <label for="newName">Name</label>
+        <input type="text" name="name" id="newName" placeholder="MY_NEW_CONSTANT">
+      </fieldset>
+      <fieldset>
+        <label for="newValue">Value</label>
+        <input type="text" name="value" id="newValue">
+      </fieldset>
+      <button class="button">
+        Add
+        <Icon icon="arrowRight" />
+      </button>
+    </form>
+  </section>
+
+  <ul>
+
+    {#each items as item, index}
+      <li class:hidden={filter && isFiltered(item)} class:highlighted={$state.highlighted.constant === item.name} in:fade={{ duration: 100, delay: 10 * index }}>
+        <form class="delete" on:submit|preventDefault={event => remove(event)}>
+          <input type="hidden" name="name" value={item.name}>
+          <button type="submit" title="Delete constant">
+            <span class="label">Delete constant</span>
+            <Icon icon="x" size="14" />
+          </button>
+        </form>
+        <form class="edit"on:submit|preventDefault={event => update(event, index)}>
+          <label for={item.name}>{item.name}</label>
+          <input type="hidden" name="name" value={item.name}>
+          <fieldset>
+            <input class:exposed={item.exposed} disabled={!item.exposed} name="value" value={item.value} id={item.name} on:input={() => item.changed = true}>
+            <button
+              type="button"
+              class="toggleExposition"
+              title={item.exposed ? 'Hide value' : 'Show value'}
+              on:click={() => item.exposed = item.exposed ? false : true}
+            >
+              <span class="label">
+                {item.exposed ? 'Hide value' : 'Show value'}
+              </span>
+              <Icon icon={item.exposed ? 'eyeStriked' : 'eye'} />
+            </button>
+          </fieldset>
+          <button type="submit" class="button" class:needed={items[index].changed}>Save</button>
+        </form>
+      </li>
+    {/each}
+
+  </ul>
+
+</div>

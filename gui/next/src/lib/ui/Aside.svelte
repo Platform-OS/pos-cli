@@ -74,18 +74,18 @@ const resize = event => {
 aside {
   width: var(--width);
   min-width: 300px;
-  max-width: 80%;
   position: relative;
   overflow: hidden;
+  display: flex;
 
   border-inline-start: 1px solid var(--color-frame);
 }
 
 .container {
-  width: 100%;
+  width: var(--width);
   min-width: 300px;
-  height: calc(100vh - 83px);
   padding: 1rem;
+  flex-shrink: 0;
   overflow: auto;
 }
 
@@ -145,7 +145,7 @@ h2 {
 <!-- ================================================================== -->
 <svelte:window bind:outerWidth={windowWidth} />
 
-<aside transition:appear|local style="--width: {$state.asideWidth}">
+<aside transition:appear style="--width: {$state.asideWidth}">
 
   <button class="resizer" class:active={resizing} on:mousedown={resizingStart}>
     <span class="label">Drag to resize panel</span>
