@@ -1,6 +1,6 @@
 # Changelog
 
-## master
+## 4.15.0
 * Chore: Updated Svelte dependencies
 * Bug: Hardcoded links to GraphiQL and Liquid Evaluator in old GUI
 * Feature: Ability to list and restore deleted records through the UI
