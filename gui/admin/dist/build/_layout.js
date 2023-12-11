@@ -158,9 +158,9 @@ function create_fragment$2(ctx) {
 		},
 		h() {
 			attr(a0, "class", "underline hover:no-underline hover:text-gray-800");
-			attr(a0, "href", "/gui/graphql");
+			attr(a0, "href", "http://localhost:3333/gui/graphql");
 			attr(a1, "class", "underline hover:no-underline hover:text-gray-800");
-			attr(a1, "href", "/gui/liquid");
+			attr(a1, "href", "http://localhost:3333/gui/liquid");
 			attr(a2, "class", "underline hover:no-underline hover:text-gray-800");
 			attr(a2, "href", "https://documentation.platformos.com");
 			attr(a3, "class", "underline hover:no-underline hover:text-gray-800");

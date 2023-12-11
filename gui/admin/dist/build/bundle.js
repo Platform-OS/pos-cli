@@ -4075,9 +4075,9 @@ var app = (function () {
     		},
     		h() {
     			attr(a0, "class", "underline hover:no-underline hover:text-gray-800");
-    			attr(a0, "href", "/gui/graphql");
+    			attr(a0, "href", "http://localhost:3333/gui/graphql");
     			attr(a1, "class", "underline hover:no-underline hover:text-gray-800");
-    			attr(a1, "href", "/gui/liquid");
+    			attr(a1, "href", "http://localhost:3333/gui/liquid");
     			attr(a2, "class", "underline hover:no-underline hover:text-gray-800");
     			attr(a2, "href", "https://documentation.platformos.com");
     			attr(a3, "class", "underline hover:no-underline hover:text-gray-800");
@@ -6402,7 +6402,7 @@ var app = (function () {
     			attr(svg8, "stroke-width", "2");
     			attr(svg8, "class", "w-4 h-4 ml-2");
     			attr(svg8, "viewBox", "0 0 24 24");
-    			attr(a4, "href", "/gui/liquid");
+    			attr(a4, "href", "http://localhost:3333/gui/liquid");
     			attr(a4, "target", "_blank");
     			attr(a4, "class", "inline-flex items-center mt-3 text-blue-500");
     			attr(div18, "class", "flex-grow");
@@ -6421,7 +6421,7 @@ var app = (function () {
     			attr(svg9, "stroke-width", "2");
     			attr(svg9, "class", "w-4 h-4 ml-2");
     			attr(svg9, "viewBox", "0 0 24 24");
-    			attr(a5, "href", "/gui/graphql");
+    			attr(a5, "href", "http://localhost:3333/gui/graphql");
     			attr(a5, "target", "_blank");
     			attr(a5, "class", "inline-flex items-center mt-3 text-blue-500");
     			attr(div21, "class", "flex-grow");

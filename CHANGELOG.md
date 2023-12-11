@@ -2,6 +2,7 @@
 
 ## master
 * Chore: Updated Svelte dependencies
+* Bug: Hardcoded links to GraphiQL and Liquid Evaluator in old GUI
 * Feature: Ability to list and restore deleted records through the UI
 * Feature: (PoC) Ability to search for given log timestamp and showing logs before and after it
 
