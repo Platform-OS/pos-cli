@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "4.15.0",
+  "version": "4.15.1",
   "description": "Manage your platformOS application",
   "scripts": {
     "test": "jest --runInBand",
@@ -64,6 +64,7 @@
     "request-promise": "^4.2.6",
     "semver": "^7.3.7",
     "shelljs": "^0.8.5",
+    "unzipper": "^0.10.14",
     "update-notifier": "^5.1.0",
     "uuid": "^8.3.2",
     "valid-url": "^1.0.9",
