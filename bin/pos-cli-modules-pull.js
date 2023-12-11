@@ -8,6 +8,7 @@ const program = require('commander'),
   downloadFile = require('../lib/downloadFile'),
   waitForStatus = require('../lib/data/waitForStatus');
 const spinner = ora({ text: 'Exporting', stream: process.stdout, spinner: 'bouncingBar' });
+const { unzip } = require('../lib/unzip');
 
 program
   .name('pos-cli modules pull')
@@ -24,6 +25,7 @@ program
       .then(exportTask => {
         waitForStatus(() => gateway.appExportStatus(exportTask.id), 'ready_for_export', 'success')
           .then(exportTask => downloadFile(exportTask.zip_file.url, filename))
+          .then(() => unzip(filename, process.cwd()))
           .then(() => spinner.succeed('Downloading files'))
           .catch(error => {
             logger.Debug(error);

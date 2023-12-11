@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.15.1
+* Bug: Fix downloading module source with `modules pull`
+
 ## 4.15.0
 * Chore: Updated Svelte dependencies
 * Bug: Hardcoded links to GraphiQL and Liquid Evaluator in old GUI
