@@ -207,8 +207,9 @@ a:hover .label {
         {/if}
 
         {#if $state.header.includes('liquid')}
+        {@const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}
         <li>
-          <a href="http://localhost:3333/gui/liquid">
+          <a href="{url}/gui/liquid">
             <Icon icon="liquid" />
             <span class="label">
               Liquid Evaluator
@@ -218,8 +219,9 @@ a:hover .label {
         {/if}
 
         {#if $state.header.includes('graphiql')}
+        {@const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}
         <li>
-          <a href="http://localhost:3333/gui/graphql/">
+          <a href="{url}/gui/graphql">
             <Icon icon="graphql" />
             <span class="label">
               GraphiQL
