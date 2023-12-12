@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.15.2
+* Bug: Fixed running the GUI in custom port number
+
 ## 4.15.1
 * Bug: Fix downloading module source with `modules pull`
 
