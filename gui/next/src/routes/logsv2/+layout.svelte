@@ -6,7 +6,6 @@
 import { onMount } from 'svelte';
 import { page } from '$app/stores';
 import { logs } from '$lib/api/logsv2';
-import { state } from '$lib/state';
 
 
 // properties
@@ -14,14 +13,16 @@ import { state } from '$lib/state';
 // main content container (dom node)
 let container;
 
+let form;
+
 let items;
 
 let filters = {};
-$: filters = Object.fromEntries($page.url.searchParams)
+$: filters = Object.fromEntries($page.url.searchParams);
+$: logs.get(filters).then(data => items = data);
 
-onMount(async () => {
-  items = await logs.get(filters);
-});
+const today = new Date();
+const minAllowedDate = new Date(today - 1000 * 60 * 60 * 24 * 3);
 
 </script>
 
@@ -38,8 +39,15 @@ onMount(async () => {
 }
 
 /* logs */
-.logs {
+.content {
   overflow: auto;
+}
+
+.filters {
+  padding: var(--space-navigation);
+
+  background-color: var(--color-background);
+  border-block-end: 1px solid var(--color-frame);
 }
 
 table {
@@ -110,7 +118,22 @@ table {
 
 <div class="container" bind:this={container}>
 
-  <section class="logs">
+  <section class="content">
+
+      <nav class="filters">
+        <form action="" bind:this={form}>
+          <input
+            type="date"
+            name="start_time"
+            min={minAllowedDate.toISOString().split('T')[0]}
+            max={today.toISOString().split('T')[0]}
+            value={new Date(filters.start_time).toISOString().split('T')[0]}
+            on:change={form.requestSubmit()}
+          >
+          <button>Submit</button>
+        </form>
+      </nav>
+
       <table>
         <thead>
           <tr>
@@ -149,6 +172,7 @@ table {
           </tbody>
         {/if}
       </table>
+
   </section>
 
   {#if $page.params.id}
