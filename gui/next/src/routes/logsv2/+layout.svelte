@@ -31,17 +31,15 @@ onMount(async () => {
 
 /* shared */
 .container {
-  width: 100%;
-  display: flex;
+  height: 100%;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr min-content;
 }
 
 /* logs */
 .logs {
-  height: calc(100vh - 82px);
   overflow: auto;
-  position: sticky;
-
-  flex-grow: 1;
 }
 
 table {

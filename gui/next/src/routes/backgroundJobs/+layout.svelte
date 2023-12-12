@@ -82,10 +82,10 @@ const filter = () => {
 <style>
 
 .container {
-  width: 100%;
-
-  display: flex;
-  align-items: flex-start;
+  height: 100%;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr min-content;
 }
 
 

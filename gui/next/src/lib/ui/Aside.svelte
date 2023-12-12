@@ -33,7 +33,7 @@ const appear = function(node, {
     css: (t) => {
       const eased = quintOut(t);
 
-      return `min-width: 0; width: calc(${$state.asideWidth} * ${eased});` }
+      return `min-width: 0; width: calc(${$state.asideWidth || '30vw'} * ${eased});` }
   }
 };
 
@@ -61,7 +61,7 @@ const resizingEnd = () => {
 // returns:   changes the $state.asideWidth
 // ------------------------------------------------------------------------
 const resize = event => {
-  $state.asideWidth = windowWidth - event.clientX - 9 + 'px';
+  $state.asideWidth = windowWidth - event.clientX - 14 + 'px';
 };
 
 </script>
@@ -72,20 +72,22 @@ const resize = event => {
 
 /* layout */
 aside {
-  width: var(--width);
+  width: var(--width, 30vw);
   min-width: 300px;
-  max-width: 80%;
+  max-width: 90vw;
   position: relative;
   overflow: hidden;
+  display: flex;
 
   border-inline-start: 1px solid var(--color-frame);
 }
 
 .container {
-  width: 100%;
+  width: var(--width, 30vw);
   min-width: 300px;
-  height: calc(100vh - 83px);
+  max-width: 90vw;
   padding: 1rem;
+  flex-shrink: 0;
   overflow: auto;
 }
 
@@ -136,6 +138,8 @@ h2 {
 
 .resizer:hover,
 .resizer.active {
+  background-color: var(--color-frame);
+
   opacity: 1;
 }
 
@@ -145,7 +149,7 @@ h2 {
 <!-- ================================================================== -->
 <svelte:window bind:outerWidth={windowWidth} />
 
-<aside transition:appear|local style="--width: {$state.asideWidth}">
+<aside transition:appear style={$state.asideWidth ? `--width: ${$state.asideWidth}` : ''}>
 
   <button class="resizer" class:active={resizing} on:mousedown={resizingStart}>
     <span class="label">Drag to resize panel</span>

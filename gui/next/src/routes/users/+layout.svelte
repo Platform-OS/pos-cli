@@ -70,9 +70,10 @@ const appear = function(node, {
 <style>
 
 .container {
-  width: 100%;
-
-  display: flex;
+  height: 100%;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr min-content;
 }
 
 nav {

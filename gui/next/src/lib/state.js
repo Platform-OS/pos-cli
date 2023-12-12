@@ -68,7 +68,7 @@ function createStore(){
     // list of notifications (array of objects)
     state.notifications = [];
     // width of the aside panel in css units (string)
-    state.asideWidth = browser && localStorage.asideWidth ? localStorage.asideWidth : '30%';
+    state.asideWidth = browser && localStorage.asideWidth ? localStorage.asideWidth : false;
 
 
 

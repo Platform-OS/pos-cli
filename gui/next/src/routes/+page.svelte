@@ -58,6 +58,7 @@ const toggleDescription = what => {
 <style>
 
 nav {
+  width: 100%;
   margin-inline: auto;
   margin-block-start: 2rem;
   padding-inline: 2rem;
