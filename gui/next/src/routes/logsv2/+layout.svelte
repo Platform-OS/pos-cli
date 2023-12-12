@@ -3,7 +3,6 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount } from 'svelte';
 import { page } from '$app/stores';
 import { logs } from '$lib/api/logsv2';
 
@@ -12,17 +11,20 @@ import { logs } from '$lib/api/logsv2';
 // ------------------------------------------------------------------------
 // main content container (dom node)
 let container;
-
+// filters form (dom node)
 let form;
-
+// request results with 'hits' containing array with logs (object)
 let items;
-
-let filters = {};
-$: filters = Object.fromEntries($page.url.searchParams);
-$: logs.get(filters).then(data => items = data);
-
+// todays date (Date object)
 const today = new Date();
+// how far to the past the logs can be requested (Date object)
 const minAllowedDate = new Date(today - 1000 * 60 * 60 * 24 * 3);
+// currently active filters (object)
+let filters = Object.fromEntries($page.url.searchParams);
+
+if(!filters.start_time){ filters.start_time = today.toISOString().split('T')[0]; }
+
+$: logs.get(Object.fromEntries($page.url.searchParams)).then(data => items = data);
 
 </script>
 
@@ -127,10 +129,9 @@ table {
             name="start_time"
             min={minAllowedDate.toISOString().split('T')[0]}
             max={today.toISOString().split('T')[0]}
-            value={new Date(filters.start_time).toISOString().split('T')[0]}
+            bind:value={filters.start_time}
             on:change={form.requestSubmit()}
           >
-          <button>Submit</button>
         </form>
       </nav>
 

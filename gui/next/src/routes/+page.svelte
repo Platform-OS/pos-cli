@@ -372,7 +372,7 @@ h2 {
   <ul class="applications">
 
     <li class="application" class:showDescription={showDescriptionFor.includes('liquid')}>
-      <a href="http://localhost:3333/gui/liquid">
+      <a href="{(typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}/gui/liquid">
         <div class="icon" style="color: #aeb0b3;">
           <Icon icon="liquid" size="48" />
         </div>
@@ -402,7 +402,7 @@ h2 {
     </li>
 
     <li class="application" class:showDescription={showDescriptionFor.includes('graphiql')}>
-      <a href="http://localhost:3333/gui/graphql">
+      <a href="{(typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}/gui/graphql">
         <div class="icon" style="color: #f30e9c;">
           <Icon icon="graphql" size="48" />
         </div>
