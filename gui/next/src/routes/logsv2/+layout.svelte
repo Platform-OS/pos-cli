@@ -18,7 +18,8 @@ let items;
 // todays date (Date object)
 const today = new Date();
 // how far to the past the logs can be requested (Date object)
-const minAllowedDate = new Date(today - 1000 * 60 * 60 * 24 * 3);
+const dayInterval = 1000 * 60 * 60 * 24;
+const minAllowedDate = new Date(today -  dayInterval * 3);
 // currently active filters (object)
 let filters = Object.fromEntries($page.url.searchParams);
   filters.start_time = filters.start_time || today.toISOString().split('T')[0];
