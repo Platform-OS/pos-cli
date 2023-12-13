@@ -3,25 +3,32 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount } from 'svelte';
 import { page } from '$app/stores';
 import { logs } from '$lib/api/logsv2';
-import { state } from '$lib/state';
 
 
 // properties
 // ------------------------------------------------------------------------
 // main content container (dom node)
 let container;
-
+// filters form (dom node)
+let form;
+// request results with 'hits' containing array with logs (object)
 let items;
+// todays date (Date object)
+const today = new Date();
+// how far to the past the logs can be requested (Date object)
+const dayInterval = 1000 * 60 * 60 * 24;
+const minAllowedDate = new Date(today -  dayInterval * 3);
+// currently active filters (object)
+let filters = Object.fromEntries($page.url.searchParams);
+  filters.start_time = filters.start_time || today.toISOString().split('T')[0];
 
-let filters = {};
-$: filters = Object.fromEntries($page.url.searchParams)
 
-onMount(async () => {
-  items = await logs.get(filters);
-});
+
+// purpose:   load new logs each time query params change
+// ------------------------------------------------------------------------
+$: logs.get(Object.fromEntries($page.url.searchParams)).then(data => items = data);
 
 </script>
 
@@ -29,32 +36,72 @@ onMount(async () => {
 <!-- ================================================================== -->
 <style>
 
-/* shared */
-.container {
+/* layout */
+.page {
+  max-width: 100vw;
   height: 100%;
   overflow: hidden;
   display: grid;
   grid-template-columns: 1fr min-content;
+  position: relative;
 }
 
-/* logs */
-.logs {
+.container {
+  min-height: 0;
+  max-width: 100vw;
+  display: grid;
+  grid-template-rows: min-content 1fr;
+}
+
+.content {
+  height: 100%;
+  min-height: 0;
   overflow: auto;
 }
 
+
+/* filters */
+.filters {
+  padding: var(--space-navigation);
+
+  background-color: var(--color-background);
+  border-block-end: 1px solid var(--color-frame);
+}
+
+
+/* content table */
 table {
-  width: 100%;
-  max-width: 100vw;
+  min-width: 100%;
+
+  line-height: 1.27em;
 }
 
   thead {
     background-color: var(--color-background);
   }
 
-  th, td {
-    padding: 1rem;
-
+  th,
+  td {
     border-block-end: 1px solid var(--color-frame);
+  }
+
+  th,
+  td > a {
+    padding: var(--space-table) calc(var(--space-navigation) * 1.5);
+  }
+
+  th:first-child,
+  td:first-child > a {
+    padding-inline-start: var(--space-navigation);
+  }
+
+  th:last-child,
+  td:last-child > a {
+    padding-inline-end: var(--space-navigation);
+  }
+
+  td > a {
+    display: block;
   }
 
   .time,
@@ -66,6 +113,12 @@ table {
   .time {
     white-space: nowrap;
   }
+
+    @media (max-width: 750px){
+      .time {
+        white-space: normal;
+      }
+    }
 
   .message {
     width: 100%;
@@ -86,7 +139,7 @@ table {
     text-overflow: ellipsis;
   }
 
-  .error {
+  .error .type {
     color: var(--color-danger);
   }
 
@@ -94,9 +147,31 @@ table {
     background-color: var(--color-highlight);
   }
 
-  .active .time {
-    font-weight: 800;
+  tr {
+    position: relative;
   }
+
+  tr:after {
+    position: absolute;
+    inset: calc(var(--space-table) / 3);
+    z-index: -1;
+
+    border-radius: calc(1rem - var(--space-table) / 1.5);
+    background: transparent;
+
+    content: '';
+
+    transition: background-color .1s linear;
+  }
+
+  tr:hover:after {
+    background-color: var(--color-background);
+  }
+
+  tr.active:after {
+    background-color: var(--color-middleground);
+  }
+
 
 </style>
 
@@ -108,47 +183,64 @@ table {
 </svelte:head>
 
 
-<div class="container" bind:this={container}>
+<div class="page" bind:this={container}>
 
-  <section class="logs">
-      <table>
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Type</th>
-            <th class="message">Message</th>
-          </tr>
-        </thead>
-        {#if items}
-          <tbody>
-            {#each items.hits as log}
-              <tr
-                class:error={log.type.match(/error/i)}
-                class:highlight={filters.key == log._timestamp}
-                class:active={$page.params.id == log._timestamp}
-              >
-                <td class="time">
-                  <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
-                    {new Date(log.options_at / 1000).toLocaleString()}
-                  </a>
-                </td>
-                <td class="type">
-                  <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
-                    {log.type}
-                  </a>
-                </td>
-                <td class="message">
-                  <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
-                    <div>
-                      {log.message}
-                    </div>
-                  </a>
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        {/if}
-      </table>
+  <section class="container">
+
+      <nav class="filters">
+        <form action="" bind:this={form}>
+          <input
+            type="date"
+            name="start_time"
+            min={minAllowedDate.toISOString().split('T')[0]}
+            max={today.toISOString().split('T')[0]}
+            bind:value={filters.start_time}
+            on:change={form.requestSubmit()}
+          >
+        </form>
+      </nav>
+
+      <article class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th class="message">Message</th>
+            </tr>
+          </thead>
+          {#if items}
+            <tbody>
+              {#each items.hits as log}
+                <tr
+                  class:error={log.type.match(/error/i)}
+                  class:highlight={filters.key == log._timestamp}
+                  class:active={$page.params.id == log._timestamp}
+                >
+                  <td class="time">
+                    <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
+                      {new Date(log.options_at / 1000).toLocaleString()}
+                    </a>
+                  </td>
+                  <td class="type">
+                    <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
+                      {log.type}
+                    </a>
+                  </td>
+                  <td class="message">
+                    <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
+                      <div>
+                        {log.message}
+                      </div>
+                    </a>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          {/if}
+        </table>
+      </article>
+
   </section>
 
   {#if $page.params.id}

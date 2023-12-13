@@ -16,8 +16,19 @@ const logs = {
 
 
     filters.from = filters.from ?? 0;
-    filters.size = filters.size ?? 10;
+    filters.size = filters.size ?? 20;
     filters.stream_name = filters.stream_name ?? 'logs'
+
+    // parse the dates from YYYY-MM-DD
+    if(filters.start_time){
+      // we need end-of-day
+      let date = new Date(filters.start_time);
+      date.setHours(23, 59, 59);
+
+      filters.end_time = Math.floor(date.getTime() * 1000);
+      filters.start_time = Math.floor(date.getTime() - 24 * 60 * 60 * 1000 * 3);
+    }
+
 
     filters = new URLSearchParams(filters).toString();
 
