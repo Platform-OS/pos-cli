@@ -61,8 +61,18 @@ const resizingEnd = () => {
 // returns:   changes the $state.asideWidth
 // ------------------------------------------------------------------------
 const resize = event => {
-  $state.asideWidth = windowWidth - event.clientX - 14 + 'px';
+  $state.asideWidth = windowWidth - event.clientX - 6 + 'px';
 };
+
+// purpose:   resets the size to default when double clicked
+// effect:    clears localStorage and $state.asideWidth
+// ------------------------------------------------------------------------
+const resizingReset = event => {
+  if(event.detail === 2){
+    $state.asideWidth = false;
+    localStorage.removeItem('asideWidth');
+  }
+}
 
 </script>
 
@@ -82,6 +92,19 @@ aside {
   border-inline-start: 1px solid var(--color-frame);
 }
 
+  @media (max-width: 750px){
+    aside {
+      width: 90vw;
+      min-width: 0;
+      max-width: 90vw;
+      position: absolute;
+      inset-inline-end: 0;
+      inset-block: 0;
+
+      background-color: var(--color-page);
+    }
+  }
+
 .container {
   width: var(--width, 30vw);
   min-width: 300px;
@@ -90,6 +113,14 @@ aside {
   flex-shrink: 0;
   overflow: auto;
 }
+
+  @media (max-width: 750px){
+    .container {
+      width: 90vw;
+      min-width: 0;
+      max-width: 90vw;
+    }
+  }
 
 
 /* navigation */
@@ -143,6 +174,12 @@ h2 {
   opacity: 1;
 }
 
+  @media (max-width: 750px){
+    .resizer {
+      display: none;
+    }
+  }
+
 </style>
 
 
@@ -151,7 +188,7 @@ h2 {
 
 <aside transition:appear style={$state.asideWidth ? `--width: ${$state.asideWidth}` : ''}>
 
-  <button class="resizer" class:active={resizing} on:mousedown={resizingStart}>
+  <button class="resizer" class:active={resizing} on:mousedown={resizingStart} on:click={resizingReset}>
     <span class="label">Drag to resize panel</span>
     <Icon icon="resizeHorizontal" size="7" />
   </button>
