@@ -36,7 +36,7 @@ onMount(() => {
   load();
   updatePinnedState();
 
-  newLogsInterval = setInterval(load, 3000);
+  newLogsInterval = setInterval(() => { if(browser && document.visibilityState !== 'hidden'){ load(); } }, 3000);
   return () => clearInterval(newLogsInterval);
 });
 

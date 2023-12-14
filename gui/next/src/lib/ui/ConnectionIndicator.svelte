@@ -29,7 +29,9 @@ onMount(async () => {
 // ------------------------------------------------------------------------
 const checkIfOnline = async () => {
   if(browser && document.visibilityState !== 'hidden'){
-    fetch('http://localhost:3333/info').then(response => response.json()).then(data => {
+    const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333';
+
+    fetch(`${url}/info`).then(response => response.json()).then(data => {
       if(data){
         $state.online = true;
         return true;
