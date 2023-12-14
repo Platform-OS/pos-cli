@@ -4,6 +4,7 @@
 * Feature: (GUI) Added filtering by date to Logs v2
 * Feature: (GUI) Added hover and active states to the table in Logs v2
 * Feature: (GUI) Ability to reset sidebar width by double clicking the resize handle
+* Feature: (GUI) Don't fetch logs for connection indicator and just use /info
 
 ## 4.15.2
 * Bug: Fixed running the GUI in custom port number
