@@ -5,9 +5,9 @@
 // ------------------------------------------------------------------------
 import { tick, afterUpdate, onMount, beforeUpdate } from 'svelte';
 import { fade } from 'svelte/transition';
-import { quintOut } from 'svelte/easing';
 import { browser } from '$app/environment';
 import { state } from '$lib/state.js';
+import { logs } from '$lib/api/logs';
 
 import { tryParseJSON } from '$lib/tryParseJSON.js';
 import JSONTree from '$lib/ui/JSONTree.svelte';
@@ -28,7 +28,46 @@ let pinned = [];
 let pinnedPanel;
 // max number of characters to show and parse in a message (int)
 let maxMessageLength = 262144;
+// interval for checking for new logs (interval)
+let newLogsInterval;
 
+
+onMount(() => {
+  load();
+  updatePinnedState();
+
+  newLogsInterval = setInterval(load, 3000);
+  return () => clearInterval(newLogsInterval);
+});
+
+
+const load = async () => {
+  const last = $state.logs.logs?.at(-1)?.id ?? null;
+  const newLogs = await logs.get({ last: last });
+
+  // if already showing logs, just append the new ones
+  if(last){
+    if(newLogs.logs?.length){
+      $state.logs.logs = [...$state.logs.logs, ...newLogs.logs];
+
+      // store the times when logs were downloaded to mark new ones
+      $state.logs.downloaded_at.push(Date.now());
+      if($state.logs.downloaded_at.length > 2){
+        $state.logs.downloaded_at.splice(0, 1);
+      }
+    }
+  }
+  // if fresh start, create the logs object
+  else {
+    if(!$state.logs.logs){
+      $state.logs = newLogs;
+
+      if(!$state.logs.downloaded_at){
+        $state.logs.downloaded_at = [Date.now()];
+      }
+    }
+  }
+}
 
 // purpose:		adds a .hidden property to each log item if not matching the string
 // attributes:	string you want to filter the logs with (string)
@@ -71,13 +110,13 @@ afterUpdate(async () => {
 });
 
 
-// purpose:		saves the log in localStorage for future use
+// purpose:		  saves the log in localStorage for future use
 // attributes:	log data you want to save (object)
 // ------------------------------------------------------------------------
-onMount(() => {
+const updatePinnedState = () => {
   pinnedPanel = localStorage.pinnedPanel === 'true' ? true : false;
   pinned = localStorage.pinnedLogs ? JSON.parse(localStorage.pinnedLogs) : [];
-});
+};
 
 const pin = (log) => {
   if(pinned.find(pin => pin.id === log.id)){
@@ -95,24 +134,6 @@ const togglePinnedPanel = () => {
   } else {
     pinnedPanel = true;
     localStorage.pinnedPanel = true;
-  }
-};
-
-
-// transition: 	slides from right
-// options: 	delay (int), duration (int)
-// ------------------------------------------------------------------------
-const appear = function(node, {
-  delay = 0,
-  duration = 150
-}){
-  return {
-    delay,
-    duration,
-    css: (t) => {
-      const eased = quintOut(t);
-
-      return `width: ${500 * eased}px;` }
   }
 };
 
