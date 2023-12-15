@@ -10,7 +10,7 @@ test('see home screen', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Logs', exact: true}).first().click();
 
-  await expect(page).toHaveTitle('Logs: qa-poscli-gui.staging.oregon.platform-os.com');
+  await expect(page).toHaveTitle('Logs: qa-poscli-gui-ci.staging.oregon.platform-os.com/');
 
   await expect(page.getByText('No newer logs to show')).toBeVisible();
 });

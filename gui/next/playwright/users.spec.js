@@ -9,7 +9,7 @@ test('see home screen', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Users', exact: true}).first().click();
 
-  await expect(page).toHaveTitle('Users: qa-poscli-gui.staging.oregon.platform-os.com');
+  await expect(page).toHaveTitle('Users: qa-poscli-gui-ci.staging.oregon.platform-os.com/');
 });
 
 
