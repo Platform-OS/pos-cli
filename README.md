@@ -197,12 +197,35 @@ Create a new module based on module starter repository.
 You can install modules that are published in modules marketplace by adding them to `app/pos-modules.json`. To make that you can use `pos-cli modules install`
 
     pos-cli modules install <env> [module name]
+    pos-cli deploy <env>
 
 #### Remove
 
 Removes a module from your application.
 
     pos-cli modules remove [environment] <module name>
+
+#### Publishing
+
+In order to publish module to our module repository first you have to create module on Partner Portal (https://partners.platformos.com/pos_modules/new) and give it a unique name.
+Create sepeate directory for your new module. Then you can run `pos-cli init <module_name>` to create necessary directory structure. 
+
+    mkdir <module_name>; cd <module_name>
+    pos-cli init <module_name>
+
+Once you have prepared your module you can release the new version and the publish it
+
+    pos-cli modules version x.x.x
+    pos-cli modules push --email <your_email>
+    
+
+#### Pulling module codebase
+
+You can fetch the codebase of the module directly to your project. Then you can view the module implementation and change it if you need.
+
+    pos-cli modules pull <env> <module_name>
+    
+It will download and unpack module files into `modules/<module_name>` directory.
     
 
 ##### module templates
