@@ -207,7 +207,7 @@ h2 {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>platformOS Instance Admin</title>
+  <title>platformOS{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 <nav>

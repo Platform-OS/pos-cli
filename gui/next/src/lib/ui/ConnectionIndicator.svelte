@@ -33,12 +33,10 @@ const checkIfOnline = async () => {
 
     fetch(`${url}/info`).then(response => response.json()).then(data => {
       if(data){
-        $state.online = true;
-        return true;
+        $state.online = data;
       }
     }).catch(e => {
       $state.online = false;
-      return false;
     });
   }
 };

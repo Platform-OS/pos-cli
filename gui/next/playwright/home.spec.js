@@ -5,8 +5,15 @@ import { test, expect } from '@playwright/test';
 test('see home screen', async ({ page }) => {
   await page.goto('./');
 
-  await expect(page).toHaveTitle('platformOS Instance Admin');
+  await expect(page).toHaveTitle('platformOS: qa-poscli-gui.staging.oregon.platform-os.com');
   await expect(page.locator('body')).toContainText('Partner Portal');
+});
+
+
+test('seeing instance URL', async ({ page }) => {
+  await page.goto('./');
+
+  await expect(page.locator('.instance')).toContainText('qa-poscli-gui.staging.oregon.platform-os.com');
 });
 
 

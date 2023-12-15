@@ -9,7 +9,7 @@ test('see home screen', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Database', exact: true}).first().click();
 
-  await expect(page).toHaveTitle('Database | platformOS');
+  await expect(page).toHaveTitle('Database: qa-poscli-gui.staging.oregon.platform-os.com');
 });
 
 

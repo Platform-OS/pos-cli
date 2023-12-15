@@ -4,6 +4,7 @@
   colors
   spacings
   fonts
+  easings
 */
 
 
@@ -185,4 +186,11 @@
 ============================================================================ */
 :root {
   --font-normal: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+}
+
+
+/* easings
+============================================================================ */
+:root {
+  --easing-rapid: cubic-bezier(0.075, 0.82, 0.165, 1);
 }

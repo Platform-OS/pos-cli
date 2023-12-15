@@ -62,7 +62,7 @@ const keyboardShortcuts = event => {
 <style>
 
 section {
-  height: calc(100vh - 82px);
+  height: calc(100vh - 83px);
   flex-grow: 1;
   display: flex;
   flex-direction: column;
@@ -126,7 +126,7 @@ nav {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>{$state.table?.name || 'Loading…'} | platformOS</title>
+  <title>{$state.table?.name || 'Loading…'}{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 <svelte:window on:keypress={keyboardShortcuts} />

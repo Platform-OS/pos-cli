@@ -4,7 +4,8 @@
 // imports
 // ------------------------------------------------------------------------
 import { page } from '$app/stores';
-import { logs } from '$lib/api/logsv2';
+import { logs } from '$lib/api/logsv2.js';
+import { state } from '$lib/state.js';
 
 
 // properties
@@ -179,7 +180,7 @@ table {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Logs | platformOS</title>
+  <title>Logs{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 

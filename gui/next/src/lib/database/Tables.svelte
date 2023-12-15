@@ -137,7 +137,7 @@ const listKeyboardShortcut = (event) => {
 
 aside {
   width: 350px;
-  height: calc(100vh - 82px);
+  height: calc(100vh - 83px);
   flex-shrink: 0;
   overflow: auto;
 

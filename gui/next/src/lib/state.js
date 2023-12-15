@@ -26,7 +26,7 @@ function createStore(){
   const state = {};
     // list of items pinned to the header navigation (array of strings)
     state.header = browser && localStorage.header ? JSON.parse(localStorage.header) : ['database', 'users', 'logs'];
-    // if the app is connected to the instance (bool)
+    // if the app is connected to the instance (object or false)
     state.online = undefined;
     // logs data (object)
     state.logs = {};

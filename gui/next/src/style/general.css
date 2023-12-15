@@ -43,11 +43,6 @@ a {
 
 /* utilities
 ============================================================================ */
-/* used to indicate invisible labels important for screen readers */
-.stamp {
-  position: absolute;
-  left: -100vw;
-}
 
 /* used to mark keyboard shortcuts */
 kbd {
