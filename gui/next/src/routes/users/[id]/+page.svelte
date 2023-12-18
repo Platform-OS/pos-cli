@@ -5,6 +5,7 @@
 // ------------------------------------------------------------------------
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
+import { state } from '$lib/state.js';
 
 import Aside from '$lib/ui/Aside.svelte';
 
@@ -95,7 +96,7 @@ time {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>{item?.email ?? 'Users'} | platformOS</title>
+  <title>{item?.email ?? 'Users'}{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 <Aside title={item?.email ?? item?.id ?? 'Loading…'} closeUrl="/users?{$page.url.searchParams.toString()}">

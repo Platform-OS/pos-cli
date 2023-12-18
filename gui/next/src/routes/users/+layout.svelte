@@ -251,8 +251,6 @@ td:last-child, th:last-child {
 
   </section>
 
-  {#if $page.params.id}
-    <slot></slot>
-  {/if}
+  <slot></slot>
 
 </div>

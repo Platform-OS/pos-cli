@@ -202,7 +202,7 @@ nav > div {
 
 /* logs */
 .logs {
-  height: calc(100vh - 82px);
+  height: calc(100vh - 83px);
   overflow: auto;
   position: sticky;
 
@@ -370,7 +370,7 @@ footer {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Logs | platformOS</title>
+  <title>Logs{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 

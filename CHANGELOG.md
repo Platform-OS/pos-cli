@@ -5,6 +5,7 @@
 * Feature: (GUI) Added hover and active states to the table in Logs v2
 * Feature: (GUI) Ability to reset sidebar width by double clicking the resize handle
 * Feature: (GUI) Don't fetch logs for connection indicator and just use /info
+* Feature: (GUI) Show instance link in the header and in the page title
 * Feature: allow to pull public module files via `modules pull`
 
 ## 4.15.2

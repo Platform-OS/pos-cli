@@ -312,7 +312,7 @@ li {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Constants | platformOS</title>
+  <title>Constants{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 <div class="container">

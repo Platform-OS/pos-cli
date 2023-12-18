@@ -8,6 +8,7 @@ import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { backgroundJob } from '$lib/api/backgroundJob.js';
 import { relativeTime } from '$lib/relativeTime.js';
+import { state } from '$lib/state.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Number from '$lib/ui/forms/Number.svelte';
@@ -256,7 +257,7 @@ menu :global(button:hover) {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Background Jobs | platformOS</title>
+  <title>Jobs{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 

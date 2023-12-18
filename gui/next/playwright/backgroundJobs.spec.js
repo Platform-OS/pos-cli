@@ -10,7 +10,7 @@ test('see home screen', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Background Jobs', exact: true}).first().click();
 
-  await expect(page).toHaveTitle('Background Jobs | platformOS');
+  await expect(page).toHaveTitle('Jobs: qa-poscli-gui-ci.staging.oregon.platform-os.com/');
 });
 
 
