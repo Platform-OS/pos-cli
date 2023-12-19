@@ -1,5 +1,8 @@
 # Changelog
 
+## master
+* Chore: (GUI) Updated to SvelteKit 2 and Vite 5
+
 ## 4.16.0
 * Feature: (GUI) Added filtering by date to Logs v2
 * Feature: (GUI) Added hover and active states to the table in Logs v2
