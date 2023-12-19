@@ -2,6 +2,7 @@
 
 ## master
 * Chore: (GUI) Updated to SvelteKit 2 and Vite 5
+* Chore: (GUI) Updated naming in GraphQL requests
 
 ## 4.16.0
 * Feature: (GUI) Added filtering by date to Logs v2

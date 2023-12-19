@@ -19,7 +19,7 @@ const table = {
 
     const query = `
       query {
-        admin_model_schemas(
+        admin_tables(
           per_page: 100
           ${filter}
         ) {
@@ -34,7 +34,7 @@ const table = {
         }
       }`;
 
-    return graphql({ query }, false).then(data => data.admin_model_schemas.results);
+    return graphql({ query }, false).then(data => data.admin_tables.results);
   }
 };
 
