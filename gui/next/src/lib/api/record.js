@@ -144,7 +144,7 @@ const record = {
 
     const params = {...defaults, ...args};
 
-    const tableFilter = params.table ? `model_schema_id: { value: ${params.table} }` : '';
+    const tableFilter = params.table ? `table_id: { value: ${params.table} }` : '';
 
     const idFilterIndex = params.filters?.attributes?.findIndex(attribute => attribute.name === 'id');
 
@@ -170,7 +170,7 @@ const record = {
 
     const query = `
       query {
-        models(
+        records(
           page: ${params.filters.page}
           per_page: 20,
           sort: { ${sort} },
@@ -193,7 +193,7 @@ const record = {
         }
       }`;
 
-    return graphql({ query }).then(data => { state.data('records', data.models) });
+    return graphql({ query }).then(data => { state.data('records', data.records) });
   },
 
 
@@ -211,8 +211,8 @@ const record = {
 
     const query = `
       mutation {
-        model_create(model: {
-          model_schema_name: "${table}",
+        record_create(record: {
+          table: "${table}",
           properties: [${properties}]
         }) {
           id
@@ -240,10 +240,10 @@ const record = {
 
     const query = `
       mutation {
-        model_update(
+        record_update(
           id: ${id},
-          model: {
-            model_schema_name: "${table}"
+          record: {
+            table: "${table}"
             properties: [${properties}]
           }
         ) {
