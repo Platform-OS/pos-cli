@@ -1,6 +1,6 @@
-import{g as s}from"./graphql.vANW7X3L.js";const m={get:e=>{const t=`
+import{g as a}from"./graphql.vANW7X3L.js";const i={get:e=>{const t=`
       query {
-        admin_model_schemas(
+        admin_tables(
           per_page: 100
           ${e?`filter: { id: { value: ${e} } }`:""}
         ) {
@@ -13,4 +13,4 @@ import{g as s}from"./graphql.vANW7X3L.js";const m={get:e=>{const t=`
             }
           }
         }
-      }`;return s({query:t}).then(r=>r.admin_model_schemas.results)}};export{m as t};
+      }`;return a({query:t}).then(r=>r.admin_tables.results)}};export{i as t};
