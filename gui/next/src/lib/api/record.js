@@ -211,7 +211,7 @@ const record = {
 
     const query = `
       mutation {
-        record_create(model: {
+        record_create(record: {
           table: "${table}",
           properties: [${properties}]
         }) {
