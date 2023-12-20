@@ -1,8 +1,12 @@
 # Changelog
 
-## master
+## 4.16.1
 * Chore: (GUI) Updated to SvelteKit 2 and Vite 5
 * Chore: (GUI) Updated naming in GraphQL requests
+* Feature: List and pass additional options to generators
+* Feature: add `pos-cli generate list` command
+* Improvement: allow to pull public modules files without env
+* Improvement: modules push will pack all files
 
 ## 4.16.0
 * Feature: (GUI) Added filtering by date to Logs v2
