@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.16.2
+* Bug: Fix passing arguments to generator
+
 ## 4.16.1
 * Chore: (GUI) Updated to SvelteKit 2 and Vite 5
 * Chore: (GUI) Updated naming in GraphQL requests

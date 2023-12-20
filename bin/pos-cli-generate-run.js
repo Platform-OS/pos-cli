@@ -37,7 +37,7 @@ const installModulesAndLoadGenerator = (generatorPath, generatorName) => {
 
 const runYeoman = async (generatorPath, attributes, options) => {
   const generatorName = registerGenerator(generatorPath);
-  const generatorArgs = compact([generatorName, attributes]);
+  const generatorArgs = compact([generatorName].concat(attributes));
   await yeomanEnv.run(generatorArgs, options);
 }
 
@@ -104,17 +104,18 @@ const description = `Run generator
 program
   .name('pos-cli generate')
   .description(description)
-  .arguments('<generatorPath> [generatorAttributes]', 'path to the generator directory')
+  .arguments('<generatorPath>', 'path to the generator directory')
+  .argument('[generatorArguments...]', 'generator arguments')
   .option('--generator-help', 'show help for given generator')
   .allowUnknownOption()
-  .usage("<generatorPath> [generatorAttributes]", 'arguments that will be passed to the generator')
-  .action(async function (generatorPath, generatorAttributes, options, command) {
+  .usage("<generatorPath> <generatorArguments...>", 'arguments that will be passed to the generator')
+  .action(async function (generatorPath, generatorArguments, options, command) {
     try{
       if (options.generatorHelp){
         showHelpForGenerator(generatorPath);
       } else {
         const extraOptions = unknownOptions(command);
-        await runYeoman(generatorPath, generatorAttributes, extraOptions);
+        await runYeoman(generatorPath, generatorArguments, extraOptions);
       }
     } catch (e) {
       logger.Error(`Error: ${e.message}`, { exit: false });
