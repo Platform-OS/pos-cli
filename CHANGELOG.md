@@ -1,6 +1,10 @@
 # Changelog
 
 ## 4.16.2
+* Bug: Fix error handling in `sync` command
+* Improvement: Do not include `node_modules` directory in `modules push` command
+
+## 4.16.2
 * Bug: Fix passing arguments to generator
 
 ## 4.16.1
