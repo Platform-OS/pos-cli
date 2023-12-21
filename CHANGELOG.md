@@ -1,5 +1,8 @@
 # Changelog
 
+## master
+* Bug: (GUI) `0` (int) no longer outputs `null` in the database browser
+
 ## 4.16.2
 * Bug: Fix passing arguments to generator
 
