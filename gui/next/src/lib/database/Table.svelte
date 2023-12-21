@@ -243,14 +243,16 @@ menu li:last-child :global(button) {
           {#each $state.table.properties as property}
             {@const value = parseValue(record.properties[property.name], property.attribute_type)}
             <td class:value-null={value.type === 'null'}>
-              {#if value.type === 'json' || value.type === 'jsonEscaped'}
-                {#if $state.view.tableStyle === 'expanded'}
-                  <JSONTree value={value.value} />
+              {#if value.value !== undefined}
+                {#if value.type === 'json' || value.type === 'jsonEscaped'}
+                  {#if $state.view.tableStyle === 'expanded'}
+                    <JSONTree value={value.value} />
+                  {:else}
+                    {JSON.stringify(value.value)}
+                  {/if}
                 {:else}
-                  {JSON.stringify(value.value)}
+                  {value.value}
                 {/if}
-              {:else}
-                {value.value}
               {/if}
             </td>
           {/each}
