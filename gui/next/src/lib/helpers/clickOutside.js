@@ -1,26 +1,26 @@
 /*
-	svelte action that handles clicking outside given node
+  svelte action that handles clicking outside given node
 */
 
 
 const clickOutside = (node, callback) => {
-	const handleClick = event => {
+  const handleClick = event => {
 
-		const path = event.composedPath();
+    const path = event.composedPath();
 
-		if (!path.includes(node)) {
+    if (!path.includes(node)) {
 
-			callback();
-		}
-	}
+      callback();
+    }
+  }
 
-	document.addEventListener('mousedown', handleClick);
+  document.addEventListener('mousedown', handleClick);
 
-	return {
-		destroy() {
-			document.removeEventListener('mousedown', handleClick);
-		}
-	}
+  return {
+    destroy() {
+      document.removeEventListener('mousedown', handleClick);
+    }
+  }
 };
 
 
