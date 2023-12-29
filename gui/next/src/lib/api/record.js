@@ -141,7 +141,7 @@ const record = {
         page: 1
       }
     };
-console.log(args);
+
     const params = {...defaults, ...args};
 
     const tableFilter = params.table ? `table_id: { value: ${params.table} }` : '';
