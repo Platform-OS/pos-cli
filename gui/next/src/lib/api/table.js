@@ -15,13 +15,16 @@ import { graphql } from '$lib/api/graphql';
 // ------------------------------------------------------------------------
 const table = {
   get: (id) => {
-    const filter = id ? `filter: { id: { value: ${id} } }` : '';
-
     const query = `
-      query {
+      query(
+        $per_page: Int
+        $id: ID
+      ) {
         admin_tables(
-          per_page: 100
-          ${filter}
+          per_page: $per_page
+          filter: {
+            id: { value: $id }
+          }
         ) {
           results {
             id
@@ -34,7 +37,9 @@ const table = {
         }
       }`;
 
-    return graphql({ query }, false).then(data => data.admin_tables.results);
+    const variables = { per_page: 100, id: id }
+
+    return graphql({ query, variables }).then(data => data.admin_tables.results);
   }
 };
 
