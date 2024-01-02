@@ -1,6 +1,6 @@
 # Changelog
 
-## master
+## 4.17.0
 * Bug: (GUI) `0` (int) no longer outputs `null` in the database browser
 * Improvement: (GUI) Make the record context menu stay open untill user clicks outside it
 
