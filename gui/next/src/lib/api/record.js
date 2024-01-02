@@ -86,41 +86,82 @@ const getPropertiesString = (props) => {
 // ------------------------------------------------------------------------
 const getFiltersString = (filters) => {
   let filtersString = '';
+  let variablesDefinition = '';
+  let variables = {};
 
   const operation_types = {
     string: ['array_contains', 'not_array_contains', 'contains', 'ends_with', 'not_contains', 'not_ends_with', 'not_starts_with', 'not_value', 'starts_with', 'value'],
-    range: ['range']
+    int: ['value_int', 'not_value_int'],
+    float: ['not_value_float', 'value_float'],
+    bool: ['exists', 'not_value_boolean', 'value_boolean'],
+    range: ['range'],
+    array: ['value_array', 'not_value_array', 'value_in', 'not_value_in', 'array_overlaps', 'not_array_overlaps']
   };
 
   filters.forEach(filter => {
-
     let parsedValue = '';
 
-    if(operation_types.string.includes(filter.operation)){
-      parsedValue = `"${filter.value}"`;
+    if(operation_types.int.includes(filter.operation)){
+      parsedValue = parseInt(filter.value);
+    }
+    else if (operation_types.float.includes(filter.operation)){
+      parsedValue = parseFloat(filter.value);
+    }
+    else if (operation_types.bool.includes(filter.operation)){
+      parsedValue = filter.value === 'true' ? true : false;
     }
     else if(operation_types.range.includes(filter.operation)){
-      parsedValue = `{ ${filter.minFilter}: "${filter.minFilterValue}", ${filter.maxFilter}: "${filter.maxFilterValue}" }`;
+      parsedValue = {};
+      parsedValue[filter.minFilter] = filter.minFilterValue;
+      parsedValue[filter.maxFilter] = filter.maxFilterValue;
+    }
+    else if(operation_types.array.includes(filter.operation)){
+      parsedValue = JSON.parse(filter.value);
     }
     else {
       parsedValue = filter.value;
     }
 
     // filtering by id is not done in this string
-    if(filter.name !== 'id' && parsedValue){
+    // NEW
+    const variableTypeDependingOnOperation = {
+      exists: 'Boolean',
+      value_boolean: 'Boolean',
+      not_value_boolean: 'Boolean',
+      value_int: 'Int',
+      not_value_int: 'Int',
+      not_value_float: 'Float',
+      range: 'RangeFilter',
+      value_float: 'Float',
+      value_array: '[String!]',
+      not_value_array: '[String!]',
+      value_in: '[String!]',
+      not_value_in: '[String!]',
+      array_overlaps: '[String!]',
+      not_array_overlaps: '[String!]'
+    };
+
+    variables[filter.name] = parsedValue;
+
+    variablesDefinition += `, $${filter.name}: ${variableTypeDependingOnOperation[filter.operation] || 'String'}`; // NEW
+    if(filter.name !== 'id'){
       filtersString += `{
         name: "${filter.name}",
-        ${filter.operation}: ${parsedValue}
-      }`;
+        ${filter.operation}: $${filter.name}
+      }`; // UPDATED
     }
 
   });
+
+  variablesDefinition = variablesDefinition.slice(2); // remove first comma ', '
+  variablesDefinition = variablesDefinition.length && `(${variablesDefinition})`; // add brackets to definition string
+
 
   filtersString = `
     properties: [${filtersString}]
   `;
 
-  return filtersString;
+  return { filtersString, variablesDefinition, variables };
 };
 
 
@@ -141,7 +182,6 @@ const record = {
         page: 1
       }
     };
-
     const params = {...defaults, ...args};
 
     const tableFilter = params.table ? `table_id: { value: ${params.table} }` : '';
@@ -150,7 +190,7 @@ const record = {
 
     let idFilter = '';
     if(idFilterIndex >= 0 && params.filters.attributes[idFilterIndex].value){
-      idFilter = `id: { ${params.filters.attributes[idFilterIndex].operation}: ${params.filters.attributes[idFilterIndex].value} }`;
+      idFilter = `id: { ${params.filters.attributes[idFilterIndex].operation}: $id }`;
     }
 
     let sort = '';
@@ -166,10 +206,12 @@ const record = {
 
     const deletedFilter = params.deleted === 'true' ? `deleted_at: { exists: true }` : '';
 
-    const filters = params.filters?.attributes ? getFiltersString(params.filters.attributes) : '';
+    const filters = params.filters?.attributes ? getFiltersString(params.filters.attributes).filtersString : '';
+    const variablesDefinition = params.filters?.attributes && getFiltersString(params.filters.attributes).variablesDefinition || ''; // NEW
+    const variables = params.filters?.attributes && getFiltersString(params.filters.attributes).variables;
 
     const query = `
-      query {
+      query${variablesDefinition} {
         records(
           page: ${params.filters.page}
           per_page: 20,
@@ -193,7 +235,7 @@ const record = {
         }
       }`;
 
-    return graphql({ query }).then(data => { state.data('records', data.records) });
+    return graphql({ query, variables }).then(data => { state.data('records', data.records) }); // UPDATED
   },
 
 
