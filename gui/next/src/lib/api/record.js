@@ -79,48 +79,107 @@ const getPropertiesString = (props) => {
 };
 
 
-// purpose:		build the filters string to pass to GraphQL
-// arguments:	list of attributes to filter the data with (array of objects) that icludes:
+// purpose:		build the strings and objects needed to pass with GraphQL request to filter the properties
+// arguments:	list of properties to filter the data with (array of objects) that icludes:
 //				    attribute_type, property, operation, value
-// returns:		GraphQL string with filtering properties (string)
+// returns:		GraphQL variables definitions, e.g. '($variable_name: String. $another_variable: Int)' (string)
+//            variables with their values to pass with the query, e.g. { variable_name: 'Variable value', another_variable: 5 } (object)
+//            filters used to filter properties in GraphQL requests, e.g. 'properties: [name: "variable_name", contains: $variable_value]' (string)
 // ------------------------------------------------------------------------
-const getFiltersString = (filters) => {
-  let filtersString = '';
-
-  const operation_types = {
+const buildPropertiesFilter = (filters = []) => {
+  // graphql variables definition for the query (string)
+  let variablesDefinition = '';
+  // variables passed with the query (object)
+  let variables = {};
+  // filters passed with the query (string)
+  let propertiesFilter = '';
+  // list of data types for variables in each operations, unmentioned are considered 'string' (object)
+  const operationsForType = {
     string: ['array_contains', 'not_array_contains', 'contains', 'ends_with', 'not_contains', 'not_ends_with', 'not_starts_with', 'not_value', 'starts_with', 'value'],
-    range: ['range']
+    int: ['value_int', 'not_value_int'],
+    float: ['not_value_float', 'value_float'],
+    bool: ['exists', 'not_value_boolean', 'value_boolean'],
+    range: ['range'],
+    array: ['value_array', 'not_value_array', 'value_in', 'not_value_in', 'array_overlaps', 'not_array_overlaps']
+  };
+  // type name to be used in graphql variables definition
+  const parsedGraphqlType = {
+    string: 'String',
+    int: 'Int',
+    float: 'Float',
+    bool: 'Boolean',
+    range: 'RangeFilter',
+    array: '[String!]'
   };
 
-  filters.forEach(filter => {
+  for(const filter of filters){
 
-    let parsedValue = '';
-
-    if(operation_types.string.includes(filter.operation)){
-      parsedValue = `"${filter.value}"`;
+    // if there is no value, don't output filter string for that filter which effectively clears it
+    if(!filter.minFilterValue && !filter.maxFilterValue && !filter.value){
+      break;
     }
-    else if(operation_types.range.includes(filter.operation)){
-      parsedValue = `{ ${filter.minFilter}: "${filter.minFilterValue}", ${filter.maxFilter}: "${filter.maxFilterValue}" }`;
+
+    // storing the type for current filter
+    let filterType = '';
+    // we are getting each filter value as a string, so it needs to be parsed for graphql request
+    let parsedFilterValue = '';
+
+    if(operationsForType.int.includes(filter.operation)){
+      filterType = 'int';
+      parsedFilterValue = parseInt(filter.value);
+    }
+    else if (operationsForType.float.includes(filter.operation)){
+      filterType = 'float';
+      parsedFilterValue = parseFloat(filter.value);
+    }
+    else if (operationsForType.bool.includes(filter.operation)){
+      filterType = 'bool';
+      parsedFilterValue = filter.value === 'true' ? true : false;
+    }
+    else if(operationsForType.range.includes(filter.operation)){
+      filterType = 'range';
+      parsedFilterValue = {};
+      parsedFilterValue[filter.minFilter] = filter.minFilterValue;
+      parsedFilterValue[filter.maxFilter] = filter.maxFilterValue;
+    }
+    else if(operationsForType.array.includes(filter.operation)){
+      filterType = 'array';
+      parsedFilterValue = JSON.parse(filter.value);
     }
     else {
-      parsedValue = filter.value;
+      filterType = 'string';
+      parsedFilterValue = filter.value;
     }
 
-    // filtering by id is not done in this string
-    if(filter.name !== 'id' && parsedValue){
-      filtersString += `{
+    // skipping the ID as it is not filtered as a property
+    if(filter.name !== 'id'){
+      // add current filter variable to variables definition string
+      variablesDefinition += `, $${filter.name}: ${parsedGraphqlType[filterType]}`;
+
+      // add the current filter to the variables object passed with the request (corresponding with variables definition)
+      variables[filter.name] = parsedFilterValue;
+
+      // add current filter to properties filters string passed in GraphQL request
+      propertiesFilter += `{
         name: "${filter.name}",
-        ${filter.operation}: ${parsedValue}
+        ${filter.operation}: $${filter.name}
       }`;
     }
 
-  });
+  };
 
-  filtersString = `
-    properties: [${filtersString}]
+  // build the final variables definition string with all the needed variables and their types
+  if(variablesDefinition.length){
+    variablesDefinition = variablesDefinition.slice(2); // remove first comma ', '
+    variablesDefinition = `(${variablesDefinition})`; // add brackets to definition string
+  }
+
+  // build final string for filtering the properties
+  propertiesFilter = `
+    properties: [${propertiesFilter}]
   `;
 
-  return filtersString;
+  return { variablesDefinition, variables, propertiesFilter };
 };
 
 
@@ -135,19 +194,18 @@ const record = {
   // returns:		array of records as they appear in the database (array)
   // ------------------------------------------------------------------------
   get: (args) => {
+
     const defaults = {
       deleted: false,
       filters: {
         page: 1
       }
     };
-
     const params = {...defaults, ...args};
 
     const tableFilter = params.table ? `table_id: { value: ${params.table} }` : '';
 
     const idFilterIndex = params.filters?.attributes?.findIndex(attribute => attribute.name === 'id');
-
     let idFilter = '';
     if(idFilterIndex >= 0 && params.filters.attributes[idFilterIndex].value){
       idFilter = `id: { ${params.filters.attributes[idFilterIndex].operation}: ${params.filters.attributes[idFilterIndex].value} }`;
@@ -166,10 +224,10 @@ const record = {
 
     const deletedFilter = params.deleted === 'true' ? `deleted_at: { exists: true }` : '';
 
-    const filters = params.filters?.attributes ? getFiltersString(params.filters.attributes) : '';
+    const propertiesFilterData = buildPropertiesFilter(params.filters?.attributes);
 
     const query = `
-      query {
+      query${propertiesFilterData.variablesDefinition} {
         records(
           page: ${params.filters.page}
           per_page: 20,
@@ -178,7 +236,7 @@ const record = {
             ${tableFilter}
             ${idFilter}
             ${deletedFilter}
-            ${filters}
+            ${propertiesFilterData.propertiesFilter}
           }
         ) {
           current_page
@@ -193,7 +251,7 @@ const record = {
         }
       }`;
 
-    return graphql({ query }).then(data => { state.data('records', data.records) });
+    return graphql({ query, variables: propertiesFilterData.variables }).then(data => { state.data('records', data.records) });
   },
 
 
