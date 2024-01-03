@@ -115,7 +115,7 @@ const buildPropertiesFilter = (filters = []) => {
   for(const filter of filters){
 
     // if there is no value, don't output filter string for that filter which effectively clears it
-    if(!filter.minFilterValue && !filter.value){
+    if(!filter.minFilterValue && !filter.maxFilterValue && !filter.value){
       break;
     }
 
@@ -151,15 +151,15 @@ const buildPropertiesFilter = (filters = []) => {
       parsedFilterValue = filter.value;
     }
 
-    // add current filter variable to variables definition string
-    variablesDefinition += `, $${filter.name}: ${parsedGraphqlType[filterType]}`;
-
-    // add the current filter to the variables object passed with the request (corresponding with variables definition)
-    variables[filter.name] = parsedFilterValue;
-
-    // add current filter to properties filters string passed in GraphQL request
-    // skipping the ID as it is not filtered as property
+    // skipping the ID as it is not filtered as a property
     if(filter.name !== 'id'){
+      // add current filter variable to variables definition string
+      variablesDefinition += `, $${filter.name}: ${parsedGraphqlType[filterType]}`;
+
+      // add the current filter to the variables object passed with the request (corresponding with variables definition)
+      variables[filter.name] = parsedFilterValue;
+
+      // add current filter to properties filters string passed in GraphQL request
       propertiesFilter += `{
         name: "${filter.name}",
         ${filter.operation}: $${filter.name}
@@ -208,7 +208,7 @@ const record = {
     const idFilterIndex = params.filters?.attributes?.findIndex(attribute => attribute.name === 'id');
     let idFilter = '';
     if(idFilterIndex >= 0 && params.filters.attributes[idFilterIndex].value){
-      idFilter = `id: { ${params.filters.attributes[idFilterIndex].operation}: $id }`;
+      idFilter = `id: { ${params.filters.attributes[idFilterIndex].operation}: ${params.filters.attributes[idFilterIndex].value} }`;
     }
 
     let sort = '';
@@ -251,7 +251,7 @@ const record = {
         }
       }`;
 
-    return graphql({ query, variables: propertiesFilterData.variables }).then(data => { state.data('records', data.records) }); // UPDATED
+    return graphql({ query, variables: propertiesFilterData.variables }).then(data => { state.data('records', data.records) });
   },
 
 
