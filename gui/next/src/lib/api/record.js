@@ -79,6 +79,100 @@ const getPropertiesString = (props) => {
 };
 
 
+const buildMutationIngredients = (formData) => {
+
+  // entries from the form
+  const formEntries = formData.entries();
+  // graphql variables definition for the query (string)
+  let variablesDefinition = '';
+  // variables passed with the query (object)
+  let variables = {};
+  // properties list with variables as their value passed with the query (string)
+  let properties = '';
+  // type name to be used in graphql variables definition
+  const parsedGraphqlType = {
+    string: 'String',
+    integer: 'Int',
+    float: 'Float',
+    boolean: 'Boolean',
+    array: '[String!]',
+    json: 'JSONPayload'
+  };
+  // helper object that will store the column name with all it's corresponding propertiest needed to pass to graphql (object)
+  let columns = {};
+
+  function parseValue(type, value){
+
+    if(value === ''){
+      return null;
+    }
+
+    if(type === 'integer'){
+      return parseInt(value);
+    }
+
+    if(type === 'float'){
+      return parseFloat(value);
+    }
+
+    if(type === 'boolean'){
+      if(value === 'true'){
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    if(type === 'array'){
+      return JSON.parse(value);
+    }
+
+    if(type === 'json'){
+      return JSON.parse(value);
+    }
+
+    return JSON.stringify(value);
+
+  }
+
+  // parse FormData entries to an object
+  for(const [entry, value] of formEntries){
+    // only for form data entries related to columns
+    if(entry.indexOf('[') >= 0){
+
+      // get the column name from FormData
+      let column = entry.slice(0, entry.indexOf('['));
+      // get the column properties names like the 'type' and 'value'
+      let property = entry.slice(entry.indexOf('[')+1, entry.indexOf(']'));
+
+      // build an object like: column_name = { type: 'type', value: 'value' }
+      (columns[column] ??= {})[property] = value;
+
+    }
+  }
+
+
+  for(const column in columns){
+    variablesDefinition += `, $${column}: ${parsedGraphqlType[columns[column].type]}`;
+
+    variables[column] = parseValue(columns[column].type, columns[column].value);
+
+    properties = ''; // TO DO
+  }
+
+
+  // build the final variables definition string with all the needed variables and their types
+  if(variablesDefinition.length){
+    variablesDefinition = variablesDefinition.slice(2); // remove first comma ', '
+    variablesDefinition = `(${variablesDefinition})`; // add brackets to definition string
+  }
+
+  console.log(variablesDefinition);
+  console.log(variables);
+
+};
+
+
 // purpose:		build the strings and objects needed to pass with GraphQL request to filter the properties
 // arguments:	list of properties to filter the data with (array of objects) that icludes:
 //				    attribute_type, property, operation, value
@@ -266,6 +360,8 @@ const record = {
     const table = properties.tableName;
     delete properties.tableName;
     properties = getPropertiesString(properties);
+
+    let test = buildMutationIngredients(args.properties);
 
     const query = `
       mutation {

@@ -1,5 +1,9 @@
 # Changelog
 
+## master
+* Bug: (GUI) Fixed clearing `boolean` value saved as 'null' (string)
+* Bug: (GUI) Fixed editing JSON with special characters
+
 ## 4.17.0
 * Bug: (GUI) `0` (int) no longer outputs `null` in the database browser
 * Improvement: (GUI) Make the record context menu stay open untill user clicks outside it

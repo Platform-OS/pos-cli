@@ -275,7 +275,6 @@ textarea {
                 {#if property.attribute_type === 'upload'}
                   (non editable)
                 {/if}
-                <input type="hidden" name="{property.name}[parsedType]" value={value.type} />
               </div>
             </label>
           </dir>
