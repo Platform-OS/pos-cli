@@ -83,10 +83,12 @@ const save = async (event) => {
   validation = {};
 
   for(const property of properties.entries()){
-    if(property[0].endsWith('[type]') && property[1] === 'json'){
-      const propertyName = property[0].replace('[type]', '');
-      if(!tryParseJSON(properties.get(propertyName + '[value]'))){
-        validation[propertyName] = { property: propertyName, message: 'Not a valid JSON' };
+    if(property[0].endsWith('[type]')){
+      if(property[1] === 'json' || property[1] === 'array'){
+        const propertyName = property[0].replace('[type]', '');
+        if(!tryParseJSON(properties.get(propertyName + '[value]'))){
+          validation[propertyName] = { property: propertyName, message: `Not a valid ${property[1]}` };
+        }
       }
     }
   }
