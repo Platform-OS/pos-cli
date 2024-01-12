@@ -5,18 +5,14 @@
 
 // imports
 // ------------------------------------------------------------------------
-import JSON5 from 'json5'
-
-import { tryParseJSON } from '$lib/tryParseJSON.js';
 import { graphql } from '$lib/api/graphql';
 import { state } from '$lib/state';
 
 
 
-
-// purpose:		maps GraphQL types to corresponding GraphQL type query
+// purpose:   maps column types to corresponding property type used in GraphQL string
 // ------------------------------------------------------------------------
-const typeMap = {
+const columnTypeToPropertyType = {
   array: 'value_array',
   boolean: 'value_boolean',
   date: 'value',
@@ -29,59 +25,29 @@ const typeMap = {
   json: 'value_json'
 };
 
-
-// purpose:		builds properties string from FormData to pass to GraphQL
-// arguments:	FormData properties serialized to object (object) - Object.fromEntries(<FormData>.entries())
-// returns:		GraphQL string with properties (string)
+// purpose:		maps column types to corresponding variable type used in GraphQL variables definition
 // ------------------------------------------------------------------------
-const getPropertiesString = (props) => {
-
-  let output = {};
-
-  Object.keys(props)
-  .forEach((prop) => {
-
-    let property = prop.slice(0, prop.indexOf('['));
-    let key = prop.slice(prop.indexOf('[')+1, prop.indexOf(']'));
-
-    (output[property] ??= {})[key] = props[prop];
-  });
-
-  let string = '';
-
-  Object.keys(output).forEach(key => {
-    // we are showing escaped JSONs as indented tree, so we need to remove new line signs and indentation when saved
-    if(output[key].type === 'string' && tryParseJSON(output[key].value)){
-      output[key].value = JSON.stringify(JSON.parse(output[key].value));
-    }
-
-    if(output[key].type === 'string' || output[key].type === 'text' || output[key].type === 'date' || output[key].type === 'time' || output[key].type === 'datetime'){
-      output[key].value = JSON.stringify(output[key].value);
-    }
-
-    // so if this is a true JSON we expect to send it to GraphQL api like a JS-object but in a string
-    // that's why it needs to be parsed from editing JSON {"something": "something"} to {something: "something"}
-    if(output[key].type === 'json'){
-      output[key].value = JSON5.stringify(JSON.parse(output[key].value), { quote: '"' });
-    }
-
-    if(!output[key].value){
-      output[key].value = null;
-    }
-
-    // don't allow editing the upload property but allow any other
-    if(output[key].type !== 'upload'){
-      string += `{ name: "${key}", ${typeMap[output[key].type]}: ${output[key].value} }`;
-    }
-  });
-
-  return string;
+const columnTypeToVariableType = {
+  string: 'String',
+  integer: 'Int',
+  float: 'Float',
+  boolean: 'Boolean',
+  array: '[String!]',
+  json: 'JSONPayload',
+  range: 'RangeFilter'
 };
 
 
+
+// purpose:		builds all the needed data to build and trigger GraphQL mutation
+// arguments: FormData object with the column, type and value (column[value], column[type])
+// returns:   variablesDefinition (string) - GraphQL variables definitions $variable: Type
+//            variables (object) - values for defined variables passed to GraphQL API
+//            properties (string) - list of GraphQL properties for given variables to use inside "properties: []"
+// ------------------------------------------------------------------------
 const buildMutationIngredients = (formData) => {
 
-  // entries from the form
+  // entries from the form (object)
   const formEntries = formData.entries();
   // graphql variables definition for the query (string)
   let variablesDefinition = '';
@@ -89,20 +55,11 @@ const buildMutationIngredients = (formData) => {
   let variables = {};
   // properties list with variables as their value passed with the query (string)
   let properties = '';
-  // type name to be used in graphql variables definition
-  const parsedGraphqlType = {
-    string: 'String',
-    integer: 'Int',
-    float: 'Float',
-    boolean: 'Boolean',
-    array: '[String!]',
-    json: 'JSONPayload'
-  };
   // helper object that will store the column name with all it's corresponding propertiest needed to pass to graphql (object)
   let columns = {};
 
+  // values we are getting from FormData are strings, this will parse them depending on the column type we are taking them from
   function parseValue(type, value){
-
     if(value === ''){
       return null;
     }
@@ -131,15 +88,13 @@ const buildMutationIngredients = (formData) => {
       return JSON.parse(value);
     }
 
-    return JSON.stringify(value);
+    return value;
+  };
 
-  }
-
-  // parse FormData entries to an object
+  // parse FormData entries to an `columns` object
   for(const [entry, value] of formEntries){
-    // only for form data entries related to columns
+    // do it only for FormData entries related to columns
     if(entry.indexOf('[') >= 0){
-
       // get the column name from FormData
       let column = entry.slice(0, entry.indexOf('['));
       // get the column properties names like the 'type' and 'value'
@@ -147,17 +102,16 @@ const buildMutationIngredients = (formData) => {
 
       // build an object like: column_name = { type: 'type', value: 'value' }
       (columns[column] ??= {})[property] = value;
-
     }
-  }
+  };
 
-
+  // for each edited column build the needed strings and add the value to `variables`
   for(const column in columns){
-    variablesDefinition += `, $${column}: ${parsedGraphqlType[columns[column].type]}`;
+    variablesDefinition += `, $${column}: ${columnTypeToVariableType[columns[column].type]}`;
 
     variables[column] = parseValue(columns[column].type, columns[column].value);
 
-    properties = ''; // TO DO
+    properties += `{ name: "${column}", ${columnTypeToPropertyType[columns[column].type]}: $${column} }`;
   }
 
 
@@ -167,8 +121,7 @@ const buildMutationIngredients = (formData) => {
     variablesDefinition = `(${variablesDefinition})`; // add brackets to definition string
   }
 
-  console.log(variablesDefinition);
-  console.log(variables);
+  return { variablesDefinition, variables, properties }
 
 };
 
@@ -180,7 +133,7 @@ const buildMutationIngredients = (formData) => {
 //            variables with their values to pass with the query, e.g. { variable_name: 'Variable value', another_variable: 5 } (object)
 //            filters used to filter properties in GraphQL requests, e.g. 'properties: [name: "variable_name", contains: $variable_value]' (string)
 // ------------------------------------------------------------------------
-const buildPropertiesFilter = (filters = []) => {
+const buildQueryIngredients = (filters = []) => {
   // graphql variables definition for the query (string)
   let variablesDefinition = '';
   // variables passed with the query (object)
@@ -196,16 +149,8 @@ const buildPropertiesFilter = (filters = []) => {
     range: ['range'],
     array: ['value_array', 'not_value_array', 'value_in', 'not_value_in', 'array_overlaps', 'not_array_overlaps']
   };
-  // type name to be used in graphql variables definition
-  const parsedGraphqlType = {
-    string: 'String',
-    int: 'Int',
-    float: 'Float',
-    bool: 'Boolean',
-    range: 'RangeFilter',
-    array: '[String!]'
-  };
 
+  // build the data for each applied filter
   for(const filter of filters){
 
     // if there is no value, don't output filter string for that filter which effectively clears it
@@ -248,7 +193,7 @@ const buildPropertiesFilter = (filters = []) => {
     // skipping the ID as it is not filtered as a property
     if(filter.name !== 'id'){
       // add current filter variable to variables definition string
-      variablesDefinition += `, $${filter.name}: ${parsedGraphqlType[filterType]}`;
+      variablesDefinition += `, $${filter.name}: ${columnTypeToVariableType[filterType]}`;
 
       // add the current filter to the variables object passed with the request (corresponding with variables definition)
       variables[filter.name] = parsedFilterValue;
@@ -318,7 +263,7 @@ const record = {
 
     const deletedFilter = params.deleted === 'true' ? `deleted_at: { exists: true }` : '';
 
-    const propertiesFilterData = buildPropertiesFilter(params.filters?.attributes);
+    const propertiesFilterData = buildQueryIngredients(params.filters?.attributes);
 
     const query = `
       query${propertiesFilterData.variablesDefinition} {
@@ -350,30 +295,25 @@ const record = {
 
 
   // purpose:		creates new record in the database
-  // arguments:	(object)
-  //				    tableName (string) - name of the table that you are adding the record in
-  //				    properties (FormData) - key-value pairs for the record
+  // arguments:
   // returns:		id of the newly created record (int)
   // ------------------------------------------------------------------------
   create: (args) => {
-    let properties = Object.fromEntries(args.properties.entries());
-    const table = properties.tableName;
-    delete properties.tableName;
-    properties = getPropertiesString(properties);
-
-    let test = buildMutationIngredients(args.properties);
+    const formDataEntries = Object.fromEntries(args.properties.entries());
+    const table = formDataEntries.tableName;
+    const ingredients = buildMutationIngredients(args.properties);
 
     const query = `
-      mutation {
+      mutation${ingredients.variablesDefinition} {
         record_create(record: {
           table: "${table}",
-          properties: [${properties}]
+          properties: [${ingredients.properties}]
         }) {
           id
         }
       }`;
 
-    return graphql({ query });
+    return graphql({ query, variables: ingredients.variables });
   },
 
 
@@ -385,27 +325,25 @@ const record = {
   // returns:		id of the edited record (int)
   // ------------------------------------------------------------------------
   edit: (args) => {
-    let properties = Object.fromEntries(args.properties.entries());
-    const table = properties.tableName;
-    delete properties.tableName;
-    const id = properties.recordId;
-    delete properties.recordId;
-    properties = getPropertiesString(properties);
+    let formDataEntries = Object.fromEntries(args.properties.entries());
+    const table = formDataEntries.tableName;
+    const id = formDataEntries.recordId;
+    const ingredients = buildMutationIngredients(args.properties);
 
     const query = `
-      mutation {
+      mutation${ingredients.variablesDefinition} {
         record_update(
           id: ${id},
           record: {
             table: "${table}"
-            properties: [${properties}]
+            properties: [${ingredients.properties}]
           }
         ) {
           id
         }
       }`;
 
-    return graphql({ query });
+    return graphql({ query, variables: ingredients.variables });
   },
 
 
