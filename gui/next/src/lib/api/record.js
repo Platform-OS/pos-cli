@@ -39,6 +39,103 @@ const columnTypeToVariableType = {
 
 
 
+// purpose:		build the strings and objects needed to pass with GraphQL request to filter the properties
+// arguments:	list of properties to filter the data with (array of objects) that icludes:
+//				    attribute_type, property, operation, value
+// returns:		GraphQL variables definitions, e.g. '($variable_name: String. $another_variable: Int)' (string)
+//            variables with their values to pass with the query, e.g. { variable_name: 'Variable value', another_variable: 5 } (object)
+//            filters used to filter properties in GraphQL requests, e.g. 'properties: [name: "variable_name", contains: $variable_value]' (string)
+// ------------------------------------------------------------------------
+const buildQueryIngredients = (filters = []) => {
+  // graphql variables definition for the query (string)
+  let variablesDefinition = '';
+  // variables passed with the query (object)
+  let variables = {};
+  // filters passed with the query (string)
+  let propertiesFilter = '';
+  // list of data types for variables in each operations, unmentioned are considered 'string' (object)
+  const operationsForType = {
+    string: ['array_contains', 'not_array_contains', 'contains', 'ends_with', 'not_contains', 'not_ends_with', 'not_starts_with', 'not_value', 'starts_with', 'value'],
+    int: ['value_int', 'not_value_int'],
+    float: ['not_value_float', 'value_float'],
+    bool: ['exists', 'not_value_boolean', 'value_boolean'],
+    range: ['range'],
+    array: ['value_array', 'not_value_array', 'value_in', 'not_value_in', 'array_overlaps', 'not_array_overlaps']
+  };
+
+  // build the data for each applied filter
+  for(const filter of filters){
+
+    // if there is no value, don't output filter string for that filter which effectively clears it
+    if(!filter.minFilterValue && !filter.maxFilterValue && !filter.value){
+      break;
+    }
+
+    // storing the type for current filter
+    let filterType = '';
+    // we are getting each filter value as a string, so it needs to be parsed for graphql request
+    let parsedFilterValue = '';
+
+    if(operationsForType.int.includes(filter.operation)){
+      filterType = 'integer';
+      parsedFilterValue = parseInt(filter.value);
+    }
+    else if (operationsForType.float.includes(filter.operation)){
+      filterType = 'float';
+      parsedFilterValue = parseFloat(filter.value);
+    }
+    else if (operationsForType.bool.includes(filter.operation)){
+      filterType = 'boolean';
+      parsedFilterValue = filter.value === 'true' ? true : false;
+    }
+    else if(operationsForType.range.includes(filter.operation)){
+      filterType = 'range';
+      parsedFilterValue = {};
+      parsedFilterValue[filter.minFilter] = filter.minFilterValue;
+      parsedFilterValue[filter.maxFilter] = filter.maxFilterValue;
+    }
+    else if(operationsForType.array.includes(filter.operation)){
+      filterType = 'array';
+      parsedFilterValue = JSON.parse(filter.value);
+    }
+    else {
+      filterType = 'string';
+      parsedFilterValue = filter.value;
+    }
+
+    // skipping the ID as it is not filtered as a property
+    if(filter.name !== 'id'){
+      // add current filter variable to variables definition string
+      variablesDefinition += `, $${filter.name}: ${columnTypeToVariableType[filterType]}`;
+
+      // add the current filter to the variables object passed with the request (corresponding with variables definition)
+      variables[filter.name] = parsedFilterValue;
+
+      // add current filter to properties filters string passed in GraphQL request
+      propertiesFilter += `{
+        name: "${filter.name}",
+        ${filter.operation}: $${filter.name}
+      }`;
+    }
+
+  };
+
+  // build the final variables definition string with all the needed variables and their types
+  if(variablesDefinition.length){
+    variablesDefinition = variablesDefinition.slice(2); // remove first comma ', '
+    variablesDefinition = `(${variablesDefinition})`; // add brackets to definition string
+  }
+
+  // build final string for filtering the properties
+  propertiesFilter = `
+    properties: [${propertiesFilter}]
+  `;
+
+  return { variablesDefinition, variables, propertiesFilter };
+};
+
+
+
 // purpose:		builds all the needed data to build and trigger GraphQL mutation
 // arguments: FormData object with the column, type and value (column[value], column[type])
 // returns:   variablesDefinition (string) - GraphQL variables definitions $variable: Type
@@ -123,102 +220,6 @@ const buildMutationIngredients = (formData) => {
 
   return { variablesDefinition, variables, properties }
 
-};
-
-
-// purpose:		build the strings and objects needed to pass with GraphQL request to filter the properties
-// arguments:	list of properties to filter the data with (array of objects) that icludes:
-//				    attribute_type, property, operation, value
-// returns:		GraphQL variables definitions, e.g. '($variable_name: String. $another_variable: Int)' (string)
-//            variables with their values to pass with the query, e.g. { variable_name: 'Variable value', another_variable: 5 } (object)
-//            filters used to filter properties in GraphQL requests, e.g. 'properties: [name: "variable_name", contains: $variable_value]' (string)
-// ------------------------------------------------------------------------
-const buildQueryIngredients = (filters = []) => {
-  // graphql variables definition for the query (string)
-  let variablesDefinition = '';
-  // variables passed with the query (object)
-  let variables = {};
-  // filters passed with the query (string)
-  let propertiesFilter = '';
-  // list of data types for variables in each operations, unmentioned are considered 'string' (object)
-  const operationsForType = {
-    string: ['array_contains', 'not_array_contains', 'contains', 'ends_with', 'not_contains', 'not_ends_with', 'not_starts_with', 'not_value', 'starts_with', 'value'],
-    int: ['value_int', 'not_value_int'],
-    float: ['not_value_float', 'value_float'],
-    bool: ['exists', 'not_value_boolean', 'value_boolean'],
-    range: ['range'],
-    array: ['value_array', 'not_value_array', 'value_in', 'not_value_in', 'array_overlaps', 'not_array_overlaps']
-  };
-
-  // build the data for each applied filter
-  for(const filter of filters){
-
-    // if there is no value, don't output filter string for that filter which effectively clears it
-    if(!filter.minFilterValue && !filter.maxFilterValue && !filter.value){
-      break;
-    }
-
-    // storing the type for current filter
-    let filterType = '';
-    // we are getting each filter value as a string, so it needs to be parsed for graphql request
-    let parsedFilterValue = '';
-
-    if(operationsForType.int.includes(filter.operation)){
-      filterType = 'int';
-      parsedFilterValue = parseInt(filter.value);
-    }
-    else if (operationsForType.float.includes(filter.operation)){
-      filterType = 'float';
-      parsedFilterValue = parseFloat(filter.value);
-    }
-    else if (operationsForType.bool.includes(filter.operation)){
-      filterType = 'bool';
-      parsedFilterValue = filter.value === 'true' ? true : false;
-    }
-    else if(operationsForType.range.includes(filter.operation)){
-      filterType = 'range';
-      parsedFilterValue = {};
-      parsedFilterValue[filter.minFilter] = filter.minFilterValue;
-      parsedFilterValue[filter.maxFilter] = filter.maxFilterValue;
-    }
-    else if(operationsForType.array.includes(filter.operation)){
-      filterType = 'array';
-      parsedFilterValue = JSON.parse(filter.value);
-    }
-    else {
-      filterType = 'string';
-      parsedFilterValue = filter.value;
-    }
-
-    // skipping the ID as it is not filtered as a property
-    if(filter.name !== 'id'){
-      // add current filter variable to variables definition string
-      variablesDefinition += `, $${filter.name}: ${columnTypeToVariableType[filterType]}`;
-
-      // add the current filter to the variables object passed with the request (corresponding with variables definition)
-      variables[filter.name] = parsedFilterValue;
-
-      // add current filter to properties filters string passed in GraphQL request
-      propertiesFilter += `{
-        name: "${filter.name}",
-        ${filter.operation}: $${filter.name}
-      }`;
-    }
-
-  };
-
-  // build the final variables definition string with all the needed variables and their types
-  if(variablesDefinition.length){
-    variablesDefinition = variablesDefinition.slice(2); // remove first comma ', '
-    variablesDefinition = `(${variablesDefinition})`; // add brackets to definition string
-  }
-
-  // build final string for filtering the properties
-  propertiesFilter = `
-    properties: [${propertiesFilter}]
-  `;
-
-  return { variablesDefinition, variables, propertiesFilter };
 };
 
 
