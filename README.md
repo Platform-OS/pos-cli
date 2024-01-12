@@ -221,11 +221,17 @@ Once you have prepared your module you can release the new version and the publi
 
 #### Pulling module codebase
 
-You can fetch the codebase of the module directly to your project. Then you can view the module implementation and change it if you need.
+You can fetch the module codebase that is deployed on your instance.
 
     pos-cli modules pull <env> <module_name>
     
 It will download and unpack module files into `modules/<module_name>` directory.
+
+#### Downloading module version codebase
+
+You can download public module codebase that has been released.
+
+    pos-cli modules download <module_name>
     
 
 ##### module templates
