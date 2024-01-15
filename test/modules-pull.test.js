@@ -30,13 +30,13 @@ describe('Successful pull', () => {
 });
 
 describe('Failed pull', () => {
-  test('Module not found - non existing module', async () => {
+  test('Module not found - non-existing module', async () => {
     const { stdout, stderr } = await run('tests', 'moduleNotFound');
     expect(stderr).toMatch('Module not found');
   });
   test('Module not found - no name for module', async () => {
     const { stdout, stderr } = await run('tests', '');
-    expect(stderr).toMatch('Module not found');
+    expect(stderr).toMatch('Module name not provided');
   });
   test('Unescaped characters in request path', async () => {
     const { stdout, stderr } = await run('tests', 'ąę');
