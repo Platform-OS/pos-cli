@@ -532,7 +532,7 @@ test('adding a record with broken array and expecting validation error', async (
 
   await page.getByRole('button', { name: 'Create record' }).click();
 
-  await expect(page.getByText('has an invalid value')).toBeVisible();
+  await expect(page.getByText('Not a valid array')).toBeVisible();
 });
 
 
