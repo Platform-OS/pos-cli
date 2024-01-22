@@ -4,6 +4,7 @@
 * Feature: (LogsV2 Reports) Added a few built-in reports based on requests https://github.com/mdyd-dev/pos-cli/pull/572
 * Bug: (GUI) Fixed parsing `null` values on the database table view for `boolean` type
 * Improvement: (GUI) Editing `boolean` values not uses `<select>` instead of `textarea`
+* Bug: Fixed exporting as zip instead of JSON
 
 ## 4.17.1
 * Bug: (GUI) Fixed clearing `boolean` value saved as 'null' (string)
