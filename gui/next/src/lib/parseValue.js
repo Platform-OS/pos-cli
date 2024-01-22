@@ -15,7 +15,7 @@ const parseValue = (value, type) => {
     type: type
   };
 
-  if(type !== 'boolean' && value === null){
+  if(value === null){
     parsed.value = null;
     parsed.type = 'null';
     return {...parsed};
@@ -44,7 +44,7 @@ const parseValue = (value, type) => {
     return {...parsed};
   }
 
-  return {...parsed};
+  return {...parsed, original: { value, type }};
 };
 
 

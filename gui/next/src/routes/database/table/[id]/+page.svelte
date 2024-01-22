@@ -30,10 +30,6 @@ $: $state.table = $state.tables.filter(table => table.id === $page.params.id)[0]
 // ------------------------------------------------------------------------
 $: $page.params.id && record.get({ table: $page.params.id }) && state.clearFilters();
 
-// purpose:		clear filters each time the table id changes
-// ------------------------------------------------------------------------
-$: $page.params.id && state.clearFilters();
-
 
 // purpose:		refresh current data without reloading the whole page
 // returns:		updates the store with freshly downloaded records for current view

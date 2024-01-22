@@ -20,6 +20,10 @@ textarea {
   transition-timing-function: linear;
 }
 
+  .content-context select {
+    background-color: var(--color-context-input-background);
+  }
+
 textarea {
   padding: 1rem;
 }
