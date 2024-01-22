@@ -1,6 +1,6 @@
 # Changelog
 
-## master
+## 4.17.1
 * Bug: (GUI) Fixed clearing `boolean` value saved as 'null' (string)
 * Bug: (GUI) Fixed adding and editing JSONs with special characters, especially brackets
 
