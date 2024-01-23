@@ -1,0 +1,12 @@
+{
+  "aggs": {
+    "histogram": "SELECT lb_status_code, target_status_code, http_request_path as path, count(target_status_code) as count, avg(target_processing_time) as avg_target_processing_time FROM query GROUP BY lb_status_code, target_status_code, path ORDER BY count DESC limit 20"
+  },
+  "query": {
+    "sql": "select * from requests where target_processing_time > 1"
+  },
+  "meta": {
+    "title": "slow endpoints sorted by requests number",
+    "columns": ["path", "count", "avg_target_processing_time", "target_status_code", "lb_status_code", "target_status_code"]
+  }
+}
