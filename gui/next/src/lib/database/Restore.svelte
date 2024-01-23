@@ -3,6 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { createEventDispatcher } from 'svelte';
 import { page } from '$app/stores';
 import { record } from '$lib/api/record';
 import { state } from '$lib/state';
@@ -14,10 +15,13 @@ export let table;
 export let id;
 
 let form;
+let dispatch = createEventDispatcher();
 
 const restore = async (event) => {
 
   event.preventDefault();
+
+  dispatch('success');
 
   const restore = await record.restore({ table: table.name, properties: new FormData(form) });
 

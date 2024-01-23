@@ -1,7 +1,16 @@
 # Changelog
 
 ## master
+* Bug: (GUI) Fixed parsing `null` values on the database table view for `boolean` type
+* Improvement: (GUI) Editing `boolean` values not uses `<select>` instead of `textarea`
+
+## 4.17.1
+* Bug: (GUI) Fixed clearing `boolean` value saved as 'null' (string)
+* Bug: (GUI) Fixed adding and editing JSONs with special characters, especially brackets
+
+## 4.17.0
 * Bug: (GUI) `0` (int) no longer outputs `null` in the database browser
+* Improvement: (GUI) Make the record context menu stay open untill user clicks outside it
 
 ## 4.16.2
 * Bug: Fix passing arguments to generator

@@ -11,11 +11,9 @@
 // ------------------------------------------------------------------------
 import { state } from '$lib/state.js';
 import { parseValue } from '$lib/parseValue.js'
-import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Icon from '$lib/ui/Icon.svelte';
-import Delete from '$lib/database/Delete.svelte';
-import Restore from '$lib/database/Restore.svelte';
+import ContextMenu from '$lib/database/ContextMenu.svelte';
 import JSONTree from '$lib/ui/JSONTree.svelte';
 
 
@@ -109,6 +107,11 @@ td, th {
   background-color: var(--color-highlight);
 }
 
+.hasContextMenu {
+  position: relative;
+  z-index: 20;
+}
+
 .value-null {
   text-transform: uppercase;
   font-size: .9em;
@@ -134,55 +137,30 @@ td, th {
     opacity: 1;
   }
 
-  tr:hover .combo .button:hover {
+  tr:hover .combo .button:not(.active):hover {
     background-color: var(--color-background);
+  }
+
+  .combo .button.active {
+    background-color: var(--color-context);
+    color: var(--color-text-inverted);
+  }
+
+  .combo .button.active:hover :global(svg) {
+    color: var(--color-text-inverted);
+  }
+
+  tr:has(.active) .combo {
+    opacity: 1;
+  }
+
+  tr:has(.active) .combo button:first-child {
+    border-end-start-radius: 0;
   }
 
 
 .delete {
   width: 50px;
-}
-
-/* extended menu */
-menu {
-  display: none;
-  position: absolute;
-  left: .5rem;
-  top: 100%;
-  z-index: 20;
-  overflow: hidden;
-
-  border-radius: 1rem;
-  white-space: nowrap;
-}
-
-menu.active {
-  display: block;
-}
-
-  td:first-child:hover {
-    z-index: 30;
-  }
-
-menu li + li {
-  border-block-start: 1px solid var(--color-context-input-background);
-}
-
-menu :global(button) {
-  width: 100%;
-  padding: .5rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: .5em;
-  line-height: 0;
-}
-
-menu :global(button:hover) {
-  background-color: var(--color-context-button-background-hover);
-}
-
-menu li:last-child :global(button) {
-  padding-block-end: .6rem;
 }
 
 </style>
@@ -207,11 +185,11 @@ menu li:last-child :global(button) {
     </thead>
     {#if $state.records?.results?.length}
       {#each $state.records?.results as record (record.id)}
-        <tr class:highlighted={$state.highlighted.record === record.id}>
-          <td on:mouseleave={() => contextMenu.id = null}>
+        <tr class:highlighted={$state.highlighted.record === record.id} class:hasContextMenu={contextMenu.id === record.id}>
+          <td>
             <div class="id">
               <div class="combo">
-                <button class="button compact more" on:click={() => contextMenu.id = record.id}>
+                <button class="button compact more" class:active={contextMenu.id === record.id} on:click={() => contextMenu.id = record.id}>
                   <span class="label">More options</span>
                   <Icon icon="navigationMenuVertical" size="16" />
                 </button>
@@ -220,23 +198,9 @@ menu li:last-child :global(button) {
                   <Icon icon="pencil" size="16" />
                 </button>
               </div>
-              <menu class="content-context" class:active={contextMenu.id === record.id}>
-                <ul>
-                  <li>
-                    <button type="button" on:click={() => { $state.record = {...record}; $state.record.id = null; } }>
-                      <Icon icon="copy" size="22" />
-                      Copy record
-                    </button>
-                  </li>
-                  <li>
-                    {#if $state.filters.deleted === 'true'}
-                      <Restore table={$state.table} id={record.id} />
-                    {:else}
-                      <Delete table={$state.table} id={record.id} />
-                    {/if}
-                  </li>
-                </ul>
-              </menu>
+              {#if contextMenu.id === record.id}
+                <ContextMenu record={record} on:close={() => contextMenu.id = null} />
+              {/if}
               {record.id}
             </div>
           </td>

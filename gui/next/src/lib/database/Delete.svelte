@@ -3,6 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { createEventDispatcher } from 'svelte';
 import { page } from '$app/stores';
 import { record } from '$lib/api/record';
 import { state } from '$lib/state';
@@ -14,12 +15,16 @@ export let table;
 export let id;
 
 let form;
+let dispatch = createEventDispatcher();
 
 const remove = async (event) => {
 
   event.preventDefault();
 
+
   if(confirm('Are you sure you want to delete this record?')){
+
+    dispatch('success');
 
     const remove = await record.delete({ table: table.name, properties: new FormData(form) });
 

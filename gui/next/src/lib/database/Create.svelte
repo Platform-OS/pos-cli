@@ -83,10 +83,13 @@ const save = async (event) => {
   validation = {};
 
   for(const property of properties.entries()){
-    if(property[0].endsWith('[type]') && property[1] === 'json'){
-      const propertyName = property[0].replace('[type]', '');
-      if(!tryParseJSON(properties.get(propertyName + '[value]'))){
-        validation[propertyName] = { property: propertyName, message: 'Not a valid JSON' };
+    if(property[0].endsWith('[type]')){
+      if(property[1] === 'json' || property[1] === 'array'){
+        const propertyName = property[0].replace('[type]', '');
+        const propertyValue = properties.get(propertyName + '[value]')
+        if(propertyValue !== '' && !tryParseJSON(propertyValue)){
+          validation[propertyName] = { property: propertyName, message: `Not a valid ${property[1]}` };
+        }
       }
     }
   }
@@ -190,7 +193,8 @@ label {
   font-size: .9em;
 }
 
-textarea {
+textarea,
+select {
   width: 100%;
   max-height: 40rem;
 }
@@ -275,18 +279,28 @@ textarea {
                 {#if property.attribute_type === 'upload'}
                   (non editable)
                 {/if}
-                <input type="hidden" name="{property.name}[parsedType]" value={value.type} />
               </div>
             </label>
           </dir>
           <div>
-            <textarea
-              rows="1"
-              name="{property.name}[value]"
-              id="edit_{property.name}"
-              use:autosize
-              disabled={property.attribute_type === 'upload'}
-            >{value.type === 'json' || value.type === 'jsonEscaped' && !dontParseStringedJson ? JSON.stringify(value.value, undefined, 2) : value.value}</textarea>
+            {#if property.attribute_type === 'boolean'}
+              <select
+                name="{property.name}[value]"
+                id="edit_{property.name}"
+              >
+                <option value="" class="value-null"></option>
+                <option value="true" selected={value.value === 'true'}>true</option>
+                <option value="false" selected={value.value === 'false'}>false</option>
+              </select>
+            {:else}
+              <textarea
+                rows="1"
+                name="{property.name}[value]"
+                id="edit_{property.name}"
+                use:autosize
+                disabled={property.attribute_type === 'upload'}
+              >{value.type === 'json' || value.type === 'jsonEscaped' && !dontParseStringedJson ? JSON.stringify(value.value, undefined, 2) : value.value}</textarea>
+            {/if}
             <div role="alert">
               {#if validation[property.name]}
                 {validation[property.name].message}
