@@ -47,7 +47,7 @@ program
     'use normal object `id` instead of `external_id` in exported json data',
     'false'
   )
-  .option('-z --zip', 'export to zip archive', 'false')
+  .option('-z --zip', 'export to zip archive', false)
   .action((environment, params) => {
     const isZipFile = params.zip;
     let filename = params.path;
