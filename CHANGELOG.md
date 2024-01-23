@@ -1,5 +1,9 @@
 # Changelog
 
+## master
+* Bug: (GUI) Fixed parsing `null` values on the database table view for `boolean` type
+* Improvement: (GUI) Editing `boolean` values not uses `<select>` instead of `textarea`
+
 ## 4.17.1
 * Bug: (GUI) Fixed clearing `boolean` value saved as 'null' (string)
 * Bug: (GUI) Fixed adding and editing JSONs with special characters, especially brackets
