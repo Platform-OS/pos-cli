@@ -1,6 +1,7 @@
 # Changelog
 
 ## master
+* Bug: Fixed updating module version in `pos-cli modules install <module_name>` command
 
 ## 4.17.2
 * Feature: (LogsV2 Reports) Added a few built-in reports based on requests https://github.com/mdyd-dev/pos-cli/pull/572

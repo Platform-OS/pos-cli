@@ -23,7 +23,7 @@ const readLocalModules = () => {
 const addNewModule = async (moduleName, moduleVersion, localModules, getVersions) => {
   const newModule = await findModuleVersion(moduleName, moduleVersion, getVersions);
   if(newModule){
-    const modules = {...newModule, ...localModules};
+    const modules = {...localModules, ...newModule};
     return modules;
   } else {
     throw new Error(`Can't find module ${moduleName} with version ${moduleVersion}`);
