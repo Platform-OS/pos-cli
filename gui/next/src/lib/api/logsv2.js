@@ -29,10 +29,14 @@ const logs = {
       filters.start_time = Math.floor(date.getTime() - 24 * 60 * 60 * 1000 * 3);
     }
 
+    if(filters.message){
+      filters.sql = `SELECT * FROM logs where message LIKE '%${filters.message}%'`;
+    }
 
-    filters = new URLSearchParams(filters).toString();
 
-    return fetch(`${url}?${filters}`)
+    let filtersString = new URLSearchParams(filters).toString();
+
+    return fetch(`${url}?${filtersString}`)
       .then(response => {
         if(response.ok){
           return response.json();
