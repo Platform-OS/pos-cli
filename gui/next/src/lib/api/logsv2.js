@@ -30,7 +30,7 @@ const logs = {
     }
 
     if(filters.message){
-      filters.sql = `SELECT * FROM logs where message LIKE '%${filters.message}%' OR type LIKE '%${filters.message}%' OR options_data_url LIKE '%${filters.message}%'`;
+      filters.sql = `SELECT * FROM logs where message ILIKE '%${filters.message}%' OR type ILIKE '%${filters.message}%' OR options_data_url ILIKE '%${filters.message}%'`;
     }
 
 
