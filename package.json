@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "4.17.1",
+  "version": "4.17.2",
   "description": "Manage your platformOS application",
   "scripts": {
     "test": "jest --runInBand",
