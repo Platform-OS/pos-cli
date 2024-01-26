@@ -34,9 +34,9 @@ const logs = {
     }
 
 
-    let filtersString = new URLSearchParams(filters).toString();
+    filters = new URLSearchParams(filters).toString();
 
-    return fetch(`${url}?${filtersString}`)
+    return fetch(`${url}?${filters}`)
       .then(response => {
         if(response.ok){
           return response.json();
