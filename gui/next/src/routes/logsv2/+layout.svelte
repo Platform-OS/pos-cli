@@ -249,7 +249,7 @@ table {
               type="text"
               name="message"
               id=filter_message
-              placeholder="Filter by message"
+              placeholder="Find logs"
               bind:value={filters.message}
             >
             <button type="submit" class="button">
