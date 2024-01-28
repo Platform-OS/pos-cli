@@ -1,6 +1,7 @@
 # Changelog
 
 ## master
+* Bug: Fixed updating module version in `pos-cli modules install <module_name>` command
 
 ## 4.17.3
 * Bug: Fix packing module files for `pos-cli modules push` command
