@@ -29,6 +29,10 @@ const logs = {
       filters.start_time = Math.floor(date.getTime() - 24 * 60 * 60 * 1000 * 3);
     }
 
+    if(filters.message){
+      filters.sql = `SELECT * FROM logs where message ILIKE '%${filters.message}%' OR type ILIKE '%${filters.message}%' OR options_data_url ILIKE '%${filters.message}%'`;
+    }
+
 
     filters = new URLSearchParams(filters).toString();
 

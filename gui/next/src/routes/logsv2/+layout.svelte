@@ -7,6 +7,8 @@ import { page } from '$app/stores';
 import { logs } from '$lib/api/logsv2.js';
 import { state } from '$lib/state.js';
 
+import Icon from '$lib/ui/Icon.svelte';
+
 
 // properties
 // ------------------------------------------------------------------------
@@ -68,6 +70,47 @@ $: logs.get(Object.fromEntries($page.url.searchParams)).then(data => items = dat
   background-color: var(--color-background);
   border-block-end: 1px solid var(--color-frame);
 }
+
+  .filters form {
+    display: flex;
+    gap: var(--space-navigation);
+  }
+
+  .filters input:focus-visible {
+    position: relative;
+    z-index: 1;
+  }
+
+  .filters .search {
+    display: flex;
+    align-items: center;
+  }
+
+  .filters .search label :global(svg) {
+    width: 16px;
+    height: 16px;
+    margin-inline-end: -16px;
+    position: relative;
+    inset-inline-start: .8em;
+    inset-block-start: 2px;
+    z-index: 2;
+
+    color: var(--color-text-secondary);
+  }
+
+  .filters .search input {
+    padding-inline-start: 2.5em;
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  .filters .search .button {
+    margin-inline-start: 1px;
+    padding-block: .63rem;
+    padding-inline: .7em .8em;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+  }
 
 
 /* content table */
@@ -196,8 +239,24 @@ table {
             min={minAllowedDate.toISOString().split('T')[0]}
             max={today.toISOString().split('T')[0]}
             bind:value={filters.start_time}
-            on:change={form.requestSubmit()}
+            on:input={form.requestSubmit()}
           >
+          <fieldset class="search">
+            <label for="filter_message">
+              <Icon icon="search" />
+            </label>
+            <input
+              type="text"
+              name="message"
+              id=filter_message
+              placeholder="Find logs"
+              bind:value={filters.message}
+            >
+            <button type="submit" class="button">
+              <span class="label">Filter logs</span>
+              <Icon icon="arrowRight" />
+            </button>
+          </fieldset>
         </form>
       </nav>
 
