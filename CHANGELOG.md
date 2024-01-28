@@ -2,6 +2,9 @@
 
 ## master
 
+## 4.17.3
+* Bug: Fix packing module files for `pos-cli modules push` command
+
 ## 4.17.2
 * Feature: (LogsV2 Reports) Added a few built-in reports based on requests https://github.com/mdyd-dev/pos-cli/pull/572
 * Bug: (GUI) Fixed parsing `null` values on the database table view for `boolean` type
