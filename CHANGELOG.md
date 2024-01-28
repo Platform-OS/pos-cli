@@ -1,6 +1,8 @@
 # Changelog
 
 ## master
+
+## 4.17.4
 * Feature: (GUI) Ability to filter logs by string
 * Bug: Fixed updating module version in `pos-cli modules install <module_name>` command
 
