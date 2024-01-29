@@ -140,7 +140,9 @@ header {
 
 h2 {
   margin-block-end: .2em;
+  overflow: hidden;
 
+  text-overflow: ellipsis;
   font-weight: 500;
   font-size: 1.2rem;
 }
