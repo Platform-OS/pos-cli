@@ -45,7 +45,6 @@ const getItems = async () => {
   clearInterval(runsAtUpdateInterval);
 
   items = await backgroundJob.get(filters);
-  console.log(items);
 
   runsAtUpdateInterval = setInterval(() => {
     items.results.forEach(item => {

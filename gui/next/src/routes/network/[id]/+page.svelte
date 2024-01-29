@@ -14,8 +14,6 @@ import Aside from '$lib/ui/Aside.svelte';
 // ------------------------------------------------------------------------
 // log details (object)
 let item = {};
-// message parsed to JSON if available (string or object)
-$: message = item && tryParseJSON(item.message);
 
 const load = async () => {
   const filters = {

@@ -7,8 +7,6 @@ import { page } from '$app/stores';
 import { network } from '$lib/api/network.js';
 import { state } from '$lib/state.js';
 
-import Icon from '$lib/ui/Icon.svelte';
-
 
 // properties
 // ------------------------------------------------------------------------
