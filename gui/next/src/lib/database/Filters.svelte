@@ -26,8 +26,8 @@ const operations = {
   integer: ['value_int', 'exists', 'not_value_int', 'range'],
   float: ['value_float', 'exists', 'not_value_float', 'range'],
   upload: ['value', 'exists', 'not_value'],
-  datetime: ['value', 'exists', 'not_value'],
-  date: ['value', 'exists', 'not_value']
+  datetime: ['value', 'exists', 'contains', 'ends_with', 'not_contains', 'not_ends_with', 'not_starts_with', 'not_value', 'starts_with'],
+  date: ['value', 'exists', 'contains', 'ends_with', 'not_contains', 'not_ends_with', 'not_starts_with', 'not_value', 'starts_with']
 };
 
 

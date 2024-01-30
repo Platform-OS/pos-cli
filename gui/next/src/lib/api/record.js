@@ -106,7 +106,7 @@ const buildQueryIngredients = (filters = []) => {
     // skipping the ID as it is not filtered as a property
     if(filter.name !== 'id'){
       // add current filter variable to variables definition string
-      variablesDefinition += `, $${filter.name}: ${columnTypeToVariableType[filterType]}`;
+      variablesDefinition += `, $${filter.name}: ${columnTypeToVariableType[filterType] || 'String'}`;
 
       // add the current filter to the variables object passed with the request (corresponding with variables definition)
       variables[filter.name] = parsedFilterValue;
@@ -204,7 +204,7 @@ const buildMutationIngredients = (formData) => {
 
   // for each edited column build the needed strings and add the value to `variables`
   for(const column in columns){
-    variablesDefinition += `, $${column}: ${columnTypeToVariableType[columns[column].type]}`;
+    variablesDefinition += `, $${column}: ${columnTypeToVariableType[columns[column].type] || 'String'}`;
 
     variables[column] = parseValue(columns[column].type, columns[column].value);
 
