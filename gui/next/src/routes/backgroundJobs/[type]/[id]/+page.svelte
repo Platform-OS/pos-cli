@@ -145,6 +145,13 @@ code {
       </Code>
     {/if}
 
+    {#if item.partial_name}
+      <h2>Background function name:</h2>
+      <Code>
+        {item.partial_name}
+      </Code>
+    {/if}
+
     {#if item.arguments}
       <h2>Arguments</h2>
       <code>
