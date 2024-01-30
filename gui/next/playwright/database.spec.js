@@ -431,6 +431,24 @@ test('filtering record string by starts_with', async ({ page }) => {
   await expect(page.getByRole('cell', { name: '[]'})).toBeHidden();
 });
 
+
+test('filtering record datetime by value', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
+
+  await page.locator('select[name="name"]').selectOption('qa_table_1_datetime');
+  await page.locator('select[name="operation"]').selectOption('starts_with');
+  await page.getByPlaceholder('filter value').fill('2007');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array1_item1"'})).toBeHidden();
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array2_item1"'})).toBeHidden();
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array3_item1"'})).toBeVisible();
+});
+
+
 test('distinguishing between boolean data and false values', async ({ page }) => {
   await page.goto(url);
 
@@ -483,7 +501,7 @@ test('reordering records', async ({ page }) => {
   await page.locator('select[name="by"]').selectOption('qa_table_1_int');
   await page.locator('select[name="order"]').selectOption('DESC');
 
-  await expect(page.locator('table > tr:first-of-type td:nth-child(4)')).toContainText('2137');
+  await expect(page.locator('table > tr:first-of-type td:nth-child(5)')).toContainText('2137');
 });
 
 
