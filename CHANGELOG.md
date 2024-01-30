@@ -1,7 +1,9 @@
 # Changelog
 
 ## master
+* Feature: (GUI) Basic network log under `/network`
 * Improvement: add new command `modules download`, bring back old syntax to `modules pull`
+
 
 ## 4.17.4
 * Feature: (GUI) Ability to filter logs by string
