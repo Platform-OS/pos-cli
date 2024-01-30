@@ -501,7 +501,7 @@ test('reordering records', async ({ page }) => {
   await page.locator('select[name="by"]').selectOption('qa_table_1_int');
   await page.locator('select[name="order"]').selectOption('DESC');
 
-  await expect(page.locator('table > tr:first-of-type td:nth-child(4)')).toContainText('2137');
+  await expect(page.locator('table > tr:first-of-type td:nth-child(5)')).toContainText('2137');
 });
 
 
