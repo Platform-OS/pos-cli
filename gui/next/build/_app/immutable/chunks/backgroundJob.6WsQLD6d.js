@@ -26,6 +26,7 @@ import{g as o}from"./graphql.vANW7X3L.js";const _={get:async e=>{let t="";e!=nul
             id
             label
             liquid_body
+            partial_name
             locked_at
             queue
             resource_id

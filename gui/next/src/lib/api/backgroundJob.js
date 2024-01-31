@@ -54,6 +54,7 @@ const backgroundJob = {
             id
             label
             liquid_body
+            partial_name
             locked_at
             queue
             resource_id
