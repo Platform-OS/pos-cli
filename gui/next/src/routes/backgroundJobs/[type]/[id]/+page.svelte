@@ -147,9 +147,9 @@ code {
 
     {#if item.partial_name}
       <h2>Background function name:</h2>
-      <Code>
+      <code>
         {item.partial_name}
-      </Code>
+      </code>
     {/if}
 
     {#if item.arguments}
