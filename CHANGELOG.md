@@ -2,6 +2,7 @@
 
 ## master
 * Bug: (GUI) Fixed adding and editing records with `datetime` field
+* Chore: Set minimal node version to 16
 
 ## 4.17.5
 * Feature: (GUI) Basic network log under `/network`
