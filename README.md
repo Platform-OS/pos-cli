@@ -8,7 +8,7 @@ Run all commands in the project root directory - one level above the `app` or `m
 
 ### Requirements
 
-`pos-cli` requires nodejs >= v10 to work properly. [Read more on how to install node on your platform](https://nodejs.org/en/download/).
+`pos-cli` requires nodejs >= v16 to work properly. [Read more on how to install node on your platform](https://nodejs.org/en/download/).
 
 ## Installation and update
 
