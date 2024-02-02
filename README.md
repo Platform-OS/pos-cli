@@ -8,7 +8,7 @@ Run all commands in the project root directory - one level above the `app` or `m
 
 ### Requirements
 
-`pos-cli` requires nodejs >= v10 to work properly. [Read more on how to install node on your platform](https://nodejs.org/en/download/).
+`pos-cli` requires nodejs >= v16 to work properly. [Read more on how to install node on your platform](https://nodejs.org/en/download/).
 
 ## Installation and update
 
@@ -29,9 +29,9 @@ See this [guide](https://documentation.platformos.com/get-started/partner-portal
 
 To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
 
-    pos-cli env add [environment] --email [your email] --url [your application url]
+    pos-cli env add [environment] --url [your application url]
 
-Example: `pos-cli env add staging --email myemail@example.com --url https://example.com`
+Example: `pos-cli env add staging --url https://example.com`
 
 Configuration for environments is in the `.pos` file.
 
@@ -373,6 +373,13 @@ To open platformOS Admin go to [http://localhost:3333](http://localhost:3333)
 If you want to open platformOS Admin as soon as `gui serve` is running, add `--open` (`-o`) as your argument.
 
     pos-cli gui serve [environment] -o
+    
+    
+#### Running with sync
+
+Usualy in day to day work you want to have `gui serve` and `sync` run. You can do it with one command:
+
+    pos-cli gui serve [environment] -o --sync
 
 #### GraphiQL Browser
 
