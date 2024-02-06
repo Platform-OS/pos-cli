@@ -271,6 +271,7 @@ menu :global(button:hover) {
           <select name="type" id="filter-type" bind:value={filters.type} on:change={form.requestSubmit()}>
             <option value="SCHEDULED">Scheduled</option>
             <option value="DEAD">Failed</option>
+            <option value="RUNNING">Running</option>
           </select>
         </fieldset>
         <!--

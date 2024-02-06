@@ -3,6 +3,7 @@
 ## master
 * Bug: (GUI) Fixed adding and editing records with `datetime` field
 * Chore: Set minimal node version to 16
+* Improvement: (GUI) Show currently running jobs in Background Jobs
 
 ## 4.17.5
 * Feature: (GUI) Basic network log under `/network`
