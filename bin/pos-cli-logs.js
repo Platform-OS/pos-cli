@@ -12,17 +12,30 @@ const fetchAuthData = require('../lib/settings').fetchSettings,
   Gateway = require('../lib/proxy');
 
 class LogStream extends EventEmitter {
-  constructor(authData, interval) {
+  constructor(authData, interval, filter) {
     super();
     this.authData = authData;
     this.gateway = new Gateway(authData);
     this.interval = interval
+    this.filter = !!filter && filter.toLowerCase()
   }
 
   start() {
     const t = this;
     setInterval(() => t.fetchData(), t.interval);
     logger.Debug('Starting live logging...');
+  }
+
+  filterByLogType(row) {
+    if (!this.filter) return;
+
+    try {
+      return this.filter !== (row.error_type || 'error').toLowerCase()
+    }
+    catch(e) {
+      logger.Error(`${row.error_type} error`)
+      return false
+    }
   }
 
   fetchData() {
@@ -35,17 +48,8 @@ class LogStream extends EventEmitter {
 
         for (let k in logs) {
           const row = logs[k];
-          const filter = !!program.filter && program.filter.toLowerCase();
 
-          try {
-            const errorType = (row.error_type || 'error').toLowerCase();
-          }
-          catch(e) {
-            logger.Error(`${row.error_type} error`)
-            const errorType = "weird-error-type"
-          }
-
-          if (!!program.filter && filter !== errorType) continue;
+          if (this.filterByLogType(row)) continue;
 
           if (!storage.exists(row.id)) {
             storage.add(row);
@@ -76,7 +80,7 @@ program
   .option('-q, --quiet', 'show only log message, without context')
   .action((environment, program, argument) => {
     const authData = fetchAuthData(environment, program);
-    const stream = new LogStream(authData, program.interval);
+    const stream = new LogStream(authData, program.interval, program.filter);
 
     stream.on('message', ({ created_at, error_type, message, data }) => {
       if (message == null) message = '';
