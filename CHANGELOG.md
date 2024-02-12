@@ -1,6 +1,9 @@
 # Changelog
 
-## master
+## 4.18.1
+* Bug: Fixed `pos-cli logs --filter` to consider log `type`
+
+## 4.18.0
 * Bug: (GUI) Fixed adding and editing records with `datetime` field
 * Chore: Set minimal node version to 16
 
