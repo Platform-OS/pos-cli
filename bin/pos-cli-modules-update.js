@@ -24,7 +24,7 @@ program
   .name('pos-cli modules update')
   .arguments('<module-name>', 'name of the module. Example: core. You can also pass version number: core@1.0.0')
   .action(async (moduleNameWithVersion) => {
-    const spinner = ora({ text: "Modules update", stream: process.stdout, spinner: 'bouncingBar' }).start();
+    const spinner = ora({ text: "Updating module", stream: process.stdout, spinner: 'bouncingBar' }).start();
 
     try{
       let localModules = configFiles.readLocalModules();
@@ -32,7 +32,7 @@ program
         const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
         localModules = await updateModule(moduleName, moduleVersion, localModules, Portal.moduleVersions);
         configFiles.writePosModules(localModules);
-        spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]}`);
+        spinner.succeed(`Updated module: ${moduleName}@${localModules[moduleName]}`);
       }
 
       if(!localModules) {
@@ -47,7 +47,7 @@ program
       // throw e;
       logger.Debug(e);
       spinner.stopAndPersist();
-      spinner.fail(e.message);
+      logger.Error(e.message);
     }
   });
 
