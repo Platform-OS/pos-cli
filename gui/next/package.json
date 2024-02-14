@@ -9,13 +9,13 @@
     "test": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.1",
+    "@playwright/test": "^1.41.2",
     "@sveltejs/adapter-auto": "^3.1.1",
     "@sveltejs/adapter-static": "^3.0.1",
     "@sveltejs/kit": "^2.5.0",
     "@sveltejs/vite-plugin-svelte": "^3.0.2",
-    "svelte": "^4.2.9",
-    "vite": "^5.0.12"
+    "svelte": "^4.2.10",
+    "vite": "^5.1.2"
   },
   "type": "module",
   "dependencies": {
