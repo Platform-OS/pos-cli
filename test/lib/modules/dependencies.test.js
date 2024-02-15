@@ -1,10 +1,9 @@
 const dependencies = require('../../../lib/modules/dependencies');
 const isEqual = require('lodash.isequal');
 
-test('returns empty hash if there is a problem loading configuration file', async () => {
+test('resolveDependencies ok', async () => {
   const core = {"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}, "1.6.0":{"dependencies":{}}, "1.8.0":{"dependencies":{}}}};
   const modulesVersions = async (modulesNames) => {
-    // console.log('hit');
     if(isEqual(modulesNames, ['payments_stripe', 'tests', 'a'])) {
       return [
         {"module":"payments_stripe","versions":{"1.0.6":{"dependencies":{"payments":"^1.0.0", "core":"^1.0.0"}}}},
@@ -44,6 +43,35 @@ test('returns empty hash if there is a problem loading configuration file', asyn
   );
 });
 
+test('resolveDependencies do not use newest available version but the one defined in root', async () => {
+  const core = {"module":"core","versions":{"1.6.0":{"dependencies":{}}, "1.6.1":{"dependencies":{}}, "1.8.0":{"dependencies":{}}}};
+  const tests = {"module":"tests","versions":{"1.0.7":{"dependencies":{"core":"^1.6.0"}}}}
+  const modulesVersions = async (modulesNames) => {
+    // console.log('hit');
+    if(isEqual(modulesNames, ['tests', 'core'])) {
+      return [tests, core];
+    } else if(isEqual(modulesNames, ['tests'])) {
+      return [tests];
+    } else if(isEqual(modulesNames, ['core'])) {
+      return [core]
+    }
+    console.log('dont know', modulesNames);
+  };
+  const rootModules = {
+    "tests": "1.0.7",
+    "core": "1.6.1"
+  };
+
+  const data = await dependencies.resolveDependencies(rootModules, modulesVersions, rootModules);
+
+  expect(data).toEqual(
+    {
+      "tests": "1.0.7",
+      "core": "1.6.1"
+    }
+  );
+});
+
 
 test('find module with newest version', async () => {
   const modulesVersions = async (modulesNames) => {
@@ -70,3 +98,4 @@ test('can not find module with requested version', async () => {
 
   expect(data).toEqual(null);
 });
+
