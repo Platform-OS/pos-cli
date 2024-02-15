@@ -59,20 +59,20 @@ test('pinning a log message and managing pinned logs', async ({ page }) => {
 
 
 test('filtering log messages', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'log?message=Log+for+filterinig+log+messages+tests');
+  await page.goto(triggerLogUrl + 'log?message=Log+without+error+for+filterinig+log+messages+tests');
   await expect(page.getByText('Registering a log: info')).toBeVisible();
   await page.goto(triggerLogUrl + 'log?type=error&message=Error+log+for+filtering+log+messages+tests');
   await expect(page.getByText('Registering a log: error')).toBeVisible();
 
   await page.goto(url);
 
-  await expect(page.getByText('Log for filtering log messages tests')).toBeAttached();
+  await expect(page.getByText('Log without error for filtering log messages tests')).toBeAttached();
   await expect(page.getByText('Error log for filtering log messages tests')).toBeAttached();
 
   await page.getByLabel('Filter:').fill('error');
 
   await expect(page.getByText('Error log for filtering log messages tests')).toBeVisible();
-  await expect(page.getByText('Log for filtering log messages tests')).toBeHidden();
+  await expect(page.getByText('Log without error for filtering log messages tests')).toBeHidden();
 });
 
 
