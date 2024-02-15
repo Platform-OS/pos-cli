@@ -17,12 +17,12 @@ test('see home screen', async ({ page }) => {
 
 
 test('viewing logs', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'log');
-  await expect(page.getByText('Registering a log')).toBeVisible();
+  await page.goto(triggerLogUrl + 'log?message=This+is+a+first+test+log');
+  await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.goto(url);
 
-  await expect(page.getByText('This is a test log').first()).toBeVisible();
+  await expect(page.getByText('This is a first test log')).toBeVisible();
 });
 
 
@@ -59,32 +59,32 @@ test('pinning a log message and managing pinned logs', async ({ page }) => {
 
 
 test('filtering log messages', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'log');
-  await expect(page.getByText('Registering a log')).toBeVisible();
-  await page.goto(triggerLogUrl + 'log_error');
-  await expect(page.getByText('Registering an error log')).toBeVisible();
+  await page.goto(triggerLogUrl + 'log?message=Log+for+filterinig+log+messages+tests');
+  await expect(page.getByText('Registering a log: info')).toBeVisible();
+  await page.goto(triggerLogUrl + 'log?type=error&message=Error+log+for+filtering+log+messages+tests');
+  await expect(page.getByText('Registering a log: error')).toBeVisible();
 
   await page.goto(url);
 
-  await expect(page.getByText('This is a test log').first()).toBeAttached();
-  await expect(page.getByText('This is an error log').first()).toBeAttached();
+  await expect(page.getByText('Log for filtering log messages tests')).toBeAttached();
+  await expect(page.getByText('Error log for filtering log messages tests')).toBeAttached();
 
   await page.getByLabel('Filter:').fill('error');
 
-  await expect(page.getByText('This is an error log').first()).toBeVisible();
-  await expect(page.getByText('This is a test log').first()).toBeHidden();
+  await expect(page.getByText('Error log for filtering log messages tests')).toBeVisible();
+  await expect(page.getByText('Log for filtering log messages tests')).toBeHidden();
 });
 
 
 test('clearing logs from the screen', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'log');
-  await expect(page.getByText('Registering a log')).toBeVisible();
+  await page.goto(triggerLogUrl + 'log?message=Log+for+clearing+logs+from+the+screen+tests');
+  await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.goto(url);
 
-  await expect(page.getByText('This is a test log').first()).toBeVisible();
+  await expect(page.getByText('Log for clearing logs from the screen tests')).toBeVisible();
 
   await page.getByRole('button', { name: 'Clear screen' }).click();
 
-  await expect(page.getByText('This is a test log').first()).toBeHidden();
+  await expect(page.getByText('Log for clearing logs from the screen tests')).toBeHidden();
 });
