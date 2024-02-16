@@ -31,7 +31,7 @@ let filters = Object.fromEntries($page.url.searchParams);
 
 // purpose:   load new logs each time query params change
 // ------------------------------------------------------------------------
-$: logs.get(Object.fromEntries($page.url.searchParams)).then(data => items = data);
+$: logs.get(Object.fromEntries($page.url.searchParams)).then(data => $state.logsv2 = data);
 
 </script>
 
@@ -269,9 +269,9 @@ table {
               <th class="message">Message</th>
             </tr>
           </thead>
-          {#if items}
+          {#if $state.logsv2.hits}
             <tbody>
-              {#each items.hits as log}
+              {#each $state.logsv2.hits as log}
                 <tr
                   class:error={log.type.match(/error/i)}
                   class:highlight={filters.key == log._timestamp}

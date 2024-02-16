@@ -55,11 +55,8 @@ button[aria-disabled="true"] {
 }
 
 button :global(svg) {
-  width: 16px;
-  height: 16px;
-
-  position: relative;
-  top: .05em;
+  width: 14px;
+  height: 14px;
 }
 
   button.progressing :global(svg) {

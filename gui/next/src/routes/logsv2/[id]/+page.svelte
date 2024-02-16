@@ -4,7 +4,8 @@
 // imports
 // ------------------------------------------------------------------------
 import { page } from '$app/stores';
-import { logs } from '$lib/api/logsv2';
+import { logs } from '$lib/api/logsv2.js';
+import { state } from '$lib/state.js';
 import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Aside from '$lib/ui/Aside.svelte';
@@ -12,23 +13,31 @@ import JSONTree from '$lib/ui/JSONTree.svelte';
 import Copy from '$lib/ui/Copy.svelte';
 
 
-// properties
+
+// purpose:   loads log detail from api or from cached logs if available
+// effect:    updated $state.logv2
 // ------------------------------------------------------------------------
-// log details (object)
-let item = {};
-// message parsed to JSON if available (string or object)
-$: message = item && tryParseJSON(item.message);
-
 const load = async () => {
-  const filters = {
-    size: 1,
-    sql: `select * from logs where _timestamp = ${$page.params.id}`
-  };
 
-  await logs.get(filters).then(response => {
-    item = response.hits[0];
-  });
-}
+  // try to find the viewed log details in all the logs we have currently loaded on page
+  const logFoundInCached = $state.logsv2.hits?.find(log => log._timestamp == $page.params.id);
+
+  if(logFoundInCached){
+    $state.logv2 = logFoundInCached;
+  }
+  // make the api request only for log that is not currenly loaded on page
+  else {
+    const filters = {
+      size: 1,
+      sql: `select * from logs where _timestamp = ${$page.params.id}`
+    };
+
+    await logs.get(filters).then(response => {
+      $state.logv2 = response.hits[0];
+    });
+  }
+
+};
 
 $: $page.params.id && load();
 
@@ -50,17 +59,12 @@ dl {
     text-align: end;
   }
 
-h2 {
-  margin-block: .5em;
-  display: flex;
-  justify-content: space-between;
-}
-
 a:hover {
   color: var(--color-interaction-hover);
 }
 
 .code {
+  margin-block-start: .2rem;
   padding: .6em .8em .6em .8em;
 
   border-radius: 0 1rem 1rem;
@@ -82,23 +86,23 @@ a:hover {
   <script src="/prism.js" data-manual></script>
 </svelte:head>
 
-<Aside title={item?.type ?? 'Loading…'} closeUrl="/logsv2?{$page.url.searchParams.toString()}">
+<Aside title={$state.logv2?.type ?? 'Loading…'} closeUrl="/logsv2?{$page.url.searchParams.toString()}">
 
   <dl>
-    <dt>Time:</dt> <dd>{new Date(item?.options_at / 1000).toLocaleString()}</dd>
-    <dt>Host:</dt> <dd><a href="{item?.options_data_url}">{item?.options_data_url}</a></dd>
+    <dt>Time:</dt> <dd>{new Date($state.logv2?.options_at / 1000).toLocaleString()}</dd>
+    <dt>URL:</dt> <dd><a href="https://{$state.logv2?.options_data_url}">{new URL('https://' + $state.logv2?.options_data_url).pathname + new URL('https://' + $state.logv2?.options_data_url).search}</a></dd>
+    {#if $state.logv2.message}
+      <dt>Message:</dt> <dd><Copy text={$state.logv2.message} /></dd>
+    {/if}
   </dl>
 
-  {#if item?.message}
-    <h2>
-      Message:
-      <Copy text={item.message} />
-    </h2>
+  {#if $state.logv2.message}
+    {@const message = tryParseJSON($state.logv2.message)}
     <div class="code" class:json={message}>
       {#if message}
         <JSONTree value={message} showFullLines={true} />
       {:else}
-        {item.message}
+        {$state.logv2.message}
       {/if}
     </div>
   {/if}
