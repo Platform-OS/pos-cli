@@ -1,5 +1,10 @@
 # Changelog
 
+## master
+* Feature: (GUI) Added ability to show currently running background jobs
+* Feature: Added `modules update` command
+* Improvement: (GUI) Made browsing logs detail faster in Logs V2
+
 ## 4.18.1
 * Bug: Fixed `pos-cli logs --filter` to consider log `type`
 
