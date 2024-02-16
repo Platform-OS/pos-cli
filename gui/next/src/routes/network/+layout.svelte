@@ -14,8 +14,6 @@ import { state } from '$lib/state.js';
 let container;
 // filters form (dom node)
 let form;
-// request results with 'hits' containing array with logs (object)
-let items;
 // todays date (Date object)
 const today = new Date();
 // how far to the past the logs can be requested (Date object)
@@ -28,8 +26,9 @@ let filters = Object.fromEntries($page.url.searchParams);
 
 
 // purpose:   load new logs each time query params change
+// effect:    updates $state.networks
 // ------------------------------------------------------------------------
-$: network.get(Object.fromEntries($page.url.searchParams)).then(data => items = data);
+$: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.networks = data);
 
 </script>
 
@@ -235,9 +234,9 @@ table {
               <th>Request</th>
             </tr>
           </thead>
-          {#if items}
+          {#if $state.networks.hits}
             <tbody>
-              {#each items.hits as log}
+              {#each $state.networks.hits as log}
                 <tr
                   class:highlight={filters.key == log._timestamp}
                   class:active={$page.params.id == log._timestamp}
