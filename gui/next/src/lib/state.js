@@ -34,6 +34,10 @@ function createStore(){
     state.logsv2 = {};
     // currently active log (object)
     state.logv2 = {};
+    // network logs data (object)
+    state.networks = {};
+    // currently active network log (object)
+    state.network = {};
     // tables for current instance (array)
     state.tables = [];
     // currently active table (object)
