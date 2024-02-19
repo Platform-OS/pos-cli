@@ -18,7 +18,13 @@ const network = {
     filters.from = filters.from ?? 0;
     filters.size = filters.size ?? 20;
     filters.stream_name = filters.stream_name ?? 'requests'
-    filters.sql = filters.sql ?? `SELECT * FROM requests`;
+
+    let where = '';
+    if(filters.lb_status_codes){
+      where = ' WHERE ';
+    }
+
+    filters.sql = filters.sql ?? `SELECT * FROM requests` + where + filters.lb_status_code;
 
     // parse the dates from YYYY-MM-DD
     if(filters.start_time){
@@ -30,10 +36,36 @@ const network = {
       filters.start_time = Math.floor(date.getTime() - 24 * 60 * 60 * 1000 * 3);
     }
 
+    // parse status codes
+    if(filters.lb_status_codes){
+      filters.lb_status_codes = ` lb_status_code IN (${filters.lb_status_codes}) `;
+    }
+
+
+    const request = {
+      aggs: {
+        statuses: `SELECT lb_status_code, count(lb_status_code) as count FROM query GROUP BY lb_status_code ORDER BY count DESC LIMIT 20`
+      },
+      query: {
+        sql: `SELECT * FROM ${filters.stream_name} ${where} ${filters.lb_status_codes}`,
+        // sql: "SELECT * FROM requests WHERE lb_status_code IN ('400', '404')"
+        from: filters.from,
+        size: filters.size,
+        start_time: filters.start_time || 0,
+        end_time: filters.end_time || 0
+      }
+    }
+
 
     filters = new URLSearchParams(filters).toString();
 
-    return fetch(`${url}?${filters}`)
+    return fetch(`${url}`, {
+      method: 'POST',
+      body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json"
+      },
+    })
       .then(response => {
         if(response.ok){
           return response.json();

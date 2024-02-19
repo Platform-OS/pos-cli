@@ -21,7 +21,8 @@ const dayInterval = 1000 * 60 * 60 * 24;
 const minAllowedDate = new Date(today -  dayInterval * 3);
 // currently active filters (object)
 let filters = Object.fromEntries($page.url.searchParams);
-  filters.start_time = filters.start_time || today.toISOString().split('T')[0];
+    filters.start_time = filters.start_time || today.toISOString().split('T')[0];
+    filters.lb_status_codes = filters.lb_status_codes?.split(',') || [];
 
 
 
@@ -29,6 +30,8 @@ let filters = Object.fromEntries($page.url.searchParams);
 // effect:    updates $state.networks
 // ------------------------------------------------------------------------
 $: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.networks = data);
+
+$: console.log(filters);
 
 </script>
 
@@ -42,7 +45,7 @@ $: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.n
   height: 100%;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr min-content;
+  grid-template-columns: min-content 1fr min-content;
   position: relative;
 }
 
@@ -50,7 +53,7 @@ $: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.n
   min-height: 0;
   max-width: 100vw;
   display: grid;
-  grid-template-rows: min-content 1fr;
+  grid-template-rows: 1fr;
 }
 
 .content {
@@ -64,18 +67,51 @@ $: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.n
 .filters {
   padding: var(--space-navigation);
 
-  background-color: var(--color-background);
-  border-block-end: 1px solid var(--color-frame);
+  border-inline-end: 1px solid var(--color-frame);
 }
+
+  .filters h2 {
+    margin-block-end: .2em;
+    font-weight: 500;
+  }
 
   .filters form {
     display: flex;
+    flex-direction: column;
     gap: var(--space-navigation);
   }
 
-  .filters input:focus-visible {
-    position: relative;
-    z-index: 1;
+  .filters ul {
+    border-radius: .5rem;
+    border: 1px solid var(--color-frame);
+  }
+
+  .filters li {
+    padding: calc(var(--space-navigation) / 2);
+    padding-inline-start: calc(var(--space-navigation) / 1.5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .filters li:not(:last-child) {
+    border-block-end: 1px solid var(--color-frame);
+  }
+
+  .filters li label {
+    display: flex;
+    align-items: center;
+    gap: .2em;
+    cursor: pointer;
+  }
+
+  .filters li small {
+    padding: 2px 5px;
+    background-color: var(--color-background);
+    border-radius: .5em;
+
+    font-family: monospace;
+    font-variant-numeric: tabular-nums;
   }
 
 
@@ -210,20 +246,56 @@ table {
 
 <div class="page" bind:this={container}>
 
-  <section class="container">
+  <nav class="filters">
 
-      <nav class="filters">
-        <form action="" bind:this={form}>
-          <input
-            type="date"
-            name="start_time"
-            min={minAllowedDate.toISOString().split('T')[0]}
-            max={today.toISOString().split('T')[0]}
-            bind:value={filters.start_time}
-            on:input={form.requestSubmit()}
-          >
-        </form>
-      </nav>
+    <form action="" bind:this={form}>
+
+      <fieldset>
+        <input
+          type="date"
+          name="start_time"
+          min={minAllowedDate.toISOString().split('T')[0]}
+          max={today.toISOString().split('T')[0]}
+          bind:value={filters.start_time}
+          on:input={form.requestSubmit()}
+        >
+      </fieldset>
+
+      <fieldset>
+        <h2>Status Code</h2>
+        <input
+          type="text"
+          name="lb_status_codes"
+          bind:value={filters.lb_status_codes}
+        >
+
+        {#if $state.networks?.aggs?.statuses}
+          <ul>
+            {#each $state.networks.aggs.statuses as status, index}
+              <li>
+                <label>
+                  <input
+                    type="checkbox"
+                    value={status.lb_status_code}
+                    name="lb_status_codes[]"
+                    bind:group={filters.lb_status_codes}
+                    on:change={form.requestSubmit()}
+                    class="form-helper"
+                  >
+                  {status.lb_status_code}
+                </label>
+                <small>{status.count}</small>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </fieldset>
+
+    </form>
+
+  </nav>
+
+  <section class="container">
 
       <article class="content">
         <table>
