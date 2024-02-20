@@ -7,7 +7,9 @@
 
 
 
-input,
+input[type="text"],
+input[type="number"],
+input[type="date"],
 select,
 textarea {
   padding: .5rem 1rem;
@@ -56,4 +58,8 @@ textarea::placeholder {
 .content-context select:disabled,
 .content-context textarea:disabled {
   color: rgba(var(--color-rgb-context-button-text), .6);
+}
+
+input[type="checkbox"] {
+  all: revert;
 }

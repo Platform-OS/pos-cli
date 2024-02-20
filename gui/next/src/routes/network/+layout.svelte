@@ -3,6 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { onMount, tick } from 'svelte';
 import { page } from '$app/stores';
 import { network } from '$lib/api/network.js';
 import { state } from '$lib/state.js';
@@ -21,14 +22,21 @@ const dayInterval = 1000 * 60 * 60 * 24;
 const minAllowedDate = new Date(today -  dayInterval * 3);
 // currently active filters (object)
 let filters = Object.fromEntries($page.url.searchParams);
-  filters.start_time = filters.start_time || today.toISOString().split('T')[0];
-
+    filters.start_time = filters.start_time || today.toISOString().split('T')[0];
+    filters.lb_status_codes = filters.lb_status_codes?.split(',') || [];
 
 
 // purpose:   load new logs each time query params change
+// arguments: filters to use on the query (object)
 // effect:    updates $state.networks
 // ------------------------------------------------------------------------
-$: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.networks = data);
+function load(filters){
+  network.get(filters).then(data => { $state.networks = data; });
+}
+
+onMount(() => {
+  load(Object.fromEntries($page.url.searchParams));
+});
 
 </script>
 
@@ -42,7 +50,7 @@ $: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.n
   height: 100%;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr min-content;
+  grid-template-columns: min-content 1fr min-content;
   position: relative;
 }
 
@@ -50,7 +58,7 @@ $: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.n
   min-height: 0;
   max-width: 100vw;
   display: grid;
-  grid-template-rows: min-content 1fr;
+  grid-template-rows: 1fr;
 }
 
 .content {
@@ -64,18 +72,55 @@ $: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.n
 .filters {
   padding: var(--space-navigation);
 
-  background-color: var(--color-background);
-  border-block-end: 1px solid var(--color-frame);
+  border-inline-end: 1px solid var(--color-frame);
 }
+
+  .filters h2 {
+    margin-block-end: .2em;
+    font-weight: 500;
+  }
 
   .filters form {
     display: flex;
+    flex-direction: column;
     gap: var(--space-navigation);
   }
 
-  .filters input:focus-visible {
-    position: relative;
-    z-index: 1;
+  .filters ul {
+    border-radius: .5rem;
+    border: 1px solid var(--color-frame);
+  }
+
+  .filters li {
+    padding: calc(var(--space-navigation) / 2);
+    padding-inline-start: calc(var(--space-navigation) / 1.5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .filters li:not(:last-child) {
+    border-block-end: 1px solid var(--color-frame);
+  }
+
+  .filters li label {
+    display: flex;
+    align-items: center;
+    gap: .2em;
+    cursor: pointer;
+  }
+
+  .filters li small {
+    padding: 2px 5px;
+    background-color: var(--color-background);
+    border-radius: .5em;
+
+    font-family: monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .filters input[name="lb_status_codes"] {
+    display: none;
   }
 
 
@@ -210,20 +255,55 @@ table {
 
 <div class="page" bind:this={container}>
 
-  <section class="container">
+  <nav class="filters">
+    <form action="" bind:this={form} on:submit={event => { load(Object.fromEntries(new FormData(event.target))); }}>
 
-      <nav class="filters">
-        <form action="" bind:this={form}>
-          <input
-            type="date"
-            name="start_time"
-            min={minAllowedDate.toISOString().split('T')[0]}
-            max={today.toISOString().split('T')[0]}
-            bind:value={filters.start_time}
-            on:input={form.requestSubmit()}
-          >
-        </form>
-      </nav>
+
+      <fieldset>
+        <input
+          type="date"
+          name="start_time"
+          min={minAllowedDate.toISOString().split('T')[0]}
+          max={today.toISOString().split('T')[0]}
+          bind:value={filters.start_time}
+          on:input={form.requestSubmit()}
+        >
+      </fieldset>
+
+      <fieldset>
+        <h2>Status Code</h2>
+        <input
+          type="text"
+          name="lb_status_codes"
+          bind:value={filters.lb_status_codes}
+        >
+
+        {#if $state.networks?.aggs?.filters}
+          <ul>
+            {#each $state.networks.aggs.filters as status}
+              <li>
+                <label>
+                  <input
+                    form="none"
+                    type="checkbox"
+                    value={status.lb_status_code.toString()}
+                    bind:group={filters.lb_status_codes}
+                    on:change={() => { form.requestSubmit(); }}
+                  >
+                  {status.lb_status_code}
+                </label>
+                <small>{status.count}</small>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </fieldset>
+
+    </form>
+  </nav>
+
+
+  <section class="container">
 
       <article class="content">
         <table>
@@ -234,9 +314,9 @@ table {
               <th>Request</th>
             </tr>
           </thead>
-          {#if $state.networks.hits}
+          {#if $state.networks?.aggs?.results}
             <tbody>
-              {#each $state.networks.hits as log}
+              {#each $state.networks.aggs.results as log}
                 <tr
                   class:highlight={filters.key == log._timestamp}
                   class:active={$page.params.id == log._timestamp}

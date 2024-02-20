@@ -9,7 +9,7 @@ const ServerError = require('../lib/ServerError');
 
 program.showHelpAfterError();
 program
-  .name('pos-cli logsv2 search')
+  .name('pos-cli logsv2 reports')
   .arguments('[environment]', 'name of environment. Example: staging')
   // .option('--from <from>', 'start from', 0)
   // .option('--size <size>', 'rows size', 20)
