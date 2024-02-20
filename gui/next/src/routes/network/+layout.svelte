@@ -3,6 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { onMount, tick } from 'svelte';
 import { page } from '$app/stores';
 import { network } from '$lib/api/network.js';
 import { state } from '$lib/state.js';
@@ -25,13 +26,17 @@ let filters = Object.fromEntries($page.url.searchParams);
     filters.lb_status_codes = filters.lb_status_codes?.split(',') || [];
 
 
-
 // purpose:   load new logs each time query params change
+// arguments: filters to use on the query (object)
 // effect:    updates $state.networks
 // ------------------------------------------------------------------------
-$: network.get(Object.fromEntries($page.url.searchParams)).then(data => $state.networks = data);
+function load(filters){
+  network.get(filters).then(data => { $state.networks = data; });
+}
 
-$: console.log(filters);
+onMount(() => {
+  load(Object.fromEntries($page.url.searchParams));
+});
 
 </script>
 
@@ -112,6 +117,10 @@ $: console.log(filters);
 
     font-family: monospace;
     font-variant-numeric: tabular-nums;
+  }
+
+  .filters input[name="lb_status_codes"] {
+    display: none;
   }
 
 
@@ -247,8 +256,8 @@ table {
 <div class="page" bind:this={container}>
 
   <nav class="filters">
+    <form action="" bind:this={form} on:submit={event => { load(Object.fromEntries(new FormData(event.target))); }}>
 
-    <form action="" bind:this={form}>
 
       <fieldset>
         <input
@@ -269,18 +278,17 @@ table {
           bind:value={filters.lb_status_codes}
         >
 
-        {#if $state.networks?.aggs?.statuses}
+        {#if $state.networks?.aggs?.filters}
           <ul>
-            {#each $state.networks.aggs.statuses as status, index}
+            {#each $state.networks.aggs.filters as status}
               <li>
                 <label>
                   <input
+                    form="none"
                     type="checkbox"
-                    value={status.lb_status_code}
-                    name="lb_status_codes[]"
+                    value={status.lb_status_code.toString()}
                     bind:group={filters.lb_status_codes}
-                    on:change={form.requestSubmit()}
-                    class="form-helper"
+                    on:change={() => { form.requestSubmit(); }}
                   >
                   {status.lb_status_code}
                 </label>
@@ -292,8 +300,8 @@ table {
       </fieldset>
 
     </form>
-
   </nav>
+
 
   <section class="container">
 
@@ -306,9 +314,9 @@ table {
               <th>Request</th>
             </tr>
           </thead>
-          {#if $state.networks.hits}
+          {#if $state.networks?.aggs?.results}
             <tbody>
-              {#each $state.networks.hits as log}
+              {#each $state.networks.aggs.results as log}
                 <tr
                   class:highlight={filters.key == log._timestamp}
                   class:active={$page.params.id == log._timestamp}
