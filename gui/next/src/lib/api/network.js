@@ -45,7 +45,7 @@ const network = {
 
     // request the aggregated results
     if(!filters.sql){
-      aggregations.results = `SELECT _timestamp, http_request_url, http_request_path, http_request_method, http_request_protocol, lb_status_code, client, user_agent FROM query ${where} ${filters.lb_status_codes ?? ''} ORDER BY _timestamp DESC`;
+      aggregations.results = `SELECT _timestamp, http_request_url, http_request_path, http_request_method, http_request_protocol, lb_status_code, client, user_agent, request_processing_time, target_processing_time, sent_bytes FROM query ${where} ${filters.lb_status_codes ?? ''} ORDER BY _timestamp DESC`;
     }
 
 

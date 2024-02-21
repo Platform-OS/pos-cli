@@ -5,6 +5,7 @@
 * Feature: Added `modules update` command
 * Improvement: (GUI) Made browsing logs detail faster in Logs V2
 * Feature: (GUI) Added ability to filter Network Logs by Status Code
+* Feature: (GUI) Extended information available in Netwok Log detail with 'execution duration' and 'response size'
 
 ## 4.18.1
 * Bug: Fixed `pos-cli logs --filter` to consider log `type`
