@@ -70,6 +70,10 @@ a:hover {
   color: var(--color-interaction-hover);
 }
 
+dl {
+  margin-block-start: var(--space-page);
+}
+
 </style>
 
 
