@@ -90,8 +90,6 @@ dl {
 
       <dt>Request method</dt> <dd>{$state.network.http_request_method}</dd>
 
-      <dt>Request protocol</dt> <dd>{$state.network.http_request_protocol}</dd>
-
       <dt>Status</dt> <dd class:success={$state.network.lb_status_code >= 200 && $state.network.lb_status_code < 300} class:error={$state.network.http_request_protocol.lb_status_code >= 400 && $state.network.http_request_protocol.lb_status_code < 600}>{$state.network.lb_status_code} {httpStatusCodes[$state.network.lb_status_code]}</dd>
 
       <dt>Client IP</dt> <dd>{$state.network.client}</dd>
