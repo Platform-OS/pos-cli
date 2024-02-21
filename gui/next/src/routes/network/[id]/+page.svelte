@@ -6,6 +6,7 @@
 import { page } from '$app/stores';
 import { network } from '$lib/api/network';
 import { state } from '$lib/state.js';
+import { httpStatusCodes } from '$lib/helpers/httpStatusCodes.js';
 
 import Aside from '$lib/ui/Aside.svelte';
 
@@ -57,13 +58,13 @@ $: $page.params.id && load();
   font-size: .75em;
 }
 
-  .success {
-    color: var(--color-confirmation);
-  }
+.success {
+  color: var(--color-confirmation);
+}
 
-  .error {
-    color: var(--color-danger);
-  }
+.error {
+  color: var(--color-danger);
+}
 
 a:hover {
   color: var(--color-interaction-hover);
@@ -87,7 +88,7 @@ a:hover {
 
       <dt>Request protocol</dt> <dd>{$state.network.http_request_protocol}</dd>
 
-      <dt>Status</dt> <dd class:success={$state.network.lb_status_code >= 200 && $state.network.lb_status_code < 300} class:error={$state.network.http_request_protocol.lb_status_code >= 400 && $state.network.http_request_protocol.lb_status_code < 600}>{$state.network.lb_status_code}</dd>
+      <dt>Status</dt> <dd class:success={$state.network.lb_status_code >= 200 && $state.network.lb_status_code < 300} class:error={$state.network.http_request_protocol.lb_status_code >= 400 && $state.network.http_request_protocol.lb_status_code < 600}>{$state.network.lb_status_code} {httpStatusCodes[$state.network.lb_status_code]}</dd>
 
       <dt>Client IP</dt> <dd>{$state.network.client}</dd>
 
