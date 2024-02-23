@@ -143,6 +143,7 @@ h2 {
   overflow: hidden;
 
   text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 500;
   font-size: 1.2rem;
 }
@@ -200,7 +201,7 @@ h2 {
     {#if title || closeUrl}
       <header>
         {#if title}
-          <h2>{title}</h2>
+          <h2>{@html title}</h2>
         {/if}
 
         {#if closeUrl}

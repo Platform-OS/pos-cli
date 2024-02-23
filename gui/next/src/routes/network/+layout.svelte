@@ -191,7 +191,7 @@ table {
     text-overflow: ellipsis;
   }
 
-  .request .method {
+  .method {
     padding: .2rem;
 
     border-radius: 4px;
