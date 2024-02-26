@@ -15,6 +15,9 @@ const network = {
     const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}/api/logsv2` : 'http://localhost:3333/api/logsv2';
 
     filters.stream_name = filters.stream_name ?? 'requests'
+    if(filters.aggregate === 'http_request_path'){
+      filters.aggregate = ' GROUP BY http_request_path, http_request_method'
+    }
 
     // parse the dates from YYYY-MM-DD
     if(filters.start_time){
@@ -45,7 +48,11 @@ const network = {
 
     // request the aggregated results
     if(!filters.sql){
-      aggregations.results = `SELECT _timestamp, http_request_url, http_request_path, http_request_method, lb_status_code, client, user_agent, request_processing_time, target_processing_time, sent_bytes FROM query ${where} ${filters.lb_status_codes ?? ''} ORDER BY _timestamp DESC`;
+      if(!filters.aggregate){
+        aggregations.results = `SELECT _timestamp, http_request_url, http_request_path, http_request_method, lb_status_code, client, user_agent, request_processing_time, target_processing_time, sent_bytes FROM query ${where} ${filters.lb_status_codes ?? ''} ORDER BY _timestamp DESC`;
+      } else {
+        aggregations.results = `SELECT http_request_path, count(http_request_path) as count, http_request_method FROM query ${where} ${filters.lb_status_codes ?? ''} ${filters.aggregate} ORDER BY count DESC`;
+      }
     }
 
 

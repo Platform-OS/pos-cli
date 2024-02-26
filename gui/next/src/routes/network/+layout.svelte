@@ -8,6 +8,8 @@ import { page } from '$app/stores';
 import { network } from '$lib/api/network.js';
 import { state } from '$lib/state.js';
 
+import Icon from '$lib/ui/Icon.svelte';
+
 
 // properties
 // ------------------------------------------------------------------------
@@ -31,6 +33,9 @@ let filters = Object.fromEntries($page.url.searchParams);
 // effect:    updates $state.networks
 // ------------------------------------------------------------------------
 function load(filters){
+  if($state.networks.aggs){
+    $state.networks.aggs.results = [];
+  }
   network.get(filters).then(data => { $state.networks = data; });
 }
 
@@ -141,7 +146,8 @@ table {
   }
 
   th,
-  td > a {
+  td > a,
+  td > div {
     padding: var(--space-table) calc(var(--space-navigation) * 1.5);
   }
 
@@ -157,6 +163,16 @@ table {
 
   td > a {
     display: block;
+  }
+
+  th div {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .count {
+    text-align: end;
   }
 
   .time {
@@ -201,6 +217,7 @@ table {
   }
 
   .status > a {
+    text-align: center;
     font-family: monospace;
     font-size: 1rem;
   }
@@ -221,7 +238,7 @@ table {
     position: relative;
   }
 
-  tr:after {
+  tr:has(a):after {
     position: absolute;
     inset: calc(var(--space-table) / 3);
     z-index: -1;
@@ -242,6 +259,20 @@ table {
     background-color: var(--color-middleground);
   }
 
+  /* aggregation buttons */
+  input[name="aggregate"] {
+    position: absolute;
+    left: -100vw;
+  }
+
+  input[name="aggregate"] + label {
+    color: var(--color-text-secondary);
+  }
+
+  input[name="aggregate"]:checked + label {
+    color: var(--color-interaction);
+  }
+
 
 </style>
 
@@ -256,8 +287,7 @@ table {
 <div class="page" bind:this={container}>
 
   <nav class="filters">
-    <form action="" bind:this={form} on:submit={event => { load(Object.fromEntries(new FormData(event.target))); }}>
-
+    <form action="" id="filters" bind:this={form} on:submit={event => { load(Object.fromEntries(new FormData(event.target))); }}>
 
       <fieldset>
         <input
@@ -309,38 +339,76 @@ table {
         <table>
           <thead>
             <tr>
-              <th>Time</th>
-              <th>Status</th>
-              <th>Request</th>
+              {#if filters.aggregate}
+                <th>
+                  Count
+                </th>
+              {:else}
+                <th>Time</th>
+                <th>Status</th>
+              {/if}
+              <th>
+                <div>
+                  {$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Aggregated ' : ''}Request{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 's' : ''}
+                  <fieldset>
+                    <input
+                      type="checkbox"
+                      form="filters"
+                      name="aggregate"
+                      id="aggregateRequests"
+                      value="http_request_path"
+                      bind:checked={filters.aggregate}
+                      on:change={form.requestSubmit()}
+                    >
+                    <label for="aggregateRequests" title="{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Split request paths' : 'Aggregate request paths'}" class="button compact">
+                      <Icon icon="merge" />
+                    </label>
+                  </fieldset>
+                </div>
+              </th>
             </tr>
           </thead>
           {#if $state.networks?.aggs?.results}
             <tbody>
               {#each $state.networks.aggs.results as log}
                 <tr
-                  class:highlight={filters.key == log._timestamp}
-                  class:active={$page.params.id == log._timestamp}
+                  class:highlight={log._timestamp && filters.key == log._timestamp}
+                  class:active={log._timestamp && $page.params.id == log._timestamp}
                 >
-                  <td class="time">
-                    <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
-                      {new Date(log._timestamp / 1000).toLocaleString()}
-                    </a>
-                  </td>
-                  <td
-                    class="status"
-                    class:success={log.lb_status_code >= 200 && log.lb_status_code < 300}
-                    class:error={log.lb_status_code >= 400 && log.lb_status_code < 600}
-                  >
-                    <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
-                      {log.lb_status_code}
-                    </a>
-                  </td>
+                  {#if filters.aggregate}
+                    <td class="count">
+                      <div>
+                        {log.count}
+                      </div>
+                    </td>
+                  {:else}
+                    <td class="time">
+                      <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                        {new Date(log._timestamp / 1000).toLocaleString()}
+                      </a>
+                    </td>
+                    <td
+                      class="status"
+                      class:success={log.lb_status_code >= 200 && log.lb_status_code < 300}
+                      class:error={log.lb_status_code >= 400 && log.lb_status_code < 600}
+                    >
+                      <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                        {log.lb_status_code}
+                      </a>
+                    </td>
+                  {/if}
                   <td class="request">
-                    <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                    {#if !filters.aggregate}
+                      <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                        <div>
+                          <span class="method">{log.http_request_method}</span> {log.http_request_path}
+                        </div>
+                      </a>
+                    {:else}
                       <div>
                         <span class="method">{log.http_request_method}</span> {log.http_request_path}
                       </div>
-                    </a>
+                    {/if}
                   </td>
                 </tr>
               {/each}

@@ -74,6 +74,10 @@ dl {
   margin-block-start: var(--space-page);
 }
 
+dd {
+  text-align: end;
+}
+
 </style>
 
 
