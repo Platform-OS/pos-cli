@@ -1,6 +1,9 @@
 # Changelog
 
 ## master
+* Feature: (GUI) Added ability to aggregate Network Logs by request URL
+
+## 4.19.0
 * Feature: (GUI) Added ability to show currently running background jobs
 * Feature: Added `modules update` command
 * Improvement: (GUI) Made browsing logs detail faster in Logs V2
