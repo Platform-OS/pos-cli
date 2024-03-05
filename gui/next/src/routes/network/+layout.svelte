@@ -8,7 +8,7 @@ import { page } from '$app/stores';
 import { network } from '$lib/api/network.js';
 import { state } from '$lib/state.js';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Toggle from '$lib/ui/forms/Toggle.svelte';
 
 
 // properties
@@ -75,6 +75,7 @@ onMount(() => {
 
 /* filters */
 .filters {
+  min-width: 240px;
   padding: var(--space-navigation);
 
   border-inline-end: 1px solid var(--color-frame);
@@ -124,6 +125,10 @@ onMount(() => {
     font-variant-numeric: tabular-nums;
   }
 
+  .filters input[type="date"] {
+    width: 100%;
+  }
+
   .filters input[name="lb_status_codes"] {
     display: none;
   }
@@ -138,6 +143,10 @@ table {
 
   thead {
     background-color: var(--color-background);
+  }
+
+  th {
+    white-space: nowrap;
   }
 
   th,
@@ -163,12 +172,6 @@ table {
 
   td > a {
     display: block;
-  }
-
-  th div {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
   }
 
   .count {
@@ -228,6 +231,15 @@ table {
 
   .status.error {
     color: var(--color-danger);
+  }
+
+  .status.info {
+    color: var(--color-interaction);
+  }
+
+  .duration {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
   }
 
   .highlight td {
@@ -301,6 +313,28 @@ table {
       </fieldset>
 
       <fieldset>
+        <Toggle
+          name="aggregate"
+          options={[{value: 'http_request_path', label: 'Aggregate requests'}]}
+          on:change={form.requestSubmit()}
+        />
+
+        <!-- <input
+          type="checkbox"
+          form="filters"
+          name="aggregate"
+          id="aggregateRequests"
+          value="http_request_path"
+          bind:checked={filters.aggregate}
+          on:change={form.requestSubmit()}
+        >
+        <label for="aggregateRequests" title="{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Split request paths' : 'Aggregate request paths'}" class="button compact">
+          <Icon icon="merge" />
+          Aggregate requests
+        </label> -->
+      </fieldset>
+
+      <fieldset>
         <h2>Status Code</h2>
         <input
           type="text"
@@ -348,23 +382,14 @@ table {
                 <th>Status</th>
               {/if}
               <th>
-                <div>
-                  {$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Aggregated ' : ''}Request{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 's' : ''}
-                  <fieldset>
-                    <input
-                      type="checkbox"
-                      form="filters"
-                      name="aggregate"
-                      id="aggregateRequests"
-                      value="http_request_path"
-                      bind:checked={filters.aggregate}
-                      on:change={form.requestSubmit()}
-                    >
-                    <label for="aggregateRequests" title="{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Split request paths' : 'Aggregate request paths'}" class="button compact">
-                      <Icon icon="merge" />
-                    </label>
-                  </fieldset>
-                </div>
+                {$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Aggregated ' : ''}Request{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 's' : ''}
+              </th>
+              <th class="duration">
+                {#if !filters.aggregate}
+                  Duration
+                {:else}
+                  Avg Processing Time
+                {/if}
               </th>
             </tr>
           </thead>
@@ -390,6 +415,7 @@ table {
                     <td
                       class="status"
                       class:success={log.lb_status_code >= 200 && log.lb_status_code < 300}
+                      class:info={log.lb_status_code >= 300 && log.lb_status_code < 400}
                       class:error={log.lb_status_code >= 400 && log.lb_status_code < 600}
                     >
                       <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
@@ -407,6 +433,17 @@ table {
                     {:else}
                       <div>
                         <span class="method">{log.http_request_method}</span> {log.http_request_path}
+                      </div>
+                    {/if}
+                  </td>
+                  <td class="duration">
+                    {#if !filters.aggregate}
+                      <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                        {Math.round((parseFloat(log.request_processing_time) + parseFloat(log.target_processing_time) + Number.EPSILON) * 1000) / 1000}s
+                      </a>
+                    {:else}
+                      <div>
+                        {Math.round((parseFloat(log.avg_target_processing_time) + Number.EPSILON) * 1000) / 1000}s
                       </div>
                     {/if}
                   </td>

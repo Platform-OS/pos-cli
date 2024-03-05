@@ -51,7 +51,7 @@ const network = {
       if(!filters.aggregate){
         aggregations.results = `SELECT _timestamp, http_request_url, http_request_path, http_request_method, lb_status_code, client, user_agent, request_processing_time, target_processing_time, sent_bytes FROM query ${where} ${filters.lb_status_codes ?? ''} ORDER BY _timestamp DESC`;
       } else {
-        aggregations.results = `SELECT http_request_path, count(http_request_path) as count, http_request_method FROM query ${where} ${filters.lb_status_codes ?? ''} ${filters.aggregate} ORDER BY count DESC`;
+        aggregations.results = `SELECT http_request_path, count(http_request_path) as count, http_request_method, avg(target_processing_time) as avg_target_processing_time FROM query ${where} ${filters.lb_status_codes ?? ''} ${filters.aggregate} ORDER BY count DESC`;
       }
     }
 
