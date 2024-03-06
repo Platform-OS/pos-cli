@@ -1,15 +1,23 @@
 <!-- ================================================================== -->
 <script>
 
+// imports
+// ------------------------------------------------------------------------
 import { fade } from 'svelte/transition';
 
 import Icon from '$lib/ui/Icon.svelte';
 
-export let name;
-export let options = [];
-export let checked = options.length > 1 ? options[0].value : '';
 
-let choosen = (' ' + checked).slice(1);
+// properties
+// ------------------------------------------------------------------------
+// name attribute for the form elements (string)
+export let name;
+// available options to choose from (array of objects) containing input value and label for it
+// [{ value: 'choice_a', label: 'This is choice A'}, { value: 'choice_b', label: 'This is choice B'}]
+export let options = [];
+// which of the options is checked (string)
+// for more than one option, the first one is checked by default
+export let checked = options.length > 1 ? options[0].value.toString() : '';
 
 </script>
 
@@ -84,7 +92,7 @@ let choosen = (' ' + checked).slice(1);
     background-color: var(--color-interaction-hover);
   }
 
-/* checkbox version */
+/* single choice checkbox version */
 .toggle.single label {
   position: relative;
   display: flex;
@@ -157,21 +165,21 @@ let choosen = (' ' + checked).slice(1);
       type="radio"
       name={name}
       value={options[0].value}
-      bind:group={choosen}
+      checked={checked === options[0].value}
       id="toggle-{name}-{options[0].value}"
-      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); choosen = choosen === options[0].value ? options[1].value : options[0].value } } }
+      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); checked = checked === options[0].value ? options[1].value : options[0].value } } }
     >
     <label for="toggle-{name}-{options[0].value}">{options[0].label}</label>
 
-    <label for="toggle-{name}-{choosen === options[0].value ? options[1].value : options[0].value}" class="switcher"></label>
+    <label for="toggle-{name}-{checked === options[0].value ? options[1].value : options[0].value}" class="switcher"></label>
 
     <input
       type="radio"
       name={name}
       value={options[1].value}
-      bind:group={choosen}
+      checked={checked === options[1].value}
       id="toggle-{name}-{options[1].value}"
-      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); choosen = choosen === options[0].value ? options[1].value : options[0].value } } }
+      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); checked = checked === options[0].value ? options[1].value : options[0].value } } }
     >
     <label for="toggle-{name}-{options[1].value}">{options[1].label}</label>
 
@@ -179,8 +187,8 @@ let choosen = (' ' + checked).slice(1);
 
     <label for="toggle-{name}-{options[0].value}">
       {options[0].label}
-      {#if choosen === true}
-        <i in:fade={{delay: 100, duration: 50}}>
+      {#if checked === options[0].value}
+        <i in:fade={{delay: 50, duration: 50}}>
           <Icon icon="check" />
         </i>
       {/if}
@@ -190,9 +198,10 @@ let choosen = (' ' + checked).slice(1);
       type="checkbox"
       name={name}
       value={options[0].value}
-      bind:checked={choosen}
       id="toggle-{name}-{options[0].value}"
-      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); choosen = choosen === options[0].value ? '' : options[0].value } } }
+      checked={checked === options[0].value}
+      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); checked = checked === options[0].value ? '' : options[0].value } } }
+      on:change={event => checked = event.target.checked ? options[0].value : '' }
       on:change
     >
 
