@@ -355,7 +355,7 @@ table {
         />
       </fieldset>
 
-      <fieldset class="sort">
+      <!-- <fieldset class="sort">
         <select name="by" id="sort_by" bind:value={filters.sort.by} on:change={() => form.requestSubmit()}>
           {#if filters.aggregate}
             <option value="count">Count</option>
@@ -380,7 +380,7 @@ table {
             <Icon icon="sortAZ" />
           {/if}
         </label>
-      </fieldset>
+      </fieldset> -->
 
       <fieldset>
         <h2>Status Code</h2>
