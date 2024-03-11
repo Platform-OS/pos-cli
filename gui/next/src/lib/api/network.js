@@ -43,13 +43,13 @@ const network = {
 
     // request the filters aggregations
     if(!filters.sql){
-      aggregations.filters = `SELECT lb_status_code, count(lb_status_code) as count FROM query GROUP BY lb_status_code ORDER BY count DESC LIMIT 20`
+      aggregations.filters = `SELECT lb_status_code, count(lb_status_code) as count FROM query GROUP BY lb_status_code ORDER BY count DESC`
     }
 
     // request the aggregated results
     if(!filters.sql){
       if(!filters.aggregate){
-        aggregations.results = `SELECT _timestamp, http_request_url, http_request_path, http_request_method, lb_status_code, client, user_agent, request_processing_time, target_processing_time, sent_bytes FROM query ${where} ${filters.lb_status_codes ?? ''} ORDER BY _timestamp DESC`;
+        aggregations.results = `SELECT _timestamp, http_request_url, http_request_path, http_request_method, lb_status_code, client, user_agent, request_processing_time, target_processing_time, sent_bytes FROM query LIMIT 150`;
       } else {
         aggregations.results = `SELECT http_request_path, count(http_request_path) as count, http_request_method, avg(target_processing_time) as avg_target_processing_time FROM query ${where} ${filters.lb_status_codes ?? ''} ${filters.aggregate} ORDER BY count DESC`;
       }
@@ -63,7 +63,7 @@ const network = {
       query: {
         sql: filters.sql || `SELECT * FROM ${filters.stream_name}`,
         from: filters.from ?? 0,
-        size: filters.size ?? 20,
+        size: filters.size ?? 150,
         start_time: filters.start_time || 0,
         end_time: filters.end_time || 0
       }
