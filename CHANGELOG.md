@@ -1,6 +1,6 @@
 # Changelog
 
-## master
+## 4.20.0
 * Feature: (GUI) Added ability to aggregate Network Logs by request URL
 
 ## 4.19.0
