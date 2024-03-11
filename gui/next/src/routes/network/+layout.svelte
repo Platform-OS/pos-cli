@@ -3,12 +3,13 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount, tick } from 'svelte';
+import { onMount } from 'svelte';
 import { page } from '$app/stores';
 import { network } from '$lib/api/network.js';
 import { state } from '$lib/state.js';
 
 import Icon from '$lib/ui/Icon.svelte';
+import Toggle from '$lib/ui/forms/Toggle.svelte';
 
 
 // properties
@@ -25,6 +26,10 @@ const minAllowedDate = new Date(today -  dayInterval * 3);
 // currently active filters (object)
 let filters = Object.fromEntries($page.url.searchParams);
     filters.start_time = filters.start_time || today.toISOString().split('T')[0];
+    filters.sort = {
+      by: filters.aggregate ? 'count' : '_timestamp',
+      order: 'DESC'
+    }
     filters.lb_status_codes = filters.lb_status_codes?.split(',') || [];
 
 
@@ -75,6 +80,7 @@ onMount(() => {
 
 /* filters */
 .filters {
+  min-width: 240px;
   padding: var(--space-navigation);
 
   border-inline-end: 1px solid var(--color-frame);
@@ -124,8 +130,55 @@ onMount(() => {
     font-variant-numeric: tabular-nums;
   }
 
+  .filters input[type="date"] {
+    width: 100%;
+  }
+
   .filters input[name="lb_status_codes"] {
     display: none;
+  }
+
+  .sort {
+    position: relative;
+    display: flex;
+    gap: 1px;
+  }
+
+  .sort select[name="by"] {
+    flex-grow: 1;
+
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sort select[name="order"] {
+    width: 50px;
+    position: absolute;
+    inset-inline-end: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .sort label {
+    position: relative;
+
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+  }
+
+  .sort select:hover + label {
+    background-color: rgba(var(--color-rgb-interaction-hover), .2);
+  }
+
+  .sort select:focus-visible + label {
+    box-shadow: 0 0 1px 2px var(--color-interaction-hover);
   }
 
 
@@ -138,6 +191,10 @@ table {
 
   thead {
     background-color: var(--color-background);
+  }
+
+  th {
+    white-space: nowrap;
   }
 
   th,
@@ -163,12 +220,6 @@ table {
 
   td > a {
     display: block;
-  }
-
-  th div {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
   }
 
   .count {
@@ -230,6 +281,15 @@ table {
     color: var(--color-danger);
   }
 
+  .status.info {
+    color: var(--color-interaction);
+  }
+
+  .duration {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+  }
+
   .highlight td {
     background-color: var(--color-highlight);
   }
@@ -259,20 +319,6 @@ table {
     background-color: var(--color-middleground);
   }
 
-  /* aggregation buttons */
-  input[name="aggregate"] {
-    position: absolute;
-    left: -100vw;
-  }
-
-  input[name="aggregate"] + label {
-    color: var(--color-text-secondary);
-  }
-
-  input[name="aggregate"]:checked + label {
-    color: var(--color-interaction);
-  }
-
 
 </style>
 
@@ -299,6 +345,42 @@ table {
           on:input={form.requestSubmit()}
         >
       </fieldset>
+
+      <fieldset>
+        <Toggle
+          name="aggregate"
+          options={[{value: 'http_request_path', label: 'Aggregate requests'}]}
+          bind:checked={filters.aggregate}
+          on:change={() => { filters.sort.by = filters.aggregate ? 'count' : '_timestamp'; form.requestSubmit(); }}
+        />
+      </fieldset>
+
+      <!-- <fieldset class="sort">
+        <select name="by" id="sort_by" bind:value={filters.sort.by} on:change={() => form.requestSubmit()}>
+          {#if filters.aggregate}
+            <option value="count">Count</option>
+            <option value="http_request_path">Request Path</option>
+            <option value="avg_request_processing_time">Processing Time</option>
+          {:else}
+            <option value="_timestamp">Time</option>
+            <option value="http_request_path">Request path</option>
+            <option value="request_processing_time">Duration</option>
+          {/if}
+        </select>
+
+        <select name="order" id="sort_order" bind:value={filters.sort.order} on:change={() => form.requestSubmit()}>
+          <option value="DESC">DESC [Z→A]</option>
+          <option value="ASC">ASC [A→Z]</option>
+        </select>
+
+        <label for="sort_order" class="button">
+          {#if filters.sort.order === 'DESC'}
+            <Icon icon="sortZA" />
+          {:else}
+            <Icon icon="sortAZ" />
+          {/if}
+        </label>
+      </fieldset> -->
 
       <fieldset>
         <h2>Status Code</h2>
@@ -348,23 +430,14 @@ table {
                 <th>Status</th>
               {/if}
               <th>
-                <div>
-                  {$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Aggregated ' : ''}Request{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 's' : ''}
-                  <fieldset>
-                    <input
-                      type="checkbox"
-                      form="filters"
-                      name="aggregate"
-                      id="aggregateRequests"
-                      value="http_request_path"
-                      bind:checked={filters.aggregate}
-                      on:change={form.requestSubmit()}
-                    >
-                    <label for="aggregateRequests" title="{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Split request paths' : 'Aggregate request paths'}" class="button compact">
-                      <Icon icon="merge" />
-                    </label>
-                  </fieldset>
-                </div>
+                {$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Aggregated ' : ''}Request{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 's' : ''}
+              </th>
+              <th class="duration">
+                {#if !filters.aggregate}
+                  Duration
+                {:else}
+                  Avg Processing Time
+                {/if}
               </th>
             </tr>
           </thead>
@@ -390,6 +463,7 @@ table {
                     <td
                       class="status"
                       class:success={log.lb_status_code >= 200 && log.lb_status_code < 300}
+                      class:info={log.lb_status_code >= 300 && log.lb_status_code < 400}
                       class:error={log.lb_status_code >= 400 && log.lb_status_code < 600}
                     >
                       <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
@@ -407,6 +481,17 @@ table {
                     {:else}
                       <div>
                         <span class="method">{log.http_request_method}</span> {log.http_request_path}
+                      </div>
+                    {/if}
+                  </td>
+                  <td class="duration">
+                    {#if !filters.aggregate}
+                      <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                        {Math.round((parseFloat(log.request_processing_time) + parseFloat(log.target_processing_time) + Number.EPSILON) * 1000) / 1000}s
+                      </a>
+                    {:else}
+                      <div>
+                        {Math.round((parseFloat(log.avg_target_processing_time) + Number.EPSILON) * 1000) / 1000}s
                       </div>
                     {/if}
                   </td>
