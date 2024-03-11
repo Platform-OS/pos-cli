@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.20.1
+* Chore: (GUI) Updated build files
+
 ## 4.20.0
 * Feature: (GUI) Added ability to aggregate Network Logs by request URL
 
