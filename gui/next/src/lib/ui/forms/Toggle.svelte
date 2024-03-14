@@ -94,6 +94,7 @@ export let checked = options.length > 1 ? options[0].value.toString() : '';
 
 /* single choice checkbox version */
 .toggle.single label {
+  width: 100%;
   position: relative;
   display: flex;
   align-items: center;

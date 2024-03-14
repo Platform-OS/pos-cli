@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.21.0
+* Feature: (GUI) Ability to sort Network Logs
+
 ## 4.20.1
 * Chore: (GUI) Updated build files
 
