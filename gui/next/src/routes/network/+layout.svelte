@@ -43,7 +43,6 @@ function load(filters){
     $state.networks.aggs.results = [];
   }
   network.get(filters).then(data => { $state.networks = data; });
-  console.log('load');
 }
 
 
