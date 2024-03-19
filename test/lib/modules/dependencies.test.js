@@ -83,12 +83,30 @@ test('find module with newest version', async () => {
   expect(data).toEqual({ "core": "1.5.0" });
 });
 
+test('find module with newest stable version', async () => {
+  const modulesVersions = async (modulesNames) => {
+    return [{"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}, "1.5.1-beta.1":{"dependencies":{}}}}];
+  };
+
+  const data = await dependencies.findModuleVersion("core", null, modulesVersions);
+
+  expect(data).toEqual({ "core": "1.5.0" });
+});
+
 test('find module with requested version', async () => {
   const modulesVersions = async (modulesNames) => [{"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}}}];
 
   const data = await dependencies.findModuleVersion("core", "1.0.0", modulesVersions);
 
   expect(data).toEqual({ "core": "1.0.0" });
+});
+
+test('find module with requested version even if it is beta', async () => {
+  const modulesVersions = async (modulesNames) => [{"module":"core","versions":{"1.0.0-beta.1":{"dependencies":{}}, "1.5.0":{"dependencies":{}}}}];
+
+  const data = await dependencies.findModuleVersion("core", "1.0.0-beta.1", modulesVersions);
+
+  expect(data).toEqual({ "core": "1.0.0-beta.1" });
 });
 
 test('can not find module with requested version', async () => {
