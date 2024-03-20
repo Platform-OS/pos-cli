@@ -15,7 +15,7 @@ const parseValue = (value, type) => {
     type: type
   };
 
-  if(value === null){
+  if(!value){
     parsed.value = null;
     parsed.type = 'null';
     return {...parsed};
