@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.21.1
+* Bug: (GUI) Fixed parsing non-existent properties when displaying records
+
 ## 4.21.0
 * Feature: (GUI) Ability to sort Network Logs
 
