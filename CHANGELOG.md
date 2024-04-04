@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.21.2
+* Bug: Fixed deploy not showing an error message when the release package is too large
+
 ## 4.21.1
 * Bug: (GUI) Fixed parsing non-existent properties when displaying records
 
