@@ -115,4 +115,15 @@ describe('Server errors', () => {
       'Validation failed: Attribute type `foo` is not allowed. Valid attribute types: string, integer, float, decimal, datetime, time, date, binary, boolean, array, address, file, photo, text, geojson, upload'
     );
   });
+
+  test('Network error and pos-cli exits with 1', async () => {
+    process.env.MPKIT_URL = 'https://incorrecturl.com'
+
+    const { stderr, stdout, code } = await run('correct');
+
+    expect(code).toEqual(1);
+    expect(stderr).toMatch(
+      'Deploy failed. RequestError: Error: getaddrinfo ENOTFOUND incorrecturl.com'
+    );
+  });
 });
