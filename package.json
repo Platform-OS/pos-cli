@@ -63,7 +63,7 @@
     "readdirp": "^3.6.0",
     "request": "^2.88.2",
     "request-promise": "^4.2.6",
-    "semver": "^7.3.7",
+    "semver": "^7.6.0",
     "shelljs": "^0.8.5",
     "text-table": "^0.2.0",
     "unzipper": "^0.10.14",
