@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
-      image: mcr.microsoft.com/playwright:v1.42.1-jammy
+      image: mcr.microsoft.com/playwright:v1.43.0-jammy
     env:
       MPKIT_EMAIL: ${{ secrets.MPKIT_EMAIL }}
       MPKIT_TOKEN: ${{ secrets.MPKIT_TOKEN }}
@@ -40,9 +40,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: pos-cli
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.11.1
       - name: Install pos-cli
         run: |
           npm install -g @platformos/pos-cli
