@@ -8,6 +8,7 @@ import { beforeNavigate, afterNavigate } from '$app/navigation';
 import { page } from '$app/stores';
 import { network } from '$lib/api/network.js';
 import { state } from '$lib/state.js';
+import { clickOutside } from '$lib/helpers/clickOutside.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Toggle from '$lib/ui/forms/Toggle.svelte';
@@ -32,6 +33,10 @@ let order;
 let aggregated = $page.url.searchParams.get('aggregated') ? true : false;
 // currently selected status codes (array)
 let lb_status_codes = $page.url.searchParams.get('lb_status_codes')?.split(',') || [];
+// popup window with the prests list (dom node)
+let presetsDialog = false;
+// if the presetrs dialog is currently visible (bool)
+let presetsDialogActive = false;
 
 
 // purpose:   load new logs each time query params change
@@ -68,6 +73,17 @@ afterNavigate(() => {
   }
 });
 
+
+function togglePresetsDialog(){
+  if(!presetsDialog.open){
+    presetsDialog.show();
+    presetsDialogActive = true;
+  } else {
+    presetsDialog.close();
+    presetsDialogActive = false;
+  }
+}
+
 </script>
 
 
@@ -102,6 +118,7 @@ afterNavigate(() => {
 .filters {
   min-width: 260px;
   padding: var(--space-navigation);
+  position: relative;
 
   border-inline-end: 1px solid var(--color-frame);
 }
@@ -114,6 +131,7 @@ afterNavigate(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+
     border-block-end: 1px solid var(--color-frame);
   }
 
@@ -122,46 +140,78 @@ afterNavigate(() => {
       font-size: 1rem;
     }
 
-  .filters .reset {
+  .filters nav > button,
+  .filters nav > a {
     padding: .2rem;
 
     line-height: 0;
     color: var(--color-text-secondary);
   }
 
-    .filters .reset:hover {
+    .filters nav > button:hover,
+    .filters nav > a:hover {
+      background: transparent;
+
       color: var(--color-interaction-hover);
     }
 
-    .filters .reset :global(svg) {
+    .filters nav > .active {
+      color: var(--color-context);
+    }
+
+    .filters nav > button :global(svg),
+    .filters nav > a :global(svg) {
       width: 16px;
       height: 16px;
     }
 
-    .filters .reset .label {
+    .filters nav .label {
       position: absolute;
       left: -100vw;
     }
 
   .filters h3 {
     margin-block-end: .2em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
     font-weight: 500;
     font-size: .875rem;
   }
 
-  .filters form {
+    .filters h3 button {
+      width: 15px;
+      height: 15px;
+      padding: 2px;
+
+      border-radius: .5em;
+
+      display: flex;
+      align-items: center;
+    }
+
+    .filters h3 button :global(svg) {
+      width: 100%;
+      height: 100%;
+    }
+
+    .filters h3 button:hover {
+      color: var(--color-interaction-hover);
+    }
+
+  .filters #filters {
     display: flex;
     flex-direction: column;
     gap: var(--space-navigation);
   }
 
-  .filters ul {
+  .filters ul.separated {
     border-radius: .5rem;
     border: 1px solid var(--color-frame);
   }
 
-  .filters li {
+  .filters ul.separated li {
     padding: calc(var(--space-navigation) / 2);
     padding-inline-start: calc(var(--space-navigation) / 1.5);
     display: flex;
@@ -169,7 +219,7 @@ afterNavigate(() => {
     align-items: center;
   }
 
-  .filters li:not(:last-child) {
+  .filters ul.separated li:not(:last-child) {
     border-block-end: 1px solid var(--color-frame);
   }
 
@@ -188,6 +238,100 @@ afterNavigate(() => {
     font-family: monospace;
     font-variant-numeric: tabular-nums;
   }
+
+  .filters .presets {
+    padding: calc(var(--space-navigation) / 2);
+    position: absolute;
+    inset-block-start: 3rem;
+    inset-inline: calc(var(--space-navigation) / 2);
+    z-index: 2;
+
+    border-radius: .5rem;
+  }
+
+  .filters .presets:before {
+    width: 12px;
+    height: 8px;
+    position: absolute;
+    inset-inline-end: 2.45rem;
+    inset-block-start: -7px;
+
+    background-color: var(--color-context);
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+
+    content: '';
+  }
+
+  .filters .presets form {
+    margin-block-end: .5em;
+
+    display: flex;
+  }
+
+  .filters .presets input {
+    width: 100%;
+    padding: .2rem .5rem .3rem;
+
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .filters .presets button[type="submit"] {
+    display: flex;
+    align-items: center;
+    padding-inline: .5rem;
+
+    background-color: var(--color-context-input-background);
+    border-radius: 0 .5rem .5rem 0;
+  }
+
+  .filters .presets button[type="submit"] :global(svg) {
+    width: 13px;
+    height: 13px;
+  }
+
+  .filters .presets li {
+    padding-inline-end: calc(var(--space-navigation) / 3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    line-height: 1.1em;
+  }
+
+    .filters .presets a {
+      padding: calc(var(--space-navigation) / 2.5) calc(var(--space-navigation) / 1.5);
+      flex-grow: 1;
+    }
+
+      .filters .presets li:hover {
+        border-radius: calc(.5rem - 4px);
+        background-color: var(--color-context-button-background-hover);
+      }
+
+    .filters .presets li button {
+      width: 15px;
+      height: 15px;
+      padding: 2px;
+      display: flex;
+      opacity: 0;
+
+      border-radius: .5em;
+    }
+
+      .filters .presets li:hover button {
+        opacity: 1;
+      }
+
+    .filters .presets li button :global(svg) {
+      width: 100%;
+      height: 100%;
+    }
+
+    .filters .presets li button:hover {
+      background-color: transparent;
+      color: var(--color-interaction-hover);
+    }
 
   .filters input[type="date"] {
     width: 100%;
@@ -404,11 +548,50 @@ table {
   <nav class="filters">
     <header>
       <h2>Filters</h2>
-      <a href="/network" class="reset">
-        <span class="label">Reset</span>
-        <Icon icon="disable" />
-      </a>
+      <nav>
+        <button type="button" class:active={presetsDialogActive} on:click={togglePresetsDialog}>
+          <span class="label">Choose filters preset</span>
+          <Icon icon="controlls" />
+        </button>
+        <a href="/network" class="reset">
+          <span class="label">Reset</span>
+          <Icon icon="disable" />
+        </a>
+      </nav>
     </header>
+
+    <dialog use:clickOutside={() => presetsDialogActive && togglePresetsDialog()} bind:this={presetsDialog} class="presets content-context">
+      <form action="">
+        <input type="text" placeholder="Save current view">
+        <button type="submit">
+          <span class="label">Save currently selected filters as new preset</span>
+          <Icon icon="plus" />
+        </button>
+      </form>
+      <ul>
+        <li>
+          <a href="/network?order_by=target_processing_time&order=DESC" autofocus>Slowest requests</a>
+          <button>
+            <span class="label">Delete 'Slowest requests' preset</span>
+            <Icon icon="x" />
+          </button>
+        </li>
+        <li>
+          <a href="/network?aggregate=http_request_path&order_by=avg_target_processing_time&order=DESC">Aggregated slowest requests</a>
+          <button>
+            <span class="label">Delete 'Aggregated slowest requests' preset</span>
+            <Icon icon="x" />
+          </button>
+        </li>
+        <li>
+          <a href="/network?order_by=_timestamp&order=DESC&lb_status_codes=400,401,402,403,404,405,406,407,408,409,410,411,412,413,414,415,416,417,418,419,420,420,421,422,423,424,425,426,427,428,429,431,451">Responded with 4** error</a>
+          <button>
+            <span class="label">Delete 'Responded with 4** error' preset</span>
+            <Icon icon="x" />
+          </button>
+        </li>
+      </ul>
+    </dialog>
 
     <form action="" id="filters" bind:this={form}>
 
@@ -475,7 +658,7 @@ table {
         >
 
         {#if $state.networks?.aggs?.filters}
-          <ul>
+          <ul class="separated">
             {#each $state.networks.aggs.filters as status}
               <li>
                 <label>
