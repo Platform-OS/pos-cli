@@ -485,11 +485,11 @@ table {
     <header>
       <h2>Filters</h2>
       <nav>
-        <button type="button" bind:this={presetsToggleButton} class:active={presetsDialogActive} on:click={togglePresetsDialog}>
+        <button type="button" title="Saved filters presets" bind:this={presetsToggleButton} class:active={presetsDialogActive} on:click={togglePresetsDialog}>
           <span class="label">Choose filters preset</span>
           <Icon icon="controlls" />
         </button>
-        <a href="/network" class="reset">
+        <a href="/network" title="Reset filters" class="reset">
           <span class="label">Reset</span>
           <Icon icon="disable" />
         </a>
