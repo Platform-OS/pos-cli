@@ -107,6 +107,8 @@ function createPreset(event){
   }];
 
   localStorage.posNetworkLogsPresets = JSON.stringify(presets);
+
+  createPresetNameInput.value = '';
 }
 
 
@@ -175,6 +177,11 @@ function deletePreset(event){
 
 
 /* presets list */
+ul {
+  max-height: 77vh;
+  overflow: auto;
+}
+
 li {
   padding-inline-end: calc(var(--space-navigation) / 3);
   display: flex;
