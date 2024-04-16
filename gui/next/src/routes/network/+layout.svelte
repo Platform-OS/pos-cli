@@ -12,6 +12,7 @@ import { clickOutside } from '$lib/helpers/clickOutside.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Toggle from '$lib/ui/forms/Toggle.svelte';
+import Presets from '$lib/network/Presets.svelte';
 
 
 // properties
@@ -37,6 +38,8 @@ let lb_status_codes = $page.url.searchParams.get('lb_status_codes')?.split(',') 
 let presetsDialog = false;
 // if the presetrs dialog is currently visible (bool)
 let presetsDialogActive = false;
+// button that toggles the presets popup (dom node)
+let presetsToggleButton;
 
 
 // purpose:   load new logs each time query params change
@@ -74,7 +77,7 @@ afterNavigate(() => {
 });
 
 
-function togglePresetsDialog(){
+function togglePresetsDialog(event){
   if(!presetsDialog.open){
     presetsDialog.show();
     presetsDialogActive = true;
@@ -163,6 +166,8 @@ function togglePresetsDialog(){
     .filters nav > a :global(svg) {
       width: 16px;
       height: 16px;
+
+      pointer-events: none;
     }
 
     .filters nav .label {
@@ -194,6 +199,8 @@ function togglePresetsDialog(){
     .filters h3 button :global(svg) {
       width: 100%;
       height: 100%;
+
+      pointer-events: none;
     }
 
     .filters h3 button:hover {
@@ -261,77 +268,6 @@ function togglePresetsDialog(){
 
     content: '';
   }
-
-  .filters .presets form {
-    margin-block-end: .5em;
-
-    display: flex;
-  }
-
-  .filters .presets input {
-    width: 100%;
-    padding: .2rem .5rem .3rem;
-
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-
-  .filters .presets button[type="submit"] {
-    display: flex;
-    align-items: center;
-    padding-inline: .5rem;
-
-    background-color: var(--color-context-input-background);
-    border-radius: 0 .5rem .5rem 0;
-  }
-
-  .filters .presets button[type="submit"] :global(svg) {
-    width: 13px;
-    height: 13px;
-  }
-
-  .filters .presets li {
-    padding-inline-end: calc(var(--space-navigation) / 3);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    line-height: 1.1em;
-  }
-
-    .filters .presets a {
-      padding: calc(var(--space-navigation) / 2.5) calc(var(--space-navigation) / 1.5);
-      flex-grow: 1;
-    }
-
-      .filters .presets li:hover {
-        border-radius: calc(.5rem - 4px);
-        background-color: var(--color-context-button-background-hover);
-      }
-
-    .filters .presets li button {
-      width: 15px;
-      height: 15px;
-      padding: 2px;
-      display: flex;
-      opacity: 0;
-
-      border-radius: .5em;
-    }
-
-      .filters .presets li:hover button {
-        opacity: 1;
-      }
-
-    .filters .presets li button :global(svg) {
-      width: 100%;
-      height: 100%;
-    }
-
-    .filters .presets li button:hover {
-      background-color: transparent;
-      color: var(--color-interaction-hover);
-    }
 
   .filters input[type="date"] {
     width: 100%;
@@ -549,7 +485,7 @@ table {
     <header>
       <h2>Filters</h2>
       <nav>
-        <button type="button" class:active={presetsDialogActive} on:click={togglePresetsDialog}>
+        <button type="button" bind:this={presetsToggleButton} class:active={presetsDialogActive} on:click={togglePresetsDialog}>
           <span class="label">Choose filters preset</span>
           <Icon icon="controlls" />
         </button>
@@ -560,37 +496,10 @@ table {
       </nav>
     </header>
 
-    <dialog use:clickOutside={() => presetsDialogActive && togglePresetsDialog()} bind:this={presetsDialog} class="presets content-context">
-      <form action="">
-        <input type="text" placeholder="Save current view">
-        <button type="submit">
-          <span class="label">Save currently selected filters as new preset</span>
-          <Icon icon="plus" />
-        </button>
-      </form>
-      <ul>
-        <li>
-          <a href="/network?order_by=target_processing_time&order=DESC" autofocus>Slowest requests</a>
-          <button>
-            <span class="label">Delete 'Slowest requests' preset</span>
-            <Icon icon="x" />
-          </button>
-        </li>
-        <li>
-          <a href="/network?aggregate=http_request_path&order_by=avg_target_processing_time&order=DESC">Aggregated slowest requests</a>
-          <button>
-            <span class="label">Delete 'Aggregated slowest requests' preset</span>
-            <Icon icon="x" />
-          </button>
-        </li>
-        <li>
-          <a href="/network?order_by=_timestamp&order=DESC&lb_status_codes=400,401,402,403,404,405,406,407,408,409,410,411,412,413,414,415,416,417,418,419,420,420,421,422,423,424,425,426,427,428,429,431,451">Responded with 4** error</a>
-          <button>
-            <span class="label">Delete 'Responded with 4** error' preset</span>
-            <Icon icon="x" />
-          </button>
-        </li>
-      </ul>
+    <dialog use:clickOutside={event => presetsDialogActive && event.target !== presetsToggleButton && togglePresetsDialog()} bind:this={presetsDialog} class="presets content-context">
+      {#if presetsDialogActive}
+        <Presets on:close={togglePresetsDialog} />
+      {/if}
     </dialog>
 
     <form action="" id="filters" bind:this={form}>
