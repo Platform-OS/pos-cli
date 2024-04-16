@@ -15,22 +15,22 @@ import Icon from '$lib/ui/Icon.svelte';
 let container;
 // input with name for new presets to save (dom node)
 let createPresetNameInput;
-// presets list containing 'url' and 'description' for each preset (array of objects)
+// presets list containing 'url' and 'name' for each preset (array of objects)
 let presets = (localStorage.posNetworkLogsPresets && JSON.parse(localStorage.posNetworkLogsPresets)) || [{
   url: "order_by=target_processing_time&order=DESC",
-  description: "Slowest requests"
+  name: "Slowest requests"
 },
 {
   url: "aggregate=http_request_path&order_by=avg_target_processing_time&order=DESC",
-  description: "Aggregated slowest requests"
+  name: "Aggregated slowest requests"
 },
 {
   url: "order_by=_timestamp&order=DESC&lb_status_codes=400,401,402,403,404,405,406,407,408,409,410,411,412,413,414,415,416,417,418,419,420,420,421,422,423,424,425,426,427,428,429,431,451",
-  description: "Responded with 4∗∗ error"
+  name: "Responded with 4∗∗ error"
 },
 {
   url: "order_by=_timestamp&order=DESC&lb_status_codes=500,501,502,503,504,505,506,507,508,510,511",
-  description: "Responded with 5∗∗ error"
+  name: "Responded with 5∗∗ error"
 }];
 
 
@@ -79,7 +79,7 @@ function handleKayboardShortcuts(event){
   // delete currently highlighted item
   else if(event.key === 'Delete'){
     if(container.contains(document.activeElement) && document.activeElement.matches('a')){
-      console.log('Delete item');
+      document.activeElement.closest('li').querySelector('form').requestSubmit();
     }
   }
 
@@ -116,12 +116,16 @@ function createPreset(event){
 function deletePreset(event){
   const data = new FormData(event.target);
   const index = data.get('id');
+  const name = data.get('name');
 
-  presets.splice(index, 1);
+  if(window.confirm(`Are you sure that you want to delete '${name}' preset?`)){
 
-  presets = presets;
+    presets.splice(index, 1);
 
-  localStorage.posNetworkLogsPresets = JSON.stringify(presets);
+    presets = presets;
+
+    localStorage.posNetworkLogsPresets = JSON.stringify(presets);
+  }
 }
 
 </script>
@@ -249,11 +253,12 @@ li button {
   <ul>
     {#each presets as preset, index}
       <li>
-        <a href="/network?{preset.url}">{preset.description}</a>
+        <a href="/network?{preset.url}">{preset.name}</a>
         <form on:submit|preventDefault={deletePreset}>
           <input type="hidden" name="id" value={index}>
+          <input type="hidden" name="name" value={preset.name}>
           <button type="submit">
-            <span class="label">Delete '{preset.description}' preset</span>
+            <span class="label">Delete '{preset.name}' preset</span>
             <Icon icon="x" />
           </button>
         </form>
