@@ -55,7 +55,7 @@ function handleKayboardShortcuts(event){
       if(document.activeElement.matches('input')){
         container.querySelector('a')?.focus();
       } else {
-        document.activeElement?.parentElement?.nextElementSibling?.querySelector('a')?.focus();
+        document.activeElement?.closest('li')?.nextElementSibling?.querySelector('a')?.focus();
       }
     } else {
       container.querySelector('li a').focus();
@@ -69,7 +69,7 @@ function handleKayboardShortcuts(event){
       if(document.activeElement?.matches('li:first-child a')){
         createPresetNameInput.focus();
       } else {
-        document.activeElement?.parentElement?.previousElementSibling?.querySelector('a')?.focus();
+        document.activeElement?.closest('li')?.previousElementSibling?.querySelector('a')?.focus();
       }
     } else {
       container.querySelector('li:last-child a').focus();
@@ -103,7 +103,7 @@ function createPreset(event){
 
   presets = [...presets, {
     url: query.toString(),
-    description: createPresetNameInput.value
+    name: createPresetNameInput.value
   }];
 
   localStorage.posNetworkLogsPresets = JSON.stringify(presets);
@@ -163,6 +163,10 @@ function deletePreset(event){
   background-color: var(--color-context-input-background);
   border-radius: 0 calc(.5rem - 4px) calc(.5rem - 4px) 0;
 }
+
+  .create button:hover {
+    color: var(--color-interaction-hover);
+  }
 
   button[type="submit"] :global(svg) {
     width: 13px;
@@ -244,7 +248,7 @@ li button {
 
 <div bind:this={container}>
   <form class="create" on:submit|preventDefault={createPreset}>
-    <input type="text" placeholder="Save current view" bind:this={createPresetNameInput}>
+    <input type="text" required placeholder="Save current view" bind:this={createPresetNameInput}>
     <button type="submit">
       <span class="label">Save currently selected filters as new preset</span>
       <Icon icon="plus" />
