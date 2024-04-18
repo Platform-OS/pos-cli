@@ -9,8 +9,7 @@ const clickOutside = (node, callback) => {
     const path = event.composedPath();
 
     if (!path.includes(node)) {
-
-      callback();
+      callback(event);
     }
   }
 

@@ -22,7 +22,8 @@ textarea {
   transition-timing-function: linear;
 }
 
-  .content-context select {
+  .content-context select,
+  .content-context input {
     background-color: var(--color-context-input-background);
   }
 
