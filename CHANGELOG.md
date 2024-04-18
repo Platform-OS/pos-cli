@@ -1,5 +1,9 @@
 # Changelog
 
+## master
+* Feature: (GUI) Ability to use predefined filters presets in `/network`
+* Feature: (GUI) Ability to save custom filters presets in `/network`
+
 ## 4.21.2
 * Bug: Fixed deploy not showing an error message when the release package is too large
 
