@@ -110,21 +110,11 @@ examples:
 
     pos-cli logsv2 search stg --sql "select * from logs where str_match(message, 'com')" --start_time 1694694303000000 --size 5 | jq
 
-#### ALERTS
 
-examples: 
-
-    pos-cli logsv2 alerts list stg # list alerts
-
-    pos-cli logsv2 alerts add stg --url SLACK_URL --name descriptive-alert-title-slack-02 --column message --operator Contains --keyword 'this is fine' --channel gcp-alerts
-
-    pos-cli logsv2 alerts list stg 
-
-    pos-cli logsv2 alerts trigger stg --name descriptive-alert-title-slack-02
     
     
 #### ROADMAP
-
+- alerts
 - alerts delete 
 - better errors
 - GUI
