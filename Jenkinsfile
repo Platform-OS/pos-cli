@@ -71,7 +71,7 @@ def podTemplate(arch,version) {
               requests:
                 cpu: 1
               memory: 1Gi
-            image: 'node:${version}'
+            image: "node:${version}"
             imagePullPolicy: IfNotPresent
             command:
             - cat
