@@ -58,15 +58,16 @@ pipeline {
   }
 }
 
-def podTemplate(arch,version) {
+def podTemplate(arch, version) {
   return """
         spec:
           nodeSelector:
-            beta.kubernetes.io/arch: "${arch}"
+            beta.kubernetes.io/arch: ${arch}
           containers:
           - name: node
             resources:
               limits:
+                cpu: 1
                 memory: 1Gi
               requests:
                 cpu: 1
