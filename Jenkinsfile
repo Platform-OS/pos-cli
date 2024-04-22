@@ -45,7 +45,7 @@ pipeline {
     }
 
     stage('Test latest') {
-      agent { kubernetes { yaml podTemplate("20") } }
+      agent { kubernetes { yaml podTemplate("20.11") } }
 
       steps {
         container(name: 'node') {
