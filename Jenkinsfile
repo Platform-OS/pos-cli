@@ -12,7 +12,7 @@ pipeline {
 
   stages {
     stage('Test') {
-      agent { kubernetes { yaml podTemplate("amd64") } }
+      agent { kubernetes { yaml podTemplate("amd64", "16") } }
 
       steps {
         container(name: 'node') {
@@ -21,10 +21,44 @@ pipeline {
         }
       }
     }
+
+    stage('Test' 18) {
+      agent { kubernetes { yaml podTemplate("amd64", "18") } }
+
+      steps {
+        container(name: 'node') {
+          sh 'set -e'
+          sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
+        }
+      }
+    }
+
+    stage('Test' 20) {
+      agent { kubernetes { yaml podTemplate("amd64", "20") } }
+
+      steps {
+        container(name: 'node') {
+          sh 'set -e'
+          sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
+        }
+      }
+    }
+
+    stage('Test latest') {
+      agent { kubernetes { yaml podTemplate("amd64", "20") } }
+
+      steps {
+        container(name: 'node') {
+          sh 'set -e'
+          sh 'npm install -g @platformos/pos-cli'
+          sh 'pos-cli env list'
+        }
+      }
+    }
   }
 }
 
-def podTemplate(arch) {
+def podTemplate(arch,version) {
   return """
         spec:
           nodeSelector:
@@ -38,7 +72,7 @@ def podTemplate(arch) {
               requests:
                 cpu: 2
               memory: 2Gi
-            image: 'node:16-alpine'
+            image: 'node:${version}-alpine'
             imagePullPolicy: IfNotPresent
             command:
             - cat
