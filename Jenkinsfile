@@ -13,6 +13,7 @@ pipeline {
   stages {
     stage('Test 16') {
       agent { kubernetes { yaml podTemplate("16") } }
+      options { timeout(time: 300, unit: 'SECONDS') }
 
       steps {
         container(name: 'node') {
@@ -24,6 +25,7 @@ pipeline {
 
     stage('Test 18') {
       agent { kubernetes { yaml podTemplate("18") } }
+      options { timeout(time: 300, unit: 'SECONDS') }
 
       steps {
         container(name: 'node') {
@@ -35,6 +37,7 @@ pipeline {
 
     stage('Test 20') {
       agent { kubernetes { yaml podTemplate("20") } }
+      options { timeout(time: 300, unit: 'SECONDS') }
 
       steps {
         container(name: 'node') {
@@ -49,7 +52,6 @@ pipeline {
 
       steps {
         container(name: 'node') {
-          sh 'set -e'
           sh 'npm install -g @platformos/pos-cli'
           sh 'pos-cli env list'
         }
