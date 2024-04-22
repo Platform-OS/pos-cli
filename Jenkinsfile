@@ -12,7 +12,7 @@ pipeline {
 
   stages {
     stage('Test 16') {
-      agent { kubernetes { yaml podTemplate("amd64", "16") } }
+      agent { kubernetes { yaml podTemplate("16") } }
 
       steps {
         container(name: 'node') {
@@ -23,7 +23,7 @@ pipeline {
     }
 
     stage('Test 18') {
-      agent { kubernetes { yaml podTemplate("amd64", "18") } }
+      agent { kubernetes { yaml podTemplate("18") } }
 
       steps {
         container(name: 'node') {
@@ -34,7 +34,7 @@ pipeline {
     }
 
     stage('Test 20') {
-      agent { kubernetes { yaml podTemplate("amd64", "20") } }
+      agent { kubernetes { yaml podTemplate("20") } }
 
       steps {
         container(name: 'node') {
@@ -45,7 +45,7 @@ pipeline {
     }
 
     stage('Test latest') {
-      agent { kubernetes { yaml podTemplate("amd64", "20") } }
+      agent { kubernetes { yaml podTemplate("20") } }
 
       steps {
         container(name: 'node') {
@@ -58,11 +58,11 @@ pipeline {
   }
 }
 
-def podTemplate(arch,version) {
+def podTemplate(version) {
   return """
         spec:
           nodeSelector:
-            beta.kubernetes.io/arch: "${arch}"
+            beta.kubernetes.io/arch: amd64
           containers:
           - name: node
             resources:
@@ -72,7 +72,7 @@ def podTemplate(arch,version) {
               requests:
                 cpu: 2
               memory: 2Gi
-            image: 'node:18-alpine'
+            image: 'node:${version}-alpine'
             imagePullPolicy: IfNotPresent
             command:
             - cat
