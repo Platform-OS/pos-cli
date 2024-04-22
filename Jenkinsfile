@@ -11,7 +11,7 @@ pipeline {
   }
 
   stages {
-    stage('Test') {
+    stage('Test 16') {
       agent { kubernetes { yaml podTemplate("amd64", "16") } }
 
       steps {
@@ -22,7 +22,7 @@ pipeline {
       }
     }
 
-    stage('Test' 18) {
+    stage('Test 18') {
       agent { kubernetes { yaml podTemplate("amd64", "18") } }
 
       steps {
@@ -33,7 +33,7 @@ pipeline {
       }
     }
 
-    stage('Test' 20) {
+    stage('Test 20') {
       agent { kubernetes { yaml podTemplate("amd64", "20") } }
 
       steps {
