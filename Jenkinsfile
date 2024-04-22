@@ -11,35 +11,34 @@ pipeline {
   }
 
   stages {
-    stage('Test latest package 20-alpine') {
-      agent { kubernetes { yaml podTemplate("amd64", "20-alpine") } }
+    stage('Test') {
+      agent { kubernetes { yaml podTemplate("amd64") } }
 
       steps {
         container(name: 'node') {
           sh 'set -e'
-          sh 'npm install -g @platformos/pos-cli'
-          sh 'pos-cli env list'
+          sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
         }
       }
     }
   }
 }
 
-def podTemplate(arch, nodeversion) {
+def podTemplate(arch) {
   return """
         spec:
           nodeSelector:
-            beta.kubernetes.io/arch: ${arch}
+            beta.kubernetes.io/arch: "${arch}"
           containers:
           - name: node
             resources:
               limits:
-                cpu: 1
-                memory: 1Gi
+                cpu: 2
+                memory: 2Gi
               requests:
-                cpu: 1
-                memory: 1Gi
-            image: "node:${nodeversion}"
+                cpu: 2
+              memory: 2Gi
+            image: 'node:16-alpine'
             imagePullPolicy: IfNotPresent
             command:
             - cat
