@@ -1,6 +1,6 @@
 # Changelog
 
-## master
+## 4.22.0
 * Feature: (GUI) Ability to use predefined filters presets in `/network`
 * Feature: (GUI) Ability to save custom filters presets in `/network`
 
