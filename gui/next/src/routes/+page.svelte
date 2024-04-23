@@ -550,7 +550,7 @@ h2 {
       </ul>
       <h2>
         Early access
-        <small>New tools is testable versions</small>
+        <small>New tools in testable versions</small>
       </h2>
     </li>
 
