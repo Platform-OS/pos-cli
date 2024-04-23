@@ -189,6 +189,101 @@ h2 {
     color: var(--color-interaction-hover);
   }
 
+.early {
+  min-width: 200px;
+  padding: 2.75rem 0 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  border: 2px dashed var(--color-frame);
+  border-radius: 1rem;
+}
+
+  .early h2 {
+    font-weight: normal;
+    color: var(--color-text-secondary);
+  }
+
+  .early h2 small {
+    display: block;
+
+    font-size: .7em;
+  }
+
+  .early ul {
+    min-height: calc(100px + .5rem);
+    display: flex;
+    flex-direction: column;
+    gap: .5em;
+  }
+
+  .early li {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .early li button {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    inset-inline-start: -1.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    opacity: 0;
+    background-color: var(--color-middleground);
+    border-radius: 4px;
+
+    transition: opacity .2s linear;
+    transition-delay: 0s;
+  }
+
+  .early li:hover button {
+    opacity: 1;
+
+    transition-delay: .8s;
+  }
+
+  .early li button:hover {
+    background-color: rgba(var(--color-rgb-interaction-hover), .2);
+    color: var(--color-interaction-hover);
+  }
+
+  .early li a {
+    display: flex;
+    align-items: center;
+    gap: .5em;
+  }
+
+  .early a:hover {
+    color: var(--color-interaction-hover);
+  }
+
+  .early i {
+    width: calc(24px + .3em * 2);
+    height: calc(24px + .3em * 2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: .6rem;
+    background-color: var(--color-middleground);
+
+    color: var(--color-interaction);
+
+    transition: all .1s ease-in-out;
+  }
+
+    .early a:hover i {
+      border-radius: .7rem;
+
+      scale: 1.07;
+    }
+
 
 .links {
   margin-block-start: 4rem;
@@ -288,11 +383,6 @@ h2 {
         <li>Debug Liquid or GraphQL errors</li>
       </ul>
       <ul class="actions">
-        <li>
-          <a href="/logsv2" style="padding-inline: .5em; font-size: .75rem; position: relative; top: -2px;">
-            V2 β
-          </a>
-        </li>
         <li>
           <button title="More information" on:click={() => toggleDescription('logs')}>
             <Icon icon="info" size="14" />
@@ -429,6 +519,39 @@ h2 {
           </button>
         </li>
       </ul>
+    </li>
+
+    <li class="early">
+      <ul>
+        <li>
+          <button title="{$state.header.includes('logsv2') ? 'Unpin Logs v2 from' : 'Pin Logs v2 to'} header menu" on:click={() => pin('logsv2')}>
+            <Icon icon={$state.header.includes('logsv2') ? 'pinFilled' : 'pin'} size="12" />
+            <span class="label">{$state.header.includes('logsv2') ? 'Unpin Logs v2 from' : 'Pin Logs v2 to'} header menu</span>
+          </button>
+          <a href="/logsv2">
+            <i>
+              <Icon icon="logFresh" size="24" />
+            </i>
+            <h3>Logs v2</h3>
+          </a>
+        </li>
+        <li>
+          <button title="{$state.header.includes('network') ? 'Unpin Network Logs from' : 'Pin Network Logs to'} header menu" on:click={() => pin('network')}>
+            <Icon icon={$state.header.includes('network') ? 'pinFilled' : 'pin'} size="12" />
+            <span class="label">{$state.header.includes('network') ? 'Unpin Network Logs from' : 'Pin Network Logs to'} header menu</span>
+          </button>
+          <a href="/network">
+            <i>
+              <Icon icon="globeMessage" size="24" />
+            </i>
+            <h3>Network Logs</h3>
+          </a>
+        </li>
+      </ul>
+      <h2>
+        Early access
+        <small>New tools is testable versions</small>
+      </h2>
     </li>
 
   </ul>

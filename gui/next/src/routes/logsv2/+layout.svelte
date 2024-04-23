@@ -216,6 +216,14 @@ table {
     background-color: var(--color-middleground);
   }
 
+small {
+  margin-block: 2rem;
+  display: block;
+
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
 
 </style>
 
@@ -299,6 +307,8 @@ table {
             </tbody>
           {/if}
         </table>
+        
+        <small>Showing latest 20 logs as Early Access limitation</small>
       </article>
 
   </section>

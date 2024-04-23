@@ -255,10 +255,32 @@ nav a:hover .label {
 
         {#if $state.header.includes('logs')}
         <li>
-          <a href="/logs" class:active={$page.url.pathname.startsWith('/logs')}>
+          <a href="/logs" class:active={$page.url.pathname === '/logs'}>
             <Icon icon="log" />
             <span class="label">
               Logs
+            </span>
+          </a>
+        </li>
+        {/if}
+
+        {#if $state.header.includes('logsv2')}
+        <li>
+          <a href="/logsv2" class:active={$page.url.pathname.startsWith('/logsv2')}>
+            <Icon icon="logFresh" />
+            <span class="label">
+              Logs v2
+            </span>
+          </a>
+        </li>
+        {/if}
+
+        {#if $state.header.includes('network')}
+        <li>
+          <a href="/network" class:active={$page.url.pathname.startsWith('/network')}>
+            <Icon icon="globeMessage" />
+            <span class="label">
+              Network Logs
             </span>
           </a>
         </li>
