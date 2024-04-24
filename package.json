@@ -59,7 +59,6 @@
     "ora": "^5.1.0",
     "pluralize": "^8.0.0",
     "prompts": "^2.4.2",
-    "raygun": "^0.13.1",
     "readdirp": "^3.6.0",
     "request": "^2.88.2",
     "request-promise": "^4.2.6",
