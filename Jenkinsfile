@@ -47,13 +47,16 @@ pipeline {
       }
     }
 
-    stage('Test latest') {
+    stage('Test tagged release') {
       agent { kubernetes { yaml podTemplate("20.11") } }
+      when { tag "v*" }
 
       steps {
         container(name: 'node') {
           sh 'npm install -g @platformos/pos-cli'
-          sh 'pos-cli env list'
+          sh 'pos-cli init'
+          sh 'pos-cli data clean --auto-confirm --include-schema'
+          sh 'pos-cli deploy'
         }
       }
     }
