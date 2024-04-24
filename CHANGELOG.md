@@ -1,5 +1,8 @@
 # Changelog
 
+## master
+* Feature: (GUI) Added Logs v2 and Network Logs to home screen
+
 ## 4.22.0
 * Feature: (GUI) Ability to use predefined filters presets in `/network`
 * Feature: (GUI) Ability to save custom filters presets in `/network`
