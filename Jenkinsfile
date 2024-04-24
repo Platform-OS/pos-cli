@@ -49,7 +49,7 @@ pipeline {
 
     stage('Test tagged release') {
       agent { kubernetes { yaml podTemplate("20.11") } }
-      when { tag "v*" }
+      when { tag pattern: "v.*", comparator: "REGEXP"}
 
       steps {
         container(name: 'node') {
