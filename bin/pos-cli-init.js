@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-const raygun = require('raygun');
-
 const program = require('commander'),
   degit = require('degit'),
   inquirer = require('inquirer');
@@ -19,22 +17,14 @@ const repos = {
 function createStructure(url, branch) {
   branch = branch ? `#${branch}` : '';
 
-  const client = new raygun.Client().init({
-    apiKey: 'GcFQWxY5X828DCfeLDC3lw',
-    reportUncaughtExceptions: true,
-    reportColumnNumbers: true,
-  });
-
   degit(`${url}${branch}`, { force: true, cache: false, verbose: false })
     .clone('.')
-    .then((resolve) => {
-      client.send('sometbibg', {}, (response) => {
-        process.exit(1);
-      });
+    .then(() => {
+      report('[OK] Init');
       logger.Success('Directory structure sucessfully created.');
     })
     .catch((error) => {
-      // report('[ERR] Init');
+      report('[ERR] Init');
       logger.Error(`Cloning failed. Reason: ${error.message}`);
     });
 }
@@ -68,7 +58,7 @@ program
         .then((answers) => {
           createStructure(repos[answers.repo], answers.branch);
 
-          // report('Init: Wizard');
+          report('Init: Wizard');
         })
       return;
     }
