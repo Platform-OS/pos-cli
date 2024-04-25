@@ -21,7 +21,7 @@ let presets = (localStorage.posNetworkLogsPresets && JSON.parse(localStorage.pos
   name: "Slowest requests"
 },
 {
-  url: "aggregate=http_request_path&order_by=avg_target_processing_time&order=DESC",
+  url: "aggregate=http_request_path&order_by=median_target_processing_time&order=DESC",
   name: "Aggregated slowest requests"
 },
 {

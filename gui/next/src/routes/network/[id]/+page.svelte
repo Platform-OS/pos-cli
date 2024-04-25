@@ -100,7 +100,7 @@ dd {
 
       <dt>Client user agent</dt> <dd>{$state.network.user_agent}</dd>
 
-      <dt>Execution duration</dt> <dd>{parseFloat($state.network.request_processing_time) + parseFloat($state.network.target_processing_time)}s</dd>
+      <dt>Processing time</dt> <dd>{parseFloat($state.network.request_processing_time) + parseFloat($state.network.target_processing_time)}s</dd>
 
       <dt>Response size</dt> <dd>{parseInt($state.network.sent_bytes)} bytes</dd>
 
