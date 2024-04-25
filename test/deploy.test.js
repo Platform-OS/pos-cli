@@ -77,8 +77,6 @@ describe('Happy path', () => {
 
   test('only assets with old upload', async () => {
     const { stdout, stderr } = await run('correct_only_assets', '-o');
-    console.log(stdout);
-    console.log(stderr);
     expect(stderr).not.toMatch('There are no files in release file, skipping.');
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('Deploy succeeded');
