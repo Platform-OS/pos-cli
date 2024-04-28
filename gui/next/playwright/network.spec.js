@@ -48,7 +48,7 @@ test('using filters presets', async ({ page }) => {
   await page.getByRole('button', { name: 'Choose filters preset'}).click();
   await page.getByRole('link', { name: 'Aggregated slowest requests' }).click();
 
-  await expect(page).toHaveURL(/aggregate=http_request_path&order_by=avg_target_processing_time&order=DESC/);
+  await expect(page).toHaveURL(/aggregate=http_request_path&order_by=median_target_processing_time&order=DESC/);
 });
 
 

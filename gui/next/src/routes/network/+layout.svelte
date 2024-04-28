@@ -521,11 +521,11 @@ table {
           <select name="order_by" id="order_by" bind:this={order_by} on:change={() => form.requestSubmit()}>
               <option selected={$page.url.searchParams.get('order_by') === 'count'} value="count" hidden={!$page.url.searchParams.get('aggregate') && !aggregated}>Count</option>
               <option selected={$page.url.searchParams.get('order_by') === 'http_request_path'} value="http_request_path" hidden={!$page.url.searchParams.get('aggregate') && !aggregated}>Request path</option>
-              <option selected={$page.url.searchParams.get('order_by') === 'avg_target_processing_time'} value="avg_target_processing_time" hidden={!$page.url.searchParams.get('aggregate') && !aggregated}>Processing time</option>
+              <option selected={$page.url.searchParams.get('order_by') === 'median_target_processing_time'} value="median_target_processing_time" hidden={!$page.url.searchParams.get('aggregate') && !aggregated}>Processing time</option>
 
               <option selected={$page.url.searchParams.get('order_by') === '_timestamp' || !$page.url.searchParams.get('order_by') && !$page.url.searchParams.get('aggregate')} value="_timestamp" hidden={$page.url.searchParams.get('aggregate') || aggregated}>Time</option>
               <option selected={$page.url.searchParams.get('order_by') === 'http_request_path'} value="http_request_path" hidden={$page.url.searchParams.get('aggregate') || aggregated}>Request path</option>
-              <option selected={$page.url.searchParams.get('order_by') === 'target_processing_time'} value="target_processing_time" hidden={$page.url.searchParams.get('aggregate') || aggregated}>Duration</option>
+              <option selected={$page.url.searchParams.get('order_by') === 'target_processing_time'} value="target_processing_time" hidden={$page.url.searchParams.get('aggregate') || aggregated}>Processing Time</option>
           </select>
 
           <select name="order" id="order" bind:this={order} on:change={() => form.requestSubmit()}>
@@ -609,11 +609,7 @@ table {
                 {$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Aggregated ' : ''}Request{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 's' : ''}
               </th>
               <th class="duration">
-                {#if !$page.url.searchParams.get('aggregate')}
-                  Duration
-                {:else}
-                  Avg Processing Time
-                {/if}
+                Processing Time
               </th>
             </tr>
           </thead>
@@ -662,11 +658,11 @@ table {
                   <td class="duration">
                     {#if !$page.url.searchParams.get('aggregate')}
                       <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
-                        {Math.round((parseFloat(log.request_processing_time) + parseFloat(log.target_processing_time) + Number.EPSILON) * 1000) / 1000}s
+                        {Math.round((parseFloat(log.target_processing_time) + Number.EPSILON) * 1000) / 1000}s
                       </a>
                     {:else}
-                      <div>
-                        {Math.round((parseFloat(log.avg_target_processing_time) + Number.EPSILON) * 1000) / 1000}s
+                      <div title="Median: {Math.round((parseFloat(log.median_target_processing_time) + Number.EPSILON) * 1000) / 1000}s &#10;&#13;Mean: {Math.round((parseFloat(log.avg_target_processing_time) + Number.EPSILON) * 1000) / 1000}s &#10;&#13;Min: {Math.round((parseFloat(log.min_target_processing_time) + Number.EPSILON) * 1000) / 1000}s &#10;&#13;Max: {Math.round((parseFloat(log.max_target_processing_time) + Number.EPSILON) * 1000) / 1000}s">
+                        {Math.round((parseFloat(log.median_target_processing_time) + Number.EPSILON) * 1000) / 1000}s
                       </div>
                     {/if}
                   </td>

@@ -56,7 +56,7 @@ const network = {
       if(!filters.aggregate){
         aggregations.results = `SELECT _timestamp, http_request_url, http_request_path, http_request_method, lb_status_code, client, user_agent, request_processing_time, target_processing_time, sent_bytes FROM query ${where} ${filters.lb_status_codes ?? ''} ${filters.order} LIMIT 150`;
       } else {
-        aggregations.results = `SELECT http_request_path, count(http_request_path) as count, http_request_method, avg(target_processing_time) as avg_target_processing_time FROM query ${where} ${filters.lb_status_codes ?? ''} ${filters.aggregate} ${filters.order}`;
+        aggregations.results = `SELECT http_request_path, count(http_request_path) as count, http_request_method, approx_percentile_cont(target_processing_time, 0.5) as median_target_processing_time, avg(target_processing_time) as avg_target_processing_time, min(target_processing_time) as min_target_processing_time, max(target_processing_time) as max_target_processing_time FROM query ${where} ${filters.lb_status_codes ?? ''} ${filters.aggregate} ${filters.order}`;
       }
     }
 

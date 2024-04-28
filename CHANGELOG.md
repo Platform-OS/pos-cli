@@ -2,6 +2,7 @@
 
 ## master
 * Feature: (GUI) Added Logs v2 and Network Logs to home screen
+* Feature: (GUI) Using median to show the average request processing time and showing min/max in the tooltip
 
 ## 4.22.0
 * Feature: (GUI) Ability to use predefined filters presets in `/network`
