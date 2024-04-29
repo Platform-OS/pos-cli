@@ -468,6 +468,13 @@ table {
     background-color: var(--color-middleground);
   }
 
+  /* disable this hover effect on Safari as they refuse to fix their position: relative bug for tables */
+  @supports (font: -apple-system-body) and (-webkit-appearance: none) {
+    tr:after {
+      display: none;
+    }
+  }
+
 
 </style>
 

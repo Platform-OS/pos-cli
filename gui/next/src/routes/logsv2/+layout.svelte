@@ -217,8 +217,10 @@ table {
   }
 
   /* disable this hover effect on Safari as they refuse to fix their position: relative bug for tables */
-  _:global(::-webkit-full-page-media) tr:after, :global(_:future) tr:after, :global(:root .safari_only) tr:after {
-    display: none;
+  @supports (font: -apple-system-body) and (-webkit-appearance: none) {
+    tr:after {
+      display: none;
+    }
   }
 
 small {
