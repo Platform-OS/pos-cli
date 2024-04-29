@@ -216,6 +216,11 @@ table {
     background-color: var(--color-middleground);
   }
 
+  /* disable this hover effect on Safari as they refuse to fix their position: relative bug for tables */
+  _:global(::-webkit-full-page-media) tr:after, :global(_:future) tr:after, :global(:root .safari_only) tr:after {
+    display: none;
+  }
+
 small {
   margin-block: 2rem;
   display: block;
