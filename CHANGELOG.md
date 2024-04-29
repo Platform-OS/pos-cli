@@ -1,6 +1,9 @@
 # Changelog
 
-## master
+## 4.23.1
+* Bug: (GUI) Remved hover state on Safari for Logs v2 and Network Logs tables cause of Safari rendering bug
+
+## 4.23.0
 * Feature: (GUI) Added Logs v2 and Network Logs to home screen
 * Feature: (GUI) Using median to show the average request processing time and showing min/max in the tooltip
 
