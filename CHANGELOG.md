@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.23.2
+* Chore: Updated dependencies
+
 ## 4.23.1
 * Bug: (GUI) Remved hover state on Safari for Logs v2 and Network Logs tables cause of Safari rendering bug
 
