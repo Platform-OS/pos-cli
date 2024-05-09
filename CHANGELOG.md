@@ -1,7 +1,8 @@
 # Changelog
 
-## 4.23.2
+## 4.24.0
 * Chore: Updated dependencies
+* Feature: (GUI) Show information when new `pos-cli` version is available
 
 ## 4.23.1
 * Bug: (GUI) Remved hover state on Safari for Logs v2 and Network Logs tables cause of Safari rendering bug
