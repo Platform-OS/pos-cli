@@ -3,10 +3,11 @@
 
 // imports
 // ------------------------------------------------------------------------
-import Icon from '$lib/ui/Icon.svelte';
-
+import { fade } from 'svelte/transition';
 import { state } from '$lib/state';
 import { table } from '$lib/api/table';
+
+import Icon from '$lib/ui/Icon.svelte';
 
 
 
@@ -49,7 +50,32 @@ const toggleDescription = what => {
   } else {
     showDescriptionFor = [...showDescriptionFor, what];
   }
-}
+};
+
+
+// purpose:   checks what is the latest pos-cli version in npm registry
+// ------------------------------------------------------------------------
+const getLatestPosCliVersion = async () => {
+  const response = await fetch('https://registry.npmjs.org/@platformos/pos-cli/latest');
+  const data = await response.json();
+  return data;
+};
+
+
+// purpose:   handles the action after clicking the 'update available' button
+// effect:    copies update command to clipboard and shows a notification
+// ------------------------------------------------------------------------
+const handleUpdate = () => {
+  navigator.clipboard.writeText(`npm i -g @platformos/pos-cli@latest`)
+    .then(() => {
+      state.notification.create('info', `<div>Update command copied to clipboard <small>Run <code>npm i -g @platformos/pos-cli@latest</code> in the terminal</small></div>`);
+    })
+    .catch(e => {
+      copying = false;
+      error = true;
+      console.error(e);
+    });
+};
 
 </script>
 
@@ -285,15 +311,33 @@ h2 {
     }
 
 
-.links {
+footer {
   margin-block-start: 4rem;
-  padding-block-start: 3.5rem;
+  padding: 2rem;
   display: flex;
   align-items: center;
-  justify-content: end;
+  justify-content: space-between;
   gap: 2rem;
 
   border-block-start: 1px solid var(--color-frame);
+}
+
+footer ul {
+  display: flex;
+  gap: 2rem;
+}
+
+.update {
+  max-width: 100px;
+  display: flex;
+  align-items: center;
+  gap: .5em;
+
+  font-size: .85rem;
+}
+
+.update :global(svg) {
+  flex-shrink: 0;
 }
 
 </style>
@@ -556,8 +600,22 @@ h2 {
 
   </ul>
 
-  <ul class="links">
+</nav>
 
+<footer>
+  <div>
+    {#await getLatestPosCliVersion() then latest}
+      <button transition:fade on:click={handleUpdate} title="Update to pos-cli version {latest.version}" class="update">
+        <Icon icon="arrowTripleUp" />
+        <span>Update available</span>
+      </button>
+      {#if latest.version !== $state.online.version}
+        Update your pos-cli
+      {/if}
+    {/await}
+  </div>
+
+  <ul>
     <li>
       <a href="https://documentation.platformos.com" class="button">
         <Icon icon="book" />
@@ -570,7 +628,5 @@ h2 {
         Partner Portal
       </a>
     </li>
-
   </ul>
-
-</nav>
+</footer>
