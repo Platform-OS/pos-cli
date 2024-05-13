@@ -14,8 +14,10 @@ let height = 0;
 
 afterUpdate(() => {
   $state.notifications.forEach(notification => {
-    if(notification.type === 'success' && !notification.timeout){
-      notification.timeout = setTimeout(() => state.notification.remove(notification.id), 7000);
+    if(!notification.timeout){
+      if(notification.type === 'success' || notification.type === 'info'){
+        notification.timeout = setTimeout(() => state.notification.remove(notification.id), 7000);
+      }
     }
   });
 });
@@ -60,9 +62,30 @@ afterUpdate(() => {
     background-color: var(--color-danger);
   }
 
+  .info {
+    background-color: var(--color-text);
+  }
+
   .disabled {
     display: none;
   }
+
+.notification :global(small) {
+  margin-block-start: .25em;
+  display: block;
+
+  font-size: .85em;
+}
+
+.notification :global(code) {
+  padding-inline: .2em;
+
+  border-radius: 4px;
+  background-color: var(--color-context);
+
+  font-family: monospace;
+  font-size: 1.2em;
+}
 
 
 button {
@@ -90,9 +113,10 @@ button:hover {
       class="notification"
       class:success={notification.type === 'success'}
       class:error={notification.type === 'error'}
+      class:info={notification.type === 'info'}
       transition:fade={{ duration: 100 }}
     >
-      {notification.message}
+      {@html notification.message}
 
       <button on:click={() => state.notification.remove(notification.id)}>
         <Icon icon="x" size="10" />
