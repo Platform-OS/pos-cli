@@ -89,12 +89,12 @@
     "pos-cli-modules": "bin/pos-cli-modules.js",
     "pos-cli-sync": "bin/pos-cli-sync.js"
   },
-  "repository": "mdyd-dev/pos-cli",
+  "repository": "platform-OS/pos-cli",
   "license": "CC BY 3.0",
   "bugs": {
-    "url": "https://github.com/mdyd-dev/pos-cli/issues"
+    "url": "https://github.com/Platform-OS/pos-cli/issues"
   },
-  "homepage": "https://github.com/mdyd-dev/pos-cli#readme",
+  "homepage": "https://github.com/Platform-OS/pos-cli/issues#readme",
   "devDependencies": {
     "dotenv": "^16.0.0",
     "jest": "^29.7.0"
