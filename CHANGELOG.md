@@ -1,5 +1,8 @@
 # Changelog
 
+## 4.24.1
+* Chore: Updated dependencies
+
 ## 4.24.0
 * Chore: Updated dependencies
 * Feature: (GUI) Show information when new `pos-cli` version is available
