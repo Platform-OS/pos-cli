@@ -3,7 +3,6 @@
 const program = require('commander'),
   watch = require('../lib/watch'),
   open = require('open'),
-  livereload = require('livereload');
 
 const fetchAuthData = require('../lib/settings').fetchSettings;
 
@@ -15,7 +14,6 @@ program
   .option('-c, --concurrency <number>', 'Maximum concurrent connections to the server', DEFAULT_CONCURRENCY)
   .option('-d, --direct-assets-upload', 'deprecated, this is the default strategy', true)
   .option('-o, --open', 'When ready, open default browser with instance')
-  .option('-l, --livereload', 'Use livereload')
   .action(async (environment, params) => {
     const authData = fetchAuthData(environment);
     const env = Object.assign(process.env, {
@@ -25,7 +23,7 @@ program
       CONCURRENCY: process.env.CONCURRENCY || params.concurrency
     });
 
-    watch.start(env, params.directAssetsUpload, params.livereload);
+    watch.start(env, params.directAssetsUpload);
 
     if (params.open) {
       await open(`${authData.url}`);
