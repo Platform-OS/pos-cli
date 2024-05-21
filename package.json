@@ -30,7 +30,7 @@
     "archiver-promise": "^1.0.0",
     "async": "^3.2.3",
     "chalk": "^4.1.2",
-    "chokidar": "^3.5.3",
+    "chokidar": "^3.6.0",
     "commander": "^11.0.0",
     "compression": "^1.7.4",
     "degit": "^2.8.4",
@@ -108,5 +108,10 @@
     "testPathIgnorePatterns": [
       "gui/next"
     ]
+  },
+  "overrides": {
+    "livereload": {
+      "chokidar": "3.6.0"
+    }
   }
 }
