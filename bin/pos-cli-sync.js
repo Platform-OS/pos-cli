@@ -2,7 +2,7 @@
 
 const program = require('commander'),
   watch = require('../lib/watch'),
-  open = require('open'),
+  open = require('open');
 
 const fetchAuthData = require('../lib/settings').fetchSettings;
 
