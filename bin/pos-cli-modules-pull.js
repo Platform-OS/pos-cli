@@ -9,7 +9,6 @@ const fetchAuthData = require('../lib/settings').fetchSettings;
 const downloadFile = require('../lib/downloadFile');
 const waitForStatus = require('../lib/data/waitForStatus');
 const spinner = ora({ text: 'Exporting', stream: process.stdout, spinner: 'bouncingBar' });
-const { unzip } = require('../lib/unzip');
 
 program
   .name('pos-cli modules pull')
@@ -26,12 +25,12 @@ program
       .then(exportTask => downloadFile(exportTask.zip_file.url, filename))
       .then(() => spinner.succeed('Downloading files'))
       .catch({ statusCode: 404 }, () => {
-        spinner.fail('Export failed');
-        logger.Error('[404] Module not found');
+        spinner.fail(`Pulling ${module} failed.`);
+        logger.Error('[404] Zip file with module files not found');
       })
       .catch(e => {
-        spinner.fail('Export failed');
-        logger.Error(e.message);
+        spinner.fail(`Pulling ${module} failed.`);
+        logger.Error(e.message || e.error.error || e.error);
       });
   });
 
