@@ -1,5 +1,8 @@
 # Changelog
 
+## unreleased
+* Improvement: Better error handling for pos-cli modules pull
+
 ## 4.24.1
 * Chore: Updated dependencies
 
