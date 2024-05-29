@@ -2,6 +2,7 @@
 
 ## unreleased
 * Improvement: Better error handling for pos-cli modules pull
+* Improvement: Allow to install a module if `app` directory is missing
 
 ## 4.24.1
 * Chore: Updated dependencies

@@ -8,6 +8,8 @@ const spinner = ora({ text: 'Setup', stream: process.stdout, spinner: 'bouncingB
 const configFiles = require('../lib/modules/configFiles');
 const { findModuleVersion, resolveDependencies } = require('../lib/modules/dependencies')
 const Portal = require('../lib/portal');
+const path = require('path');
+const { createDirectory } = require('../lib/utils/create-directory');
 
 const addNewModule = async (moduleName, moduleVersion, localModules, getVersions) => {
   const newModule = await findModuleVersion(moduleName, moduleVersion, getVersions);
@@ -28,30 +30,37 @@ program
   .name('pos-cli modules install')
   .arguments('[module-name]', 'name of the module. Example: core. You can also pass version number: core@1.0.0')
   .action(async (moduleNameWithVersion) => {
-    const spinner = ora({ text: "Modules install", stream: process.stdout, spinner: 'bouncingBar' }).start();
 
-    try{
-      let localModules = configFiles.readLocalModules();
-      if(moduleNameWithVersion){
-        const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
-        localModules = await addNewModule(moduleName, moduleVersion, localModules, Portal.moduleVersions);
-        configFiles.writePosModules(localModules);
-        spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]}`);
-      }
+    try {
+      await createDirectory(path.join(process.cwd(), configFiles.posConfigDirectory));
+      const spinner = ora({ text: "Modules install", stream: process.stdout, spinner: 'bouncingBar' }).start();
 
-      if(!localModules) {
-        spinner.stop();
-      } else {
-        spinner.start('Resolving module dependencies');
-        const modulesLocked = await resolveDependencies(localModules, Portal.moduleVersions);
-        configFiles.writePosModulesLock(modulesLocked);
-        spinner.succeed(`Modules lock file generated: ${configFiles.posModulesLockFilePath}`);
+      try{
+        let localModules = configFiles.readLocalModules();
+        if(moduleNameWithVersion){
+          const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
+          localModules = await addNewModule(moduleName, moduleVersion, localModules, Portal.moduleVersions);
+          configFiles.writePosModules(localModules);
+          spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]} to ${configFiles.posModulesFilePath}`);
+        }
+
+        if(!localModules) {
+          spinner.stop();
+        } else {
+          spinner.start('Resolving module dependencies');
+          const modulesLocked = await resolveDependencies(localModules, Portal.moduleVersions);
+          configFiles.writePosModulesLock(modulesLocked);
+          spinner.succeed(`Modules lock file updated: ${configFiles.posModulesLockFilePath}`);
+        }
+      } catch(e) {
+        // throw e;
+        logger.Debug(e);
+        spinner.stopAndPersist();
+        spinner.fail(e.message);
       }
-    } catch(e) {
-      // throw e;
-      logger.Debug(e);
-      spinner.stopAndPersist();
-      spinner.fail(e.message);
+    }
+    catch(error) {
+      logger.Error(`Aborting - ${configFiles.posConfigDirectory} directory has not been created.`)
     }
   });
 
