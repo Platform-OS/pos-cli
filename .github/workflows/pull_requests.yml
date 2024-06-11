@@ -42,7 +42,7 @@ jobs:
           path: pos-cli
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.11.1
+          node-version: 20
       - name: Install pos-cli
         run: |
           npm install -g @platformos/pos-cli
