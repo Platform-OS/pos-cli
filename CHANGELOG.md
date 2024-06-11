@@ -1,8 +1,9 @@
 # Changelog
 
-## unreleased
+## 4.25.0
 * Improvement: Better error handling for pos-cli modules pull
 * Improvement: Allow to install a module if `app` directory is missing
+* Bug: Fixed installing `pos-cli` on `npm` versions > 10.3.0
 
 ## 4.24.1
 * Chore: Updated dependencies

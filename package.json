@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "4.24.1",
+  "version": "4.25.0",
   "description": "Manage your platformOS application",
   "scripts": {
     "test": "jest --runInBand",
@@ -108,5 +108,8 @@
     "testPathIgnorePatterns": [
       "gui/next"
     ]
+  },
+  "optionalDependencies": {
+    "fsevents": "^2.3.3"
   }
 }
