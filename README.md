@@ -231,7 +231,6 @@ To publish a module to our module repository,
 
     pos-cli modules version x.x.x
     pos-cli modules push --email <your_email>
-    
 
 #### Pulling module codebase
 
@@ -247,7 +246,6 @@ Download the public codebase of a released module:
 
     pos-cli modules download <module_name>
     
-
 ##### Module Templates
 
 Templates automate and simplify the configuration process in module management. For example, upon installing a module, it is possible to specify URIs under which pages will be available after the module has been installed. This functionality is supported in both sync and deploy modes.
