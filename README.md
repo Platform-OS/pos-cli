@@ -375,7 +375,7 @@ This function is particularly useful for clearing data when testing your imports
 **Important:** This operation is irreversible. The pos-cli will request confirmation twice before proceeding to ensure that you do not accidentally remove data.
 
 
-### Admin - Graphical Interface
+### Admin - Graphical Interface (GUI)
 
 To start the local HTTP server that hosts the GUI, execute the following command:
 
@@ -385,7 +385,7 @@ Example: `pos-cli gui serve staging`
 
 You can access the platformOS Admin GUI by visiting [http://localhost:3333](http://localhost:3333).
 
-[Screenshot](admin-gui.png TODO)
+![Screenshot of the Admin GUI](docs/images/admin-gui.png)
 
 #### Opening Admin Automatically 
 
@@ -404,6 +404,8 @@ For routine tasks, you might want both the GUI server (`gui serve`) and data syn
 To interact with your instance's database using GraphQL, navigate to the GraphiQL interface at in your web browser:
 
 [http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql)
+
+![Screenshot of the GraphiQL Browser](docs/images/graphiql.png)
 
 The sidebar includes schema documentation for reference.
 
