@@ -605,12 +605,11 @@ footer ul {
 <footer>
   <div>
     {#await getLatestPosCliVersion() then latest}
-      <button transition:fade on:click={handleUpdate} title="Update to pos-cli version {latest.version}" class="update">
-        <Icon icon="arrowTripleUp" />
-        <span>Update available</span>
-      </button>
       {#if latest.version !== $state.online.version}
-        Update your pos-cli
+        <button transition:fade on:click={handleUpdate} title="Update to pos-cli version {latest.version}" class="update">
+          <Icon icon="arrowTripleUp" />
+          <span>Update available</span>
+        </button>
       {/if}
     {/await}
   </div>
