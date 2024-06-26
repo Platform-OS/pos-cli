@@ -2,16 +2,28 @@
 
 const program = require('commander'),
   fs = require('fs'),
-  ora = require('ora'),
   Gateway = require('../lib/proxy'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   uploadFile = require('../lib/s3UploadFile').uploadFile,
   presignUrl = require('../lib/presignUrl').presignUrl,
   logger = require('../lib/logger');
 
-const spinner = ora({ text: 'Sending file', stream: process.stdout, spinner: 'bouncingBar' });
+// importing ESM modules in CommonJS project
+let ora;
+const initializeEsmModules = async () => {
+  if(!ora) {
+    await import('ora').then(imported => ora = imported.default);
+  }
+
+  return true;
+}
+
 const uploadZip = async (directory, gateway) => {
+
+  await initializeEsmModules();
+  const spinner = ora({ text: 'Sending file', stream: process.stdout });
   spinner.start();
+
   try {
     const instanceId = (await gateway.getInstance()).id;
     const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/data.property_upload_import.zip`;
@@ -25,6 +37,7 @@ const uploadZip = async (directory, gateway) => {
     spinner.fail('Upload failed');
     logger.Error('Unable to upload archive file');
   }
+
 };
 
 program

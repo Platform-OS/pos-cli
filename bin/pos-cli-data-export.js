@@ -2,7 +2,6 @@
 
 const program = require('commander'),
   fs = require('fs'),
-  ora = require('ora'),
   shell = require('shelljs'),
   Gateway = require('../lib/proxy'),
   fetchAuthData = require('../lib/settings').fetchSettings,
@@ -13,9 +12,18 @@ const program = require('commander'),
 const logger = require('../lib/logger'),
   report = require('../lib/logger/report');
 
+// importing ESM modules in CommonJS project
+let ora;
+const initializeEsmModules = async () => {
+  if(!ora) {
+    await import('ora').then(imported => ora = imported.default);
+  }
+
+  return true;
+}
+
 let gateway;
 
-const spinner = ora({ text: 'Exporting', stream: process.stdout, spinner: 'bouncingBar' });
 const transform = ({ users = { results: [] }, transactables = { results: [] }, models = { results: [] } }) => {
   return {
     users: users.results,
@@ -48,7 +56,11 @@ program
     'false'
   )
   .option('-z --zip', 'export to zip archive', false)
-  .action((environment, params) => {
+  .action(async (environment, params) => {
+
+    await initializeEsmModules();
+    const spinner = ora({ text: 'Exporting', stream: process.stdout });
+
     const isZipFile = params.zip;
     let filename = params.path;
     if (!filename) {

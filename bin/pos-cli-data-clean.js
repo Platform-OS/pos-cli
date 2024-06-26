@@ -2,13 +2,21 @@
 
 const program = require('commander'),
   prompts = require('prompts'),
-  ora = require('ora'),
   Gateway = require('../lib/proxy'),
   waitForStatus = require('../lib/data/waitForStatus'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   logger = require('../lib/logger'),
-  ServerError = require('../lib/ServerError'),
-  report = require('../lib/logger/report');
+  ServerError = require('../lib/ServerError');
+
+// importing ESM modules in CommonJS project
+let ora;
+const initializeEsmModules = async () => {
+  if(!ora) {
+    await import('ora').then(imported => ora = imported.default);
+  }
+
+  return true;
+}
 
 const confirmationText = 'CLEAN DATA';
 
@@ -39,7 +47,10 @@ program
   .option('--auto-confirm', 'auto confirm instance clean without prompt')
   .option('-i, --include-schema', 'also remove instance files: pages, schemas etc.')
   .action(async (environment, params) => {
-    const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
+
+    await initializeEsmModules();
+    const spinner = ora({ text: 'Sending data', stream: process.stdout });
+    
     try {
       const gateway = new Gateway(fetchAuthData(environment));
       const confirmed = await confirmCleanup(params.autoConfirm, params.includeSchema, gateway.url)
@@ -52,7 +63,7 @@ program
         const checkDataCleanJobStatus = () => { return gateway.dataCleanStatus(response.id) }
         await waitForStatus(checkDataCleanJobStatus, 'pending', 'done')
 
-        spinner.stopAndPersist().succeed("DONE. Instance cleaned")
+        spinner.stopAndPersist().succeed('Instance cleaned successfully')
       }
       else logger.Error('Wrong confirmation. Closed without cleaning instance data.');
 

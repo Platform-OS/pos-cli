@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 
 const program = require('commander');
-const ora = require('ora');
 const logger = require('../lib/logger');
-const fetchAuthData = require('../lib/settings').fetchSettings;
-const spinner = ora({ text: 'Setup', stream: process.stdout, spinner: 'bouncingBar' });
 const configFiles = require('../lib/modules/configFiles');
 const { findModuleVersion, resolveDependencies } = require('../lib/modules/dependencies')
 const Portal = require('../lib/portal');
 const path = require('path');
 const { createDirectory } = require('../lib/utils/create-directory');
+
+// importing ESM modules in CommonJS project
+let ora;
+const initializeEsmModules = async () => {
+  if(!ora) {
+    await import('ora').then(imported => ora = imported.default);
+  }
+
+  return true;
+}
 
 const addNewModule = async (moduleName, moduleVersion, localModules, getVersions) => {
   const newModule = await findModuleVersion(moduleName, moduleVersion, getVersions);
@@ -33,9 +40,12 @@ program
 
     try {
       await createDirectory(path.join(process.cwd(), configFiles.posConfigDirectory));
-      const spinner = ora({ text: "Modules install", stream: process.stdout, spinner: 'bouncingBar' }).start();
+      
+      await initializeEsmModules();
+      const spinner = ora({ text: 'Modules install', stream: process.stdout });
+      spinner.start();
 
-      try{
+      try {
         let localModules = configFiles.readLocalModules();
         if(moduleNameWithVersion){
           const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
