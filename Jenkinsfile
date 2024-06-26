@@ -11,18 +11,6 @@ pipeline {
   }
 
   stages {
-    stage('Test 16') {
-      agent { kubernetes { yaml podTemplate("16") } }
-      options { timeout(time: 300, unit: 'SECONDS') }
-
-      steps {
-        container(name: 'node') {
-          sh 'set -e'
-          sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
-        }
-      }
-    }
-
     stage('Test 18') {
       agent { kubernetes { yaml podTemplate("18") } }
       options { timeout(time: 300, unit: 'SECONDS') }
