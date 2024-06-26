@@ -1,100 +1,106 @@
 ## Overview
 
-[pos-cli](https://github.com/mdyd-dev/pos-cli) is a command line tool developed to allow you to easily deploy your configuration files and assets to platformOS. It expects you to follow a certain file structure to correctly communicate with the platformOS API. You do not have to use it, however, it is highly recommended that you do. It is a CLI tool, hence you are expected to have basic knowledge in working with a command line interface like Terminal. 
+**pos-cli** is a command-line interface (CLI) tool specifically developed to simplify the deployment of your configuration files and assets to platformOS. It requires a specific file structure to ensure correct communication with the platformOS API. While its use is not mandatory, it is **highly recommended**. Basic familiarity with command line environments, such as Terminal, is expected when using pos-cli.
 
-If you have any feature requests, feedback, or problems, please head over to the [issues page](https://github.com/mdyd-dev/pos-cli/issues) and let us know.
+If you encounter any issues, have feedback, or want to request new features, please go to our [issues page](https://github.com/mdyd-dev/pos-cli/issues) and let us know.
 
-Run all commands in the project root directory - one level above the `app` or `modules` directory.
+Run all commands from the project root directory, one level above the `app` or `modules` directory.
 
 ### Requirements
 
-`pos-cli` requires nodejs >= v16 to work properly. [Read more on how to install node on your platform](https://nodejs.org/en/download/).
+`pos-cli` requires Node.js version 16 or higher to function correctly. [See instructions for installing Node.js on your platform](https://nodejs.org/en/download/).
 
-## Installation and update
+## Installation and Update
 
-If your node is installed for all users you might need to use `sudo` to install npm packages globally:
+If Node.js is installed on your system for all users, you may need to use the `sudo` command to install npm packages globally:
 
     sudo npm install -g @platformos/pos-cli
 
-If you are using nvm or have node installed on your account, you can omit that:
+If you're using nvm (Node Version Manager) or if Node.js is installed only for your user account, use:
 
     npm install -g @platformos/pos-cli
 
 ## Usage
 
-### Adding environments and authenticating
+### Adding Environments and Authenticating
 
-For authentication, you'll need your **Partner Portal** account credentials.
-See this [guide](https://documentation.platformos.com/get-started/partner-portal/inviting-new-user-to-partner-portal) if you don't have a Partner Portal account yet.
+To authenticate, you'll need your [**Partner Portal**](https://partners.platformos.com/) account credentials. If you don't have a Partner, follow the [Sign up on the Partner Portal guide](https://documentation.platformos.com/get-started/installation-and-configuration/#sign-up-on-the-partner-portal).
 
-To add your environment to a config file, run the `env add` command, and authenticate with your **Partner Portal** credentials:
+To add an environment to your configuration file, use the `env add` command and authenticate with your **Partner Portal** credentials:
 
     pos-cli env add [environment] --url [your application url]
 
 Example: `pos-cli env add staging --url https://example.com`
 
-Configuration for environments is in the `.pos` file.
+The configuration for your environments is stored in the `.pos` file.
 
-### Syncing changes
+### Syncing Changes
+
+To synchronize changes with your environment, use the following command:
     
     pos-cli sync [environment]
 
 Example: `pos-cli sync staging`
 
-Enables sync mode - immediately pushes changes made to the file system to the proper environment. It feels like working on localhost. Because changes are immediate, it is dangerous to use sync on production, on a live application - it is recommended to use it only for staging.
+Using this command activates **sync mode**, which immediately uploads any changes you make to your local file system to the specified environment. This offers an experience similar to working on a local server. However, because changes are applied instantly, using sync mode on a production environment or a live application is risky and not recommended. It's best to limit the use of this feature to staging environments where immediate updates can be tested safely.
 
-#### Livereloading changes
+#### Automatically Opening the Browser
 
-Add `--livereload` (`-l`) to your sync command to run the [LiveReload](http://livereload.com) server in the background.
-You need to install the LiveReload browser extension for it to refresh your browser on file changes.
-
-    pos-cli sync [environment] -l
-    
-#### Automatically opening the browser
-
-If you add `--open` (`-o`) to the sync command, it will open your Instance in the default browser.  
+Include the `--open` (`-o`) option with your sync command to automatically launch your Instance in the default web browser:
 
     pos-cli sync [environment] -o
     
 #### Concurrency
 
-By default, the `sync` command uses 3 concurrent connections to our server when syncing resources and assets. You can adjust it for your connection. 
+By default, the `sync` command establishes three concurrent connections to our server for syncing resources and assets. You have the option to modify this to better suit your network’s capabilities:
 
     pos-cli sync [environment] -c 10
+
+Adjust the number of concurrent connections based on your specific requirements and connection strength.
     
-### Deploying changes
+### Deploying Changes
+
+To deploy all changes to a specified environment, use the following command:
 
     pos-cli deploy [environment]
     
 Example: `pos-cli deploy staging`
 
-Deploys all changes. It is recommended to first deploy to `staging`, test, and only then trigger a deploy to production. Effectively, deploy creates a zip file containing all your files and sends it to the API. It is then processed in the background. We store each zip file to allow you to roll back in case something goes wrong.
+It is recommended to first deploy changes to a staging environment, thoroughly test them there, and only then proceed with deploying to production. The deploy command packages all your files into a zip file and sends it to the API for background processing. Each zip file is stored, enabling rollback if any issues arise.
 
-To skip the audit during deploy, set the environmental variable `CI` to `true`.
+To skip the audit during deployment, set the environmental variable `CI` to `true`.
 
-### Code audit
+### Code Audit
+
+To perform a static analysis of the files in your current application directory, use the following command:
 
     pos-cli audit
 
 Example: `pos-cli audit`
 
-Runs statical analysis on files in your current application directory.
+This command checks your application files for issues using static analysis, helping you maintain code quality and identify potential errors.
 
-### Reading logs
+### Reading Logs
 
-Access errors and logs that you or the system logs for you using the `logs` command. Read more on [how to create logs](https://documentation.platformos.com/api-reference/liquid/platformos-tags#log).
+Use the `logs` command to access errors and logs that you or the system logs:
 
     pos-cli logs [environment]
 
-From now on, as long as your `logs` command is running, logs will appear here. Errors will trigger system notifications if your operating system supports them.
+Read more on [how to create logs](https://documentation.platformos.com/api-reference/liquid/platformos-tags#log).
 
-You can filter logs by type using the `--filter` argument.
+Once activated, this command continuously displays logs as long as it is running. If supported by your operating system, errors will also trigger system notifications.
+
+You can filter logs displayed by specifying a type with the  `--filter` argument.
 
     pos-cli logs [environment] --filter type
 
 Example:
 
     pos-cli logs staging --filter debug
+
+This command filters and displays only the logs of type 'debug' from the staging environment.
+
+For more details, [read our documentation on logs](https://documentation.platformos.com/api-reference/liquid/platformos-tags#log).
 
 ### Logs V2
 
@@ -112,7 +118,6 @@ examples:
 
 
     
-    
 #### ROADMAP
 - alerts
 - alerts delete 
@@ -121,24 +126,22 @@ examples:
 
 ### Listing environments
 
-If you forgot what your environments are called or the URL that corresponds to any name, use:
+If you need to recall the names of your environments or their corresponding URLs, use the following command:
 
     pos-cli env list
 
 ### Initializing the directory structure
 
-If you need to create a new project from scratch you can initialize the directory structure using:
+To start a new project from scratch and set up the initial directory structure, use the `init` command:
 
     pos-cli init --url mdyd-dev/directory-structure --branch master
 
 Default URL: `mdyd-dev/directory-structure`
 Default branch: `master`
 
-The `init` command supports all formats supported by [degit](https://github.com/Rich-Harris/degit), as it is used as an engine underneath.
+The `init` command uses [degit](https://github.com/Rich-Harris/degit) to download the directory structure from the specified Git repository and extract it into your current directory. It supports all file formats that degit can handle, simplifying the setup process for new projects.
 
-It downloads the directory structure from a given git repository and extracts it in your current directory.
-
-### Managing constants
+### Managing Constants
 
 Add constant named `API_KEY` with value `abc123` on `dev` environment:
 
@@ -171,68 +174,87 @@ List defined constants showing their values on `production` environment:
 
 #### List
 
-Lists all modules installed through the Partners Portal on a given environment.
-This command will not list modules that you deployed via the `modules/` directory.
+Use the following command to display all modules that have been installed through the Partners Portal for a specific environment:
 
     pos-cli modules list [environment]
 
-#### Initialize
+**Note:** This command does not list modules that you deployed manually via the `modules/` directory. For example, if you create a directory manually, such as `modules/my-module`, and add a file like `modules/my-module/public/views/partials/my-partial.liquid`, `my-module` will not appear in the list produced by this command.
 
-Create a new module based on module starter repository.
+However, if you install a module using the `pos-cli modules install another-module` command or directly through the "Install" option in the Partners Portal interface, the module will be listed by this command.
+
+#### Initialiting a New Module
+
+To create a new module using a template from a starter repository, use the following command, where `<module name>` is your desired module name:
 
     pos-cli modules init <module name>
-    
+
+This command sets up a new directory within the `modules/` folder, pulling the initial structure and content from the [Platform-OS module template repository](https://github.com/Platform-OS/pos-module-template).
+
+Example of creating a module named "new":
+    ~/projects/pos/modules/pos-module-new pos-cli modules init new
+    [11:02:21] Module directory structure successfully created.
+
+After running the command, you can see the new module directory has been created by listing the contents:
+
+    ~/projects/pos/modules/pos-module-new ls
+    modules
+    ~/projects/pos/modules/pos-module-new cd modules
+    ~/projects/pos/modules/pos-module-new/modules ls
+    new
+    ~/projects/pos/modules/pos-module-new/modules cd new
+    ~/projects/pos/modules/pos-module-new/modules/new ls
+    CHANGELOG.md  changelog-template.hbs  LICENSE  package.json  private  public  pull_request_template.md  README.md  template-values.json
+
 #### Installation
 
-You can install modules that are published in modules marketplace by adding them to `app/pos-modules.json`. To make that you can use `pos-cli modules install`
+Install modules published in the modules marketplace by adding them to `app/pos-modules.json`. Use the following commands to install and then deploy the module:
 
     pos-cli modules install <env> [module name]
     pos-cli deploy <env>
 
 #### Remove
 
-Removes a module from your application.
+To remove a module from your application:
 
     pos-cli modules remove [environment] <module name>
 
 #### Publishing
 
-In order to publish module to our module repository first you have to create module on Partner Portal (https://partners.platformos.com/pos_modules/new) and give it a unique name.
-Create sepeate directory for your new module. Then you can run `pos-cli init <module_name>` to create necessary directory structure. 
+To publish a module to our module repository, 
+1. [Create the module on the Partner Portal](https://partners.platformos.com/pos_modules/new) and give it a unique name.
+2. Create a separate directory for your module and run `pos-cli init <module_name>` to create necessary directory structure.
 
     mkdir <module_name>; cd <module_name>
     pos-cli init <module_name>
 
-Once you have prepared your module you can release the new version and the publish it
+3. After preparing your module, release the new version and then publish it:
 
     pos-cli modules version x.x.x
     pos-cli modules push --email <your_email>
-    
 
 #### Pulling module codebase
 
-You can fetch the module codebase that is deployed on your instance.
+Fetch the codebase of a module that is deployed on your instance:
 
     pos-cli modules pull <env> <module_name>
-    
-It will download and unpack module files into `modules/<module_name>` directory.
+
+This will download and unpack module files into the `modules/<module_name>` directory.
 
 #### Downloading module version codebase
 
-You can download public module codebase that has been released.
+Download the public codebase of a released module:
 
     pos-cli modules download <module_name>
     
+##### Module Templates
 
-##### module templates
+Templates automate and simplify the configuration process in module management. For example, upon installing a module, it is possible to specify URIs under which pages will be available after the module has been installed. This functionality is supported in both sync and deploy modes.
 
-Templates provide automatic processing for easier module configuration. For example, upon installing a module, it is possible to specify URIs under which pages will be available after the module has been installed. This works both in sync and deploy mode.
+The templates use ERB/EJS-style markup (`<%=` `=%>`). with a simple filter `&` to unescape user-provided values. By default, all values are escaped.
 
-Markup is the commonly used ERB/EJS stye: `<%=` `=%>` there is no logic supported, the only available filter is `&` which will unescape the value provided by the user (by default they are all escaped).
+To specify variable values, place them in the `template-values.json` within the root module directory. You can also specify the path to this configuration file using the `TEMPLATE_VALUES_FILE_PATH` variable. For example, by executing `TEMPLATE_VALUES_FILE_PATH=templates/values.json pos-cli deploy staging` the `templates/values.json` file will be used as values for templates:
 
-Values for variables have to be provided in the root module directory `template-values.json`, but you can set the location of the configuration file using the `TEMPLATE_VALUES_FILE_PATH` variable.
-
-For example, by executing `TEMPLATE_VALUES_FILE_PATH=templates/values.json pos-cli deploy staging` the `templates/values.json` file will be used as values for templates.
+    TEMPLATE_VALUES_FILE_PATH=templates/values.json pos-cli deploy staging
 
 Directory structure with `template-values.json`:
 
@@ -250,7 +272,7 @@ modules
                 └── admin.liquid
 ```
 
-**Example**
+**Template Usage Example:**
 
 A page with this code
 
@@ -262,7 +284,7 @@ slug: <%= &desired_location =%>
 This is using templates <%= what =%> !
 ```
 
-and a `template-values.json`
+An example `template-values.json`:
 
 ```json
 {
@@ -271,7 +293,7 @@ and a `template-values.json`
 }
 ```
 
-will turn into this during deploy/sync:
+Will result during deploy/sync in:
 
 ```yaml
 ---
@@ -283,34 +305,34 @@ This is using templates magic!
 
 ### Migrations
 
-Migrations are files that contain Liquid code (including GraphQL) that you want to run and have a trace of what exactly has been run.
+Migrations are files that contain executable Liquid code (including GraphQL) code, which you can run across different environments. These files also enable you to keep a record of what scripts have been executed, making it easier to track changes and updates.
 
-This is very helpful if you want to execute the same code on multiple environments after the code has been deployed. For example, seeding initial data.
+This is particularly useful if you want to execute the same code on multiple environments after the code has been deployed, like seeding databases with initial data.
 
-Read more about migrations in our documentation:
+For detailed information:
+* Read our documentation on [Migrations](https://documentation.platformos.com/developer-guide/platformos-workflow/directory-structure#migrations)
+* or follow the [step-by-step guide on Migrating Data](https://documentation.platformos.com/developer-guide/data-import-export/migrating-data).
 
-* https://documentation.platformos.com/developer-guide/data-import-export/migrating-data
-* https://documentation.platformos.com/use-cases/e-commerce/seeding-configuration-data
 
 #### List
 
-Lists migrations deployed to the server and their current status.
+List all migrations that have been deployed to the server, along with their current status:
 
     pos-cli migrations list [environment] [name]
 
 #### Generate
 
-Generates new migration with the name you provided. It will be prepended with a timestamp so if you create more than one, they will be run in the order you intended.
-
-Migrations run automatically on deploy.
+To create a new migration, use the `generate` command with a specified name. A timestamp is automatically prepended to the name to ensure that migrations are executed in the order they were created:
 
     pos-cli migrations generate [environment] [name]
 
+Migrations are executed automatically during deployment.
+
 #### Run
 
-You can run a migration manually using the `run` command. You must first sync the migration file to the environment.
+To execute a migration manually, use the `run` command. Before running a migration, ensure that the migration file has been synchronized with the intended environment.
 
-The name of the migration is the filename without the extension, or just the timestamp.
+The migration is identified by the filename without the extension, or simply by the timestamp.
 
     pos-cli migrations run [environment] [name]
 
@@ -318,86 +340,113 @@ Example:
 
     pos-cli migrations run staging 20190715132951_update_admin_password
 
+This command manually runs a specific migration script that updates an admin password in the staging environment.
+
 ### Data
 
 #### Export
 
-Exports data from the environment to a given file in JSON format.
+This function allows you to export data from your environment to a specified file in JSON format.
 
-Read more about [exporting data with the CLI, REST API and GraphQL](https://documentation.platformos.com/developer-guide/data-import-export/export) in our documentation.
+Command:
 
     pos-cli data export staging --path=data.json
 
+For more comprehensive guidance on exporting data using the CLI, REST API, and GraphQL, read our documentation on [Data Export](https://documentation.platformos.com/developer-guide/data-import-export/export).
+
 #### Import
 
-Imports data from a given JSON file with proper data structure.
-
-Read more about [importing data with the CLI, REST API and GraphQL](https://documentation.platformos.com/developer-guide/data-import-export/import) in our documentation.
+Use this command to import data from a JSON file that follows the proper data structure into your environment:
 
     pos-cli data import staging --path=data.json
 
-#### Clean (only staging)
+For detailed instructions on importing data with different technologies, read our documentation on [Data Import Using CSV format](https://documentation.platformos.com/developer-guide/data-import-export/import).
 
-Cleans data on an Instance. Keep in mind that this only removes rows of data, not the structure definition.
+#### Clean Data (Staging Only)
 
-For example, if you have a model schema `car` and there are 10 entries of type `car`, those will be deleted, but the model schema `car` will remain intact.
-
-This is useful for testing your imports/exports or resetting your database to a pristine state between tests.
-
-**This operation is irreversible**. `pos-cli` will ask you twice if you are sure you want to do it.
+This command removes data entries from your Instance without altering the underlying data structure: 
 
     pos-cli data clean staging
+    
+For example, if your model schema is `car` and it contains 10 entries, this operation will remove these entries but the `car` schema itself will remain intact.
 
-### Admin - Graphical interface
+This function is particularly useful for clearing data when testing your imports/exports, or for resetting your database to a fresh state between tests.
 
-To start the http server locally that will serve the GUI use:
+**Important:** This operation is irreversible. The pos-cli will request confirmation twice before proceeding to ensure that you do not accidentally remove data.
+
+
+### Admin - Graphical Interface (GUI)
+
+To start the local HTTP server that hosts the GUI, execute the following command:
 
     pos-cli gui serve [environment]
 
 Example: `pos-cli gui serve staging`
 
-To open platformOS Admin go to [http://localhost:3333](http://localhost:3333)
+You can access the platformOS Admin GUI by visiting [http://localhost:3333](http://localhost:3333).
 
-#### Opening Admin automatically 
+![Screenshot of the Admin GUI](docs/images/admin-gui.png)
 
-If you want to open platformOS Admin as soon as `gui serve` is running, add `--open` (`-o`) as your argument.
+#### Opening Admin Automatically 
+
+If you want to open the platformOS Admin in your browser when the GUI server starts (as soon as `gui serve` is running), include `--open` (`-o`) in your command:
 
     pos-cli gui serve [environment] -o
     
-    
-#### Running with sync
+#### Syncing with GUI
 
-Usualy in day to day work you want to have `gui serve` and `sync` run. You can do it with one command:
+For routine tasks, you might want both the GUI server (`gui serve`) and data synchronization (`sync`) to run simultaneously. You can achieve this with a single command:
 
     pos-cli gui serve [environment] -o --sync
 
-#### GraphiQL Browser
+#### Exploring with GraphiQL Browser
 
-To explore your Instance database using GraphQL open [http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql) in your web browser.
+To interact with your instance's database using GraphQL, navigate to the GraphiQL interface at in your web browser:
 
-In the right sidebar there is a schema documentation should you need it.
+[http://localhost:3333/gui/graphql](http://localhost:3333/gui/graphql)
 
-#### Liquid evaluator
+![Screenshot of the GraphiQL Browser](docs/images/graphiql.png)
 
-To open a page where you can experiment with Liquid and evaluate it on your Instance, open [http://localhost:3333/gui/liquid](http://localhost:3333/gui/liquid) in your browser.
+The sidebar includes schema documentation for reference.
 
+#### Liquid Evaluator
+
+For experimenting and evaluating Liquid templates directly on your Instance, access the Liquid evaluator page in your browser:
+
+[http://localhost:3333/gui/liquid](http://localhost:3333/gui/liquid)
+
+This interface allows you to test and refine Liquid code within the context of your platformOS environment.
 
 ### Generators
 
-In order to quickly create files you can use generators. They are provided by modules. 
-For example `core` module provide `command` generator. You can use it like this:
+Generators are tools provided by various modules that allow you to quickly create files necessary for your project.
 
-      pos-cli generate modules/core/generators/command users/create
+For example, the [core module](https://github.com/Platform-OS/pos-module-core) includes a `command` generator, which you can use to quickly produce specific files like this:
+
+    pos-cli generate modules/core/generators/command users/create
       
-You can also display help for generator with this command:
+If you need guidance or additional information about how to use a specific generator, you can access the **help documentation** with the following command:
 
-      pos-cli generate modules/core/generators/command --generator-help
-
+    pos-cli generate modules/core/generators/command --generator-help
 
 ## Development
 
-`pos-cli gui serve` (graphiql) has its own build process. You will find it in `gui/editor/graphql`.
+The `pos-cli gui serve` command uses a distinct build process for the GraphiQL interface located in the `gui/editor/graphql` directory.
 
-Develop install dependencies (`npm ci`) and start development mode (`npm start`).
+### Setting Up Development Environment
 
-After your work is done, build production assets (`npm run build`) and commit changes to the repository.
+To prepare for development, you first need to install all necessary dependencies:
+
+    npm ci
+
+Then, you can start the development environment by executing:
+
+    npm start
+
+### Building and Committing Changes
+
+Once your development work is done, the next step is to build the production assets to ensure everything is optimized for deployment:
+
+    npm run build
+
+After building the production assets, make sure to commit your changes to the repository.
