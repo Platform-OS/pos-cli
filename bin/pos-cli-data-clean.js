@@ -63,7 +63,7 @@ program
         const checkDataCleanJobStatus = () => { return gateway.dataCleanStatus(response.id) }
         await waitForStatus(checkDataCleanJobStatus, 'pending', 'done')
 
-        spinner.stopAndPersist().succeed('Instance cleaned successfully')
+        spinner.stopAndPersist().succeed('DONE. Instance cleaned');
       }
       else logger.Error('Wrong confirmation. Closed without cleaning instance data.');
 

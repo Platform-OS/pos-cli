@@ -25,7 +25,7 @@ program
     const filename = 'modules.zip';
 
     await initializeEsmModules();
-    const spinner = ora({ text: 'Sending data', stream: process.stdout });
+    const spinner = ora({ text: 'Exporting', stream: process.stdout });
     spinner.start();
 
     Portal.moduleVersionsSearch(module)
