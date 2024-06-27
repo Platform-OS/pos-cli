@@ -2,7 +2,6 @@
 
 const program = require('commander'),
   fs = require('fs'),
-  ora = require('ora'),
   shell = require('shelljs'),
   crypto = require('crypto'),
   Gateway = require('../lib/proxy'),
@@ -16,8 +15,17 @@ const program = require('commander'),
 const logger = require('../lib/logger'),
   report = require('../lib/logger/report');
 
+// importing ESM modules in CommonJS project
+let ora;
+const initializeEsmModules = async () => {
+  if(!ora) {
+    await import('ora').then(imported => ora = imported.default);
+  }
+
+  return true;
+}
+  
 let gateway;
-const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 const tmpFileName = './tmp/data-imported.json';
 
 const logInvalidFile = (filename) => {
@@ -30,6 +38,10 @@ Do you want to import a zip file? Use --zip.
 };
 
 const dataImport = async (filename, rawIds, isZipFile) => {
+
+  await initializeEsmModules();
+  const spinner = ora({ text: 'Sending data', stream: process.stdout });
+
   spinner.start();
 
   let formData = {};

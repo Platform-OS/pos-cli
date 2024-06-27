@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "4.25.0",
+  "version": "5.0.0-0",
   "description": "Manage your platformOS application",
   "scripts": {
     "test": "jest --runInBand",
@@ -18,7 +18,7 @@
   ],
   "main": "./bin/pos-cli.js",
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "keywords": [
     "pos-cli",
@@ -55,7 +55,7 @@
     "mustache": "^4.2.0",
     "node-notifier": "^10.0.1",
     "open": "^8.4.0",
-    "ora": "^5.1.0",
+    "ora": "^8.0.1",
     "pluralize": "^8.0.0",
     "prompts": "^2.4.2",
     "readdirp": "^3.6.0",

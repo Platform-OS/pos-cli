@@ -2,7 +2,6 @@
 
 const program = require('commander'),
   fs = require('fs'),
-  ora = require('ora'),
   Gateway = require('../lib/proxy'),
   fetchAuthData = require('../lib/settings').fetchSettings,
   transform = require('../lib/data/uploadFiles'),
@@ -11,20 +10,33 @@ const program = require('commander'),
 const logger = require('../lib/logger'),
   report = require('../lib/logger/report');
 
+// importing ESM modules in CommonJS project
+let ora;
+const initializeEsmModules = async () => {
+  if(!ora) {
+    await import('ora').then(imported => ora = imported.default);
+  }
+
+  return true;
+}
+
 let gateway;
-const spinner = ora({ text: 'Sending data', stream: process.stdout, spinner: 'bouncingBar' });
 
 program
   .name('pos-cli data update')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <update-file-path>', 'path of update .json file', 'data.json')
-  .action((environment, params) => {
+  .action(async (environment, params) => {
+
     const filename = params.path;
     const authData = fetchAuthData(environment, program);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url,
     });
+
+    await initializeEsmModules();
+    const spinner = ora({ text: 'Sending data', stream: process.stdout });
 
     gateway = new Gateway(authData);
 
@@ -57,6 +69,7 @@ For example: https://jsonlint.com`
         logger.Error(e.message);
           report('[ERR] Data: Update');
       });
+
   });
 
 program.parse(process.argv);
