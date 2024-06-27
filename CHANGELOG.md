@@ -1,6 +1,7 @@
 # Changelog
 
-## not released
+## 5.0.0
+* Chore: Support for Node < 18 dropped
 * Bug: (GUI) Fixed update message not being visible in dark mode
 
 ## 4.25.0
