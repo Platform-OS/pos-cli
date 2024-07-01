@@ -3,7 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { createEventDispatcher } from 'svelte';
+import { tick, createEventDispatcher } from 'svelte';
 
 import Icon from '$lib/ui/Icon.svelte';
 
@@ -28,10 +28,25 @@ export let style;
 export let decreaseLabel = `Decrease ${name} value`;
 // label for the increase button (string)
 export let increaseLabel = `Increase ${name} value`;
+// if the field is currently focused (boold)
+let focused = false;
 
 
 // forward a change event when pressing the buttons
 const dispatch = createEventDispatcher();
+
+
+// purpose:		slows down triggering an input event to wait for the user to finish setting the number
+// effect:    triggers 'input' event on the component
+// ------------------------------------------------------------------------
+let inputTimeout;
+function debouncedInput() {
+  clearTimeout(inputTimeout);
+
+  inputTimeout = setTimeout(() => {
+    dispatch('input');
+  }, 150);
+}
 
 </script>
 
@@ -45,10 +60,11 @@ const dispatch = createEventDispatcher();
     align-items: center;
   }
 
-  input {
-    width: calc(var(--max) + 1em);
+  input[type="number"] {
+    width: calc(var(--max));
     padding-inline: .5em;
     padding-block: .45rem .55rem;
+    box-sizing: content-box;
 
     appearance: none;
     -moz-appearance: textfield;
@@ -69,7 +85,7 @@ const dispatch = createEventDispatcher();
     }
 
   button {
-    padding-block: .8rem;
+    min-height: 2.313rem;
   }
 
     button:first-child {
@@ -105,7 +121,7 @@ const dispatch = createEventDispatcher();
 
   <button
     class="button"
-    on:click|preventDefault={() => { value = value-1; dispatch('input'); }}
+    on:click|preventDefault={async () => { value = parseInt(value)-1; await tick(); debouncedInput(); }}
     disabled={value <= min}
     aria-hidden={value <= min}
   >
@@ -122,13 +138,16 @@ const dispatch = createEventDispatcher();
     max={max}
     step={step}
     bind:value={value}
-    on:input
+    on:input|preventDefault={debouncedInput}
+    on:focusin={() => focused = true}
+    on:focusout={() => focused = false}
+    autofocus={focused}
     style="--max: {max?.toString().length || 1}ch"
   >
 
   <button
     class="button"
-    on:click|preventDefault={() => { value = value+1; dispatch('input'); }}
+    on:click|preventDefault={async () => { value = parseInt(value)+1; await tick(); debouncedInput(); }}
     disabled={value >= max}
     aria-hidden={value >= max}
   >
