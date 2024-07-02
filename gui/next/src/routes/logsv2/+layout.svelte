@@ -3,29 +3,32 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { tick } from 'svelte';
+import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { logs } from '$lib/api/logsv2.js';
 import { state } from '$lib/state.js';
 
 import Icon from '$lib/ui/Icon.svelte';
+import Number from '$lib/ui/forms/Number.svelte';
 
 
 // properties
 // ------------------------------------------------------------------------
-// main content container (dom node)
-let container;
 // filters form (dom node)
 let form;
-// request results with 'hits' containing array with logs (object)
-let items;
 // todays date (Date object)
 const today = new Date();
 // how far to the past the logs can be requested (Date object)
 const dayInterval = 1000 * 60 * 60 * 24;
 const minAllowedDate = new Date(today -  dayInterval * 3);
 // currently active filters (object)
-let filters = Object.fromEntries($page.url.searchParams);
-  filters.start_time = filters.start_time || today.toISOString().split('T')[0];
+let filters = {
+  page: 1,
+  start_time: today.toISOString().split('T')[0],
+
+  ...Object.fromEntries($page.url.searchParams)
+};
 
 
 
@@ -112,6 +115,22 @@ $: logs.get(Object.fromEntries($page.url.searchParams)).then(data => $state.logs
     border-end-start-radius: 0;
   }
 
+.pagination {
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: .5em;
+
+  border-block-start: 1px solid var(--color-frame);
+  background-color: rgba(var(--color-rgb-background), .8);
+  backdrop-filter: blur(17px);
+  -webkit-backdrop-filter: blur(17px);
+}
+
+  .pagination .info {
+    cursor: help;
+  }
+
 
 /* content table */
 table {
@@ -146,6 +165,10 @@ table {
 
   td > a {
     display: block;
+  }
+
+  tr:last-child td {
+    border: 0;
   }
 
   .time,
@@ -223,15 +246,6 @@ table {
     }
   }
 
-small {
-  margin-block: 2rem;
-  display: block;
-
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
-
 </style>
 
 
@@ -242,19 +256,27 @@ small {
 </svelte:head>
 
 
-<div class="page" bind:this={container}>
+<div class="page">
 
   <section class="container">
 
       <nav class="filters">
-        <form action="" bind:this={form}>
+        <form
+          action=""
+          bind:this={form}
+          id="filters"
+          on:submit={
+            // reset page number when changing filters except when directly changing a page
+            async event => { if(event.submitter?.dataset.action !== 'numberIncrease'){ event.preventDefault(); filters.page = 1; await tick(); goto(document.location.pathname + '?' + (new URLSearchParams(new FormData(event.target)).toString())); } }
+          }
+        >
           <input
             type="date"
             name="start_time"
             min={minAllowedDate.toISOString().split('T')[0]}
             max={today.toISOString().split('T')[0]}
             bind:value={filters.start_time}
-            on:input={form.requestSubmit()}
+            on:input={() => form.requestSubmit()}
           >
           <fieldset class="search">
             <label for="filter_message">
@@ -263,7 +285,7 @@ small {
             <input
               type="text"
               name="message"
-              id=filter_message
+              id="filter_message"
               placeholder="Find logs"
               bind:value={filters.message}
             >
@@ -314,9 +336,26 @@ small {
             </tbody>
           {/if}
         </table>
-        
-        <small>Showing latest 20 logs as Early Access limitation</small>
       </article>
+
+      <nav class="pagination">
+        <label for="page">
+          Page:
+        </label>
+        <Number
+          form="filters"
+          name="page"
+          bind:value={filters.page}
+          min={1}
+          max={Math.ceil($state.logsv2.total / $state.logsv2.size) || 20}
+          step={1}
+          decreaseLabel="Previous page"
+          increaseLabel="Next page"
+          style="navigation"
+          on:input={event => { form.requestSubmit(event.detail.submitter); }}
+        />
+        of <span class="info" title="{$state.logsv2.total} logs total">{Math.ceil($state.logsv2.total / $state.logsv2.size) || 1}</span>
+      </nav>
 
   </section>
 

@@ -3,7 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { createEventDispatcher } from 'svelte';
+import { tick, createEventDispatcher } from 'svelte';
 
 import Icon from '$lib/ui/Icon.svelte';
 
@@ -28,10 +28,29 @@ export let style;
 export let decreaseLabel = `Decrease ${name} value`;
 // label for the increase button (string)
 export let increaseLabel = `Increase ${name} value`;
+// if the field is currently focused (boold)
+let focused = false;
+// main submit button for the number component (will be passed as 'submitter' to form)
+let submit;
 
 
 // forward a change event when pressing the buttons
 const dispatch = createEventDispatcher();
+
+
+// purpose:		slows down triggering an input event to wait for the user to finish setting the number
+// effect:    triggers 'input' event on the component
+// ------------------------------------------------------------------------
+let inputTimeout;
+function debouncedInput(event) {
+  clearTimeout(inputTimeout);
+
+  inputTimeout = setTimeout(() => {
+    event.submitter = submit;
+
+    dispatch('input', event);
+  }, 150);
+}
 
 </script>
 
@@ -45,10 +64,11 @@ const dispatch = createEventDispatcher();
     align-items: center;
   }
 
-  input {
-    width: calc(var(--max) + 1em);
+  input[type="number"] {
+    width: calc(var(--max));
     padding-inline: .5em;
     padding-block: .45rem .55rem;
+    box-sizing: content-box;
 
     appearance: none;
     -moz-appearance: textfield;
@@ -69,7 +89,7 @@ const dispatch = createEventDispatcher();
     }
 
   button {
-    padding-block: .8rem;
+    min-height: 2.313rem;
   }
 
     button:first-child {
@@ -104,10 +124,12 @@ const dispatch = createEventDispatcher();
 <div class="number">
 
   <button
+    form={form}
     class="button"
-    on:click|preventDefault={() => { value = value-1; dispatch('input'); }}
+    on:click|preventDefault={async event => { value = parseInt(value)-1; await tick(); debouncedInput(event); }}
     disabled={value <= min}
     aria-hidden={value <= min}
+    data-action="numberDecrease"
   >
     <span class="label">{decreaseLabel}</span>
     <Icon icon={style === 'navigation' ? 'arrowLeft' : 'minus' } />
@@ -122,15 +144,21 @@ const dispatch = createEventDispatcher();
     max={max}
     step={step}
     bind:value={value}
-    on:input
+    on:input|preventDefault={event => debouncedInput(event)}
+    on:focusin={() => focused = true}
+    on:focusout={() => focused = false}
+    autofocus={focused}
     style="--max: {max?.toString().length || 1}ch"
   >
 
   <button
+    form={form}
+    bind:this={submit}
     class="button"
-    on:click|preventDefault={() => { value = value+1; dispatch('input'); }}
+    on:click|preventDefault={async event => { value = parseInt(value)+1; await tick(); debouncedInput(event); }}
     disabled={value >= max}
     aria-hidden={value >= max}
+    data-action="numberIncrease"
   >
     <span class="label">{increaseLabel}</span>
     <Icon icon={style === 'navigation' ? 'arrowRight' : 'minus' } />
