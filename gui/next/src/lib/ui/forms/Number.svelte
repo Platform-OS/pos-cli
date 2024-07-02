@@ -30,6 +30,8 @@ export let decreaseLabel = `Decrease ${name} value`;
 export let increaseLabel = `Increase ${name} value`;
 // if the field is currently focused (boold)
 let focused = false;
+// main submit button for the number component (will be passed as 'submitter' to form)
+let submit;
 
 
 // forward a change event when pressing the buttons
@@ -40,11 +42,13 @@ const dispatch = createEventDispatcher();
 // effect:    triggers 'input' event on the component
 // ------------------------------------------------------------------------
 let inputTimeout;
-function debouncedInput() {
+function debouncedInput(event) {
   clearTimeout(inputTimeout);
 
   inputTimeout = setTimeout(() => {
-    dispatch('input');
+    event.submitter = submit;
+
+    dispatch('input', event);
   }, 150);
 }
 
@@ -120,10 +124,12 @@ function debouncedInput() {
 <div class="number">
 
   <button
+    form={form}
     class="button"
-    on:click|preventDefault={async () => { value = parseInt(value)-1; await tick(); debouncedInput(); }}
+    on:click|preventDefault={async event => { value = parseInt(value)-1; await tick(); debouncedInput(event); }}
     disabled={value <= min}
     aria-hidden={value <= min}
+    data-action="numberDecrease"
   >
     <span class="label">{decreaseLabel}</span>
     <Icon icon={style === 'navigation' ? 'arrowLeft' : 'minus' } />
@@ -138,7 +144,7 @@ function debouncedInput() {
     max={max}
     step={step}
     bind:value={value}
-    on:input|preventDefault={debouncedInput}
+    on:input|preventDefault={event => debouncedInput(event)}
     on:focusin={() => focused = true}
     on:focusout={() => focused = false}
     autofocus={focused}
@@ -146,10 +152,13 @@ function debouncedInput() {
   >
 
   <button
+    form={form}
+    bind:this={submit}
     class="button"
-    on:click|preventDefault={async () => { value = parseInt(value)+1; await tick(); debouncedInput(); }}
+    on:click|preventDefault={async event => { value = parseInt(value)+1; await tick(); debouncedInput(event); }}
     disabled={value >= max}
     aria-hidden={value >= max}
+    data-action="numberIncrease"
   >
     <span class="label">{increaseLabel}</span>
     <Icon icon={style === 'navigation' ? 'arrowRight' : 'minus' } />

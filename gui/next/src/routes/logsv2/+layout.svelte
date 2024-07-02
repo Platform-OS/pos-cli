@@ -3,6 +3,8 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { tick } from 'svelte';
+import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { logs } from '$lib/api/logsv2.js';
 import { state } from '$lib/state.js';
@@ -13,12 +15,8 @@ import Number from '$lib/ui/forms/Number.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// main content container (dom node)
-let container;
 // filters form (dom node)
 let form;
-// request results with 'hits' containing array with logs (object)
-let items;
 // todays date (Date object)
 const today = new Date();
 // how far to the past the logs can be requested (Date object)
@@ -128,6 +126,10 @@ $: logs.get(Object.fromEntries($page.url.searchParams)).then(data => $state.logs
   backdrop-filter: blur(17px);
   -webkit-backdrop-filter: blur(17px);
 }
+
+  .pagination .info {
+    cursor: help;
+  }
 
 
 /* content table */
@@ -254,12 +256,20 @@ table {
 </svelte:head>
 
 
-<div class="page" bind:this={container}>
+<div class="page">
 
   <section class="container">
 
       <nav class="filters">
-        <form action="" bind:this={form} id="filters">
+        <form
+          action=""
+          bind:this={form}
+          id="filters"
+          on:submit={
+            // reset page number when changing filters except when directly changing a page
+            async event => { if(event.submitter?.dataset.action !== 'numberIncrease'){ event.preventDefault(); filters.page = 1; await tick(); goto(document.location.pathname + '?' + (new URLSearchParams(new FormData(event.target)).toString())); } }
+          }
+        >
           <input
             type="date"
             name="start_time"
@@ -342,9 +352,9 @@ table {
           decreaseLabel="Previous page"
           increaseLabel="Next page"
           style="navigation"
-          on:input={() => { form.requestSubmit(); }}
+          on:input={event => { form.requestSubmit(event.detail.submitter); }}
         />
-        of {Math.ceil($state.logsv2.total / $state.logsv2.size) || 1}
+        of <span class="info" title="{$state.logsv2.total} logs total">{Math.ceil($state.logsv2.total / $state.logsv2.size) || 1}</span>
       </nav>
 
   </section>
