@@ -2,6 +2,7 @@
 
 ## unreleased
 * Feature: (GUI) Added pagination to Logs v2
+* Improvement: Ingore .DS_Store files on macOS while syncing not to spam the terminal with messages of it being unrecognized
 
 ## 5.0.0
 * Chore: Support for Node < 18 dropped
