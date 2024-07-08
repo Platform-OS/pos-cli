@@ -15,33 +15,37 @@ test('see link on home screen', async ({ page }) => {
 
 
 test('viewing logs', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'log?message=This+is+a+first+test+log+for+logsv2');
+  const currentTime = Date.now();
+
+  await page.goto(triggerLogUrl + `log?message=${currentTime}+this+is+a+first+test+log+for+logsv2`);
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.waitForTimeout(5000);
 
   await page.goto(url);
 
-  await expect(page.getByText('This is a first test log for logsv2')).toBeVisible();
+  await expect(page.getByText(`${currentTime} this is a first test log for logsv2`)).toBeVisible();
 });
 
 
 test('filtering logs to previous date', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'log?message=This+log+should+not+be+visible+after+filtering+the+date');
+  const currentTime = Date.now();
+
+  await page.goto(triggerLogUrl + `log?message=${currentTime}+this+log+should+not+be+visible+after+filtering+the+date`);
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.waitForTimeout(5000);
 
   await page.goto(url);
 
-  await expect(page.getByText('This log should not be visible after filtering the date').first()).toBeVisible();
+  await expect(page.getByText(`${currentTime} this log should not be visible after filtering the date`).first()).toBeVisible();
 
   const today = new Date();
   const yesterday = today.setDate(today.getDate() - 1);
 
   await page.getByLabel('Time limit').fill((new Date(yesterday)).toISOString().split('T')[0]);
 
-  await expect(page.getByText('This log should not be visible after filtering the date')).toHaveCount(0);
+  await expect(page.getByText(`${currentTime} this log should not be visible after filtering the date`)).toHaveCount(0);
 });
 
 
