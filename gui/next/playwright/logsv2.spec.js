@@ -20,7 +20,7 @@ test('viewing logs', async ({ page }) => {
   await page.goto(triggerLogUrl + `log?message=${currentTime}+this+is+a+first+test+log+for+logsv2`);
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(4000);
 
   await page.goto(url);
 
@@ -34,7 +34,7 @@ test('filtering logs to previous date', async ({ page }) => {
   await page.goto(triggerLogUrl + `log?message=${currentTime}+this+log+should+not+be+visible+after+filtering+the+date`);
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(4000);
 
   await page.goto(url);
 
@@ -55,7 +55,7 @@ test('filtering logs by string', async ({ page }) => {
   await page.goto(triggerLogUrl + `log?message=Timestamp+log+${currentTime}`);
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(4000);
 
   await page.goto(url);
 
@@ -73,6 +73,8 @@ test('opening and closing logs details', async ({ page }) => {
 
   await page.goto(triggerLogUrl + `log?message=${currentTime}+log+for+details&type=details`);
   await expect(page.getByText('Registering a log: details')).toBeVisible();
+
+  await page.waitForTimeout(4000);
 
   await page.goto(url);
 
