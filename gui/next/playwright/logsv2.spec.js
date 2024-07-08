@@ -69,13 +69,18 @@ test('filtering logs by string', async ({ page }) => {
 
 
 test('opening and closing logs details', async ({ page }) => {
+  const currentTime = Date.now();
+
+  await page.goto(triggerLogUrl + `log?message=${currentTime}+log+for+details&type=details`);
+  await expect(page.getByText('Registering a log: details')).toBeVisible();
+
   await page.goto(url);
 
-  await page.getByRole('link', { name: 'This is a first test log for logsv2' }).first().click();
-  await expect(page.getByRole('heading', { name: 'info'})).toBeVisible();
-  await expect(page.locator('code').getByText('This is a first test log for logsv2')).toBeVisible();
+  await page.getByRole('link', { name: `${currentTime} log for details` }).click();
+  await expect(page.getByRole('heading', { name: 'details'})).toBeVisible();
+  await expect(page.locator('code').getByText(`${currentTime} log for details`)).toBeVisible();
 
   // closing
   await page.getByRole('link', { name: 'Close details' }).click();
-  await expect(page.getByRole('heading', { name: 'info'})).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'details'})).toBeHidden();
 });
