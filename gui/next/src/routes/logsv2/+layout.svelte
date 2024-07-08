@@ -74,6 +74,11 @@ $: logs.get(Object.fromEntries($page.url.searchParams)).then(data => $state.logs
   border-block-end: 1px solid var(--color-frame);
 }
 
+  .filters .label {
+    position: absolute;
+    left: -100vw;
+  }
+
   .filters form {
     display: flex;
     gap: var(--space-navigation);
@@ -270,9 +275,11 @@ table {
             async event => { if(event.submitter?.dataset.action !== 'numberIncrease'){ event.preventDefault(); filters.page = 1; await tick(); goto(document.location.pathname + '?' + (new URLSearchParams(new FormData(event.target)).toString())); } }
           }
         >
+          <label for="start_time" class="label">Time limit</label>
           <input
             type="date"
             name="start_time"
+            id="start_time"
             min={minAllowedDate.toISOString().split('T')[0]}
             max={today.toISOString().split('T')[0]}
             bind:value={filters.start_time}
