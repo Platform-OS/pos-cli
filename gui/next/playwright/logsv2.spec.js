@@ -80,7 +80,7 @@ test('opening and closing logs details', async ({ page }) => {
 
   await page.getByRole('link', { name: `${currentTime} log for details` }).click();
   await expect(page.getByRole('heading', { name: 'details'})).toBeVisible();
-  await expect(page.locator('code').getByText(`${currentTime} log for details`)).toBeVisible();
+  await expect(page.locator('.code').getByText(`${currentTime} log for details`)).toBeVisible();
 
   // closing
   await page.getByRole('link', { name: 'Close details' }).click();
