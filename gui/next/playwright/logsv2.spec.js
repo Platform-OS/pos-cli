@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 
 const url = './logsv2';
-const triggerLogUrl = 'https://qa-poscli-gui.staging.oregon.platform-os.com/';
+const triggerLogUrl = 'https://qa-poscli-gui-ci.staging.oregon.platform-os.com/';
 
 
 test('see link on home screen', async ({ page }) => {
