@@ -71,7 +71,7 @@ test('filtering logs by string', async ({ page }) => {
 test('opening and closing logs details', async ({ page }) => {
   await page.goto(url);
 
-  await page.getByRole('link', { name: 'This is a first test log for logsv2' }).click();
+  await page.getByRole('link', { name: 'This is a first test log for logsv2' }).first().click();
   await expect(page.getByRole('heading', { name: 'info'})).toBeVisible();
   await expect(page.locator('code').getByText('This is a first test log for logsv2')).toBeVisible();
 
