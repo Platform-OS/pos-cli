@@ -62,3 +62,16 @@ test('filtering logs by string', async ({ page }) => {
 
   await expect(page.locator('tbody').getByRole('row')).toHaveCount(1);
 });
+
+
+test('opening and closing logs details', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByRole('link', { name: 'This is a first test log for logsv2' }).click();
+  await expect(page.getByRole('heading', { name: 'info'})).toBeVisible();
+  await expect(page.locator('code').getByText('This is a first test log for logsv2')).toBeVisible();
+
+  // closing
+  await page.getByRole('link', { name: 'Close details' }).click();
+  await expect(page.getByRole('heading', { name: 'info'})).toBeHidden();
+});
