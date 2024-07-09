@@ -22,7 +22,7 @@ test('viewing logs', async ({ page }) => {
 
   await page.goto(url);
 
-  await expect(page.getByText('This is a first test log')).toBeVisible();
+  await expect(page.getByText('This is a first test log').first()).toBeVisible();
 });
 
 
