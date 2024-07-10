@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { posInstance } from './helpers/posInstance.js';
 
 
 
 test('see home screen', async ({ page }) => {
   await page.goto('./');
 
-  await expect(page).toHaveTitle('platformOS: qa-poscli-gui-ci.staging.oregon.platform-os.com/');
+  await expect(page).toHaveTitle(`platformOS: ${posInstance.MPKIT_URL.replace('https://', '')}`);
   await expect(page.locator('body')).toContainText('Partner Portal');
 });
 
@@ -13,7 +14,7 @@ test('see home screen', async ({ page }) => {
 test('seeing instance URL', async ({ page }) => {
   await page.goto('./');
 
-  await expect(page.locator('.instance')).toContainText('qa-poscli-gui-ci.staging.oregon.platform-os.com/');
+  await expect(page.locator('.instance')).toContainText(posInstance.MPKIT_URL.replace('https://', ''));
 });
 
 

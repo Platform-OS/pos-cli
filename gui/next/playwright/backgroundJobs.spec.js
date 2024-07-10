@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { posInstance } from './helpers/posInstance.js';
 
 
 const url = './backgroundJobs';
-const triggerLogUrl = 'https://qa-poscli-gui-ci.staging.oregon.platform-os.com/';
 
 
 test('see home screen', async ({ page }) => {
@@ -15,7 +15,7 @@ test('see home screen', async ({ page }) => {
 
 
 test('viewing scheduled background jobs', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'background_job');
+  await page.goto(posInstance.MPKIT_URL + 'background_job');
   await expect(page.getByText('background job scheduled')).toBeVisible();
 
   await page.goto(url);
@@ -27,7 +27,7 @@ test('viewing scheduled background jobs', async ({ page }) => {
 
 
 test('viewing background job details', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'background_job');
+  await page.goto(posInstance.MPKIT_URL + 'background_job');
   await expect(page.getByText('background job scheduled')).toBeVisible();
 
   await page.goto(url);
@@ -43,7 +43,7 @@ test('viewing background job details', async ({ page }) => {
 
 
 test('deleting scheduled background job', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'background_job_to_delete');
+  await page.goto(posInstance.MPKIT_URL + 'background_job_to_delete');
   await expect(page.getByText('background job scheduled')).toBeVisible();
 
   page.on('dialog', async dialog => {
