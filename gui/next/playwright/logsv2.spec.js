@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { posInstance } from './helpers/posInstance.js';
 
 
 const url = './logsv2';
-const triggerLogUrl = 'https://qa-poscli-gui-ci.staging.oregon.platform-os.com/';
 
 
 test('see link on home screen', async ({ page }) => {
@@ -10,14 +10,14 @@ test('see link on home screen', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Logs v2', exact: true}).first().click();
 
-  await expect(page).toHaveTitle('Logs: ' + triggerLogUrl.replace('https://', ''));
+  await expect(page).toHaveTitle('Logs: ' + posInstance.MPKIT_URL.replace('https://', ''));
 });
 
 
 test('viewing logs', async ({ page }) => {
   const currentTime = Date.now();
 
-  await page.goto(triggerLogUrl + `log?message=${currentTime}+this+is+a+first+test+log+for+logsv2`);
+  await page.goto(posInstance.MPKIT_URL + `log?message=${currentTime}+this+is+a+first+test+log+for+logsv2`);
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.waitForTimeout(4000);
@@ -31,7 +31,7 @@ test('viewing logs', async ({ page }) => {
 test('filtering logs to previous date', async ({ page }) => {
   const currentTime = Date.now();
 
-  await page.goto(triggerLogUrl + `log?message=${currentTime}+this+log+should+not+be+visible+after+filtering+the+date`);
+  await page.goto(posInstance.MPKIT_URL + `log?message=${currentTime}+this+log+should+not+be+visible+after+filtering+the+date`);
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.waitForTimeout(4000);
@@ -52,7 +52,7 @@ test('filtering logs to previous date', async ({ page }) => {
 test('filtering logs by string', async ({ page }) => {
   const currentTime = Date.now();
 
-  await page.goto(triggerLogUrl + `log?message=Timestamp+log+${currentTime}`);
+  await page.goto(posInstance.MPKIT_URL + `log?message=Timestamp+log+${currentTime}`);
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.waitForTimeout(4000);
@@ -71,7 +71,7 @@ test('filtering logs by string', async ({ page }) => {
 test('opening and closing logs details', async ({ page }) => {
   const currentTime = Date.now();
 
-  await page.goto(triggerLogUrl + `log?message=${currentTime}+log+for+details&type=details`);
+  await page.goto(posInstance.MPKIT_URL + `log?message=${currentTime}+log+for+details&type=details`);
   await expect(page.getByText('Registering a log: details')).toBeVisible();
 
   await page.waitForTimeout(4000);

@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { posInstance } from './helpers/posInstance.js';
 
 
 const url = './logs';
-const triggerLogUrl = 'https://qa-poscli-gui-ci.staging.oregon.platform-os.com/';
 
 
 test('see home screen', async ({ page }) => {
@@ -17,7 +17,7 @@ test('see home screen', async ({ page }) => {
 
 
 test('viewing logs', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'log?message=This+is+a+first+test+log');
+  await page.goto(posInstance.MPKIT_URL + 'log?message=This+is+a+first+test+log');
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.goto(url);
@@ -59,9 +59,9 @@ test('pinning a log message and managing pinned logs', async ({ page }) => {
 
 
 test('filtering log messages', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'log?message=Log+of+info+type+for+filtering+log+messages+tests');
+  await page.goto(posInstance.MPKIT_URL + 'log?message=Log+of+info+type+for+filtering+log+messages+tests');
   await expect(page.getByText('Registering a log: info')).toBeVisible();
-  await page.goto(triggerLogUrl + 'log?type=error&message=Error+log+for+filtering+log+messages+tests');
+  await page.goto(posInstance.MPKIT_URL + 'log?type=error&message=Error+log+for+filtering+log+messages+tests');
   await expect(page.getByText('Registering a log: error')).toBeVisible();
 
   await page.goto(url);
@@ -77,7 +77,7 @@ test('filtering log messages', async ({ page }) => {
 
 
 test('clearing logs from the screen', async ({ page }) => {
-  await page.goto(triggerLogUrl + 'log?message=Log+for+clearing+logs+from+the+screen+tests');
+  await page.goto(posInstance.MPKIT_URL + 'log?message=Log+for+clearing+logs+from+the+screen+tests');
   await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.goto(url);
