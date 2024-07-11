@@ -54,6 +54,8 @@ test('filtering logs by string', async ({ page }) => {
 
   await page.goto(posInstance.MPKIT_URL + `log?message=Timestamp+log+${currentTime}`);
   await expect(page.getByText('Registering a log: info')).toBeVisible();
+  await page.goto(posInstance.MPKIT_URL + `log?message=Random+log+007`);
+  await expect(page.getByText('Registering a log: info')).toBeVisible();
 
   await page.waitForTimeout(4000);
 
@@ -63,8 +65,7 @@ test('filtering logs by string', async ({ page }) => {
   await page.getByRole('button', { name: 'Filter logs'}).click();
   
   await expect(page.getByText(`Timestamp log ${currentTime}`).first()).toBeVisible();
-
-  await expect(page.locator('tbody').getByRole('row')).toHaveCount(1);
+  await expect(page.getByText(`Random log 007`).first()).toBeHidden();
 });
 
 
