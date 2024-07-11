@@ -1,7 +1,57 @@
 import { test, expect } from '@playwright/test';
+import { posInstance } from './helpers/posInstance.js';
 
 
 const url = './network';
+
+
+test('see link on home screen', async ({ page }) => {
+  await page.goto('./');
+
+  await page.getByRole('link', { name: 'Network Logs', exact: true}).first().click();
+
+  await expect(page).toHaveTitle('Logs: ' + posInstance.MPKIT_URL.replace('https://', ''));
+});
+
+test('viewing logs', async ({ page }) => {
+  const currentTime = Date.now();
+
+  await page.goto(posInstance.MPKIT_URL + `log?${currentTime}`);
+  await expect(page.getByText('Registering a log: info')).toBeVisible();
+  await page.goto(posInstance.MPKIT_URL + `/thisWillReturn404.jpg`);
+  await expect(page.getByText('Not Found')).toBeVisible();
+
+  await page.waitForTimeout(4000);
+
+  await page.goto(url);
+
+  await expect(page.getByText(`/log`).first()).toBeVisible();
+  await expect(page.getByText(`/thisWillReturn404.jpg`)).toBeVisible();
+});
+
+
+test('filtering logs', async ({ page }) => {
+  await page.goto(url);
+
+  await expect(page.getByRole('cell', { name: '200'}).first()).toBeVisible();
+
+  await page.goto(posInstance.MPKIT_URL + `/thisWillReturn404.jpg`);
+  await expect(page.getByText('Not Found')).toBeVisible();
+
+  await page.waitForTimeout(4000);
+
+  await page.goto(url);
+
+  // filtering by status code
+  await page.getByLabel('404').check();
+  await expect(page.getByRole('cell', { name: '200'})).toBeHidden();
+  await expect(page.getByRole('cell', { name: '404'}).first()).toBeVisible();
+
+  // reset filters
+  await page.getByRole('link', { name: 'Reset'}).click();
+  await expect(page.getByLabel('404')).not.toBeChecked();
+});
+
 
 
 // presets
