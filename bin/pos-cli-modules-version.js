@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const { program } = require('commander');
 const semver = require('semver');
 
 const dir = require('../lib/directories');

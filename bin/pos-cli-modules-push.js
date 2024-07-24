@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const { program } = require('commander');
 const modules = require('../lib/modules');
 const validate = require('../lib/validators');
 

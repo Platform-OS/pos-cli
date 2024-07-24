@@ -4,7 +4,7 @@ const EventEmitter = require('events'),
   path = require('path'),
   url = require('url');
 
-const program = require('commander'),
+const { program } = require('commander'),
   notifier = require('node-notifier');
 
 const fetchAuthData = require('../lib/settings').fetchSettings,

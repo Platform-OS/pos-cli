@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const { program } = require('commander');
 
 const Gateway = require('../lib/proxy'),
   logger = require('../lib/logger'),

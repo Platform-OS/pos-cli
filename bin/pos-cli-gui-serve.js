@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const swagger = require('../lib/swagger-client');
 
-const program = require('commander'),
+const { program } = require('commander'),
   watch = require('../lib/watch'),
   open = require('open');
 

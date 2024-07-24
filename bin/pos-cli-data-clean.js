@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
+const { program } = require('commander'),
   prompts = require('prompts'),
   Gateway = require('../lib/proxy'),
   waitForStatus = require('../lib/data/waitForStatus'),

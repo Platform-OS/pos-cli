@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
+const { program } = require('commander'),
   fs = require('fs'),
   shell = require('shelljs'),
   Gateway = require('../lib/proxy'),

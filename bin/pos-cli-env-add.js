@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const { program } = require('commander');
 const logger = require('../lib/logger');
 const validate = require('../lib/validators');
 const Portal = require('../lib/portal');

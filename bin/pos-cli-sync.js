@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
+const { program } = require('commander'),
   watch = require('../lib/watch'),
   open = require('open'),
   livereload = require('livereload');
