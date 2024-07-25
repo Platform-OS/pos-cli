@@ -1,7 +1,8 @@
 # Changelog
 
 ## unreleased
-* Chore: Updated commander.js to newest version
+* Chore: Updated `commander` to newest version
+* Chore: Updated `open` to newest version
 
 ## 5.1.0
 * Feature: (GUI) Added pagination to Logs v2
