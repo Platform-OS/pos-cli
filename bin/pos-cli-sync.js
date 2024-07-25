@@ -1,9 +1,17 @@
 #!/usr/bin/env node
 
 const { program } = require('commander'),
-  watch = require('../lib/watch'),
-  open = require('open'),
-  livereload = require('livereload');
+  watch = require('../lib/watch');
+
+// importing ESM modules in CommonJS project
+let open;
+const initializeEsmModules = async () => {
+  if(!open) {
+    await import('open').then(imported => open = imported.default);
+  }
+
+  return true;
+}
 
 const fetchAuthData = require('../lib/settings').fetchSettings;
 
@@ -28,6 +36,7 @@ program
     watch.start(env, params.directAssetsUpload, params.livereload);
 
     if (params.open) {
+      await initializeEsmModules();
       await open(`${authData.url}`);
     }
   });
