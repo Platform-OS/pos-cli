@@ -54,7 +54,7 @@
     "multer": "^1.4.5-lts.1",
     "mustache": "^4.2.0",
     "node-notifier": "^10.0.1",
-    "open": "^8.4.0",
+    "open": "^10.1.0",
     "ora": "^8.0.1",
     "pluralize": "^8.0.0",
     "prompts": "^2.4.2",

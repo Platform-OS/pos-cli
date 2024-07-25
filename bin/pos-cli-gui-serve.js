@@ -2,8 +2,17 @@
 const swagger = require('../lib/swagger-client');
 
 const { program } = require('commander'),
-  watch = require('../lib/watch'),
-  open = require('open');
+  watch = require('../lib/watch');
+
+// importing ESM modules in CommonJS project
+let open;
+const initializeEsmModules = async () => {
+  if(!open) {
+    await import('open').then(imported => open = imported.default);
+  }
+
+  return true;
+}
 
 const fetchAuthData = require('../lib/settings').fetchSettings,
   server = require('../lib/server'),
@@ -32,6 +41,7 @@ program
       const client = await swagger.SwaggerProxy.client(environment);
       server.start(env, client);
       if (params.open) {
+        await initializeEsmModules();
         await open(`http://localhost:${params.port}`);
       }
 
