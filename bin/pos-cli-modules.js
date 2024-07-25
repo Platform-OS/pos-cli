@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const { program } = require('commander');
 const logger = require('../lib/logger');
 
 program.showHelpAfterError();

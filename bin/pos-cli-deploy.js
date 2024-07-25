@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const program = require('commander');
+const { program } = require('commander');
 
 const fetchAuthData = require('../lib/settings').fetchSettings;
 const logger = require('../lib/logger');

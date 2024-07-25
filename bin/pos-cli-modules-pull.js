@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const { program } = require('commander');
 const Gateway = require('../lib/proxy');
 const logger = require('../lib/logger');
 const fetchAuthData = require('../lib/settings').fetchSettings;

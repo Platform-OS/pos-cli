@@ -1,6 +1,9 @@
 # Changelog
 
 ## unreleased
+* Chore: Updated commander.js to newest version
+
+## 5.1.0
 * Feature: (GUI) Added pagination to Logs v2
 * Improvement: Ingore .DS_Store files on macOS while syncing not to spam the terminal with messages of it being unrecognized
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const program = require('commander');
+const { program } = require('commander');
 
 const audit = require('../lib/audit');
 const archive = require('../lib/archive');

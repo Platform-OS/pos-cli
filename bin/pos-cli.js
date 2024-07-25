@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
+const { program } = require('commander'),
   updateNotifier = require('update-notifier'),
   pkg = require('../package.json'),
   logger = require('../lib/logger'),

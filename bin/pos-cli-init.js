@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
+const { program } = require('commander'),
   degit = require('degit'),
   inquirer = require('inquirer');
 

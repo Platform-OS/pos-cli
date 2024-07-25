@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander');
+const { program } = require('commander');
 const logger = require('../lib/logger');
 const configFiles = require('../lib/modules/configFiles');
 const { findModuleVersion, resolveDependencies } = require('../lib/modules/dependencies')

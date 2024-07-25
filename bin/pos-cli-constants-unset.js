@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require('commander'),
+const { program } = require('commander'),
       Gateway = require('../lib/proxy'),
       validate = require('../lib/validators'),
       queries = require('../lib/graph/queries'),

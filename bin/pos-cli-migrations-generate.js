@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 
-const program = require('commander'),
+const { program } = require('commander'),
   shell = require('shelljs');
 
 const Gateway = require('../lib/proxy'),
