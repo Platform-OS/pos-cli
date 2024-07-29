@@ -1,6 +1,6 @@
 # Changelog
 
-## unreleased
+## 5.1.1
 * Chore: Updated `commander` to newest version
 * Chore: Updated `open` to newest version
 
