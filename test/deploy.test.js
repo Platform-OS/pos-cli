@@ -26,7 +26,7 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
-    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/release`);
+    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/releasee`);
     const nestedPartial = fs.readFileSync(
       `${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`,
       'utf8'
@@ -48,7 +48,7 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
-    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/release`);
+    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/releasee`);
     const nestedPartial = fs.readFileSync(
       `${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`,
       'utf8'
@@ -63,14 +63,14 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct_with_assets');
-    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/release`);
+    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/releasee`);
     const nestedPartial = fs.readFileSync(
       `${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`,
       'utf8'
     );
     expect(nestedPartial).toMatch('dir/subdir/foo');
 
-    await extract(`${deployDir}/tmp/assets.zip`, `${deployDir}/tmp/release_assets`);
+    await extract(`${deployDir}/tmp/assets.zip`, `${deployDir}/tmp/release_assetss`);
     expect(fs.existsSync(`${deployDir}/tmp/release_assets/foo.js`)).toBeTruthy();
     expect(fs.existsSync(`${deployDir}/tmp/release_assets/modules/testModule/bar.js`)).toBeTruthy();
   });
