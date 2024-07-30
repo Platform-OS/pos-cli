@@ -2,6 +2,7 @@
 
 ## unreleased
 * Chore: Removed unused `async` node package
+* Chore: Remove `extract-zip` dependency
 
 ## 5.1.1
 * Chore: Updated `commander` to newest version

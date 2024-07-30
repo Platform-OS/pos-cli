@@ -2,7 +2,7 @@
 
 const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
-const extractZip = require('extract-zip');
+const unzip = require('unzipper');
 const fs = require('fs');
 const path = require('path');
 
@@ -12,8 +12,8 @@ const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name)
 
 const run = (fixtureName, options) => exec(`${cliPath} deploy ${options || ''}`, { cwd: cwd(fixtureName), env: process.env });
 
-const extract = (source, options = {}) => {
-  return extractZip(source, options);
+const extract = async (inputPath, outputPath) => {
+  return unzip.Open.file(inputPath).then(d => d.extract({ path: outputPath, concurrency: 5 }));
 };
 
 jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
@@ -26,7 +26,7 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
-    await extract(`${deployDir}/tmp/release.zip`, { dir: `${deployDir}/tmp/release` });
+    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/release`);
     const nestedPartial = fs.readFileSync(
       `${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`,
       'utf8'
@@ -48,7 +48,7 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
-    await extract(`${deployDir}/tmp/release.zip`, { dir: `${deployDir}/tmp/release` });
+    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/release`);
     const nestedPartial = fs.readFileSync(
       `${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`,
       'utf8'
@@ -63,14 +63,14 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct_with_assets');
-    await extract(`${deployDir}/tmp/release.zip`, { dir: `${deployDir}/tmp/release` });
+    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/release`);
     const nestedPartial = fs.readFileSync(
       `${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`,
       'utf8'
     );
     expect(nestedPartial).toMatch('dir/subdir/foo');
 
-    await extract(`${deployDir}/tmp/assets.zip`, { dir: `${deployDir}/tmp/release_assets` });
+    await extract(`${deployDir}/tmp/assets.zip`, `${deployDir}/tmp/release_assets`);
     expect(fs.existsSync(`${deployDir}/tmp/release_assets/foo.js`)).toBeTruthy();
     expect(fs.existsSync(`${deployDir}/tmp/release_assets/modules/testModule/bar.js`)).toBeTruthy();
   });
