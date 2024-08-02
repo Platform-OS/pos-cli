@@ -18,7 +18,7 @@ const initializeEsmModules = async () => {
   return true;
 }
 
-const confirmationText = 'CLEAN DATA';
+const confirmationText = process.env.CONFIRMATION_TEXT || 'CLEAN DATA';
 
 const confirmCleanup = async (autoConfirm, includeSchema, url) => {
   if (autoConfirm) return true;
