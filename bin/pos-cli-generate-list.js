@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const program = require("commander");
+const { program } = require("commander");
 const path = require("path");
 const glob = require('fast-glob');
 const table = require('text-table');
