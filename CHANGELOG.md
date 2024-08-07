@@ -1,6 +1,7 @@
 # Changelog
 
 ## unreleased
+* Chore: Remove `pluralize` node package
 * Chore: Replaced `uuid` node package with native Node UUID generator
 
 ## v5.1.3
