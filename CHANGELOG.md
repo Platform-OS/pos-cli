@@ -1,9 +1,11 @@
 # Changelog
 
+## v5.1.3
+* Improvement: Force more engaging test on data clean
+
 ## v5.1.2
 * Chore: Removed unused `async` node package
 * Chore: Remove `extract-zip` dependency
-* Improvement: Force more engaging test on data clean
 * Bug: Fixed generators not generating
 
 ## 5.1.1
