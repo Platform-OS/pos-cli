@@ -1,5 +1,8 @@
 # Changelog
 
+## unreleased
+* Chore: Replaced `uuid` node package with native Node UUID generator
+
 ## v5.1.3
 * Improvement: Force more engaging test on data clean
 

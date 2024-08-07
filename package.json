@@ -64,7 +64,6 @@
     "text-table": "^0.2.0",
     "unzipper": "^0.10.14",
     "update-notifier": "^5.1.0",
-    "uuid": "^9.0.1",
     "valid-url": "^1.0.9",
     "yeoman-environment": "^3.19.3",
     "yeoman-generator": "^5.9.0"
