@@ -4,6 +4,7 @@
 * Chore: Remove `pluralize` node package
 * Chore: Replaced `uuid` node package with native Node UUID generator
 * Chore: Disable gzip compression for Express server and remove the `compression` package
+* Chore: Remove unused `js-yaml` dependency
 
 ## v5.1.3
 * Improvement: Force more engaging test on data clean
