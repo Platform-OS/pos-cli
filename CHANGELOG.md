@@ -1,5 +1,8 @@
 # Changelog
 
+## unreleased
+* Chore: Removed unused `readdirp` node package
+
 ## 5.1.4
 * Chore: Remove `pluralize` node package
 * Chore: Replaced `uuid` node package with native Node UUID generator
