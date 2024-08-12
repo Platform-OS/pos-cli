@@ -2,6 +2,7 @@
 
 ## unreleased
 * Chore: Removed unused `readdirp` node package
+* Chore: Removed `valid-url` node package and replaced it with native Node validation
 
 ## 5.1.4
 * Chore: Remove `pluralize` node package
