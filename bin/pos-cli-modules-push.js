@@ -12,6 +12,7 @@ program
   .name('pos-cli modules push')
   .requiredOption('--email <email>', 'Partner Portal account email. Example: foo@example.com')
   .option('--path <path>', 'module root directory, default is current directory')
+  .option('--name <name>', 'name of the module you would like to publish')
   .action(async (params) => {
     try {
       if (params.path) process.chdir(params.path);
