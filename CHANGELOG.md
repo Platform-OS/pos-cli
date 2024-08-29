@@ -1,6 +1,8 @@
 # Changelog
 
 ## unreleased
+
+## 5.1.5
 * Improvement: Always store generated `asset_manifest.json` in tmp/ for debugging purposes
 * Chore: Removed unused `readdirp` node package
 * Chore: Removed `valid-url` node package and replaced it with native Node validation
