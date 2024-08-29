@@ -1,0 +1,7 @@
+{
+  "name": "Foo",
+  "machine_name": "foo",
+  "type": "module",
+  "version": "0.0.1",
+  "dependencies": {}
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Bar",
+  "machine_name": "bar",
+  "type": "module",
+  "version": "0.0.1",
+  "dependencies": {}
+}
