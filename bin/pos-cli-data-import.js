@@ -26,7 +26,6 @@ const initializeEsmModules = async () => {
 }
   
 let gateway;
-const tmpFileName = './tmp/data-imported.json';
 
 const logInvalidFile = (filename) => {
   return logger.Error(
@@ -61,9 +60,7 @@ const dataImport = async (filename, rawIds, isZipFile) => {
     const data = fs.readFileSync(filename, 'utf8');
     if (!isValidJSON(data)) return logInvalidFile(filename);
     const transformedData = await transform(JSON.parse(data));
-    shell.mkdir('-p', './tmp');
-    fs.writeFileSync(tmpFileName, JSON.stringify(transformedData));
-    formData = { 'import[data]': fs.createReadStream(tmpFileName) };
+    formData = { 'import': { 'data': transformedData } };
   }
 
   formData['raw_ids'] = rawIds;
