@@ -387,6 +387,18 @@ You can access the platformOS Admin GUI by visiting [http://localhost:3333](http
 
 ![Screenshot of the Admin GUI](docs/images/admin-gui.png)
 
+#### Working with Multiple Local Instances
+
+If you are working on multiple platformOS environments or projects, you can run several instances simultaneously by setting different port numbers for each instance. This is useful when you need to develop or test multiple environments.
+
+By default, the platformOS Admin GUI runs on `http://localhost:3333`. To work on multiple environments simultaneously, you can specify different ports using the `--port` flag. For example, to serve the `staging` environment on port `3337`, use:
+
+```bash
+pos-cli gui serve staging --port 3337
+```
+
+This allows you to access the staging environment at `http://localhost:3337`, while leaving the default port available for other instances. You can repeat this with other environments by assigning unique port numbers.
+
 #### Opening Admin Automatically 
 
 If you want to open the platformOS Admin in your browser when the GUI server starts (as soon as `gui serve` is running), include `--open` (`-o`) in your command:
