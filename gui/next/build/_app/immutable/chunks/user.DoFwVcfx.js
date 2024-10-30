@@ -1,4 +1,4 @@
-import{g}from"./graphql.BD1m7lx9.js";const d={get:async(a={})=>{let e="",t="";a.value&&(a.attribute==="email"?e+=`${a.attribute}: { contains: "${a.value}" }`:e+=`${a.attribute}: { value: "${a.value}" }`,(a==null?void 0:a.attribute)==="id"&&(a!=null&&a.value)&&(t=`
+import{g as o}from"./graphql.BD1m7lx9.js";const p={get:async(a={})=>{let e="",t="";a.value&&(a.attribute==="email"?e+=`${a.attribute}: { contains: "${a.value}" }`:e+=`${a.attribute}: { value: "${a.value}" }`,(a==null?void 0:a.attribute)==="id"&&(a!=null&&a.value)&&(t=`
           deleted_at
           created_at
           external_id
@@ -10,6 +10,7 @@ import{g}from"./graphql.BD1m7lx9.js";const d={get:async(a={})=>{let e="",t="";a.
           last_name
           slug
           language
+          properties
         `));const u=`
       query {
         users(
@@ -28,4 +29,4 @@ import{g}from"./graphql.BD1m7lx9.js";const d={get:async(a={})=>{let e="",t="";a.
             ${t}
           }
         }
-      }`;return g({query:u}).then(n=>n.users)}};export{d as u};
+      }`;return o({query:u}).then(n=>n.users)}};export{p as u};
