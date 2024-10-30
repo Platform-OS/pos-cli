@@ -44,6 +44,7 @@ const user = {
           last_name
           slug
           language
+          properties
         `;
       }
     }
