@@ -286,7 +286,7 @@ const appear = function(node, {
           </button>
         {/if}
         <button type="submit" class="button">
-          <span class="label">Filter logs</span>
+          <span class="label">Apply filter</span>
           <Icon icon="arrowRight" />
         </button>
       </fieldset>
