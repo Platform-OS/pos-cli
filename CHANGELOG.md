@@ -1,6 +1,6 @@
 # Changelog
 
-## unreleased
+## 5.2.0
 * Feature: (GUI) Show custom properties in user details panel
 
 ## 5.1.5
