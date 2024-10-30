@@ -20,30 +20,32 @@ const user = {
   //				page (int)
   // returns:		array of users as they appear in the database (array of objects)
   // ------------------------------------------------------------------------
-  get: (filters) => {
+  get: async (filters = {}) => {
     let filtersString = '';
-
-    if(filters.attribute === 'email'){
-      filtersString += `${filters.attribute}: { contains: "${filters.value}" }`;
-    } else {
-      filtersString += `${filters.attribute}: { value: "${filters.value}" }`;
-    }
-
     let details = '';
-    if(filters?.attribute === 'id' && filters?.value){
-      details = `
-        deleted_at
-        created_at
-        external_id
-        jwt_token
-        temporary_token
-        name
-        first_name
-        middle_name
-        last_name
-        slug
-        language
-      `;
+
+    if(filters.value){
+      if(filters.attribute === 'email'){
+        filtersString += `${filters.attribute}: { contains: "${filters.value}" }`;
+      } else {
+        filtersString += `${filters.attribute}: { value: "${filters.value}" }`;
+      }
+
+      if(filters?.attribute === 'id' && filters?.value){
+        details = `
+          deleted_at
+          created_at
+          external_id
+          jwt_token
+          temporary_token
+          name
+          first_name
+          middle_name
+          last_name
+          slug
+          language
+        `;
+      }
     }
 
     const query = `
@@ -66,7 +68,7 @@ const user = {
         }
       }`;
 
-    return graphql({ query }, false).then(data => data.users);
+    return graphql({ query }, false).then(data => data.users );
   }
 
 };

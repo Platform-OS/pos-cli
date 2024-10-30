@@ -3,7 +3,9 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount } from 'svelte';
+import { tick } from 'svelte';
+import { goto } from '$app/navigation';
+import { state } from '$lib/state.js';
 import { quintOut } from 'svelte/easing';
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
@@ -11,9 +13,10 @@ import { user } from '$lib/api/user.js';
 import Icon from '$lib/ui/Icon.svelte';
 import Number from '$lib/ui/forms/Number.svelte';
 
+
 // properties
 // ------------------------------------------------------------------------
-// main filters form (dom node)
+// filters form (dom node)
 let form;
 // list of users (array)
 let items = [];
@@ -23,26 +26,23 @@ let defaultFilters = {
   attribute: 'email',
   value: ''
 };
-// stores currently applied filters (object)
+// currently active filters (object)
 let filters = {
-  ...defaultFilters,
+  page: 1,
+  totalPages: 1,
+  attribute: 'email',
+  value: '',
+
   ...Object.fromEntries($page.url.searchParams)
 };
-// number of pages (int)
-let maxPage = 1;
 
 
-// purpose:   loads data
+
+// purpose:   load data each time query params change
 // ------------------------------------------------------------------------
-const load = async () => {
-  await user.get(filters).then(response => {
-    items = response.results;
-    maxPage = response.total_pages
-  });
-};
-
-onMount(() => {
-  load()
+$: user.get(Object.fromEntries($page.url.searchParams)).then(data => {
+  items = data.results;
+  filters.totalPages = data.total_pages;
 });
 
 
@@ -69,188 +69,284 @@ const appear = function(node, {
 <!-- ================================================================== -->
 <style>
 
-.container {
-  height: 100%;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: 1fr min-content;
-}
-
-nav {
-  width: 100%;
-  padding: 1rem;
-
-  background-color: var(--color-background);
-}
-
-.filters form {
-  display: flex;
-  align-items: center;
-  gap: .5em;
-}
-
-.filters input {
-  padding-inline-end: 2.2rem;
-}
-
-.filters fieldset {
-  position: relative;
-}
-
-.filters .clear {
-  padding: .5rem;
-  position: absolute;
-  right: .3em;
-  top: 1px;
-
-  transition: all .1s linear;
-}
-
-  .filters .clear.disabled {
-    opacity: 0;
+  /* layout */
+  .page {
+    max-width: 100vw;
+    height: 100%;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr min-content;
+    position: relative;
   }
-
-  .filters .clear:hover {
-    color: var(--color-interaction-hover);
+  
+  .container {
+    min-height: 0;
+    max-width: 100vw;
+    display: grid;
+    grid-template-rows: min-content 1fr;
   }
+  
+  .content {
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+  }
+  
+  
+  /* filters */
+  .filters {
+    padding: var(--space-navigation);
+  
+    background-color: var(--color-background);
+    border-block-end: 1px solid var(--color-frame);
+  }
+  
+    .filters .label {
+      position: absolute;
+      left: -100vw;
+    }
+  
+    .filters form {
+      display: flex;
+      gap: var(--space-navigation);
+      align-items: center;
+    }
+  
+    .filters input:focus,
+    .filters select:focus {
+      position: relative;
+      z-index: 1;
+    }
 
-section {
-  flex-grow: 1;
-  height: calc(100vh - 83px);
-  display: flex;
-  flex-direction: column;
-  overflow: auto;
-  position: relative;
-}
+    .filters #filters_attribute {
+      margin-inline-end: 1px;
 
-table {
-  min-width: 100%;
-}
+      border-start-end-radius: 0;
+      border-end-end-radius: 0;
+    }
+  
+    .filters .search {
+      display: flex;
+      align-items: center;
+    }
+  
+    .filters .search input {
+      padding-inline-end: 1.8rem;
+      border-radius: 0;
+    }
 
-thead {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
+    .filters .clear {
+      margin-inline-start: -.9rem;
+      position: relative;
+      inset-inline-start: -.4rem;
+      z-index: 1;
+    }
+  
+    .filters .search .button[type="submit"] {
+      margin-inline-start: 1px;
+      padding-block: .63rem;
+      padding-inline: .7em .8em;
+      border-start-start-radius: 0;
+      border-end-start-radius: 0;
+    }
+  
+  .pagination {
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: .5em;
+  
+    border-block-start: 1px solid var(--color-frame);
+    background-color: rgba(var(--color-rgb-background), .8);
+    backdrop-filter: blur(17px);
+    -webkit-backdrop-filter: blur(17px);
+  }
+  
+    .pagination .info {
+      cursor: help;
+    }
+  
+  
+  /* content table */
+  table {
+    min-width: 100%;
+  
+    line-height: 1.27em;
+  }
+  
+    thead {
+      background-color: var(--color-background);
+    }
+  
+    th,
+    td {
+      border-block-end: 1px solid var(--color-frame);
+    }
+  
+    th,
+    td > a {
+      padding: var(--space-table) calc(var(--space-navigation) * 1.5);
+    }
+  
+    th:first-child,
+    td:first-child > a {
+      padding-inline-start: var(--space-navigation);
+    }
+  
+    th:last-child,
+    td:last-child > a {
+      padding-inline-end: var(--space-navigation);
+    }
+  
+    td > a {
+      display: block;
+    }
+  
+    tr:last-child td {
+      border: 0;
+    }
+  
+    .highlight td {
+      background-color: var(--color-highlight);
+    }
+  
+    tr {
+      position: relative;
+    }
+  
+    tr:after {
+      position: absolute;
+      inset: calc(var(--space-table) / 3);
+      z-index: -1;
+  
+      border-radius: calc(1rem - var(--space-table) / 1.5);
+      background: transparent;
+  
+      content: '';
+  
+      transition: background-color .1s linear;
+    }
+  
+    tr:hover:after {
+      background-color: var(--color-background);
+    }
+  
+    tr.active:after {
+      background-color: var(--color-middleground);
+    }
+  
+    /* disable this hover effect on Safari as they refuse to fix their position: relative bug for tables */
+    @supports (font: -apple-system-body) and (-webkit-appearance: none) {
+      tr:after {
+        display: none;
+      }
+    }
 
-th {
-  background-color: var(--color-background);
+    .table-id {
+      width: 1%;
 
-  white-space: nowrap;
-  font-weight: 500;
-}
-
-td, th {
-  padding: .6rem;
-  vertical-align: top;
-
-  border: 1px solid var(--color-frame);
-
-  transition: background-color .2s linear;
-}
-
-td:first-child, th:first-child {
-  width: 4rem;
-
-  border-inline-start: 0;
-  text-align: right;
-}
-
-td:last-child, th:last-child {
-  border-inline-end: 0;
-}
-
-
-.pagination {
-  margin-block-start: auto;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  position: sticky;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
-}
-
-.label {
-  position: absolute;
-  left: -100vw;
-}
-
-</style>
+      text-align: end;
+      font-variant-numeric: tabular-nums;
+    }
+  
+  </style>
 
 
 <!-- ================================================================== -->
-<div class="container">
+<svelte:head>
+  <title>Users{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+</svelte:head>
 
-  <section>
 
-    <nav class="filters">
-      <form id="filters" bind:this={form} on:submit={() => { filters.page = 1; load(); }}>
-        Filter by
-        <select name="attribute" bind:value={filters.attribute} on:change={() => filters.value = ''}>
+<div class="page">
+
+<section class="container">
+
+  <nav class="filters">
+    <form
+      action=""
+      bind:this={form}
+      id="filters"
+      on:submit={
+        // reset page number when changing filters except when directly changing a page
+        async event => { if(event.submitter?.dataset.action !== 'numberIncrease'){ event.preventDefault(); filters.page = 1; await tick(); goto(document.location.pathname + '?' + (new URLSearchParams(new FormData(event.target)).toString())); } }
+      }
+    >
+      <label for="filters_attribute">Filter by</label>
+      <fieldset class="search">
+        <select id="filters_attribute" name="attribute" bind:value={filters.attribute} on:change={() => filters.value = ''}>
           <option value="email">email</option>
           <option value="id">id</option>
         </select>
-        <fieldset>
-          <input type="text" name="value" bind:value={filters.value}>
-          {#if filters.value}
-            <button type="button" class="clear" transition:appear on:click={() => { filters = {...defaultFilters}; form.requestSubmit(); }}>
-              <span class="label">Clear filters</span>
-              <Icon icon="x" size=14 />
-            </button>
-          {/if}
-        </fieldset>
-        <button type="submit" class="button submit">
-          <span class="label">Apply filter</span>
+        <input type="text" name="value" bind:value={filters.value}>
+        {#if filters.value}
+          <button type="button" class="clear" transition:appear on:click={() => { filters = {...defaultFilters}; form.requestSubmit(); }}>
+            <span class="label">Clear filters</span>
+            <Icon icon="x" size=14 />
+          </button>
+        {/if}
+        <button type="submit" class="button">
+          <span class="label">Filter logs</span>
           <Icon icon="arrowRight" />
         </button>
-      </form>
-    </nav>
+      </fieldset>
+    </form>
+  </nav>
 
+  <article class="contetnt">
     <table>
       <thead>
         <tr>
-          <th>id</th>
-          <th>email</th>
+          <th class="table-id">ID</th>
+          <th>Email</th>
         </tr>
       </thead>
-      {#each items as user}
-        <tr>
-          <td>
-            {user.id}
-          </td>
-          <td>
-            <a href="/users/{user.id}">
-              {user.email}
-            </a>
-          </td>
-        </tr>
-      {/each}
+      {#if items}
+        <tbody>
+          {#each items as user}
+            <tr
+              class:active={$page.params.id == user.id}
+            >
+              <td class="table-id">
+                <a href="/users/{user.id}?{$page.url.searchParams.toString()}">
+                  {user.id}
+                </a>
+              </td>
+              <td>
+                <a href="/users/{user.id}?{$page.url.searchParams.toString()}">
+                  {user.email}
+                </a>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      {/if}
     </table>
+  </article>
 
-    <nav class="pagination">
-      <label for="page">
-        Page:
-      </label>
-      <Number
-        form="filters"
-        name="page"
-        bind:value={filters.page}
-        min={1}
-        max={maxPage}
-        step={1}
-        decreaseLabel="Previous page"
-        increaseLabel="Next page"
-        style="navigation"
-        on:input={load}
-      />
-      of {maxPage || 1}
-    </nav>
+  <nav class="pagination">
+    <label for="page">
+      Page:
+    </label>
+    <Number
+      form="filters"
+      name="page"
+      bind:value={filters.page}
+      min={1}
+      max={filters.totalPages}
+      step={1}
+      decreaseLabel="Previous page"
+      increaseLabel="Next page"
+      style="navigation"
+      on:input={event => { form.requestSubmit(event.detail.submitter); }}
+    />
+    of {filters.totalPages}
+  </nav>
 
-  </section>
+</section>
 
+{#if $page.params.id}
   <slot></slot>
+{/if}
 
 </div>
