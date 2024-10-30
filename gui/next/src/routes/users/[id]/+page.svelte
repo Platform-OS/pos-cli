@@ -6,8 +6,10 @@
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
 import { state } from '$lib/state.js';
+import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Aside from '$lib/ui/Aside.svelte';
+import JSONTree from '$lib/ui/JSONTree.svelte';
 
 
 // properties
@@ -16,11 +18,12 @@ import Aside from '$lib/ui/Aside.svelte';
 let item;
 
 
-// purpose:		gets the user data
+// purpose:		  gets the user data
 // attributes:	id of the user (int)
-// returns:		a single user data object from the database (object)
+// returns:		  a single user data object from the database (object)
 // ------------------------------------------------------------------------
 const load = async () => {
+  
   const filters = {
     attribute: 'id',
     value: $page.params.id
@@ -28,6 +31,8 @@ const load = async () => {
 
   await user.get(filters).then(response => {
     item = response.results[0];
+
+    console.log(item);
   });
 }
 
@@ -53,7 +58,7 @@ time {
 }
 
 .tech dt {
-  margin-block-start: .5em;
+  margin-block: .5em .2em;
 
   font-weight: 500;
 }
@@ -70,24 +75,7 @@ time {
 .personal {
   padding-block-start: 1.3rem;
 
-  border-block-start: 1px solid var(--color-frame);
-}
-
-.personal div {
-  margin-block-start: .5em;
-
-  display: flex;
-  gap: .5em;
-}
-
-.personal dd {
-  margin-block-end: .5em;
-  flex-grow: 0;
-  overflow: hidden;
-
-  word-wrap: break-all;
-  text-overflow: ellipsis;
-  font-weight: 500;
+  border-block-end: 2px solid var(--color-background);
 }
 
 </style>
@@ -116,13 +104,28 @@ time {
     {#if item?.jwt_token}<dt>JWT:</dt> <dd>{item?.jwt_token}</dd>{/if}
   </dl>
 
-  <dl class="personal">
-    {#if item?.name}<div><dt>First name:</dt> <dd>{item?.name}</dd></div>{/if}
-    {#if item?.first_name}<div><dt>First name:</dt> <dd>{item?.first_name}</dd></div>{/if}
-    {#if item?.middle_name}<div><dt>Middle name:</dt> <dd>{item?.middle_name}</dd></div>{/if}
-    {#if item?.last_name}<div><dt>Last name:</dt> <dd>{item?.last_name}</dd></div>{/if}
-    {#if item?.slug}<div><dt>Slug:</dt> <dd>{item?.slug}</dd></div>{/if}
-    {#if item?.language}<div><dt>Language:</dt> <dd>{item?.language}</dd></div>{/if}
+  <dl class="personal definitions">
+    {#if item?.name}<dt>First name:</dt> <dd>{item?.name}</dd>{/if}
+    {#if item?.first_name}<dt>First name:</dt> <dd>{item?.first_name}</dd>{/if}
+    {#if item?.middle_name}<dt>Middle name:</dt> <dd>{item?.middle_name}</dd>{/if}
+    {#if item?.last_name}<dt>Last name:</dt> <dd>{item?.last_name}</dd>{/if}
+    {#if item?.slug}<dt>Slug:</dt> <dd>{item?.slug}</dd>{/if}
+    {#if item?.language}<dt>Language:</dt> <dd>{item?.language}</dd>{/if}
   </dl>
+
+  {#if item?.properties}
+    <dl class="definitions">
+      {#each Object.entries(item.properties) as [property, value]}
+        <dt>{property}</dt>
+        <dd>
+          {#if tryParseJSON(value)}
+          <JSONTree value={value} showFullLines={true} />
+          {:else}
+            {value}
+          {/if}
+        </dd>
+      {/each}
+    </dl>
+  {/if}
 
 </Aside>

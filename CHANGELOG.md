@@ -1,6 +1,7 @@
 # Changelog
 
 ## unreleased
+* Feature: (GUI) Show custom properties in user details panel
 
 ## 5.1.5
 * Improvement: Always store generated `asset_manifest.json` in tmp/ for debugging purposes
