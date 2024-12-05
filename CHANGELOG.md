@@ -1,12 +1,13 @@
 # Changelog
 
 ## unreleased
+* Improvement: Better handling of template-values.json during pos-cli modules push
+* Bug: Updated `unzipper` to newest version to fix occassional issue with pos-cli modules download
 
 ## 5.1.5
 * Improvement: Always store generated `asset_manifest.json` in tmp/ for debugging purposes
 * Chore: Removed unused `readdirp` node package
 * Chore: Removed `valid-url` node package and replaced it with native Node validation
-* Improvement: Better handling of template-values.json during pos-cli modules push
 
 ## 5.1.4
 * Chore: Remove `pluralize` node package
