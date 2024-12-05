@@ -2,7 +2,7 @@
 
 ## unreleased
 * Improvement: Better handling of template-values.json during pos-cli modules push
-* Bug: Updated `unzipper` to newest version to fix occassional issue with pos-cli modules download
+* Bug: Updated `unzipper` to the newest version to fix occasional issue with pos-cli modules download
 
 ## 5.1.5
 * Improvement: Always store generated `asset_manifest.json` in tmp/ for debugging purposes
