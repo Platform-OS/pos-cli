@@ -1,8 +1,12 @@
 # Changelog
 
+
 ## unreleased
-* Improvement: Better handling of template-values.json during pos-cli modules push
 * Bug: Updated `unzipper` to the newest version to fix occasional issue with pos-cli modules download
+
+## 5.2.0
+* Feature: (GUI) Show custom properties in user details panel
+* Improvement: Better handling of template-values.json during pos-cli modules push
 
 ## 5.1.5
 * Improvement: Always store generated `asset_manifest.json` in tmp/ for debugging purposes
