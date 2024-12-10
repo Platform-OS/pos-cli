@@ -15,4 +15,5 @@ program
   .command('init <name>', 'initialize a module with the starter structure')
   .command('version [version] --package', 'create a new version of the module')
   .command('push', 'publish module version')
+  .command('overwrites [command]', 'helps with managing module overwrites')
   .parse(process.argv);
