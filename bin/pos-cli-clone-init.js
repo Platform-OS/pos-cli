@@ -28,33 +28,30 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 program.showHelpAfterError();
 program
   .name('pos-cli clone init')
-  .arguments('[from]', 'source environment. Example: staging')
-  .arguments('[to]', 'target environment. Example: staging2')
-  .action(async (from, to, params) => {
+  .arguments('[sourceEnv]', 'source environment. Example: staging')
+  .arguments('[targetEnv]', 'target environment. Example: staging2')
+  .action(async (sourceEnv, targetEnv, params) => {
 
     await initializeEsmModules();
-    const spinner = ora({ text: 'InstanceClone initilized', stream: process.stdout });
+    const spinner = ora({ text: 'InstanceClone initilized', stream: process.stdout, interval: 500 });
 
     try {
-      const sourceAuthData = fetchAuthData(from, program);
-      const targetAuthData = fetchAuthData(to, program);
+      const sourceAuthData = fetchAuthData(sourceEnv, program);
+      const targetAuthData = fetchAuthData(targetEnv, program);
 
       sourceGateway = new Gateway(sourceAuthData);
       targetGateway = new Gateway(targetAuthData);
 
       spinner.start();
 
-      const payload = await sourceGateway.cloneInstanceInit()
-      console.log(payload);
+      const payload = await targetGateway.cloneInstanceInit();
+      const response = await sourceGateway.cloneInstanceExport(payload);
 
-      const response = await targetGateway.cloneInstanceExport(payload)
-      console.log(response);
+      const checkInstanceCloneStatus = () => { return targetGateway.cloneInstanceStatus(payload.id) }
+      const formatResponse = r => `${r.status.name} \n${r.statuses.map((item) => [item.created_at, item.name].join(" ")).join("\n")}`
+      await waitForStatus(checkInstanceCloneStatus, [], 'done', 2000, (msg) => { spinner.text = formatResponse(msg) })
 
-      await sleep(1000);
-      status = await sourceGateway.cloneInstanceStatus(payload['id']);
-      console.log(status);
-
-      spinner.stop("DONE");
+      spinner.stopAndPersist().succeed(`${sourceEnv} instance clone to ${targetEnv} succeeded.`);
     } catch(e) {
       spinner.stop();
       console.log(e);
