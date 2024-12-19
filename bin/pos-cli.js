@@ -20,6 +20,7 @@ program
   .command('archive', 'create an archive only (no deployment)')
   .command('audit', 'check your code for deprecations, recommendations, errors')
   .command('constants', 'manage constants')
+  .command('clone', 'clone instances')
   .command('data', 'export, import or clean data on instance')
   .command('deploy <environment>', 'deploy code to environment').alias('d')
   .command('env', 'manage environments')
