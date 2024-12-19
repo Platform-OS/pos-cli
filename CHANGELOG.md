@@ -3,6 +3,7 @@
 ## unreleased
 
 * Feature: `pos-cli modules overwrites` utility commands
+* Feature: `pos-cli clone init` to initiatie InstanceCopy, works across stacks
 * Bug: Updated `unzipper` to newest version to fix occassional issue with pos-cli modules download
 
 ## 5.2.0
