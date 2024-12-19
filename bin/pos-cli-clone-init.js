@@ -54,7 +54,7 @@ program
       spinner.stopAndPersist().succeed(`${sourceEnv} instance clone to ${targetEnv} succeeded.`);
     } catch(e) {
       spinner.stop();
-      console.log(e);
+      logger.Error(e);
     }
   });
 
