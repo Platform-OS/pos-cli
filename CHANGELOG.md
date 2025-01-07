@@ -1,6 +1,6 @@
 # Changelog
 
-## unreleased
+## 5.3.0
 
 * Feature: `pos-cli modules overwrites` utility commands
 * Feature: `pos-cli clone init` to initiatie InstanceCopy, works across stacks
