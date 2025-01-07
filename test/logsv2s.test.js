@@ -4,7 +4,6 @@ const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
 const fs = require('fs');
 const path = require('path');
-// const HTTP = require('../lib/logsv2/http');
 
 require('dotenv').config();
 
