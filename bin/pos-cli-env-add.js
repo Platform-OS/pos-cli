@@ -3,7 +3,7 @@
 const { program } = require('commander');
 const ServerError = require('../lib//ServerError');
 const logger = require('../lib/logger');
-const addEnv = require('../lib/env-add/main')
+const addEnv = require('../lib/envs/add')
 
 program.showHelpAfterError();
 program
@@ -25,7 +25,6 @@ program
       else
         logger.Error(e);
     }
-    process.exit(1);
   });
 
 program.parse(process.argv);

@@ -12,7 +12,7 @@ const fetchAuthData = require('../lib/settings').settingsFromDotPos;
 
 const run = (options) => exec(`${cliPath} env add ${options}`);
 
-const addEnv = require('../lib/env-add/main')
+const addEnv = require('../lib/envs/add')
 
 describe('commander env add', () => {
   afterEach(() => exec(`rm .pos`));
@@ -36,8 +36,6 @@ describe('commander env add', () => {
     expect(settings['partner_portal_url']).toMatch('http://portal.example.com');
   });
 });
-
-// const { apiRequest } = require('../lib/apiRequest');
 
 jest.mock('../lib/portal', () => ({
   requestDeviceAuthorization: () => Promise.resolve({verification_uri_complete: "http://example.com/xxxx", device_code: "device_code"}),
