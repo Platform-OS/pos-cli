@@ -53,8 +53,8 @@ test('should run env list', async () => {
 });
 
 test('should run help on env add', async () => {
-  const { stdout, code } = await run('env add');
-  expect(stdout).toMatch('Usage: pos-cli env add [options] [environment]');
+  const { stdout, code, stderr } = await run('env add');
+  expect(stderr).toMatch('Usage: pos-cli env add [options] <environment>')
   expect(code).toEqual(1);
 });
 
