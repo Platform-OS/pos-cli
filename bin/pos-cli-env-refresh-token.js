@@ -30,12 +30,12 @@ program
         token = await deviceAuthorizationFlow(authData.url);
       } else {
         logger.Info(
-          `Please make sure that you have a permission to deploy. \n You can verify it here: ${Portal.HOST}/me/permissions`,
+          `Please make sure that you have a permission to deploy. \n You can verify it here: ${Portal.url()}/me/permissions`,
           { hideTimestamp: true }
         );
 
         const password = await readPassword();
-        logger.Info(`Asking ${Portal.HOST} for access token...`);
+        logger.Info(`Asking ${Portal.url()} for access token...`);
 
         token = await login(authData.email, password, authData.url);
       }

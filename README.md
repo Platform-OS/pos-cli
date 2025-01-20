@@ -28,9 +28,12 @@ To authenticate, you'll need your [**Partner Portal**](https://partners.platform
 
 To add an environment to your configuration file, use the `env add` command and authenticate with your **Partner Portal** credentials:
 
-    pos-cli env add [environment] --url [your application url]
+    pos-cli env add [environment] --url [your application url] [optional: --partner-portal-url]
 
-Example: `pos-cli env add staging --url https://example.com`
+Examples: 
+
+    pos-cli env add staging --url https://example.com
+    pos-cli env add staging --url https://example.com --partner-portal-url https://portal.private-stack.online
 
 The configuration for your environments is stored in the `.pos` file.
 

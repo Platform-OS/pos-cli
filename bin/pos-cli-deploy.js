@@ -30,6 +30,7 @@ program
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url,
+      PARTNER_PORTAL_HOST: authData.partner_portal_url,
       MARKETPLACE_ENV: environment,
       CI: process.env.CI === 'true',
       // TODO: Get rid off global system env, make it normal argument to function.
