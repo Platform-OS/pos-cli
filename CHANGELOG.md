@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.4.0
+
+* Improvement: `pos-cli modules download <module>` will by default download version defined in app/pos-modules.lock.json file
+* Improvement: `pos-cli modules download <module>` will automatically download all dependencies defined in module's template-values.json file if they do not exist yet
+* Improvement: Add `--force-dependencies` flag to `pos-cli modules download <module>` command to force re-downloading dependencies
+
 ## 5.3.0
 
 * Feature: `pos-cli modules overwrites` utility commands
