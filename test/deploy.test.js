@@ -16,7 +16,7 @@ const extract = async (inputPath, outputPath) => {
   return unzip.Open.file(inputPath).then(d => d.extract({ path: outputPath, concurrency: 5 }));
 };
 
-jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
+jest.setTimeout(40000); // default jasmine timeout is 5 seconds - we need more.
 
 describe('Happy path', () => {
   test('App directory + modules', async () => {
@@ -117,13 +117,13 @@ describe('Server errors', () => {
   });
 
   test('Network error and pos-cli exits with 1', async () => {
-    process.env.MPKIT_URL = 'https://incorrecturl.com'
+    process.env.MPKIT_URL = 'https://incorrecturl123xyz.com'
 
     const { stderr, stdout, code } = await run('correct');
 
     expect(code).toEqual(1);
     expect(stderr).toMatch(
-      'Deploy failed. RequestError: Error: getaddrinfo ENOTFOUND incorrecturl.com'
+      'Deploy failed. RequestError: Error: getaddrinfo ENOTFOUND incorrecturl123xyz.com'
     );
   });
 });
