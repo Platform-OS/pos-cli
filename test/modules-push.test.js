@@ -7,6 +7,10 @@ const path = require('path');
 
 require('dotenv').config();
 
+Object.assign(process.env, {
+  DEBUG: true
+});
+
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'modules', name);
 
 const run = (fixtureName, options) => exec(`${cliPath} modules push ${options}`, { cwd: cwd(fixtureName), env: process.env });
@@ -39,6 +43,7 @@ describe('Server errors', () => {
 
   test('Wrong email', async () => {
     const { stdout, stderr } = await run('good', '--email foo@example.com');
+    expect(stderr).toMatch('Cannot find modules/pos_cli_ci_test, creating archive with the current directory');
     expect(stderr).toMatch('You are unauthorized to do this operation. Check if your Token/URL or email/password are correct.');
   });
 
