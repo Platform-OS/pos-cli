@@ -7,6 +7,10 @@ const path = require('path');
 
 require('dotenv').config();
 
+Object.assign(process.env, {
+  DEBUG: true
+});
+
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'modules', name);
 
 const run = (fixtureName, options) => exec(`${cliPath} modules push ${options}`, { cwd: cwd(fixtureName), env: process.env });
