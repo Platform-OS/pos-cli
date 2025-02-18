@@ -39,6 +39,7 @@ describe('Server errors', () => {
 
   test('Wrong email', async () => {
     const { stdout, stderr } = await run('good', '--email foo@example.com');
+    expect(stderr).toMatch('Cannot find modules/pos_cli_ci_test, creating archive with the current directory');
     expect(stderr).toMatch('You are unauthorized to do this operation. Check if your Token/URL or email/password are correct.');
   });
 
