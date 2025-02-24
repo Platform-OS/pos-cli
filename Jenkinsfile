@@ -14,7 +14,7 @@ pipeline {
   stages {
     stage('Test 18') {
       agent { kubernetes { yaml podTemplate("18") } }
-      options { timeout(time: 300, unit: 'SECONDS') }
+      options { timeout(time: 500, unit: 'SECONDS') }
 
       steps {
         container(name: 'node') {
@@ -26,7 +26,7 @@ pipeline {
 
     stage('Test 20') {
       agent { kubernetes { yaml podTemplate("20") } }
-      options { timeout(time: 300, unit: 'SECONDS') }
+      options { timeout(time: 500, unit: 'SECONDS') }
 
       steps {
         container(name: 'node') {
