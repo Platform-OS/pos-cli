@@ -3,6 +3,10 @@ def name = 'pos-cli'
 pipeline {
   agent any
 
+  options {
+    disableConcurrentBuilds()
+  }
+
   environment {
     MPKIT_TOKEN = credentials('MPKIT_TOKEN')
     MPKIT_EMAIL = "darek+ci@near-me.com"
