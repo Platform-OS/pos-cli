@@ -9,6 +9,7 @@ import { state } from '$lib/state.js';
 import { quintOut } from 'svelte/easing';
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
+import ContextMenu from '$lib/users/ContextMenu.svelte';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Number from '$lib/ui/forms/Number.svelte';
@@ -36,15 +37,22 @@ let filters = {
   ...Object.fromEntries($page.url.searchParams)
 };
 
+let contextMenu = {
+  // item id for which the context menu is opened for
+  id: null
+};
 
 
 // purpose:   load data each time query params change
 // ------------------------------------------------------------------------
-$: user.get(Object.fromEntries($page.url.searchParams)).then(data => {
-  items = data.results;
-  filters.totalPages = data.total_pages;
-});
+$: reloadUsers();
 
+const reloadUsers = function() {
+  user.get(Object.fromEntries($page.url.searchParams)).then(data => {
+    items = data.results;
+    filters.totalPages = data.total_pages;
+  });
+}
 
 // transition:    zooms from nothing to full size
 // options: 	delay (int), duration (int)
@@ -85,13 +93,6 @@ const appear = function(node, {
     display: grid;
     grid-template-rows: min-content 1fr;
   }
-  
-  .content {
-    height: 100%;
-    min-height: 0;
-    overflow: auto;
-  }
-  
   
   /* filters */
   .filters {
@@ -162,11 +163,6 @@ const appear = function(node, {
     -webkit-backdrop-filter: blur(17px);
   }
   
-    .pagination .info {
-      cursor: help;
-    }
-  
-  
   /* content table */
   table {
     min-width: 100%;
@@ -184,30 +180,26 @@ const appear = function(node, {
     }
   
     th,
-    td > a {
+    td > a, td > span {
       padding: var(--space-table) calc(var(--space-navigation) * 1.5);
     }
   
     th:first-child,
-    td:first-child > a {
+    td:first-child > a, td:first-child > span {
       padding-inline-start: var(--space-navigation);
     }
   
     th:last-child,
-    td:last-child > a {
+    td:last-child > a, td:last-child > span {
       padding-inline-end: var(--space-navigation);
     }
   
-    td > a {
+    td > a, td > span {
       display: block;
     }
   
     tr:last-child td {
       border: 0;
-    }
-  
-    .highlight td {
-      background-color: var(--color-highlight);
     }
   
     tr {
@@ -243,12 +235,18 @@ const appear = function(node, {
     }
 
     .table-id {
-      width: 1%;
-
-      text-align: end;
       font-variant-numeric: tabular-nums;
+      width: 150px;
     }
-  
+
+    .menu {
+      position: relative;
+      width: 30px;
+    }
+
+    .menu button.active {
+      border-end-start-radius: 0;
+    }
   </style>
 
 
@@ -297,6 +295,7 @@ const appear = function(node, {
     <table>
       <thead>
         <tr>
+          <th class="menu"></th>
           <th class="table-id">ID</th>
           <th>Email</th>
         </tr>
@@ -307,6 +306,19 @@ const appear = function(node, {
             <tr
               class:active={$page.params.id == user.id}
             >
+            <td>
+              <span>
+                <div class="menu">
+                  <button class="button compact more" class:active={contextMenu.id === user.id} on:click={() => contextMenu.id = user.id}>
+                    <span class="label">More options</span>
+                    <Icon icon="navigationMenuVertical" size="16" />
+                  </button>
+                  {#if contextMenu.id === user.id}
+                    <ContextMenu record={user} on:reload={() => reloadUsers() } on:close={() => contextMenu.id = null} />
+                  {/if}
+                </div>
+              </span>
+            </td>
               <td class="table-id">
                 <a href="/users/{user.id}?{$page.url.searchParams.toString()}">
                   {user.id}

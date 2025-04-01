@@ -70,8 +70,21 @@ const user = {
       }`;
 
     return graphql({ query }, false).then(data => data.users );
-  }
+  },
 
+  // purpose:		delete users from the database
+  // arguments:	
+  //				id of the user (int)
+  // ------------------------------------------------------------------------
+  delete: async (id) => {
+    const query = `
+      mutation {
+        user_delete(id: ${id}){ id }
+      }
+    `;
+
+    return graphql({ query }, false)
+  }
 };
 
 
