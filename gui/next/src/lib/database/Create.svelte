@@ -314,7 +314,7 @@ select {
         <ul class="error" aria-live="assertive">
           {#each errors as error}
             <li>
-              {JSON.stringify(errors)}
+              {JSON.stringify(error)}
             </li>
           {/each}
         </ul>
