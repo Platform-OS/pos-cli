@@ -20,6 +20,7 @@
   "type": "module",
   "dependencies": {
     "svelte-autosize": "^1.1.0",
-    "svelte-json-tree": "^2.2.0"
+    "svelte-json-tree": "^2.2.0",
+    "uuid": "^11.1.0"
   }
 }

@@ -6,7 +6,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { graphql } from '$lib/api/graphql';
-
+import { v4 } from 'uuid'
 
 
 const user = {
@@ -84,7 +84,60 @@ const user = {
     `;
 
     return graphql({ query }, false)
-  }
+  },
+
+  // purpose:		creates a new user
+  // arguments:	
+  //				properties: object containing first_name, last_name, email i password
+  //        returns: id of the new user
+  // ------------------------------------------------------------------------
+  create: async (email, password, firstName, lastName) => {
+    const userQuery = `
+      mutation {
+        user: user_create(user: { email: "${email}", password: "${password}", properties: []}) {
+          id
+        }
+      }
+    `;
+    
+    return graphql({ query: userQuery }, false).then(data => {
+      if (data.errors) {
+        return data
+      }
+      const userId = data.user.id;
+      const name = `${firstName} ${lastName}`;
+
+      const names = Array.from(new Set(
+        [email.toLowerCase(), firstName.toLowerCase(), lastName.toLowerCase()]
+      )).join(' ');
+
+      const profileQuery = `
+        mutation {
+          record: record_create(
+            record: {
+              table: "modules/user/profile"
+              properties: [
+                { name: "user_id", value: "${userId}" }
+                { name: "uuid", value: "${v4()}" }
+                { name: "first_name", value: "${firstName}" }
+                { name: "last_name", value: "${lastName}" }
+                { name: "name", value: "${name}" }
+                { name: "email", value: "${email}" }
+                { name: "roles", value_array: ["member"] }
+                { name: "c__names", value: "${names}" }
+              ]
+            }
+          ) {
+            id
+          }
+      }
+      `;
+
+      return graphql({query: profileQuery }, false).then(() => userId);
+    });
+  },
+
+
 };
 
 

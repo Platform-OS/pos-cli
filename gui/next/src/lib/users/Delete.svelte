@@ -18,6 +18,8 @@ let dispatch = createEventDispatcher();
 const deleteUser = async (event) => {
   event.preventDefault();
   if(confirm('Are you sure you want to delete this user?')){
+    dispatch('close');
+
     const formData = new FormData(form);
     const id = formData.get('id')
     const remove = await user.delete(id);
@@ -28,8 +30,6 @@ const deleteUser = async (event) => {
     } else {
       state.notification.create('error', `Record ${id} could not be deleted`);
     }
-
-    dispatch('close');
   }
 }
 

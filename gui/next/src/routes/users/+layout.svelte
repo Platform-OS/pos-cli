@@ -10,6 +10,7 @@ import { quintOut } from 'svelte/easing';
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
 import ContextMenu from '$lib/users/ContextMenu.svelte';
+import CreateUser from '$lib/users/Create.svelte';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Number from '$lib/ui/forms/Number.svelte';
@@ -36,6 +37,7 @@ let filters = {
 
   ...Object.fromEntries($page.url.searchParams)
 };
+$state.user = undefined;
 
 let contextMenu = {
   // item id for which the context menu is opened for
@@ -47,8 +49,14 @@ let contextMenu = {
 // ------------------------------------------------------------------------
 $: reloadUsers();
 
-const reloadUsers = function() {
-  user.get(Object.fromEntries($page.url.searchParams)).then(data => {
+const reloadUsers = function(currentPage = null) {
+  debugger
+  const params = Object.fromEntries($page.url.searchParams);
+  if (currentPage) {
+    params['page'] = currentPage
+  }
+  user.get(params).then(data => {
+    debugger
     items = data.results;
     filters.totalPages = data.total_pages;
   });
@@ -90,6 +98,7 @@ const appear = function(node, {
   .container {
     min-height: 0;
     max-width: 100vw;
+    overflow-y: auto;
     display: grid;
     grid-template-rows: min-content 1fr;
   }
@@ -156,6 +165,10 @@ const appear = function(node, {
     display: flex;
     align-items: center;
     gap: .5em;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    justify-content: space-between;
   
     border-block-start: 1px solid var(--color-frame);
     background-color: rgba(var(--color-rgb-background), .8);
@@ -166,7 +179,7 @@ const appear = function(node, {
   /* content table */
   table {
     min-width: 100%;
-  
+    margin-bottom: 70px;
     line-height: 1.27em;
   }
   
@@ -244,8 +257,23 @@ const appear = function(node, {
       width: 30px;
     }
 
+    tr .inner-menu {
+      background-color: transparent;
+      opacity: 0;
+      transition: opacity .1s linear;
+    }
+
+    tr:hover .inner-menu {
+      opacity: .5;
+    }
+
+    .menu:hover .inner-menu, .context .menu .inner-menu {
+      opacity: 1;
+    }
+
     .menu button.active {
       border-end-start-radius: 0;
+      border-end-end-radius: 0;
     }
   </style>
 
@@ -267,7 +295,13 @@ const appear = function(node, {
       id="filters"
       on:submit={
         // reset page number when changing filters except when directly changing a page
-        async event => { if(event.submitter?.dataset.action !== 'numberIncrease'){ event.preventDefault(); filters.page = 1; await tick(); goto(document.location.pathname + '?' + (new URLSearchParams(new FormData(event.target)).toString())); } }
+        async event => {
+          event.preventDefault();
+          const params = new URLSearchParams(new FormData(event.target));
+          goto(document.location.pathname + '?' + params.toString());
+          await tick();
+          await reloadUsers(params.get('page') ?? null);
+        } 
       }
     >
       <label for="filters_attribute">Filter by</label>
@@ -305,17 +339,20 @@ const appear = function(node, {
           {#each items as user}
             <tr
               class:active={$page.params.id == user.id}
+              class:context={contextMenu.id === user.id} 
             >
             <td>
               <span>
                 <div class="menu">
-                  <button class="button compact more" class:active={contextMenu.id === user.id} on:click={() => contextMenu.id = user.id}>
-                    <span class="label">More options</span>
-                    <Icon icon="navigationMenuVertical" size="16" />
-                  </button>
-                  {#if contextMenu.id === user.id}
-                    <ContextMenu record={user} on:reload={() => reloadUsers() } on:close={() => contextMenu.id = null} />
-                  {/if}
+                  <div class="inner-menu">
+                    <button class="button compact more" class:active={contextMenu.id === user.id} on:click={() => contextMenu.id = user.id}>
+                      <span class="label">More options</span>
+                      <Icon icon="navigationMenuVertical" size="16" />
+                    </button>
+                    {#if contextMenu.id === user.id}
+                      <ContextMenu record={user} on:reload={() => reloadUsers() } on:close={() => contextMenu.id = null} />
+                    {/if}
+                  </div>
                 </div>
               </span>
             </td>
@@ -337,22 +374,28 @@ const appear = function(node, {
   </article>
 
   <nav class="pagination">
-    <label for="page">
-      Page:
-    </label>
-    <Number
-      form="filters"
-      name="page"
-      bind:value={filters.page}
-      min={1}
-      max={filters.totalPages}
-      step={1}
-      decreaseLabel="Previous page"
-      increaseLabel="Next page"
-      style="navigation"
-      on:input={event => { form.requestSubmit(event.detail.submitter); }}
-    />
-    of {filters.totalPages}
+    <div>
+      <label for="page">
+        Page:
+      </label>
+      <Number
+        form="filters"
+        name="page"
+        bind:value={filters.page}
+        min={1}
+        max={filters.totalPages}
+        step={1}
+        decreaseLabel="Previous page"
+        increaseLabel="Next page"
+        style="navigation"
+        on:input={event => { form.requestSubmit(event.detail.submitter); }}
+      />
+      of {filters.totalPages}
+    </div>
+    <button class="button" title="Create user" on:click|preventDefault={ () => $state.user = null }>
+      <Icon icon="plus" />
+      <span class="label">Create user</span>
+    </button>
   </nav>
 
 </section>
@@ -360,5 +403,10 @@ const appear = function(node, {
 {#if $page.params.id}
   <slot></slot>
 {/if}
+
+{#if $state.user !== undefined}
+<CreateUser on:success={() => reloadUsers() } />
+{/if}
+
 
 </div>
