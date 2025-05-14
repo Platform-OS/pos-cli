@@ -22,6 +22,8 @@ import Number from '$lib/ui/forms/Number.svelte';
 let form;
 // list of users (array)
 let items = [];
+// list of custom user schema properties (array) or null
+let userProperties = null;
 // default filters (object)
 let defaultFilters = {
   page: 1,
@@ -50,13 +52,11 @@ let contextMenu = {
 $: reloadUsers();
 
 const reloadUsers = function(currentPage = null) {
-  debugger
   const params = Object.fromEntries($page.url.searchParams);
   if (currentPage) {
     params['page'] = currentPage
   }
   user.get(params).then(data => {
-    debugger
     items = data.results;
     filters.totalPages = data.total_pages;
   });
@@ -79,6 +79,20 @@ const appear = function(node, {
   }
 };
 
+const showCreateUserPopup = function() {
+  if (userProperties === null) {
+    user.getCustomProperties().then(properties => {
+      console.log(properties);
+      userProperties = properties;
+      $state.user = null;
+    }).catch(error => {
+      console.log(error);
+    });
+  }
+  else {
+    $state.user = null;
+  }
+}
 </script>
 
 
@@ -392,7 +406,7 @@ const appear = function(node, {
       />
       of {filters.totalPages}
     </div>
-    <button class="button" title="Create user" on:click|preventDefault={ () => $state.user = null }>
+    <button class="button" title="Create user" on:click|preventDefault={ () => showCreateUserPopup() }>
       <Icon icon="plus" />
       <span class="label">Create user</span>
     </button>
@@ -405,7 +419,7 @@ const appear = function(node, {
 {/if}
 
 {#if $state.user !== undefined}
-<CreateUser on:success={() => reloadUsers() } />
+<CreateUser userProperties={userProperties} on:success={() => reloadUsers() } />
 {/if}
 
 

@@ -7,7 +7,10 @@ import { onMount, createEventDispatcher } from 'svelte';
 import { quintOut } from 'svelte/easing';
 import { state } from '$lib/state.js';
 import { user } from '$lib/api/user.js';
+import autosize from 'svelte-autosize';
+
 import Icon from '$lib/ui/Icon.svelte';
+import Toggle from '$lib/ui/forms/Toggle.svelte';
 
 
 // properties
@@ -18,6 +21,10 @@ let container;
 let form;
 // list of errors for the current form taken from back-end (array of objects)
 let errors = [];
+// list of inline validation errors for the current form (object)
+let validation = {};
+// list of user properties or null
+export let userProperties;
 
 const dispatch = createEventDispatcher();
 
@@ -67,16 +74,36 @@ const save = async (event) => {
   // form data as object with properties
   const properties = new FormData(form);
   // create new record
-  if($state.user === null){
-    const create = await user.create(
-      properties.get("email"),
-      properties.get("password"),
-      properties.get("firstName"),
-      properties.get("lastName")
-    );
+
+  validation = {};
+
+  for(const property of properties.entries()){
+    if(property[0].endsWith('[type]')){
+      if(property[1] === 'json' || property[1] === 'array'){
+        const propertyName = property[0].replace('[type]', '');
+        const propertyValue = properties.get(propertyName + '[value]')
+        if(propertyValue !== '' && !tryParseJSON(propertyValue)){
+          validation[propertyName] = { property: propertyName, message: `Not a valid ${property[1]}` };
+        }
+      }
+    }
+  }
+
+  if(Object.keys(validation).length){
+
+    // if there is an inline validation error, scroll to it
+    await tick();
+    document.querySelector('[role="alert"]:not(:empty)').scrollIntoView({behavior: 'smooth', block: 'center'})
+
+  } else {
+    const email = properties.get('email');
+    const password = properties.get('password');
+    properties.delete('email');
+    properties.delete('password');
+    const create = await user.create(email, password, properties);
     if(!create.errors){
       $state.user = undefined;
-      state.notification.create('success', `User ${create} created`);
+      state.notification.create('success', `User ${create.user.id} created`);
       dispatch('success');
     }
     else {
@@ -137,9 +164,10 @@ label {
   word-break: break-all;
 }
 
-input {
+input,
+textarea {
   width: 100%;
-  max-height: 40rem;
+  min-height: 53px;
 }
 
 [role="alert"]:not(:empty) {
@@ -189,6 +217,13 @@ input {
   justify-content: space-between;
 }
 
+.type {
+  margin-block-start: .2rem;
+  opacity: .5;
+
+  font-size: .9em;
+}
+
 </style>
 
 
@@ -201,36 +236,11 @@ input {
     <form bind:this={form} on:submit|preventDefault={save}>
       <fieldset>
         <dir>
-          <label for="firstName">
-            First name
-          </label>
-        </dir>
-        <div>
-          <input
-            type="text"
-            name="firstName"
-            id="first_name"
-          />
-        </div>
-      </fieldset>
-      <fieldset>
-        <dir>
-          <label for="lastName">
-            Last name
-          </label>
-        </dir>
-        <div>
-          <input
-            type="text"
-            name="lastName"
-            id="last_name"
-          />
-        </div>
-      </fieldset>
-      <fieldset>
-        <dir>
           <label for="email">
             Email
+            <div class="type">
+              string
+            </div>
           </label>
         </dir>
         <div>
@@ -245,6 +255,9 @@ input {
         <dir>
           <label for="password">
             Password
+            <div class="type">
+              string
+            </div>
           </label>
         </dir>
         <div>
@@ -255,12 +268,52 @@ input {
           />
         </div>
       </fieldset>
-
+      {#each userProperties as property}
+        {@const value = {type: property.attribute_type, value: ''}}
+        <fieldset>
+          <dir>
+            <label for="edit_{property.name}">
+              {property.name}<br>
+              <div class="type">
+                {#if property.attribute_type === 'string'}
+                  <Toggle name="{property.name}[type]" options={[{ value: 'string', label: 'string' }, { value: 'json', label: 'json' }]} checked={value.type === 'json' ? 'json' : 'string'} />
+                {:else}
+                  {property.attribute_type}
+                  <input type="hidden" name="{property.name}[type]" value={property.attribute_type}>
+                {/if}
+              </div>
+            </label>
+          </dir>
+          <div>
+            {#if property.attribute_type === 'boolean'}
+              <select
+                name="{property.name}[value]"
+                id="edit_{property.name}"
+              >
+                <option value="" class="value-null"></option>
+                <option value="true" selected={value.value === 'true'}>true</option>
+                <option value="false" selected={value.value === 'false'}>false</option>
+              </select>
+            {:else}
+              <textarea
+                rows="1"
+                name="{property.name}[value]"
+                id="edit_{property.name}"
+              >{value.value}</textarea>
+            {/if}
+            <div role="alert">
+              {#if validation[property.name]}
+                {validation[property.name].message}
+              {/if}
+            </div>
+          </div>
+        </fieldset>
+      {/each}
       <div class="footer">
         <ul class="error" aria-live="assertive">
           {#each errors as error}
             <li>
-              {JSON.stringify(error)}
+              {error.message ?? JSON.stringify(error)}
             </li>
           {/each}
         </ul>

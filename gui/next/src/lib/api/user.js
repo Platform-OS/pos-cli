@@ -6,8 +6,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { graphql } from '$lib/api/graphql';
-import { v4 } from 'uuid'
-
+import { buildMutationIngredients } from '$lib/helpers/buildMutationIngredients';
 
 const user = {
 
@@ -54,7 +53,7 @@ const user = {
         users(
           page: ${filters?.page ?? 1}
           per_page: 50
-          sort: { id: { order: ASC } }
+          sort: { id: { order: DESC } }
           filter: {
             ${filtersString}
           }
@@ -88,56 +87,40 @@ const user = {
 
   // purpose:		creates a new user
   // arguments:	
-  //				properties: object containing first_name, last_name, email i password
+  //				properties: object containing first_name, last_name, properties
   //        returns: id of the new user
   // ------------------------------------------------------------------------
-  create: async (email, password, firstName, lastName) => {
+  create: async (email, password, properties) => {
+    const ingredients = buildMutationIngredients(properties);
     const userQuery = `
-      mutation {
-        user: user_create(user: { email: "${email}", password: "${password}", properties: []}) {
+      mutation${ingredients.variablesDefinition} {
+        user: user_create(user: { email: "${email}", password: "${password}", properties: [${ingredients.properties}] }) {
           id
         }
       }
     `;
     
-    return graphql({ query: userQuery }, false).then(data => {
-      if (data.errors) {
-        return data
-      }
-      const userId = data.user.id;
-      const name = `${firstName} ${lastName}`;
-
-      const names = Array.from(new Set(
-        [email.toLowerCase(), firstName.toLowerCase(), lastName.toLowerCase()]
-      )).join(' ');
-
-      const profileQuery = `
-        mutation {
-          record: record_create(
-            record: {
-              table: "modules/user/profile"
-              properties: [
-                { name: "user_id", value: "${userId}" }
-                { name: "uuid", value: "${v4()}" }
-                { name: "first_name", value: "${firstName}" }
-                { name: "last_name", value: "${lastName}" }
-                { name: "name", value: "${name}" }
-                { name: "email", value: "${email}" }
-                { name: "roles", value_array: ["member"] }
-                { name: "c__names", value: "${names}" }
-              ]
-            }
-          ) {
-            id
-          }
-      }
-      `;
-
-      return graphql({query: profileQuery }, false).then(() => userId);
-    });
+    return graphql({ query: userQuery, variables: ingredients.variables }, false);
   },
 
+  // purpose:		returns custom properies of the user schema
+  // arguments:	
+  //        returns: list of properties
+  // ------------------------------------------------------------------------
+  getCustomProperties: async () => {
+    const propertiesQuery = `
+      query {
+        admin_user_schema {
+          properties {
+            attribute_type
+            name
+          }
+        }
+      }
+    `;
 
+    return graphql({ query: propertiesQuery }, false).then(data => data.admin_user_schema.properties);
+  }
 };
 
 
