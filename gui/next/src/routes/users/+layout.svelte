@@ -82,11 +82,10 @@ const appear = function(node, {
 const showCreateUserPopup = function() {
   if (userProperties === null) {
     user.getCustomProperties().then(properties => {
-      console.log(properties);
       userProperties = properties;
       $state.user = null;
-    }).catch(error => {
-      console.log(error);
+    }).catch(() => {
+      state.notification.create('error', 'Could not load table properties. Please try again later.');
     });
   }
   else {
