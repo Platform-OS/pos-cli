@@ -20,7 +20,7 @@ jobs:
 
   tests:
     needs: ["pre_job"]
-    if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
+    # if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
@@ -72,7 +72,7 @@ jobs:
           pos-cli gui serve &
           npm run preview &
           sleep 5 && npx playwright test
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
