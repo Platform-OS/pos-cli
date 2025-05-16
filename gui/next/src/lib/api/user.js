@@ -43,7 +43,6 @@ const user = {
           last_name
           slug
           language
-          properties
         `;
       }
     }
@@ -64,6 +63,7 @@ const user = {
             id
             email
             ${details}
+            properties
           }
         }
       }`;
@@ -95,6 +95,26 @@ const user = {
     const userQuery = `
       mutation${ingredients.variablesDefinition} {
         user: user_create(user: { email: "${email}", password: "${password}", properties: [${ingredients.properties}] }) {
+          id
+        }
+      }
+    `;
+    
+    return graphql({ query: userQuery, variables: ingredients.variables }, false);
+  },
+
+  // purpose:		edits a user
+  // arguments:	
+  //        id: id of the user to modify
+  //        email: email of the user
+  //				properties: object containing additional custom properties
+  //        returns: id of the new user
+  // ------------------------------------------------------------------------
+  edit: async (id, email, properties) => {
+    const ingredients = buildMutationIngredients(properties);
+    const userQuery = `
+      mutation${ingredients.variablesDefinition} {
+        user_update(user: { email: "${email}",  properties: [${ingredients.properties}] }, id: ${id}) {
           id
         }
       }

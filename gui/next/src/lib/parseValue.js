@@ -10,6 +10,7 @@ import { tryParseJSON } from '$lib/tryParseJSON.js';
 //				type of the value (string)
 // ------------------------------------------------------------------------
 const parseValue = (value, type) => {
+  debugger
   let parsed = {
     value: value,
     type: type

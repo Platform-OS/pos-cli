@@ -7,7 +7,8 @@ import { onMount, createEventDispatcher } from 'svelte';
 import { quintOut } from 'svelte/easing';
 import { state } from '$lib/state.js';
 import { user } from '$lib/api/user.js';
-import autosize from 'svelte-autosize';
+import { parseValue } from '$lib/parseValue.js';
+import { tryParseJSON } from '$lib/tryParseJSON.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Toggle from '$lib/ui/forms/Toggle.svelte';
@@ -25,6 +26,10 @@ let errors = [];
 let validation = {};
 // list of user properties or null
 export let userProperties;
+// user to edit or null
+export let userToEdit;
+// if we should original values instead of parsed JSON for string types (bool)
+let dontParseStringedJson = false;
 
 const dispatch = createEventDispatcher();
 
@@ -96,18 +101,33 @@ const save = async (event) => {
     document.querySelector('[role="alert"]:not(:empty)').scrollIntoView({behavior: 'smooth', block: 'center'})
 
   } else {
-    const email = properties.get('email');
-    const password = properties.get('password');
-    properties.delete('email');
-    properties.delete('password');
-    const create = await user.create(email, password, properties);
-    if(!create.errors){
-      $state.user = undefined;
-      state.notification.create('success', `User ${create.user.id} created`);
-      dispatch('success');
+    if (userToEdit === null) {
+      const email = properties.get('email');
+      const password = properties.get('password');
+      properties.delete('email');
+      properties.delete('password');
+      const create = await user.create(email, password, properties);
+      if(!create.errors){
+        $state.user = undefined;
+        state.notification.create('success', `User ${create.user.id} created`);
+        dispatch('success');
+      }
+      else {
+        errors = create.errors;
+      }
     }
     else {
-      errors = create.errors;
+      const email = properties.get('email');
+      properties.delete('email');
+      const edit = await user.edit(userToEdit.id, email, properties);
+      if(!edit.errors){
+        $state.user = undefined;
+        state.notification.create('success', `User ${edit.user_update.id} edited`);
+        dispatch('success');
+      }
+      else {
+        errors = edit.errors;
+      }
     }
   }
 };
@@ -248,9 +268,11 @@ textarea {
             type="email"
             name="email"
             id="email"
+            value={userToEdit !== null ? userToEdit.email : ''}
           />
         </div>
       </fieldset>
+      {#if userToEdit === null}
       <fieldset>
         <dir>
           <label for="password">
@@ -268,8 +290,9 @@ textarea {
           />
         </div>
       </fieldset>
+      {/if}
       {#each userProperties as property}
-        {@const value = {type: property.attribute_type, value: ''}}
+      {@const value = userToEdit !== null ? parseValue(userToEdit.properties[property.name], property.attribute_type) : {type: property.attribute_type, value: ''}}
         <fieldset>
           <dir>
             <label for="edit_{property.name}">
@@ -299,7 +322,7 @@ textarea {
                 rows="1"
                 name="{property.name}[value]"
                 id="edit_{property.name}"
-              >{value.value}</textarea>
+                >{value.type === 'json' || value.type === 'jsonEscaped' && !dontParseStringedJson ? JSON.stringify(value.value, undefined, 2) : value.value}</textarea>
             {/if}
             <div role="alert">
               {#if validation[property.name]}
@@ -320,7 +343,7 @@ textarea {
         <fieldset class="actions">
           <button type="button" class="button" on:click={() => $state.user = undefined}>Cancel</button>
           <button type="submit" class="button">
-            Create user
+            {#if userToEdit === null}Create user{:else}Edit user{/if}
             <Icon icon="arrowRight" />
           </button>
         </fieldset>

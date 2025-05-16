@@ -79,17 +79,17 @@ const appear = function(node, {
   }
 };
 
-const showCreateUserPopup = function() {
+const showCreateUserPopup = function(userToEdit = null) {
   if (userProperties === null) {
     user.getCustomProperties().then(properties => {
       userProperties = properties;
-      $state.user = null;
+      $state.user = userToEdit;
     }).catch(() => {
       state.notification.create('error', 'Could not load table properties. Please try again later.');
     });
   }
   else {
-    $state.user = null;
+    $state.user = userToEdit;
   }
 }
 </script>
@@ -362,6 +362,10 @@ const showCreateUserPopup = function() {
                       <span class="label">More options</span>
                       <Icon icon="navigationMenuVertical" size="16" />
                     </button>
+                    <button class="button compact edit" title="Edit user" on:click={() => { showCreateUserPopup(user) }}>
+                      <span class="label">Edit user</span>
+                      <Icon icon="pencil" size="16" />
+                    </button>
                     {#if contextMenu.id === user.id}
                       <ContextMenu record={user} on:reload={() => reloadUsers() } on:close={() => contextMenu.id = null} />
                     {/if}
@@ -418,7 +422,7 @@ const showCreateUserPopup = function() {
 {/if}
 
 {#if $state.user !== undefined}
-<CreateUser userProperties={userProperties} on:success={() => reloadUsers() } />
+<CreateUser userProperties={userProperties} userToEdit={$state.user} on:success={() => reloadUsers() } />
 {/if}
 
 
