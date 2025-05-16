@@ -358,14 +358,16 @@ const showCreateUserPopup = function(userToEdit = null) {
               <span>
                 <div class="menu">
                   <div class="inner-menu">
-                    <button class="button compact more" class:active={contextMenu.id === user.id} on:click={() => contextMenu.id = user.id}>
-                      <span class="label">More options</span>
-                      <Icon icon="navigationMenuVertical" size="16" />
-                    </button>
-                    <button class="button compact edit" title="Edit user" on:click={() => { showCreateUserPopup(user) }}>
-                      <span class="label">Edit user</span>
-                      <Icon icon="pencil" size="16" />
-                    </button>
+                    <div class="combo">
+                      <button class="button compact more" class:active={contextMenu.id === user.id} on:click={() => contextMenu.id = user.id}>
+                        <span class="label">More options</span>
+                        <Icon icon="navigationMenuVertical" size="16" />
+                      </button>
+                      <button class="button compact edit" title="Edit user" on:click={() => { showCreateUserPopup(user) }}>
+                        <span class="label">Edit user</span>
+                        <Icon icon="pencil" size="16" />
+                      </button>
+                    </div>
                     {#if contextMenu.id === user.id}
                       <ContextMenu record={user} on:reload={() => reloadUsers() } on:close={() => contextMenu.id = null} />
                     {/if}
