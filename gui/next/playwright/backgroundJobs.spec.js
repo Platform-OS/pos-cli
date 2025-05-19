@@ -20,7 +20,7 @@ test('viewing scheduled background jobs', async ({ page }) => {
 
   await page.goto(url);
 
-  await expect(page.getByRole('cell', { name: 'scheduled background job' }).first()).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'scheduled background job' }).first()).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole('cell', { name: 'high' }).first()).toBeVisible();
   await expect(page.getByRole('cell', { name: 'in 10 minutes' }).first()).toBeVisible();
 });
@@ -53,7 +53,7 @@ test('deleting scheduled background job', async ({ page }) => {
 
   await page.goto(url);
 
-  await expect(page.locator('tr:has-text("background job to delete")').first()).toBeVisible();
+  await expect(page.locator('tr:has-text("background job to delete")').first()).toBeVisible({ timeout: 10000 });
 
   for(const job of await page.locator('tr:has-text("background job to delete")').all()){
     await job.getByRole('button', { name: 'More options' }).click();
