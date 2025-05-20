@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.4.1
+
+* Improvement: `pos-cli modules download <module>` removes the modules/<module> before unpacking the new version to automatically handle scenario when a file is being removed from the module in a new version
+
 ## 5.4.0
 
 * Improvement: `pos-cli modules download <module>` will by default download version defined in app/pos-modules.lock.json file
