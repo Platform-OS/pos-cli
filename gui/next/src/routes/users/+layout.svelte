@@ -3,7 +3,6 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { tick } from 'svelte';
 import { goto } from '$app/navigation';
 import { state } from '$lib/state.js';
 import { quintOut } from 'svelte/easing';
@@ -11,6 +10,7 @@ import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
 import ContextMenu from '$lib/users/ContextMenu.svelte';
 import CreateUser from '$lib/users/Create.svelte';
+import { tick } from 'svelte';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Number from '$lib/ui/forms/Number.svelte';
@@ -51,11 +51,8 @@ let contextMenu = {
 // ------------------------------------------------------------------------
 $: reloadUsers();
 
-const reloadUsers = function(currentPage = null) {
+const reloadUsers = function() {
   const params = Object.fromEntries($page.url.searchParams);
-  if (currentPage) {
-    params['page'] = currentPage
-  }
   user.get(params).then(data => {
     items = data.results;
     filters.totalPages = data.total_pages;
@@ -91,6 +88,25 @@ const showCreateUserPopup = function(userToEdit = null) {
   else {
     $state.user = userToEdit;
   }
+}
+
+const clearFilters = async function() {
+  filters = structuredClone(defaultFilters);
+  await tick();
+  form.requestSubmit();
+}
+
+const submitForm = async function(event) {
+  event.preventDefault();
+  const currentUrlParams = $page.url.searchParams;
+  const params = new URLSearchParams(new FormData(event.target));
+  if (currentUrlParams.get('value') !== params.get('value')) {
+    params.set('page', 1);
+    filters.page = 1;
+  }
+  await goto(document.location.pathname + '?' + params.toString());
+  await tick();
+  await reloadUsers();
 }
 </script>
 
@@ -306,16 +322,7 @@ const showCreateUserPopup = function(userToEdit = null) {
       action=""
       bind:this={form}
       id="filters"
-      on:submit={
-        // reset page number when changing filters except when directly changing a page
-        async event => {
-          event.preventDefault();
-          const params = new URLSearchParams(new FormData(event.target));
-          goto(document.location.pathname + '?' + params.toString());
-          await tick();
-          await reloadUsers(params.get('page') ?? null);
-        } 
-      }
+      on:submit={event => submitForm(event, false)}
     >
       <label for="filters_attribute">Filter by</label>
       <fieldset class="search">
@@ -325,7 +332,7 @@ const showCreateUserPopup = function(userToEdit = null) {
         </select>
         <input type="text" name="value" bind:value={filters.value}>
         {#if filters.value}
-          <button type="button" class="clear" transition:appear on:click={() => { filters = {...defaultFilters}; form.requestSubmit(); }}>
+          <button type="button" class="clear" transition:appear on:click={clearFilters}>
             <span class="label">Clear filters</span>
             <Icon icon="x" size=14 />
           </button>

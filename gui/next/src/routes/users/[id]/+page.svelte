@@ -31,8 +31,6 @@ const load = async () => {
 
   await user.get(filters).then(response => {
     item = response.results[0];
-
-    console.log(item);
   });
 }
 
