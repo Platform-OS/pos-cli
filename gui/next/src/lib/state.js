@@ -73,8 +73,8 @@ function createStore(){
     state.notifications = [];
     // width of the aside panel in css units (string)
     state.asideWidth = browser && localStorage.asideWidth ? localStorage.asideWidth : false;
-
-
+    // list of users
+    state.users = []
 
   // purpose:		creates the store with data provided in state object
   // ------------------------------------------------------------------------
