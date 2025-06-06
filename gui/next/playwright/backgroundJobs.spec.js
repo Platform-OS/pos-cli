@@ -52,7 +52,7 @@ test('deleting scheduled background job', async ({ page }) => {
   });
 
   await page.goto(url);
-  console.log(page.locator('tr:has-text("background job to delete")').all());
+  console.log(page.locator('tr:has-text("background job to delete")').first());
   await expect(page.locator('tr:has-text("background job to delete")').first()).toBeVisible({ timeout: 10000 });
 
   for(const job of await page.locator('tr:has-text("background job to delete")').all()){

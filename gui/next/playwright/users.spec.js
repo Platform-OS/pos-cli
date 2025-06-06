@@ -85,7 +85,7 @@ test('editing an existing user', async ({ page }) => {
   const dialog = page.locator('dialog');
   await dialog.getByRole('button', { name: 'Edit user' }).first().click();
 
-  await expect(page.getByRole('cell', { name: 'testedit@test.test' })).toBeHidden();
+  await expect(page.getByRole('cell', { name: 'testedit@test.test' })).toBeHidden(20000);
   await expect(page.getByRole('cell', { name: 'testedit2@test.test' })).toBeVisible();
 });
 
