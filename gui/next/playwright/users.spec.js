@@ -57,7 +57,7 @@ test('filtering users by id', async ({ page }) => {
 
 test('adding a new user successfully', async ({ page }) => {
   await page.goto(url);
-  await page.getByRole('button', { name: 'Create user' }).click();
+  await page.getByRole('button', { name: 'Create a new user' }).click();
 
   await page.getByLabel('Email').fill('testnew@test.test');
   await page.getByLabel('Password').fill('testpassword');

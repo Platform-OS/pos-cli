@@ -420,7 +420,7 @@ const submitForm = async function(event) {
     </div>
     <button class="button" title="Create user" on:click|preventDefault={ () => showCreateUserPopup() }>
       <Icon icon="plus" />
-      <span class="label">Create user</span>
+      <span class="label">Create a new user</span>
     </button>
   </nav>
 
