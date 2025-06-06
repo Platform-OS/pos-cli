@@ -71,7 +71,7 @@ test('adding a new user successfully', async ({ page }) => {
 test('editing an existing user', async ({ page }) => {
   await page.goto(url);
 
-  await page.getByRole('button', { name: 'Create user' }).click();
+  await page.getByRole('button', { name: 'Create a new user' }).click();
 
   await page.getByLabel('Email').fill('testedit@test.test');
   await page.getByLabel('Password').fill('testpassword');
@@ -97,7 +97,7 @@ test('deleting an existing user', async ({ page }) => {
   });
 
   await page.goto(url);
-  await page.getByRole('button', { name: 'Create user' }).click();
+  await page.getByRole('button', { name: 'Create a new user' }).click();
 
   await page.getByLabel('Email').fill('testdelete@test.test');
   await page.getByLabel('Password').fill('testpassword');
