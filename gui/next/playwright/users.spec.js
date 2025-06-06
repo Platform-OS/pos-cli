@@ -54,3 +54,60 @@ test('filtering users by id', async ({ page }) => {
   await expect(page.getByRole('cell', { name: 'user2@example.com' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'user1@example.com' })).toBeHidden();
 });
+
+test('adding a new user successfully', async ({ page }) => {
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Create user' }).click();
+
+  await page.getByLabel('Email').fill('testnew@test.test');
+  await page.getByLabel('Password').fill('testpassword');
+
+  await page.getByRole('button', { name: 'Create user' }).click();
+
+  await expect(page.getByRole('cell', { name: 'testnew@test.test'})).toBeVisible();
+});
+
+
+test('editing an existing user', async ({ page }) => {
+  await page.goto(url);
+
+  await page.getByRole('button', { name: 'Create user' }).click();
+
+  await page.getByLabel('Email').fill('testedit@test.test');
+  await page.getByLabel('Password').fill('testpassword');
+
+  await page.getByRole('button', { name: 'Create user' }).click();
+
+  await expect(page.getByRole('cell', { name: 'testedit@test.test' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Edit user' }).first().click();
+  await page.getByLabel('Email').fill('testedit2@test.test');
+  const dialog = page.locator('dialog');
+  await dialog.getByRole('button', { name: 'Edit user' }).first().click();
+
+  await expect(page.getByRole('cell', { name: 'testedit@test.test' })).toBeHidden();
+  await expect(page.getByRole('cell', { name: 'testedit2@test.test' })).toBeVisible();
+});
+
+
+test('deleting an existing user', async ({ page }) => {
+  page.on('dialog', async dialog => {
+    expect(dialog.message()).toEqual('Are you sure you want to delete this user?');
+    await dialog.accept();
+  });
+
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Create user' }).click();
+
+  await page.getByLabel('Email').fill('testdelete@test.test');
+  await page.getByLabel('Password').fill('testpassword');
+
+  await page.getByRole('button', { name: 'Create user' }).click();
+
+  await expect(page.getByRole('cell', { name: 'testdelete@test.test' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'More options' }).first().click();
+  await page.getByRole('button', { name: 'Delete user' }).click();
+
+  await expect(page.getByRole('cell', { name: 'testdelete@test.test' })).toBeHidden();
+});
