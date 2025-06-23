@@ -17,7 +17,7 @@ test('see home screen', async ({ page }) => {
 test('viewing scheduled background jobs', async ({ page }) => {
   await page.goto(posInstance.MPKIT_URL + 'background_job');
   await expect(page.getByText('background job scheduled')).toBeVisible();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(2000);
 
   await page.goto(url);
 
