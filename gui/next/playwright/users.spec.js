@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { posInstance } from './helpers/posInstance.js';
 
 
 const url = './users';
@@ -9,7 +10,7 @@ test('see home screen', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Users', exact: true}).first().click();
 
-  await expect(page).toHaveTitle('Users: qa-poscli-gui-ci.staging.oregon.platform-os.com/');
+  await expect(page).toHaveTitle(`Users: ${posInstance.MPKIT_URL.replace('https://', '')}`);
 });
 
 
