@@ -70,16 +70,6 @@ test('adding a new user successfully', async ({ page }) => {
 
 test('editing an existing user', async ({ page }) => {
   await page.goto(url);
-
-  await page.getByRole('button', { name: 'Create a new user' }).click();
-
-  await page.getByLabel('Email').fill('testedit@test.test');
-  await page.getByLabel('Password').fill('testpassword');
-
-  await page.getByRole('button', { name: 'Create user' }).click();
-
-  await expect(page.getByRole('cell', { name: 'testedit@test.test' })).toBeVisible();
-
   await page.getByRole('button', { name: 'Edit user' }).first().click();
   await page.getByLabel('Email').fill('testedit2@test.test');
   const dialog = page.locator('dialog');
@@ -97,13 +87,6 @@ test('deleting an existing user', async ({ page }) => {
   });
 
   await page.goto(url);
-  await page.getByRole('button', { name: 'Create a new user' }).click();
-
-  await page.getByLabel('Email').fill('testdelete@test.test');
-  await page.getByLabel('Password').fill('testpassword');
-
-  await page.getByRole('button', { name: 'Create user' }).click();
-
   await expect(page.getByRole('cell', { name: 'testdelete@test.test' })).toBeVisible();
 
   await page.getByRole('button', { name: 'More options' }).first().click();
