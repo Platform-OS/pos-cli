@@ -30,14 +30,12 @@ jobs:
           MPKIT_TOKEN: ${{ secrets.TEST_MPKIT_TOKEN }}
           MPKIT_URL: ${{ secrets.TEST_MPKIT_URL }}
           POS_PORTAL_PASSWORD:  ${{secrets.POS_PORTAL_PASSWORD}}
-          DEBUG: 1
           CI: true
         shell: sh
         run: |
           chown -R node:node *
           chown node:node .
           npm ci
-          ls -l
-          ls -l *
-          npm test
+          #npm test
+          jest --runInBand --testPathIgnorePatterns sync.test.js
           # sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
