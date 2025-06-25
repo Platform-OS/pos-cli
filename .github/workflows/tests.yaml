@@ -1,0 +1,35 @@
+name: build and push images
+
+on:
+  push:
+    branches: ['master']
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: node:${{ matrix.alpine }}
+
+    strategy:
+      matrix:
+        include:
+          - { version: '18-alpine' }
+          - { version: '20-alpine' }
+          - { version: '20.11-alpine' }
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test
+        env:
+          MPKIT_EMAIL: ${{ secrets.TEST_MPKIT_EMAIL }}
+          MPKIT_TOKEN: ${{ secrets.TEST_MPKIT_TOKEN }}
+          MPKIT_URL: ${{ secrets.TEST_MPKIT_URL }}
+          POS_PORTAL_PASSWORD:  ${{secrets.POS_PORTAL_PASSWORD}}
+          CI: true
+          shell: sh
+          run: sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
