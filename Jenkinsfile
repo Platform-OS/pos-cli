@@ -47,6 +47,7 @@ pipeline {
       steps {
         container(name: 'node') {
           sh 'npm install -g @platformos/pos-cli'
+          echo $date
           // sh 'pos-cli init'
           // sh 'pos-cli data clean --auto-confirm --include-schema'
           // sh 'pos-cli deploy'
