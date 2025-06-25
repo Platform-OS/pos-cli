@@ -33,8 +33,6 @@ jobs:
           CI: true
         shell: sh
         run: |
-          chown -R node:node *
-          chown node:node .
           npm ci
           #npm test
           jest --runInBand --testPathIgnorePatterns sync.test.js
