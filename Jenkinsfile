@@ -65,7 +65,7 @@ def podTemplate(version) {
                 memory: 2Gi
               requests:
                 cpu: 2
-              memory: 2Gi
+                memory: 2Gi
             image: 'node:${version}-alpine'
             imagePullPolicy: IfNotPresent
             command:
