@@ -35,8 +35,7 @@ jobs:
         shell: sh
         run: |
           npm ci
-          ls -l app/
           ls -l
-          ls -l app/*
+          ls -l *
           npm test
           # sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
