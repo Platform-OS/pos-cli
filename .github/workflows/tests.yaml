@@ -31,4 +31,6 @@ jobs:
           POS_PORTAL_PASSWORD:  ${{secrets.POS_PORTAL_PASSWORD}}
           CI: true
         shell: sh
-        run: sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
+        run: |
+          npm ci && npm test
+          # sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
