@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 15
 
     strategy:
+      max-parallel: 1
       matrix:
         version: ['18', '20', '20.11']
 
