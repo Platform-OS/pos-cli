@@ -33,5 +33,9 @@ jobs:
           CI: true
         shell: sh
         run: |
-          npm ci && npm test
+          npm ci
+          ls -l app/
+          ls -l
+          ls -l app/*
+          npm test
           # sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
