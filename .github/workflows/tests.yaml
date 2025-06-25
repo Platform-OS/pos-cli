@@ -30,6 +30,7 @@ jobs:
           MPKIT_TOKEN: ${{ secrets.TEST_MPKIT_TOKEN }}
           MPKIT_URL: ${{ secrets.TEST_MPKIT_URL }}
           POS_PORTAL_PASSWORD:  ${{secrets.POS_PORTAL_PASSWORD}}
+          DEBUG: 1
           CI: true
         shell: sh
         run: |
