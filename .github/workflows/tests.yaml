@@ -35,5 +35,5 @@ jobs:
         run: |
           npm ci
           #npm test
-          npx jest --runInBand --testPathIgnorePatterns sync.test.js
+          npx jest --runInBand --testPathIgnorePatterns sync.test.js test
           # sh 'chown -R node:node * && chown node:node . && su -c "npm ci && npm test" node'
