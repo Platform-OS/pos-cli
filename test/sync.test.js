@@ -76,8 +76,10 @@ describe('Happy path', () => {
       await sleep(stepTimeout); //wait for sync to start
 
       console.log("before killing");
-      await child.stdin.end();
-      await child.kill()
+      child.stdin.end();
+      child.stdout.destroy();
+      child.stderr.destroy();
+      child.kill()
     }
 
     const { stdout, stderr, child } = await run('correct_with_assets', null, steps);
