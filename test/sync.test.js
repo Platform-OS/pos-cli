@@ -1,9 +1,9 @@
 /* global jest */
 
-const exec = require('./utils/exec');
 const { spawn } = require('child_process');
 const cliPath = require('./utils/cliPath');
 const path = require('path');
+const fs = require('fs').promises;
 
 const stepTimeout = 6000;
 
@@ -58,7 +58,8 @@ describe('Happy path', () => {
 
     const steps = async (child) => {
       await sleep(stepTimeout); //wait for sync to start
-      await exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
+      fs.appendFileSync(path.join(cwd('correct_with_assets'), 'app/assets/bar.js'), 'x');
+      // await exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for syncing the file
       child.kill();
     }
@@ -72,7 +73,7 @@ describe('Happy path', () => {
   test('sync with direct assets upload', async () => {
     const steps = async (child) => {
       await sleep(stepTimeout); //wait for sync to start
-      await exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
+      fs.appendFileSync(path.join(cwd('correct_with_assets'), 'app/assets/bar.js'), 'x');
       await sleep(stepTimeout); //wait for syncing the file
       child.kill();
     }
@@ -92,14 +93,26 @@ properties:
 `;
 
     const steps = async (child) => {
-      await exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for sync to start
-      await exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for syncing the file
-      await exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for deleting the file
+      const baseDir = cwd('correct_with_assets');
+      const dirPath = path.join(baseDir, 'app', dir);
+      const filePath = path.join(baseDir, 'app', fileName);
+
+      // Create directory if it doesn't exist
+      await fs.mkdir(dirPath, { recursive: true });
+      await sleep(stepTimeout);
+
+      // Write the valid YAML content to the file
+      await fs.appendFile(filePath, validYML);
+      await sleep(stepTimeout);
+
+      // Delete the file
+      await fs.rm(filePath);
+      await sleep(stepTimeout);
+
+      // Kill the child process
       child.kill();
     }
+
     const { stderr, stdout } = await run('correct_with_assets', null, steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
