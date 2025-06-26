@@ -1,6 +1,7 @@
 /* global jest */
 
 const exec = require('./utils/exec');
+const { spawn } = require('child_process');
 const cliPath = require('./utils/cliPath');
 const path = require('path');
 
@@ -9,13 +10,45 @@ const stepTimeout = 6000;
 require('dotenv').config();
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
-const run = (fixtureName, options, callback) => {
-  return exec(
-    `${cliPath} sync ${options}`,
-    { cwd: cwd(fixtureName), env: process.env },
-    callback
-  );
+// const run = (fixtureName, options, callback) => {
+//   return exec(
+//     `${cliPath} sync ${options}`,
+//     { cwd: cwd(fixtureName), env: process.env },
+//     callback
+//   );
+// };
+
+const run = (fixtureName, options = '', steps) => {
+  const cwdPath = cwd(fixtureName);
+  return new Promise((resolve, reject) => {
+    const child = spawn(cliPath, ['sync', options], {
+      cwd: cwdPath,
+      env: process.env,
+      shell: true,
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', data => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', data => {
+      stderr += data.toString();
+    });
+
+    child.on('error', reject);
+
+    child.on('close', (code) => {
+      resolve({ stdout, stderr, code });
+    });
+
+    // Run additional steps while child is alive
+    steps(child);
+  });
 };
+
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
