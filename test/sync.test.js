@@ -1,6 +1,6 @@
 /* global jest */
 
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const cliPath = require('./utils/cliPath');
 const path = require('path');
 const fs = require('fs').promises;
@@ -75,7 +75,7 @@ describe('Happy path', () => {
       child.kill()
       console.log(child.pid);
       console.log(child.killed)
-      console.log(child);
+      exec(`ps -p ${child.pid}`)
     }
 
     const { stdout, stderr, child } = await run('correct_with_assets', null, steps);
