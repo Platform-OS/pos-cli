@@ -19,46 +19,46 @@ const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name)
 // };
 
 const run = (fixtureName, options = '', steps) => {
-  const cwdPath = path.join(process.cwd(), 'test', 'fixtures', 'deploy', fixtureName)
   return new Promise((resolve, reject) => {
     (async () => {
-    const child = spawn(cliPath, ['sync', options], {
-      cwd: cwdPath,
-      env: process.env,
-      shell: true,
-      //#stdio: 'pipe',
-    });
+      const cwdPath = path.join(process.cwd(), 'test', 'fixtures', 'deploy', fixtureName)
+      const child = spawn(cliPath, ['sync', options], {
+        cwd: cwdPath,
+        env: process.env,
+        shell: true,
+        //#stdio: 'pipe',
+      });
 
-    let stdout = '';
-    let stderr = '';
+      let stdout = '';
+      let stderr = '';
 
-    child.stdout.on('data', data => {
-      console.log(data.toString());
-      stdout += data.toString();
-    });
+      child.stdout.on('data', data => {
+        console.log(data.toString());
+        stdout += data.toString();
+      });
 
-    child.stderr.on('data', data => {
-      console.log(data.toString());
-      stderr += data.toString();
-    });
+      child.stderr.on('data', data => {
+        console.log(data.toString());
+        stderr += data.toString();
+      });
 
-    // child.on('error', reject);
+      // child.on('error', reject);
 
-    child.on('error', (code) => {
-      child.stdout?.removeAllListeners();
-      child.stderr?.removeAllListeners();
+      child.on('error', (code) => {
+        child.stdout?.removeAllListeners();
+        child.stderr?.removeAllListeners();
 
-      resolve({ stdout, stderr, code, child });
-    });
+        resolve({ stdout, stderr, code, child });
+      });
 
-    child.on('close', (code) => {
-      child.stdout?.removeAllListeners();
-      child.stderr?.removeAllListeners();
+      child.on('close', (code) => {
+        child.stdout?.removeAllListeners();
+        child.stderr?.removeAllListeners();
 
-      resolve({ stdout, stderr, code, child });
-    });
+        resolve({ stdout, stderr, code, child });
+      });
 
-    steps(child);
+      await steps(child);
     })();
   });
 };
@@ -74,11 +74,15 @@ describe('Happy path', () => {
       await sleep(stepTimeout); //wait for sync to start
       await fs.appendFile(path.join(cwd('correct_with_assets'), 'app/assets/bar.js'), 'x');
       await sleep(stepTimeout); //wait for sync to start
-      await child.kill()
+      await sleep(1000); //wait for sync to start
+      console.log(child.pid);
+      await sleep(1000); //wait for sync to start
+
+      console.log("before killing");
+      return child.kill()
     }
 
     const { stdout, stderr, child } = await run('correct_with_assets', null, steps);
-
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
     // child.kill();
