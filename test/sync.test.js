@@ -21,7 +21,7 @@ const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name)
 const run = (fixtureName, options = '', steps) => {
   const cwdPath = cwd(fixtureName);
   return new Promise((resolve, reject) => {
-    const child = spawn(cliPath, ['sync', options], {
+    const child = await spawn(cliPath, ['sync', options], {
       cwd: cwdPath,
       env: process.env,
       shell: true,
