@@ -76,7 +76,7 @@ describe('Happy path', () => {
       await sleep(stepTimeout); //wait for sync to start
 
       console.log("before killing");
-      await child.stdin.pause();
+      await child.stdin.end();
       await child.kill()
     }
 
