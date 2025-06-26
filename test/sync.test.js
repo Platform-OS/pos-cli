@@ -63,7 +63,7 @@ const run = (fixtureName, options = '', steps) => {
       });
 
       // Run additional steps while child is alive
-      await steps(child);
+      return steps(child);
     } catch (e) {
       console.log(e);
       return reject(e)
