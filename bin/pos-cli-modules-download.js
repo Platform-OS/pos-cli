@@ -35,8 +35,11 @@ const downloadModule = async (module, lockData) => {
 
     logger.Info(`Searching for ${module}...`);
     const moduleVersion = await Portal.moduleVersionsSearch(module);
+    const modulePath = `${process.cwd()}/modules/${module.split('@')[0]}`
     logger.Info(`Downloading ${module}...`);
     await downloadFile(moduleVersion['public_archive'], filename);
+    logger.Info(`Cleaning ${modulePath}...`);
+    await fs.promises.rm(modulePath, { recursive: true, force: true });
     logger.Info(`Unzipping ${module}...`);
     await unzip(filename, `${process.cwd()}/modules`);
     shell.rm(filename);

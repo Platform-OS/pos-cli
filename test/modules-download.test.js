@@ -32,6 +32,24 @@ describe('Successful download', () => {
     });
   });
 
+  test('clean up removed files', async () => {
+    const pathToModuleLeftoverFile = `${cwd('deploy/modules_test_with_old_files')}/modules/tests/private/leftover.txt`;
+    expect(fs.existsSync(pathToModuleLeftoverFile)).toBeTruthy();
+    const pathToModuleJson = `${cwd('deploy/modules_test_with_old_files')}/modules/tests/template-values.json`;
+    const pathToDirectory = `${cwd('deploy/modules_test_with_old_files')}/modules`;
+
+    const { stdout } = await run('deploy/modules_test_with_old_files', 'tests');
+    expect(stdout).toContain('Downloading tests@0.0.3');
+    expect(fs.existsSync(pathToModuleJson)).toBeTruthy();
+    expect(fs.existsSync(pathToModuleLeftoverFile)).toBeFalsy();
+
+    await fs.promises.rm(pathToDirectory, { recursive: true });
+
+    fs.mkdirSync(path.dirname(pathToModuleLeftoverFile), { recursive: true });
+    fs.writeFileSync(pathToModuleLeftoverFile, 'Hello');
+    expect(fs.existsSync(pathToModuleLeftoverFile)).toBeTruthy();
+  });
+
   test('download test module in a specific version', async () => {
     const pathToModuleJson = `${cwd('deploy/modules_test')}/modules/tests/template-values.json`;
     const pathToDirectory = `${cwd('deploy/modules_test')}/modules`;
