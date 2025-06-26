@@ -58,7 +58,7 @@ describe('Happy path', () => {
 
     const steps = async (child) => {
       await sleep(stepTimeout); //wait for sync to start
-      exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
+      await exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for syncing the file
       child.kill();
     }
@@ -72,7 +72,7 @@ describe('Happy path', () => {
   test('sync with direct assets upload', async () => {
     const steps = async (child) => {
       await sleep(stepTimeout); //wait for sync to start
-      exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
+      await exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for syncing the file
       child.kill();
     }
@@ -92,11 +92,11 @@ properties:
 `;
 
     const steps = async (child) => {
-      exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
+      await exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for sync to start
-      exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
+      await exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for syncing the file
-      exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
+      await exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for deleting the file
       child.kill();
     }
