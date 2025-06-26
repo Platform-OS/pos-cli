@@ -71,7 +71,7 @@ test('adding a new user successfully', async ({ page }) => {
 
 test('editing an existing user', async ({ page }) => {
   await page.goto(url);
-  await page.getByRole('button', { name: 'Edit user' }).first().click();
+  await page.getByRole('button', { name: 'Edit user' }).nth(1).click();
   await page.getByLabel('Email').fill('testedit2@test.test');
   const dialog = page.locator('dialog');
   await dialog.getByRole('button', { name: 'Edit user' }).first().click();
