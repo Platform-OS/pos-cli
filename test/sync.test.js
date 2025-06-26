@@ -21,6 +21,7 @@ const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name)
 const run = (fixtureName, options = '', steps) => {
   const cwdPath = path.join(process.cwd(), 'test', 'fixtures', 'deploy', fixtureName)
   return new Promise((resolve, reject) => {
+    (async () => {
     const child = spawn(cliPath, ['sync', options], {
       cwd: cwdPath,
       env: process.env,
@@ -58,6 +59,7 @@ const run = (fixtureName, options = '', steps) => {
     });
 
     steps(child);
+    })();
   });
 };
 
@@ -72,10 +74,7 @@ describe('Happy path', () => {
       await sleep(stepTimeout); //wait for sync to start
       await fs.appendFile(path.join(cwd('correct_with_assets'), 'app/assets/bar.js'), 'x');
       await sleep(stepTimeout); //wait for sync to start
-      child.kill()
-      console.log(child.pid);
-      console.log(child.killed)
-      exec(`ps -p ${child.pid}`)
+      await child.kill()
     }
 
     const { stdout, stderr, child } = await run('correct_with_assets', null, steps);
