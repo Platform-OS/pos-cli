@@ -19,44 +19,49 @@ const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name)
 // };
 
 const run = (fixtureName, options = '', steps) => {
+  const cwdPath = path.join(process.cwd(), 'test', 'fixtures', 'deploy', fixtureName)
   return new Promise((resolve, reject) => {
-    const cwdPath = path.join(process.cwd(), 'test', 'fixtures', 'deploy', fixtureName)
-    const child = spawn(cliPath, ['sync', options], {
-      cwd: cwdPath,
-      env: process.env,
-      shell: true,
-      stdio: 'pipe',
-    });
+    try {
+      const child = spawn(cliPath, ['sync', options], {
+        cwd: cwdPath,
+        env: process.env,
+        shell: true,
+        stdio: 'pipe',
+      });
 
-    let stdout = '';
-    let stderr = '';
+      let stdout = '';
+      let stderr = '';
 
-    child.stdout.on('data', data => {
-      stdout += data.toString();
-    });
+      child.stdout.on('data', data => {
+        stdout += data.toString();
+      });
 
-    child.stderr.on('data', data => {
-      stderr += data.toString();
-    });
+      child.stderr.on('data', data => {
+        stderr += data.toString();
+      });
 
-    // child.on('error', reject);
+      // child.on('error', reject);
 
-    child.on('error', (code) => {
-      child.stdout?.removeAllListeners();
-      child.stderr?.removeAllListeners();
+      child.on('error', (code) => {
+        child.stdout?.removeAllListeners();
+        child.stderr?.removeAllListeners();
 
-      resolve({ stdout, stderr, code });
-    });
+        resolve({ stdout, stderr, code });
+      });
 
-    child.on('close', (code) => {
-      child.stdout?.removeAllListeners();
-      child.stderr?.removeAllListeners();
+      child.on('close', (code) => {
+        child.stdout?.removeAllListeners();
+        child.stderr?.removeAllListeners();
 
-      resolve({ stdout, stderr, code });
-    });
+        resolve({ stdout, stderr, code });
+      });
 
-    // Run additional steps while child is alive
-    steps(child);
+      // Run additional steps while child is alive
+      steps(child);
+    } catch (e) {
+      console.log(e);
+      return reject(e)
+    }
   });
 };
 
