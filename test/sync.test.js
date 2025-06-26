@@ -79,7 +79,7 @@ describe('Happy path', () => {
       await sleep(1000); //wait for sync to start
 
       console.log("before killing");
-      await exec(`kill -p ${child.pid}`, (err, stdout, stderr) => { console.log({err, stderr, stdout}) })
+      await exec(`kill -9 ${child.pid}`, (err, stdout, stderr) => { console.log({err, stderr, stdout}) })
       await child.kill()
     }
 
