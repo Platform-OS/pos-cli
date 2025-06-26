@@ -19,12 +19,13 @@ const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name)
 // };
 
 const run = (fixtureName, options = '', steps) => {
-  const cwdPath = cwd(fixtureName);
   return new Promise((resolve, reject) => {
-    const child = await spawn(cliPath, ['sync', options], {
+    const cwdPath = path.join(process.cwd(), 'test', 'fixtures', 'deploy', fixtureName)
+    const child = spawn(cliPath, ['sync', options], {
       cwd: cwdPath,
       env: process.env,
       shell: true,
+      stdio: 'pipe',
     });
 
     let stdout = '';
@@ -38,9 +39,19 @@ const run = (fixtureName, options = '', steps) => {
       stderr += data.toString();
     });
 
-    child.on('error', reject);
+    // child.on('error', reject);
+
+    child.on('error', (code) => {
+      child.stdout?.removeAllListeners();
+      child.stderr?.removeAllListeners();
+
+      resolve({ stdout, stderr, code });
+    });
 
     child.on('close', (code) => {
+      child.stdout?.removeAllListeners();
+      child.stderr?.removeAllListeners();
+
       resolve({ stdout, stderr, code });
     });
 
@@ -61,7 +72,8 @@ describe('Happy path', () => {
       await fs.appendFile(path.join(cwd('correct_with_assets'), 'app/assets/bar.js'), 'x');
       // await exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for syncing the file
-      await child.kill();
+
+      child.kill();
     }
 
     const { stdout, stderr } = await run('correct_with_assets', null, steps);
