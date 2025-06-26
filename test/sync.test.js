@@ -79,8 +79,8 @@ describe('Happy path', () => {
       await sleep(1000); //wait for sync to start
 
       console.log("before killing");
-      exec(`kill ${child.pid}`, (err, stdout, stderr) => { console.log({err, stderr, stdout}) })
-      return child.kill()
+      await exec(`kill -p ${child.pid}`, (err, stdout, stderr) => { console.log({err, stderr, stdout}) })
+      await child.kill()
     }
 
     const { stdout, stderr, child } = await run('correct_with_assets', null, steps);
