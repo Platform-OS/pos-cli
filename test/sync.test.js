@@ -66,11 +66,11 @@ properties:
 
     const steps = async (child) => {
       await exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
-      await sleep(2000); //wait for syncing the file
+      await sleep(stepTimeout); //wait for syncing the file
       await exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
-      await sleep(2000); //wait for syncing the file
+      await sleep(stepTimeout); //wait for syncing the file
       await exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
-      await sleep(6000); //wait for deleting the file
+      await sleep(stepTimeout); //wait for deleting the file
       kill(child);
     }
     const { stderr, stdout } = await run('correct_with_assets', null, steps);
