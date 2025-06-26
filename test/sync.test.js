@@ -29,20 +29,25 @@ const run = (fixtureName, options = '', steps) => {
         stdio: 'pipe',
       });
 
+      console.log(child);
+
       let stdout = '';
       let stderr = '';
 
       child.stdout.on('data', data => {
+        console.log(data);
         stdout += data.toString();
       });
 
       child.stderr.on('data', data => {
+        console.log(data);
         stderr += data.toString();
       });
 
       // child.on('error', reject);
 
       child.on('error', (code) => {
+        console.log(code);
         child.stdout?.removeAllListeners();
         child.stderr?.removeAllListeners();
 
@@ -50,6 +55,7 @@ const run = (fixtureName, options = '', steps) => {
       });
 
       child.on('close', (code) => {
+        console.log(code);
         child.stdout?.removeAllListeners();
         child.stderr?.removeAllListeners();
 
@@ -57,7 +63,7 @@ const run = (fixtureName, options = '', steps) => {
       });
 
       // Run additional steps while child is alive
-      steps(child);
+      await steps(child);
     } catch (e) {
       console.log(e);
       return reject(e)
