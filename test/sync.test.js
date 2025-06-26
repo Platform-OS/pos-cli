@@ -5,7 +5,7 @@ const cliPath = require('./utils/cliPath');
 const path = require('path');
 const fs = require('fs').promises;
 
-const stepTimeout = 6000;
+const stepTimeout = 3000;
 
 require('dotenv').config();
 
@@ -21,53 +21,43 @@ const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name)
 const run = (fixtureName, options = '', steps) => {
   const cwdPath = path.join(process.cwd(), 'test', 'fixtures', 'deploy', fixtureName)
   return new Promise((resolve, reject) => {
-    try {
-      const child = spawn(cliPath, ['sync', options], {
-        cwd: cwdPath,
-        env: process.env,
-        shell: true,
-        stdio: 'pipe',
-      });
+    const child = spawn(cliPath, ['sync', options], {
+      cwd: cwdPath,
+      env: process.env,
+      shell: true,
+      //#stdio: 'pipe',
+    });
 
-      console.log(child);
+    let stdout = '';
+    let stderr = '';
 
-      let stdout = '';
-      let stderr = '';
+    child.stdout.on('data', data => {
+      console.log(data.toString());
+      stdout += data.toString();
+    });
 
-      child.stdout.on('data', data => {
-        console.log(data);
-        stdout += data.toString();
-      });
+    child.stderr.on('data', data => {
+      console.log(data.toString());
+      stderr += data.toString();
+    });
 
-      child.stderr.on('data', data => {
-        console.log(data);
-        stderr += data.toString();
-      });
+    // child.on('error', reject);
 
-      // child.on('error', reject);
+    child.on('error', (code) => {
+      child.stdout?.removeAllListeners();
+      child.stderr?.removeAllListeners();
 
-      child.on('error', (code) => {
-        console.log(code);
-        child.stdout?.removeAllListeners();
-        child.stderr?.removeAllListeners();
+      resolve({ stdout, stderr, code, child });
+    });
 
-        resolve({ stdout, stderr, code });
-      });
+    child.on('close', (code) => {
+      child.stdout?.removeAllListeners();
+      child.stderr?.removeAllListeners();
 
-      child.on('close', (code) => {
-        console.log(code);
-        child.stdout?.removeAllListeners();
-        child.stderr?.removeAllListeners();
+      resolve({ stdout, stderr, code, child });
+    });
 
-        resolve({ stdout, stderr, code });
-      });
-
-      // Run additional steps while child is alive
-      return steps(child);
-    } catch (e) {
-      console.log(e);
-      return reject(e)
-    }
+    steps(child);
   });
 };
 
@@ -81,16 +71,15 @@ describe('Happy path', () => {
     const steps = async (child) => {
       await sleep(stepTimeout); //wait for sync to start
       await fs.appendFile(path.join(cwd('correct_with_assets'), 'app/assets/bar.js'), 'x');
-      // await exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for syncing the file
-
-      child.kill();
+      await sleep(stepTimeout); //wait for sync to start
+      child.kill()
     }
 
-    const { stdout, stderr } = await run('correct_with_assets', null, steps);
+    const { stdout, stderr, child } = await run('correct_with_assets', null, steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
+    // child.kill();
   });
 
   // test('sync with direct assets upload', async () => {
