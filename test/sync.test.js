@@ -73,6 +73,9 @@ describe('Happy path', () => {
       await fs.appendFile(path.join(cwd('correct_with_assets'), 'app/assets/bar.js'), 'x');
       await sleep(stepTimeout); //wait for sync to start
       child.kill()
+      console.log(child.pid);
+      console.log(child.killed)
+      console.log(child);
     }
 
     const { stdout, stderr, child } = await run('correct_with_assets', null, steps);
