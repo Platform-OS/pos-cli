@@ -74,12 +74,9 @@ describe('Happy path', () => {
       await sleep(stepTimeout); //wait for sync to start
       await fs.appendFile(path.join(cwd('correct_with_assets'), 'app/assets/bar.js'), 'x');
       await sleep(stepTimeout); //wait for sync to start
-      await sleep(1000); //wait for sync to start
-      console.log(child.pid);
-      await sleep(1000); //wait for sync to start
 
       console.log("before killing");
-      await exec(`kill -9 ${child.pid}`, (err, stdout, stderr) => { console.log({err, stderr, stdout}) })
+      await child.stdin.pause();
       await child.kill()
     }
 
