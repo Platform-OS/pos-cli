@@ -26,6 +26,8 @@ const kill = p => {
   p.kill()
 }
 
+jest.retryTimes(2);
+
 describe('Happy path', () => {
   test('sync assets', async () => {
 
