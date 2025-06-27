@@ -4,7 +4,7 @@ const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
 const path = require('path');
 
-const stepTimeout = 2000;
+const stepTimeout = 3500;
 
 require('dotenv').config();
 
