@@ -88,7 +88,7 @@ aside {
   position: relative;
   overflow: hidden;
   display: flex;
-
+  background-color: var(--color-page);
   border-inline-start: 1px solid var(--color-frame);
 }
 

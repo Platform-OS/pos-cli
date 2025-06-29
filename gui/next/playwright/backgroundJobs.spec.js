@@ -10,17 +10,18 @@ test('see home screen', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Background Jobs', exact: true}).first().click();
 
-  await expect(page).toHaveTitle('Jobs: qa-poscli-gui-ci.staging.oregon.platform-os.com/');
+  await expect(page).toHaveTitle(`Jobs: ${posInstance.MPKIT_URL.replace('https://', '')}`);
 });
 
 
 test('viewing scheduled background jobs', async ({ page }) => {
   await page.goto(posInstance.MPKIT_URL + 'background_job');
   await expect(page.getByText('background job scheduled')).toBeVisible();
+  await page.waitForTimeout(1000);
 
   await page.goto(url);
 
-  await expect(page.getByRole('cell', { name: 'scheduled background job' }).first()).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('cell', { name: 'scheduled background job' }).first()).toBeVisible({ timeout: 15000 });
   await expect(page.getByRole('cell', { name: 'high' }).first()).toBeVisible();
   await expect(page.getByRole('cell', { name: 'in 10 minutes' }).first()).toBeVisible();
 });
@@ -29,6 +30,7 @@ test('viewing scheduled background jobs', async ({ page }) => {
 test('viewing background job details', async ({ page }) => {
   await page.goto(posInstance.MPKIT_URL + 'background_job');
   await expect(page.getByText('background job scheduled')).toBeVisible();
+  await page.waitForTimeout(1000);
 
   await page.goto(url);
 
@@ -45,6 +47,7 @@ test('viewing background job details', async ({ page }) => {
 test('deleting scheduled background job', async ({ page }) => {
   await page.goto(posInstance.MPKIT_URL + 'background_job_to_delete');
   await expect(page.getByText('background job scheduled')).toBeVisible();
+  await page.waitForTimeout(1000);
 
   page.on('dialog', async dialog => {
     expect(dialog.message()).toEqual('Are you sure you want to delete this background job?');
@@ -52,12 +55,11 @@ test('deleting scheduled background job', async ({ page }) => {
   });
 
   await page.goto(url);
-
-  await expect(page.locator('tr:has-text("background job to delete")').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('tr:has-text("background job to delete")').first()).toBeVisible({ timeout: 15000 });
 
   for(const job of await page.locator('tr:has-text("background job to delete")').all()){
     await job.getByRole('button', { name: 'More options' }).click();
     await job.getByRole('button', { name: 'Delete background job' }).click();
-    await expect(job).toBeHidden();
+    await expect(job).toBeHidden(20000);
   }
 });

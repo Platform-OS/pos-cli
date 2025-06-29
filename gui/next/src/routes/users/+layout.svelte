@@ -3,12 +3,14 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { tick } from 'svelte';
 import { goto } from '$app/navigation';
 import { state } from '$lib/state.js';
 import { quintOut } from 'svelte/easing';
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
+import ContextMenu from '$lib/users/ContextMenu.svelte';
+import CreateUser from '$lib/users/Create.svelte';
+import { tick } from 'svelte';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Number from '$lib/ui/forms/Number.svelte';
@@ -20,6 +22,8 @@ import Number from '$lib/ui/forms/Number.svelte';
 let form;
 // list of users (array)
 let items = [];
+// list of custom user schema properties (array) or null
+let userProperties = null;
 // default filters (object)
 let defaultFilters = {
   page: 1,
@@ -35,16 +39,25 @@ let filters = {
 
   ...Object.fromEntries($page.url.searchParams)
 };
+$state.user = undefined;
 
+let contextMenu = {
+  // item id for which the context menu is opened for
+  id: null
+};
 
 
 // purpose:   load data each time query params change
 // ------------------------------------------------------------------------
-$: user.get(Object.fromEntries($page.url.searchParams)).then(data => {
-  items = data.results;
-  filters.totalPages = data.total_pages;
-});
+$: reloadUsers();
 
+const reloadUsers = function() {
+  const params = Object.fromEntries($page.url.searchParams);
+  user.get(params).then(data => {
+    items = data.results;
+    filters.totalPages = data.total_pages;
+  });
+}
 
 // transition:    zooms from nothing to full size
 // options: 	delay (int), duration (int)
@@ -63,6 +76,38 @@ const appear = function(node, {
   }
 };
 
+const showCreateUserPopup = function(userToEdit = null) {
+  if (userProperties === null) {
+    user.getCustomProperties().then(properties => {
+      userProperties = properties;
+      $state.user = userToEdit;
+    }).catch(() => {
+      state.notification.create('error', 'Could not load table properties. Please try again later.');
+    });
+  }
+  else {
+    $state.user = userToEdit;
+  }
+}
+
+const clearFilters = async function() {
+  filters = structuredClone(defaultFilters);
+  await tick();
+  form.requestSubmit();
+}
+
+const submitForm = async function(event) {
+  event.preventDefault();
+  const currentUrlParams = $page.url.searchParams;
+  const params = new URLSearchParams(new FormData(event.target));
+  if (currentUrlParams.get('value') !== params.get('value')) {
+    params.set('page', 1);
+    filters.page = 1;
+  }
+  await goto(document.location.pathname + '?' + params.toString());
+  await tick();
+  await reloadUsers();
+}
 </script>
 
 
@@ -82,16 +127,10 @@ const appear = function(node, {
   .container {
     min-height: 0;
     max-width: 100vw;
+    overflow-y: auto;
     display: grid;
     grid-template-rows: min-content 1fr;
   }
-  
-  .content {
-    height: 100%;
-    min-height: 0;
-    overflow: auto;
-  }
-  
   
   /* filters */
   .filters {
@@ -155,6 +194,10 @@ const appear = function(node, {
     display: flex;
     align-items: center;
     gap: .5em;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    justify-content: space-between;
   
     border-block-start: 1px solid var(--color-frame);
     background-color: rgba(var(--color-rgb-background), .8);
@@ -162,15 +205,10 @@ const appear = function(node, {
     -webkit-backdrop-filter: blur(17px);
   }
   
-    .pagination .info {
-      cursor: help;
-    }
-  
-  
   /* content table */
   table {
     min-width: 100%;
-  
+    margin-bottom: 70px;
     line-height: 1.27em;
   }
   
@@ -184,30 +222,26 @@ const appear = function(node, {
     }
   
     th,
-    td > a {
+    td > a, td > span {
       padding: var(--space-table) calc(var(--space-navigation) * 1.5);
     }
   
     th:first-child,
-    td:first-child > a {
+    td:first-child > a, td:first-child > span {
       padding-inline-start: var(--space-navigation);
     }
   
     th:last-child,
-    td:last-child > a {
+    td:last-child > a, td:last-child > span {
       padding-inline-end: var(--space-navigation);
     }
   
-    td > a {
+    td > a, td > span {
       display: block;
     }
   
     tr:last-child td {
       border: 0;
-    }
-  
-    .highlight td {
-      background-color: var(--color-highlight);
     }
   
     tr {
@@ -243,12 +277,33 @@ const appear = function(node, {
     }
 
     .table-id {
-      width: 1%;
-
-      text-align: end;
       font-variant-numeric: tabular-nums;
+      width: 150px;
     }
-  
+
+    .menu {
+      position: relative;
+      width: 30px;
+    }
+
+    tr .inner-menu {
+      background-color: transparent;
+      opacity: 0;
+      transition: opacity .1s linear;
+    }
+
+    tr:hover .inner-menu {
+      opacity: .5;
+    }
+
+    .menu:hover .inner-menu, .context .menu .inner-menu {
+      opacity: 1;
+    }
+
+    .menu button.active {
+      border-end-start-radius: 0;
+      border-end-end-radius: 0;
+    }
   </style>
 
 
@@ -267,10 +322,7 @@ const appear = function(node, {
       action=""
       bind:this={form}
       id="filters"
-      on:submit={
-        // reset page number when changing filters except when directly changing a page
-        async event => { if(event.submitter?.dataset.action !== 'numberIncrease'){ event.preventDefault(); filters.page = 1; await tick(); goto(document.location.pathname + '?' + (new URLSearchParams(new FormData(event.target)).toString())); } }
-      }
+      on:submit={event => submitForm(event, false)}
     >
       <label for="filters_attribute">Filter by</label>
       <fieldset class="search">
@@ -280,7 +332,7 @@ const appear = function(node, {
         </select>
         <input type="text" name="value" bind:value={filters.value}>
         {#if filters.value}
-          <button type="button" class="clear" transition:appear on:click={() => { filters = {...defaultFilters}; form.requestSubmit(); }}>
+          <button type="button" class="clear" transition:appear on:click={clearFilters}>
             <span class="label">Clear filters</span>
             <Icon icon="x" size=14 />
           </button>
@@ -297,6 +349,7 @@ const appear = function(node, {
     <table>
       <thead>
         <tr>
+          <th class="menu"></th>
           <th class="table-id">ID</th>
           <th>Email</th>
         </tr>
@@ -306,7 +359,29 @@ const appear = function(node, {
           {#each items as user}
             <tr
               class:active={$page.params.id == user.id}
+              class:context={contextMenu.id === user.id} 
             >
+            <td>
+              <span>
+                <div class="menu">
+                  <div class="inner-menu">
+                    <div class="combo">
+                      <button class="button compact more" class:active={contextMenu.id === user.id} on:click={() => contextMenu.id = user.id}>
+                        <span class="label">More options</span>
+                        <Icon icon="navigationMenuVertical" size="16" />
+                      </button>
+                      <button class="button compact edit" title="Edit user" on:click={() => { showCreateUserPopup(user) }}>
+                        <span class="label">Edit user</span>
+                        <Icon icon="pencil" size="16" />
+                      </button>
+                    </div>
+                    {#if contextMenu.id === user.id}
+                      <ContextMenu record={user} on:reload={() => reloadUsers() } on:close={() => contextMenu.id = null} />
+                    {/if}
+                  </div>
+                </div>
+              </span>
+            </td>
               <td class="table-id">
                 <a href="/users/{user.id}?{$page.url.searchParams.toString()}">
                   {user.id}
@@ -325,22 +400,28 @@ const appear = function(node, {
   </article>
 
   <nav class="pagination">
-    <label for="page">
-      Page:
-    </label>
-    <Number
-      form="filters"
-      name="page"
-      bind:value={filters.page}
-      min={1}
-      max={filters.totalPages}
-      step={1}
-      decreaseLabel="Previous page"
-      increaseLabel="Next page"
-      style="navigation"
-      on:input={event => { form.requestSubmit(event.detail.submitter); }}
-    />
-    of {filters.totalPages}
+    <div>
+      <label for="page">
+        Page:
+      </label>
+      <Number
+        form="filters"
+        name="page"
+        bind:value={filters.page}
+        min={1}
+        max={filters.totalPages}
+        step={1}
+        decreaseLabel="Previous page"
+        increaseLabel="Next page"
+        style="navigation"
+        on:input={event => { form.requestSubmit(event.detail.submitter); }}
+      />
+      of {filters.totalPages}
+    </div>
+    <button class="button" title="Create user" on:click|preventDefault={ () => showCreateUserPopup() }>
+      <Icon icon="plus" />
+      <span class="label">Create a new user</span>
+    </button>
   </nav>
 
 </section>
@@ -348,5 +429,10 @@ const appear = function(node, {
 {#if $page.params.id}
   <slot></slot>
 {/if}
+
+{#if $state.user !== undefined}
+<CreateUser userProperties={userProperties} userToEdit={$state.user} on:success={() => reloadUsers() } />
+{/if}
+
 
 </div>
