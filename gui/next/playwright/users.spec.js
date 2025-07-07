@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { posInstance } from './helpers/posInstance.js';
 
 
 const url = './users';
@@ -9,7 +10,7 @@ test('see home screen', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Users', exact: true}).first().click();
 
-  await expect(page).toHaveTitle('Users: qa-poscli-gui-ci.staging.oregon.platform-os.com/');
+  await expect(page).toHaveTitle(`Users: ${posInstance.MPKIT_URL.replace('https://', '')}`);
 });
 
 
@@ -53,4 +54,46 @@ test('filtering users by id', async ({ page }) => {
 
   await expect(page.getByRole('cell', { name: 'user2@example.com' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'user1@example.com' })).toBeHidden();
+});
+
+test('adding a new user successfully', async ({ page }) => {
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Create a new user' }).click();
+
+  await page.getByLabel('Email').fill('testnew@test.test');
+  await page.getByLabel('Password').fill('testpassword');
+
+  await page.getByRole('button', { name: 'Create user' }).click();
+
+  await expect(page.getByRole('cell', { name: 'testnew@test.test'})).toBeVisible();
+});
+
+
+test('editing an existing user', async ({ page }) => {
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Edit user' }).nth(1).click();
+  await page.getByLabel('Email').fill('testedit2@test.test');
+  const dialog = page.locator('dialog');
+  await dialog.getByRole('button', { name: 'Edit user' }).first().click();
+
+  await expect(page.getByRole('cell', { name: 'testedit@test.test' })).toBeHidden(20000);
+  await expect(page.getByRole('cell', { name: 'testedit2@test.test' })).toBeVisible();
+});
+
+
+test('deleting an existing user', async ({ page }) => {
+  page.on('dialog', async dialog => {
+    expect(dialog.message()).toEqual('Are you sure you want to delete this user?');
+    await dialog.accept();
+  });
+
+  await page.goto(url);
+
+  const user = page.getByRole('cell', { name: 'testdelete@test.test' });
+  await expect(user).toBeVisible();
+  const userRow = user.locator("..");
+  await userRow.getByRole('button', { name: 'More options' }).first().click();
+  await userRow.getByRole('button', { name: 'Delete user' }).click();
+
+  await expect(page.getByRole('cell', { name: 'testdelete@test.test' })).toBeHidden();
 });
