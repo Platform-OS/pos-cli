@@ -88,10 +88,12 @@ test('deleting an existing user', async ({ page }) => {
   });
 
   await page.goto(url);
-  await expect(page.getByRole('cell', { name: 'testdelete@test.test' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'More options' }).first().click();
-  await page.getByRole('button', { name: 'Delete user' }).click();
+  const user = page.getByRole('cell', { name: 'testdelete@test.test' });
+  await expect().toBeVisible(user);
+  const userRow = user.locator("..");
+  await userRow.getByRole('button', { name: 'More options' }).first().click();
+  await userRow.getByRole('button', { name: 'Delete user' }).click();
 
   await expect(page.getByRole('cell', { name: 'testdelete@test.test' })).toBeHidden();
 });
