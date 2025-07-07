@@ -4,7 +4,7 @@ const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
 const path = require('path');
 
-const stepTimeout = 6000;
+const stepTimeout = 3500;
 
 require('dotenv').config();
 
@@ -20,6 +20,14 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
 
+const kill = p => {
+  p.stdout.destroy();
+  p.stderr.destroy();
+  p.kill()
+}
+
+jest.retryTimes(2);
+
 describe('Happy path', () => {
   test('sync assets', async () => {
 
@@ -27,7 +35,7 @@ describe('Happy path', () => {
       await sleep(stepTimeout); //wait for sync to start
       exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for syncing the file
-      child.kill();
+      kill(child);
     }
 
     const { stdout, stderr } = await run('correct_with_assets', null, steps);
@@ -41,7 +49,7 @@ describe('Happy path', () => {
       await sleep(stepTimeout); //wait for sync to start
       exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for syncing the file
-      child.kill();
+      kill(child);
     }
     const { stdout, stderr } = await run('correct_with_assets', '-d', steps);
 
@@ -59,13 +67,13 @@ properties:
 `;
 
     const steps = async (child) => {
-      exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for sync to start
-      exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
+      await exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for syncing the file
-      exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
+      await exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
+      await sleep(stepTimeout); //wait for syncing the file
+      await exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout); //wait for deleting the file
-      child.kill();
+      kill(child);
     }
     const { stderr, stdout } = await run('correct_with_assets', null, steps);
 

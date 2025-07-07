@@ -1,0 +1,38 @@
+name: unit tests
+
+on:
+  push:
+    branches: ['master']
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      max-parallel: 1
+      matrix:
+        version: ['18', '20', '20.11']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.version }}
+
+      - name: Test
+        env:
+          MPKIT_EMAIL: ${{ secrets.TEST_MPKIT_EMAIL }}
+          MPKIT_TOKEN: ${{ secrets.TEST_MPKIT_TOKEN }}
+          MPKIT_URL: ${{ secrets.TEST_MPKIT_URL }}
+          POS_PORTAL_PASSWORD:  ${{secrets.POS_PORTAL_PASSWORD}}
+          CI: true
+        shell: sh
+        run: |
+          npm ci
+          npm test
+          # npx jest test/sync.test.js --detectOpenHandles --runInBand #--testPathIgnorePatterns sync.test.js
