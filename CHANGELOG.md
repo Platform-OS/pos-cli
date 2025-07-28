@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.5.0
+
+* Feature: (GUI) Ability to add, edit and remove users
+
 ## 5.4.1
 
 * Improvement: `pos-cli modules download <module>` removes the modules/<module> before unpacking the new version to automatically handle scenario when a file is being removed from the module in a new version
