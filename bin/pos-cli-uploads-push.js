@@ -18,7 +18,7 @@ const initializeEsmModules = async () => {
   return true;
 }
 
-const uploadZip = async (directory, gateway) => {
+const uploadZip = async (filepath, gateway) => {
 
   await initializeEsmModules();
   const spinner = ora({ text: 'Sending file', stream: process.stdout });
@@ -26,10 +26,10 @@ const uploadZip = async (directory, gateway) => {
 
   try {
     const instanceId = (await gateway.getInstance()).id;
-    const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/data.property_upload_import.zip`;
+    const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/data.public_property_upload_import.zip`;
     logger.Debug(propertyUploadsDirectory);
-    const { uploadUrl } = await presignUrl(propertyUploadsDirectory, directory);
-    await uploadFile(directory, uploadUrl);
+    const { uploadUrl } = await presignUrl(propertyUploadsDirectory, filepath);
+    await uploadFile(filepath, uploadUrl);
 
     spinner.stopAndPersist().succeed('Upload done.');
   } catch (error) {

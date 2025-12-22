@@ -1,6 +1,6 @@
 {
   "aggs": {
-    "histogram": "SELECT lb_status_code, target_status_code, http_request_path as path, count(target_status_code) as count, avg(target_processing_time) as avg_target_processing_time FROM query GROUP BY lb_status_code, target_status_code, path ORDER BY avg_target_processing_time DESC limit 20"
+    "histogram": "SELECT lb_status_code, target_status_code, http_request_path as path, count(target_status_code) as count, approx_percentile_cont(target_processing_time, 0.5) as avg_target_processing_time FROM query GROUP BY lb_status_code, target_status_code, path ORDER BY avg_target_processing_time DESC limit 20"
   },
   "query": {
     "sql": "select * from requests where target_processing_time > 1"

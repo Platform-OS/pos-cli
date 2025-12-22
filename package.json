@@ -53,6 +53,7 @@
     "open": "^10.1.0",
     "ora": "^8.0.1",
     "prompts": "^2.4.2",
+    "lodash.isequal": "^4.5.0",
     "request": "^2.88.2",
     "request-promise": "^4.2.6",
     "semver": "^7.3.7",
@@ -79,7 +80,8 @@
     "pos-cli-logsv2-search": "bin/pos-cli-logsv2-search.js",
     "pos-cli-migrations": "bin/pos-cli-migrations.js",
     "pos-cli-modules": "bin/pos-cli-modules.js",
-    "pos-cli-sync": "bin/pos-cli-sync.js"
+    "pos-cli-sync": "bin/pos-cli-sync.js",
+    "pos-cli-fetch-logs": "bin/pos-fetch-logs.js"
   },
   "repository": "platform-OS/pos-cli",
   "license": "CC BY 3.0",

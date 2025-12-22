@@ -34,4 +34,5 @@ program
   .command('pull', 'export app data to a zip file')
   .command('sync <environment>', 'update environment on file change').alias('s')
   .command('uploads', 'manage uploads files')
+  .command('fetch-logs', 'fetch logs')
   .parse(process.argv);
