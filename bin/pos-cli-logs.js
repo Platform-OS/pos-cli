@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 const EventEmitter = require('events'),
-  path = require('path'),
-  url = require('url');
+  path = require('path');
 
 const { program } = require('commander'),
   notifier = require('node-notifier');
@@ -103,7 +102,7 @@ program
         if (!program.quiet && data) {
           let parts = [];
           if (data.url) {
-            requestUrl = url.parse(`https://${data.url}`);
+            requestUrl = new URL(`https://${data.url}`);
             let line = `path: ${requestUrl.pathname}`;
             if (requestUrl.search) line += `${requestUrl.search}`;
             parts.push(line);

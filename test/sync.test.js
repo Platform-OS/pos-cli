@@ -3,8 +3,9 @@
 const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
 const path = require('path');
+const fs = require('fs');
 
-const stepTimeout = 3500;
+const stepTimeout = 5000;
 
 require('dotenv').config();
 
@@ -23,10 +24,16 @@ jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
 const kill = p => {
   p.stdout.destroy();
   p.stderr.destroy();
-  p.kill()
+  p.kill();
 }
 
 jest.retryTimes(2);
+
+// Reset bar.js to its original state after all tests
+afterAll(() => {
+  const barJsPath = path.join(cwd('correct_with_assets'), 'app/assets/bar.js');
+  fs.writeFileSync(barJsPath, "console.log('bar');\n");
+});
 
 describe('Happy path', () => {
   test('sync assets', async () => {

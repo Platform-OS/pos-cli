@@ -135,6 +135,7 @@ describe('Failed download', () => {
   });
   test('Unescaped characters in request path', async () => {
     const { stderr } = await run('deploy/modules_test', 'ąę');
-    expect(stderr).toMatch('[ERR_UNESCAPED_CHARACTERS]: Request path contains unescaped characters');
+    // axios automatically encodes URLs, so we get a 404 instead of an encoding error
+    expect(stderr).toMatch('404 not found');
   });
 });

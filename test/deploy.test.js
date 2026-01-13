@@ -105,7 +105,7 @@ describe('Server errors', () => {
   test('Error in form', async () => {
     const { stderr } = await run('incorrect_form');
     expect(stderr).toMatch(
-      'Unknown properties: hello. Available properties are: api_call_notifications, async_callback_actions, authorization_policies, body, callback_actions, default_payload, email_notifications, fields, flash_alert, flash_notice, live_reindex, metadata, name, redirect_to, request_allowed, resource, resource_owner, response_headers, return_to, sms_notifications, spam_protection.'
+      'Unknown properties in `form_configurations/hello.liquid`: hello. Available properties are: api_call_notifications, async_callback_actions, authorization_policies, body, callback_actions, default_payload, email_notifications, fields, flash_alert, flash_notice, live_reindex, metadata, name, redirect_to, request_allowed, resource, resource_owner, response_headers, return_to, sms_notifications, spam_protection.'
     );
   });
 
@@ -123,7 +123,7 @@ describe('Server errors', () => {
 
     expect(code).toEqual(1);
     expect(stderr).toMatch(
-      'Deploy failed. RequestError: Error: getaddrinfo ENOTFOUND incorrecturl123xyz.com'
+      'Deploy failed. RequestError: getaddrinfo ENOTFOUND incorrecturl123xyz.com'
     );
   });
 });
