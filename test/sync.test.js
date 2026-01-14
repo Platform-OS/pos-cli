@@ -3,6 +3,7 @@
 const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
 const path = require('path');
+const fs = require('fs');
 
 const stepTimeout = 3500;
 
@@ -27,6 +28,15 @@ const kill = p => {
 }
 
 jest.retryTimes(2);
+
+// Store original content to restore after tests
+const barJsPath = path.join(cwd('correct_with_assets'), 'app/assets/bar.js');
+const originalBarJsContent = fs.readFileSync(barJsPath, 'utf8');
+
+afterAll(() => {
+  // Restore bar.js to original content after all tests
+  fs.writeFileSync(barJsPath, originalBarJsContent);
+});
 
 describe('Happy path', () => {
   test('sync assets', async () => {
