@@ -50,6 +50,28 @@ describe('exec liquid CLI', () => {
     expect(code).toEqual(1);
     expect(stderr).toMatch("error: missing required argument 'code'");
   });
+
+  test('cancels execution on production environment when user says no', async () => {
+    const { code, stdout, stderr } = await exec(`echo "n" | ${cliPath} exec liquid production "{{ 'hello' | upcase }}"`, { env });
+
+    expect(code).toEqual(0);
+    expect(stdout).toMatch('Execution cancelled.');
+  });
+
+  test('proceeds with execution on production environment when user confirms', async () => {
+    const { code, stdout, stderr } = await exec(`echo "y" | ${cliPath} exec liquid production "{{ 'hello' | upcase }}"`, { env });
+
+    // This will fail because the mock API isn't set up, but we want to check it doesn't cancel
+    expect(stdout).not.toMatch('Execution cancelled.');
+    expect(stderr).not.toMatch('Execution cancelled.');
+  });
+
+  test('does not prompt for non-production environments', async () => {
+    const { code, stdout, stderr } = await exec(`${cliPath} exec liquid staging "{{ 'hello' | upcase }}"`, { env });
+
+    expect(stdout).not.toMatch('WARNING: You are executing liquid code on a production environment');
+    expect(stdout).not.toMatch('Execution cancelled.');
+  });
 });
 
 // Integration test - requires real platformOS instance
