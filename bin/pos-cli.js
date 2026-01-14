@@ -24,6 +24,7 @@ program
   .command('data', 'export, import or clean data on instance')
   .command('deploy <environment>', 'deploy code to environment').alias('d')
   .command('env', 'manage environments')
+  .command('exec', 'execute code on instance')
   .command('gui', 'gui for content editor, graphql, logs')
   .command('generate', 'generates files')
   .command('init', 'initialize directory structure')
