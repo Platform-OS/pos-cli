@@ -79,7 +79,9 @@
     "pos-cli-logsv2-search": "bin/pos-cli-logsv2-search.js",
     "pos-cli-migrations": "bin/pos-cli-migrations.js",
     "pos-cli-modules": "bin/pos-cli-modules.js",
-    "pos-cli-sync": "bin/pos-cli-sync.js"
+    "pos-cli-sync": "bin/pos-cli-sync.js",
+    "pos-cli-test": "bin/pos-cli-test.js",
+    "pos-cli-test-run": "bin/pos-cli-test-run.js"
   },
   "repository": "platform-OS/pos-cli",
   "license": "CC BY 3.0",

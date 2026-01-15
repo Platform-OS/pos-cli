@@ -1,0 +1,66 @@
+{% comment %}
+  Required params:
+    collection: collection
+    current_page: integer
+  Optional params:
+    button_attrs: string
+    container_class: string
+{% endcomment %}
+{% liquid
+  assign container_class = container_class | default: "subtitle flex justify-center md:justify-end items-center mt-8 mx-auto md:mr-0 md:ms-auto"
+  assign button_attrs = button_attrs | default: '' | html_safe
+  assign current_page = collection.current_page | to_positive_integer: 1
+  assign page_name = page_name | default: 'page'
+%}
+
+{% if collection.has_previous_page or collection.has_next_page %}
+  <form>
+    <input type="hidden" name="authenticity_token" value="{{ context.authenticity_token }}">
+    <div class="{{ container_class }}" data-pagination>
+      {% if collection.has_previous_page %}
+        <button type="submit"
+                name="{{ page_name }}"
+                value="{{ current_page | minus: 1 }}"
+                {{ button_attrs }}
+                aria-label="Previous page"
+                class="p-4 text-interaction hover:text-interaction-hover"
+
+        >
+          <
+        </button>
+      {% endif %}
+
+      {% liquid
+        assign range_low = current_page | minus: 2 | at_least: 1
+        assign range_high = range_low | plus: 4 | at_most: collection.total_pages
+      %}
+      {% for page_num in (range_low..range_high) %}
+        {% if page_num == current_page %}
+          <span class="button button-secondary pointer-events-none mx-1 !subtitle">{{ page_num }}</span>
+        {% else %}
+          <button type="submit"
+                  name="{{ page_name }}"
+                  value="{{ page_num }}"
+                  {{ button_attrs }}
+                  class="p-4 text-interaction hover:text-interaction-hover"
+          >
+            {{ page_num }}
+          </button>
+        {% endif %}
+      {% endfor %}
+
+      {% if collection.has_next_page %}
+        <button type="submit"
+                name="{{ page_name }}"
+                value="{{ current_page | plus: 1 }}"
+                {{ button_attrs }}
+                class="p-4 text-interaction hover:text-interaction-hover"
+                aria-label="Next page"
+        >
+
+          >
+        </button>
+      {% endif %}
+    </div>
+  </form>
+{% endif %}

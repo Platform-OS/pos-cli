@@ -1,0 +1,10 @@
+{% liquid
+  hash_assign contract['total'] = contract['total'] | plus: 1
+
+  assign value = value | default: object[field_name]
+  unless value
+    function contract = 'modules/tests/helpers/register_error', contract: contract, field_name: field_name, key: 'modules/tests/should.be_true'
+  endunless
+
+  return contract
+%}

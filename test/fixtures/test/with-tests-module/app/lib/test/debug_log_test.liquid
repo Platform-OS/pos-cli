@@ -1,0 +1,11 @@
+{% liquid
+    assign var = '{"field": 1 }' | parse_json
+
+    # This debug log has a different type than the test_name, so it should be dimmed
+    log 'Debug: checking variable value', type: 'debug'
+
+    include 'modules/tests/assertions/equal', contract: contract, given: var.field, expected: 1, field_name: 'field'
+
+    # Another debug log with custom type
+    log 'Custom debug message from test', type: 'custom_debug'
+%}

@@ -1,0 +1,8 @@
+{% liquid
+  if id == blank
+    return null
+  endif
+
+  graphql r  = 'modules/tests/sent_mails/search', id: id, limit: 1
+  return r.mails.results.first
+%}

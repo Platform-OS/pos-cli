@@ -34,5 +34,6 @@ program
   .command('modules', 'manage modules')
   .command('pull', 'export app data to a zip file')
   .command('sync <environment>', 'update environment on file change').alias('s')
+  .command('test', 'run tests on instance')
   .command('uploads', 'manage uploads files')
   .parse(process.argv);

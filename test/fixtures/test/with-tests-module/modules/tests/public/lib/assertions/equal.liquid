@@ -1,0 +1,9 @@
+{% liquid
+  hash_assign contract['total'] = contract['total'] | plus: 1
+
+  if given != expected
+    assign msg = 'modules/tests/should.equal' | t: given: given, expected: expected
+    function contract = 'modules/tests/helpers/register_error', contract: contract, field_name: field_name, message: msg
+  endif
+  return contract
+%}
