@@ -1,0 +1,11 @@
+---
+layout: modules/tests/test
+---
+{% liquid
+  if context.environment == 'staging' or context.environment == 'development'
+    assign page = context.params.page | to_positive_integer: 1
+    function mails = 'modules/tests/queries/sent_mails/search', limit: 20, page: page
+
+    render 'modules/tests/sent_mails/list', mails: mails
+  endif
+%}

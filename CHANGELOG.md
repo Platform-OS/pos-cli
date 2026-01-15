@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* Feature: `pos-cli exec liquid` command to execute Liquid code directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
+* Feature: `pos-cli exec graphql` command to execute GraphQL queries directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
+* Feature: `pos-cli test run` command to run tests using the tests module
+
 ## 5.5.0
 
 * Feature: (GUI) Ability to add, edit and remove users

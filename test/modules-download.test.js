@@ -6,6 +6,8 @@ const fs = require('fs');
 const path = require('path');
 
 require('dotenv').config();
+const { requireRealCredentials } = require('./utils/realCredentials');
+requireRealCredentials();
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', name);
 
@@ -24,12 +26,7 @@ describe('Successful download', () => {
     const moduleJson = JSON.parse(fs.readFileSync(pathToModuleJson, 'utf8'));
     expect(moduleJson.version).toBe('0.0.3');
 
-    fs.rm(pathToDirectory, { recursive: true }, (err) => {
-      if(err){
-        console.error(err.message);
-        return;
-      }
-    });
+    await fs.promises.rm(pathToDirectory, { recursive: true });
   });
 
   test('clean up removed files', async () => {
@@ -61,12 +58,7 @@ describe('Successful download', () => {
     const moduleJson = JSON.parse(fs.readFileSync(pathToModuleJson, 'utf8'));
     expect(moduleJson.version).toBe('1.0.0');
 
-    fs.rm(pathToDirectory, { recursive: true }, (err) => {
-      if(err){
-        console.error(err.message);
-        return;
-      }
-    });
+    await fs.promises.rm(pathToDirectory, { recursive: true });
   });
 
   test('download the latest test module if no app/pos-modules.lock.json', async () => {
@@ -78,14 +70,8 @@ describe('Successful download', () => {
     expect(stderr).toContain('Warning: Can\'t find app/pos-modules.lock.json');
     expect(fs.existsSync(pathToModuleJson)).toBeTruthy();
 
-    fs.rm(pathToDirectory, { recursive: true }, (err) => {
-      if(err){
-        console.error(err.message);
-        return;
-      }
-    });
+    await fs.promises.rm(pathToDirectory, { recursive: true });
   });
-
 
   test('download user module with dependencies', async () => {
     const pathToUserModuleJson = `${cwd('deploy/modules_user')}/modules/user/template-values.json`;
@@ -115,12 +101,7 @@ describe('Successful download', () => {
     expect(stdout3).toContain('Downloading user@3.0.8');
     expect(stdout3).toContain('Downloading core@1.5.5');
 
-    fs.rm(pathToDirectory, { recursive: true }, (err) => {
-      if (err) {
-        console.error(err.message);
-        return;
-      }
-    });
+    await fs.promises.rm(pathToDirectory, { recursive: true });
   }, 20000);
 });
 

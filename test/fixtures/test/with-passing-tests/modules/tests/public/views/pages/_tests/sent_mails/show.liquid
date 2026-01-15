@@ -1,0 +1,11 @@
+---
+slug: _tests/sent_mails/:id
+layout: modules/tests/test
+---
+{% liquid
+  if context.environment == 'staging' or context.environment == 'development'
+    function mail = 'modules/tests/queries/sent_mails/find', id: context.params.id
+
+    render 'modules/tests/sent_mails/show', mail: mail
+  endif
+%}

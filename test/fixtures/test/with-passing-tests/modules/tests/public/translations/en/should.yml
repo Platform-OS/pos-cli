@@ -1,0 +1,16 @@
+en:
+  should:
+    be_false: should be false
+    be_valid: should be valid
+    equal: expected %{given} to equal %{expected}
+    equal_not_verbose: does not match
+    have_key: key should exist in "%{field_name}"
+    have_key_with_value: should have value "%{value}"
+    match: match
+    be_blank: should be blank
+    be_true: should be true
+    not:
+      be_empty: should not be empty
+      be_blank: should not be blank
+      be_valid: should not be valid
+      be_true: should not be true

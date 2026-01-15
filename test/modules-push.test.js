@@ -6,6 +6,8 @@ const fs = require('fs');
 const path = require('path');
 
 require('dotenv').config();
+const { requireRealCredentials } = require('./utils/realCredentials');
+requireRealCredentials();
 
 Object.assign(process.env, {
   DEBUG: true

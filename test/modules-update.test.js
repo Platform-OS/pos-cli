@@ -5,6 +5,8 @@ const cliPath = require('./utils/cliPath');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+const { requireRealCredentials } = require('./utils/realCredentials');
+requireRealCredentials();
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', name);
 const run = async (fixtureName, options) => await exec(`${cliPath} modules update ${options}`, { cwd: cwd(fixtureName), env: process.env });
