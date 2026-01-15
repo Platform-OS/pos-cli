@@ -444,6 +444,60 @@ If you need guidance or additional information about how to use a specific gener
 
     pos-cli generate modules/core/generators/command --generator-help
 
+### Executing Code
+
+#### Execute Liquid
+
+Execute Liquid code directly on your instance:
+
+    pos-cli exec liquid [environment] [code]
+
+Example:
+
+    pos-cli exec liquid staging "{{ 'hello' | upcase }}"
+
+You can also execute Liquid code from a file using the `-f` flag:
+
+    pos-cli exec liquid staging -f path/to/script.liquid
+
+#### Execute GraphQL
+
+Execute GraphQL queries directly on your instance:
+
+    pos-cli exec graphql [environment] [query]
+
+Example:
+
+    pos-cli exec graphql staging "{ users(per_page: 5) { results { id email } } }"
+
+You can also execute GraphQL from a file using the `-f` flag:
+
+    pos-cli exec graphql staging -f path/to/query.graphql
+
+**Note:** When executing on production environments (environment name contains "prod" or "production"), you will be prompted for confirmation before execution.
+
+### Running Tests
+
+To run tests on your instance, you need to have the [tests module](https://github.com/Platform-OS/pos-module-tests) installed.
+
+#### Run All Tests
+
+    pos-cli test run [environment]
+
+Example:
+
+    pos-cli test run staging
+
+This command runs all tests and streams the results in real-time, showing individual test outcomes and a summary at the end.
+
+#### Run a Single Test
+
+    pos-cli test run [environment] [test-name]
+
+Example:
+
+    pos-cli test run staging my_test
+
 ## Development
 
 The `pos-cli gui serve` command uses a distinct build process for the GraphiQL interface located in the `gui/editor/graphql` directory.

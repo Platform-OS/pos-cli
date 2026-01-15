@@ -1,0 +1,13 @@
+---
+layout: ''
+---
+{% liquid
+  if context.environment == 'staging' or context.environment == 'development'
+    assign test_name = 5 | random_string | prepend: "liquid_test_"
+    # platformos-check-disable ConvertIncludeToRender
+    include 'modules/tests/commands/run', format: 'js', test_name: test_name
+    # platformos-check-enable ConvertIncludeToRender
+  else
+    echo '{"success":false,"error":"Tests can only be run in staging or development environment"}'
+  endif
+%}

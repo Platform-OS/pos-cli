@@ -1,0 +1,18 @@
+<ul>
+  <a href="/_tests/run" class="button">Run</a>
+  <a href="/_tests/run_async" class="button">Run Async</a>
+</ul>
+<section class="table mt-5">
+  <header>
+    <div>Test</div>
+    <div></div>
+  </header>
+  <div class="table-content">
+  {% for test in tests %}
+    <ul>
+      {% assign test_name = test.path | split: 'test/' | last %}
+      <li>{{ test.path }}</li>
+      <li><a href="/_tests/run?name={{ test_name }}" class="button">Run</a></li>
+    </ul>
+  {% endfor %}
+</section>

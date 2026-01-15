@@ -1,0 +1,22 @@
+Liquid tests
+------------------------
+{% liquid
+  for contract in contracts
+    render 'modules/tests/tests/test_report_text', name: contract.test_path, contract: contract
+    assign total = total | plus: contract.total
+  endfor
+%}
+------------------------
+{% liquid
+  if total_errors > 0
+    assign result = 'Failed'
+  else
+    assign result = 'Success'
+  endif
+%}
+{{ result }}_{{ test_name | strip }}
+{% if total_errors > 0 %}
+  Total errors: {{ total_errors }}
+{% endif %}
+
+Assertions: {{ total }}. Failed: {{ total_errors }}. Time: {{ total_duration }}ms
