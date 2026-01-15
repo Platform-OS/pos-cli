@@ -89,6 +89,37 @@ describe('exec graphql CLI', () => {
     expect(stdout).not.toMatch('WARNING: You are executing GraphQL on a production environment');
     expect(stdout).not.toMatch('Execution cancelled.');
   });
+
+  test('accepts --file flag and reads content from file', async () => {
+    const fixturePath = require('path').resolve(__dirname, 'fixtures/test-graphql.graphql');
+    const { code, stdout, stderr } = await exec(`${cliPath} exec graphql staging --file "${fixturePath}"`, { env });
+
+    // Command will fail due to mock API but should not complain about missing graphql argument
+    expect(stderr).not.toMatch("error: missing required argument 'graphql'");
+  });
+
+  test('accepts -f shorthand flag and reads content from file', async () => {
+    const fixturePath = require('path').resolve(__dirname, 'fixtures/test-graphql.graphql');
+    const { code, stdout, stderr } = await exec(`${cliPath} exec graphql staging -f "${fixturePath}"`, { env });
+
+    // Command will fail due to mock API but should not complain about missing graphql argument
+    expect(stderr).not.toMatch("error: missing required argument 'graphql'");
+  });
+
+  test('shows error when file does not exist', async () => {
+    const { code, stderr } = await exec(`${cliPath} exec graphql staging --file "/nonexistent/path/to/file.graphql"`, { env });
+
+    expect(code).toEqual(1);
+    expect(stderr).toMatch('File not found');
+    expect(stderr).toMatch('/nonexistent/path/to/file.graphql');
+  });
+
+  test('requires either graphql argument or --file option', async () => {
+    const { code, stderr } = await exec(`${cliPath} exec graphql staging`, { env });
+
+    expect(code).toEqual(1);
+    expect(stderr).toMatch("error: missing required argument 'graphql'");
+  });
 });
 
 // Integration test - requires real platformOS instance
