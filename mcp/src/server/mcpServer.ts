@@ -42,6 +42,18 @@ export class McpServer {
   }
 
   private setupRoutes() {
+    // SSE Discovery endpoint (MCP SSE spec)
+    this.app.get('/', (req, res) => {
+      console.log('SSE discovery served');
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      });
+      res.write('event: endpoint\n');
+      res.write('data: ' + JSON.stringify({endpoint: '/sessions'}) + '\n\n');
+    });
+
     // Health check with ADMIN_API_KEY
     this.app.get('/health', (req, res) => {
       const apiKey = String(req.headers['x-api-key']) || String(req.query.apiKey);
