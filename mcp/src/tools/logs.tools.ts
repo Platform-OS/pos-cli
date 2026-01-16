@@ -14,17 +14,20 @@ export const platformosLogsFetchTool: Tool = {
     logs: z.array(z.union([z.string(), z.record(z.unknown())])),
     lastId: z.string().optional(),
   }),
-  async handler(input) {
+  handler: async function*(input) {
     const client = new PlatformOSClient();
-    // Note: logs is streaming, here timeout version
+    // Note: logs is streaming, here batch version yielding lines
     const gw = await client.getGateway(input.env);
     const json = { lastId: input.lastId };
     const result = await gw.logs(json);
     // Parse logs from result
-    return { logs: result.split('\n').filter((l: string) => l), lastId: '' }; // stub parse
+    const lines = result.split('\n').filter((l: string) => l);
+    for (let i = 0; i < Math.min(lines.length, input.limit ?? 100); i++) {
+      yield lines[i];
+    }
   },
 };
 
 export const logsTools: Tool[] = [
-  platformosLogsFetchTool,
+  platformosLogsFetchTool
 ];

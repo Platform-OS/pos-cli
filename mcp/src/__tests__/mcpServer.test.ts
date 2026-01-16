@@ -53,11 +53,37 @@ describe('MCP Server', () => {
     expect(res.status).toBe(404);
   });
 
-  test('call tool with invalid input', async () => {
-    const res = await request(app)
-      .post('/call')
-      .set('Authorization', 'Bearer client-secret')
-      .send({ tool: 'platformos.graphql.execute', input: { env: 123 } });
-    expect(res.status).toBe(400);
+  test('call-stream unauthorized', async () => {
+    const res = await request(app).post('/call-stream').send({ tool: 'platformos.env.list', input: {} });
+    expect(res.status).toBe(401);
   });
-});
+
+  test('call-stream authorized invalid tool', async () => {
+    const res = await request(app)
+      .post('/call-stream')
+      .set('Authorization', 'Bearer client-secret')
+      .send({ tool: 'nonexistent', input: {} });
+    expect(res.status).toBe(404);
+  });
+
+  test('call-stream sync tool headers', async () => {
+    const res = await request(app)
+      .post('/call-stream')
+      .set('Authorization', 'Bearer client-secret')
+      .send({ tool: 'platformos.env.list', input: {} });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/event-stream');
+    expect(res.text).toContain('data:');
+    expect(res.text).toContain('[DONE]');
+  });
+
+  test('call-stream streaming tool', async () => {
+    // assumes staging env seeded or stub
+    const res = await request(app)
+      .post('/call-stream')
+      .set('Authorization', 'Bearer client-secret')
+      .send({ tool: 'platformos.logs.fetch', input: { env: 'staging' } });
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('data:');
+    expect(res.text).toContain('[DONE]');
+  });

@@ -1,8 +1,12 @@
-import { config } from '../config';
+import express from 'express';
+
 import { FsStorage } from '../storage/fsStorage';
 import { AuthManager } from '../authManager';
-import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+
 import { allTools, type Tool } from '../tools';
+import { config } from '../config';
 
 export class McpServer {
   private storage: FsStorage;
@@ -15,6 +19,10 @@ export class McpServer {
     this.auth = new AuthManager(this.storage);
     this.tools = allTools;
     this.app = express();
+    this.app.use(helmet());
+    this.app.use(cors({
+      origin: '*',
+    }));
     this.app.use(express.json());
     this.setupRoutes();
   }
@@ -51,7 +59,7 @@ export class McpServer {
       }
     });
 
-    // MCP Tool call execution
+    // MCP Tool call execution (/call)
     this.app.post('/call', async (req, res) => {
       const token = String(req.headers.authorization?.replace('Bearer ', ''));
       const client = token ? this.auth.validateMcpClient(token) : null;
@@ -80,9 +88,76 @@ export class McpServer {
         res.status(400).json({ error: (error as Error).message });
       }
     });
+
+    // MCP Tool call stream SSE (/call-stream)
+    this.app.post('/call-stream', async (req, res) => {
+      const token = String(req.headers.authorization?.replace('Bearer ', ''));
+      const client = token ? this.auth.validateMcpClient(token) : null;
+      if (!client) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { tool: toolName, input } = req.body;
+      
+      const tool = this.tools.find(t => t.name === toolName);
+      if (!tool) {
+        return res.status(404).json({ error: `Tool '${toolName}' not found` });
+      }
+
+      try {
+        const validatedInput = tool.inputSchema.parse(input);
+
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        });
+        res.flushHeaders?.();
+
+        const rawResult = await tool.handler(validatedInput);
+
+        if (rawResult && typeof (rawResult as any)[Symbol.asyncIterator] === 'function') {
+          // streaming
+          (async () => {
+            try {
+              for await (const chunk of rawResult as any) {
+                if (res.writableEnded) break;
+                const part = { type: 'text', text: String(chunk) };
+                res.write(`data: ${JSON.stringify(part)}\n\n`);
+              }
+            } catch (streamError) {
+              console.error('Stream error:', streamError);
+            } finally {
+              if (!res.writableEnded) {
+                res.write('data: [DONE]\n\n');
+                res.end();
+              }
+            }
+          })();
+        } else {
+          // sync
+          const text = JSON.stringify(rawResult ?? null, null, 2);
+          res.write(`data: ${JSON.stringify({type: 'text', text})}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        }
+      } catch (error) {
+        console.error('Tool execution error:', error);
+        if (!res.headersSent) {
+          res.status(400).json({ error: (error as Error).message });
+        } else {
+          res.write(`data: ${JSON.stringify({type: 'error', text: (error as Error).message})}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        }
+      }
+    });
+
+
+
   }
 
-  async listen() {
+  public async listen() {
     return new Promise<void>((resolve) => {
       this.app.listen(config.adminPort, () => {
         console.log(`MCP Admin server running on http://localhost:${config.adminPort}`);
