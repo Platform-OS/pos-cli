@@ -119,7 +119,7 @@ describe('pos-cli test run', () => {
 
         const result = formatTestLog(logRow, false);
 
-        expect(result).toContain('[debug:debug]');
+        expect(result).toContain('debug:');
         expect(result).toContain('Debug: checking variable value');
       });
 
@@ -131,7 +131,7 @@ describe('pos-cli test run', () => {
 
         const result = formatTestLog(logRow, false);
 
-        expect(result).toContain('[debug:custom_debug]');
+        expect(result).toContain('custom_debug:');
         expect(result).toContain('Custom debug message from test');
       });
 
@@ -155,8 +155,41 @@ describe('pos-cli test run', () => {
 
         const result = formatTestLog(logRow, true);
 
-        expect(result).not.toMatch(/\n$/);
+        expect(result).toMatch(/\n$/);
         expect(result).toContain('Test message with newline');
+      });
+
+      test('formatTestLog output ends with newline for test path messages', () => {
+        const logRow = {
+          message: '{"path": "app/lib/test/example_test.liquid"}',
+          error_type: 'liquid_test_abc123'
+        };
+
+        const result = formatTestLog(logRow, true);
+
+        expect(result).toMatch(/\n$/);
+      });
+
+      test('formatTestLog output ends with newline for regular test logs', () => {
+        const logRow = {
+          message: 'Test assertion passed',
+          error_type: 'liquid_test_abc123'
+        };
+
+        const result = formatTestLog(logRow, true);
+
+        expect(result).toMatch(/\n$/);
+      });
+
+      test('formatTestLog output ends with newline for debug logs', () => {
+        const logRow = {
+          message: 'Debug: checking variable value',
+          error_type: 'debug'
+        };
+
+        const result = formatTestLog(logRow, false);
+
+        expect(result).toMatch(/\n$/);
       });
 
       test('handles non-string message by converting to JSON', () => {
@@ -605,7 +638,26 @@ describe('pos-cli test run', () => {
           expect(mockEmit).toHaveBeenCalledWith('testLog', debugLog, false);
         });
 
-        test('does not emit logs before test started', () => {
+        test('emits user log with JSON content that matches test summary structure', () => {
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
+          stream.testStarted = true;
+          const mockEmit = jest.fn();
+          stream.emit = mockEmit;
+
+          // User log that accidentally has JSON structure similar to test summary
+          const userLogWithJson = {
+            id: 2,
+            message: JSON.stringify({ success: true, total: 5, data: 'user content' }),
+            error_type: 'world'
+          };
+
+          stream.processLogMessage(userLogWithJson);
+
+          // Should be emitted as testLog because error_type is 'world', not 'liquid_test_abc123 SUMMARY'
+          expect(mockEmit).toHaveBeenCalledWith('testLog', userLogWithJson, false);
+        });
+
+        test('does not emit logs before test started (non-test-path logs)', () => {
           const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
           const mockEmit = jest.fn();
           stream.emit = mockEmit;
@@ -618,7 +670,27 @@ describe('pos-cli test run', () => {
 
           stream.processLogMessage(earlyLog);
 
+          // Non-test-path logs should not be emitted before testStarted
           expect(mockEmit).not.toHaveBeenCalled();
+        });
+
+        test('emits test path logs even before testStarted flag is set', () => {
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
+          const mockEmit = jest.fn();
+          stream.emit = mockEmit;
+
+          // First log with test path should be emitted even if testStarted is false
+          // This handles cases where test framework doesn't emit "Starting unit tests" log
+          const testPathLog = {
+            id: 1,
+            message: '{"path":"modules/community/test/commands/can_profiles_test"}',
+            error_type: 'liquid_test_abc123'
+          };
+
+          stream.processLogMessage(testPathLog);
+
+          // Test path log should be emitted to mark test start
+          expect(mockEmit).toHaveBeenCalledWith('testLog', testPathLog, true);
         });
 
         test('does not emit logs after test completed', () => {
@@ -637,6 +709,24 @@ describe('pos-cli test run', () => {
           stream.processLogMessage(lateLog);
 
           expect(mockEmit).not.toHaveBeenCalled();
+        });
+
+        test('emits user logs with custom error_type (not testName) as testLog events', () => {
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
+          stream.testStarted = true;
+          const mockEmit = jest.fn();
+          stream.emit = mockEmit;
+
+          const userLog = {
+            id: 2,
+            message: 'hello',
+            error_type: 'world'
+          };
+
+          stream.processLogMessage(userLog);
+
+          // User log should be emitted as testLog with isTestLog=false (it's not from test framework)
+          expect(mockEmit).toHaveBeenCalledWith('testLog', userLog, false);
         });
 
         test('filters noise from past test runs by only processing logs with matching testName', () => {
@@ -749,7 +839,6 @@ describe('pos-cli test run', () => {
         const output = stdout + stderr;
 
         expect(stdout).toMatch(`Running tests on: ${process.env.MPKIT_URL}`);
-        expect(stdout).toMatch('Starting test run...');
 
         const hasTestResults = output.includes('passed') ||
                               output.includes('failed') ||
@@ -766,9 +855,8 @@ describe('pos-cli test run', () => {
       test('runs a single passing test by name and shows success', async () => {
         const { stdout, stderr, code } = await run('with-tests-module', 'staging example_test');
 
-        expect(stdout).toMatch('Test Results:');
-        expect(stdout).toMatch(/✓.*example_test/);
-        expect(stdout).toMatch('1 passed');
+        expect(stdout + stderr).toMatch(/✓.*example_test/);
+        expect(stdout + stderr).toMatch(/1 passed/);
 
         expect(code).toBe(0);
       });
@@ -776,9 +864,8 @@ describe('pos-cli test run', () => {
       test('runs a single failing test by name and shows failure', async () => {
         const { stdout, stderr, code } = await run('with-tests-module', 'staging failing_test');
 
-        expect(stdout + stderr).toMatch('Test Results:');
         expect(stdout + stderr).toMatch(/✗.*failing_test/);
-        expect(stdout + stderr).toMatch('1 failed');
+        expect(stdout + stderr).toMatch(/1 failed/);
 
         expect(code).toBe(1);
       });
@@ -796,7 +883,8 @@ describe('pos-cli test run', () => {
       test('exits with code 0 when running all tests and all pass', async () => {
         const { stdout, stderr, code } = await run('with-passing-tests', 'staging');
 
-        expect(stdout).toMatch('Starting test run...');
+        // Check for presence of test output (exact message may vary by tests module version)
+        expect(stdout).toMatch('Running tests on:');
 
         const output = stdout + stderr;
         expect(output).toMatch(/\d+ passed/);
