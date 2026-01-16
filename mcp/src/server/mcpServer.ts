@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 
 import { FsStorage } from '../storage/fsStorage';
 import { AuthManager } from '../authManager';
@@ -19,12 +19,26 @@ export class McpServer {
     this.auth = new AuthManager(this.storage);
     this.tools = allTools;
     this.app = express();
-    this.app.use(helmet());
+    this.app.use(helmet({
+      contentSecurityPolicy: false,
+      noSniff: false,
+    }));
     this.app.use(cors({
       origin: '*',
     }));
     this.app.use(express.json());
     this.setupRoutes();
+
+    // 404 handler
+    this.app.use((req: Request, res: Response) => {
+      res.status(404).json({ error: 'Not found' });
+    });
+
+    // Error handler
+    this.app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+      console.error('Server error:', err);
+      res.status(500).json({ error: (err as Error).message });
+    });
   }
 
   private setupRoutes() {
