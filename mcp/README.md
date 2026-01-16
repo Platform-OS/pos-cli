@@ -129,5 +129,30 @@ This MCP server reuses pos-cli's `lib/apiWrappers` and Gateway directly - no sub
 4. OpenAPI spec generation
 
 ---
-*Built with ❤️ for platformOS developers*
+## SSE Transport (Claude/Cursor, Cursor AI)
+
+Use SSE transport for discovery-based connections:
+
+```
+transport_type: "sse"
+url: "http://localhost:3000/"  # discovery endpoint
+```
+
+Test discovery:
+
+```bash
+curl -N http://localhost:3000/
+```
+
+Expected first event:
+
+```
+event: endpoint
+data: {"endpoint":"/call-stream","tools":[...schemas]}\n\n
+ping...
+```
+
+POST `/call-stream` supports both legacy `{tool,input}` and standard MCP JSON-RPC `tools/call`.
+
+
 ","path":"mcp/README.md

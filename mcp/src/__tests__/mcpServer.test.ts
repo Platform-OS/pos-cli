@@ -87,3 +87,4 @@ describe('MCP Server', () => {
     expect(res.text).toContain('data:');
     expect(res.text).toContain('[DONE]');
   });
+});

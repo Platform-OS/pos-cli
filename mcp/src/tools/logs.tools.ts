@@ -14,17 +14,15 @@ export const platformosLogsFetchTool: Tool = {
     logs: z.array(z.union([z.string(), z.record(z.unknown())])),
     lastId: z.string().optional(),
   }),
-  handler: async function*(input) {
+  handler: async (input) => {
     const client = new PlatformOSClient();
-    // Note: logs is streaming, here batch version yielding lines
+    // Note: logs is streaming, here batch version returning array
     const gw = await client.getGateway(input.env);
     const json = { lastId: input.lastId };
     const result = await gw.logs(json);
     // Parse logs from result
     const lines = result.split('\n').filter((l: string) => l);
-    for (let i = 0; i < Math.min(lines.length, input.limit ?? 100); i++) {
-      yield lines[i];
-    }
+    return { logs: lines.slice(0, input.limit ?? 100) };
   },
 };
 

@@ -1,0 +1,29 @@
+name: MCP Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: |
+          npm ci
+      - name: Run tests and coverage
+        run: |
+          npm test --prefix mcp --silent -- --runInBand --coverage --coverageDirectory=mcp/coverage --coverageReporters=text-summary --coverageReporters=html
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-coverage-html
+          path: mcp/coverage
