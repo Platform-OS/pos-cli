@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PlatformOSClient } from '../../../lib/apiWrappers';
+import { PlatformOSClient } from '../lib/apiWrappers';
 import type { Tool } from './env.tools';
 
 const CONSTANTS_QUERY = `{ constants { name value type } }`;
@@ -21,7 +21,7 @@ export const platformosConstantsListTool: Tool = {
     const client = new PlatformOSClient();
     const res = await client.graphql(env, CONSTANTS_QUERY);
     if (!res.success) throw new Error(res.error || 'Query failed');
-    return { constants: res.data?.constants || [] };
+    return { constants: res.data?.data?.constants || [] };
   },
 };
 
@@ -53,7 +53,7 @@ export const platformosConstantsSetTool: Tool = {
       type: input.type,
     });
     if (!res.success) throw new Error(res.error || 'Mutation failed');
-    return { success: true, constant: res.data?.set_constant };
+    return { success: true, constant: res.data?.data?.set_constant };
   },
 };
 

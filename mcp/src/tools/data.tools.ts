@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PlatformOSClient } from '../../../lib/apiWrappers';
+import { PlatformOSClient } from '../lib/apiWrappers';
 import type { Tool } from './env.tools';
 
 export const platformosDataExportStartTool: Tool = {
@@ -20,7 +20,7 @@ export const platformosDataExportStartTool: Tool = {
     if (!res.success) {
       throw new Error(res.error || 'Failed to start export');
     }
-    return { jobId: res.data.id, poll: true };
+    return { jobId: res.data!.id, poll: true };
   },
 };
 
@@ -43,14 +43,14 @@ export const platformosDataExportStatusTool: Tool = {
     if (!res.success) {
       throw new Error(res.error || 'Failed to check status');
     }
-    const data = res.data;
+    const data = res.data!;
     let status: 'pending' | 'completed' | 'failed' = 'pending';
     if (data.status === 'completed') status = 'completed';
     else if (data.status === 'failed' || data.error) status = 'failed';
     return {
       status,
-      ...(data.download_url &amp;&amp; { download_url: data.download_url }),
-      ...(status === 'failed' &amp;&amp; { error: data.error || 'Export failed' }),
+      ...(data.download_url && { download_url: data.download_url }),
+      ...(status === 'failed' && { error: data.error || 'Export failed' }),
       ...data,
     };
   },

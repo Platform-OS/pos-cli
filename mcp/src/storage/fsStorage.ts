@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 export interface PlatformOSEnv {
   name: string;
   url: string;
-  account: string;
+  account?: string;
   site?: string;
   token?: string;
   email?: string;
@@ -15,41 +15,49 @@ export interface PlatformClient {
   token: string;
 }
 
-export class FsStorage {
-  private cwd: string;
-  private envsDir: string;
-  private clientsPath: string;
+type StoredEnv = Omit<PlatformOSEnv, 'name'>;export class FsStorage {
+  private readonly baseCwd: string;
+  private readonly repoRoot: string;
+  private readonly posPath: string;
+  private readonly clientsPath: string;
 
-  constructor(cwd: string = process.cwd()) {
-    this.cwd = cwd;
-    this.envsDir = path.join(cwd, '.pos/envs');
-    this.clientsPath = path.join(cwd, 'clients.json');
-    this.ensureDirs();
-  }
-
-  private ensureDirs() {
-    if (!existsSync(this.envsDir)) {
-      mkdirSync(this.envsDir, { recursive: true });
+  constructor(baseCwd: string = process.cwd()) {
+    this.baseCwd = baseCwd;
+    this.repoRoot = path.dirname(baseCwd);
+    this.posPath = path.join(this.repoRoot, '.pos');
+    this.clientsPath = path.join(this.baseCwd, 'clients.json');
+  }  async listEnvs(): Promise<PlatformOSEnv[]> {
+    if (!existsSync(this.posPath)) return [];
+    try {
+      const content = readFileSync(this.posPath, 'utf8');
+      const posConfig: Record<string, StoredEnv> = JSON.parse(content);
+      return Object.entries(posConfig).map(([name, envData]) => ({
+        name,
+        ...envData
+      } as PlatformOSEnv));
+    } catch (e) {
+      return [];
     }
-  }
-
-  async listEnvs(): Promise<PlatformOSEnv[]> {
-    if (!existsSync(this.envsDir)) return [];
-    const files = (await import('fs/promises')).readdir(this.envsDir);
-    const envFiles = (await files).filter(f => f.endsWith('.json'));
-    const envs: PlatformOSEnv[] = [];
-    for (const file of envFiles) {
-      try {
-        const data = JSON.parse(readFileSync(path.join(this.envsDir, file), 'utf8'));
-        envs.push({ name: file.replace('.json', ''), ...data });
-      } catch {}
-    }
-    return envs;
   }
 
   async saveEnv(env: PlatformOSEnv): Promise<void> {
-    const filePath = path.join(this.envsDir, `${env.name}.json`);
-    writeFileSync(filePath, JSON.stringify(env, null, 2));
+    let posConfig: Record<string, StoredEnv> = {};
+    if (existsSync(this.posPath)) {
+      try {
+        const content = readFileSync(this.posPath, 'utf8');
+        posConfig = JSON.parse(content);
+      } catch (e) {
+        // Invalid .pos, start fresh
+      }
+    }
+    posConfig[env.name] = {
+      url: env.url,
+      account: env.account,
+      site: env.site,
+      token: env.token,
+      email: env.email
+    };
+    writeFileSync(this.posPath, JSON.stringify(posConfig, null, 2));
   }
 
   async listClients(): Promise<PlatformClient[]> {

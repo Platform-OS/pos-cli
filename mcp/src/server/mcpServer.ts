@@ -42,8 +42,8 @@ export class McpServer {
         res.json({ 
           tools: this.tools.map(t => ({
             name: t.name,
-            description: t.description,
-            inputSchema: t.inputSchema._def.schema // Approximate JSON schema
+            description: t.description
+            // inputSchema omitted for POC (add zod-to-json-schema later)
           })) 
         });
       } else {

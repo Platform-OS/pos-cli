@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PlatformOSClient, type GraphQLResult } from '../../../lib/apiWrappers';
+import { PlatformOSClient, type GraphQLResult } from '../lib/apiWrappers';
 import type { Tool } from './env.tools';
 
 export const graphqlExecuteSchema = z.object({

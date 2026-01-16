@@ -1,7 +1,7 @@
 import * as path from 'path';
-import type { PlatformOSEnv } from '../../src/storage/fsStorage';
-import { FsStorage } from '../../src/storage/fsStorage';
-import { config } from '../../src/config';
+import type { PlatformOSEnv } from '../storage/fsStorage';
+import { FsStorage } from '../storage/fsStorage';
+import { config } from '../config';
 import { z } from 'zod';
 
 export interface GraphQLResult {
@@ -13,6 +13,7 @@ export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
+  errors?: any[];
 }
 
 export class PlatformOSClient {
@@ -23,6 +24,7 @@ export class PlatformOSClient {
     if (!envConfig?.token) {
       throw new Error(`No valid token for environment '${envName}'`);
     }
+    // @ts-ignore
     const mod = await import('../../../lib/proxy.js');
     const Gateway = mod.default;
     const portal = null;

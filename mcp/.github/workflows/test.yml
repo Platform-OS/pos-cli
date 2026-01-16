@@ -1,0 +1,26 @@
+name: MCP tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install
+        run: npm ci
+        working-directory: mcp
+      - name: Run tests
+        run: npm test --silent
+        working-directory: mcp
+      - name: Run coverage
+        run: npm test --silent -- --coverage
+        working-directory: mcp

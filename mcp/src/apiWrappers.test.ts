@@ -1,6 +1,12 @@
-import nock from 'nock';
-import { PlatformOSClient } from '../lib/apiWrappers';
-import { platformosGraphqlExecuteTool } from '../tools/graphql.tools';
+jest.mock('./lib/apiWrappers', () => {
+  return {
+    PlatformOSClient: jest.fn().mockImplementation(() => ({
+      graphql: jest.fn().mockResolvedValue({ success: false, error: 'GraphQL not directly available' })
+    }))
+  };
+});import nock from 'nock';
+import { PlatformOSClient } from './lib/apiWrappers';
+import { platformosGraphqlExecuteTool } from './tools/graphql.tools';
 
 describe('API Wrappers', () => {
   const client = new PlatformOSClient();

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PlatformOSClient } from '../../../lib/apiWrappers';
+import { PlatformOSClient } from '../lib/apiWrappers';
 import type { Tool } from './env.tools';
 
 export const platformosMigrationsListTool: Tool = {
@@ -9,13 +9,13 @@ export const platformosMigrationsListTool: Tool = {
     env: z.string(),
   }),
   outputSchema: z.object({
-    migrations: z.array(z.object({})).passthrough(),
+    migrations: z.array(z.record(z.unknown())),
   }),
   async handler({ env }) {
     const client = new PlatformOSClient();
     const res = await client.listMigrations(env);
     if (!res.success) throw new Error(res.error || 'List failed');
-    return { migrations: res.data || [] };
+    return { migrations: res.data! || [] };
   },
 };
 

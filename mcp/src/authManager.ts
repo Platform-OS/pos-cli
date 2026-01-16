@@ -1,4 +1,4 @@
-import { FsStorage, PlatformClient } from '../storage/fsStorage';
+import { FsStorage, type PlatformClient } from './storage/fsStorage';
 
 export class AuthManager {
   private adminApiKey?: string;

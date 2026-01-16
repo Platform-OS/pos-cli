@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PlatformOSClient } from '../../../lib/apiWrappers';
+import { PlatformOSClient } from '../lib/apiWrappers';
 import type { Tool } from './env.tools';
 
 export const platformosLiquidRenderTool: Tool = {

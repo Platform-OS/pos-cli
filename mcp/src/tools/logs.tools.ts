@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PlatformOSClient } from '../../../lib/apiWrappers';
+import { PlatformOSClient } from '../lib/apiWrappers';
 import type { Tool } from './env.tools';
 
 export const platformosLogsFetchTool: Tool = {
@@ -11,7 +11,7 @@ export const platformosLogsFetchTool: Tool = {
     limit: z.number().default(100).optional(),
   }),
   outputSchema: z.object({
-    logs: z.array(z.string()).or(z.array(z.object({}))).passthrough(),
+    logs: z.array(z.union([z.string(), z.record(z.unknown())])),
     lastId: z.string().optional(),
   }),
   async handler(input) {
@@ -21,7 +21,7 @@ export const platformosLogsFetchTool: Tool = {
     const json = { lastId: input.lastId };
     const result = await gw.logs(json);
     // Parse logs from result
-    return { logs: result.split('\n').filter(l =&gt; l), lastId: '' }; // stub parse
+    return { logs: result.split('\n').filter((l: string) => l), lastId: '' }; // stub parse
   },
 };
 

@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import { FsStorage } from '../storage/fsStorage';
 import type { PlatformOSEnv } from '../storage/fsStorage';
-import { PlatformOSClient } from '../../../lib/apiWrappers';
+import { PlatformOSClient } from '../lib/apiWrappers';
 
 export interface Tool {
   name: string;
   description: string;
-  inputSchema: z.ZodObject&lt;any&gt;;
-  outputSchema: z.ZodObject&lt;any&gt;;
-  handler: (input: any) =&gt; Promise&lt;any&gt;;
+  inputSchema: z.ZodObject<any>;
+  outputSchema: z.ZodObject<any>;
+  handler: (input: any) => Promise<any>;
 }
 
 export const platformosEnvListTool: Tool = {
@@ -46,17 +46,17 @@ export const platformosEnvAddTool: Tool = {
   }),
   async handler(input) {
     const storage = new FsStorage();
-    const existing = (await storage.listEnvs()).find(e =&gt; e.name === input.name);
+    const existing = (await storage.listEnvs()).find(e => e.name === input.name);
     if (existing) {
       throw new Error(`Environment ${input.name} already exists`);
     }
     const env: PlatformOSEnv = {
       name: input.name,
       url: input.url,
-      ...(input.email &amp;&amp; {email: input.email}),
-      ...(input.account &amp;&amp; {account: input.account}),
-      ...(input.site &amp;&amp; {site: input.site}),
-      ...(input.token &amp;&amp; {token: input.token}),
+      ...(input.email && {email: input.email}),
+      ...(input.account && {account: input.account}),
+      ...(input.site && {site: input.site}),
+      ...(input.token && {token: input.token}),
     };
     await storage.saveEnv(env);
     return { success: true, message: `Environment ${input.name} added successfully` };

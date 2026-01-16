@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PlatformOSClient } from '../../../lib/apiWrappers';
+import { PlatformOSClient } from '../lib/apiWrappers';
 import type { Tool } from './env.tools';
 
 export const platformosModulesListTool: Tool = {
@@ -12,8 +12,7 @@ export const platformosModulesListTool: Tool = {
     modules: z.array(z.object({
       name: z.string(),
       version: z.string().optional(),
-      // etc
-    })).passthrough(),
+    }).passthrough()),
   }),
   async handler({ env }) {
     const client = new PlatformOSClient();
