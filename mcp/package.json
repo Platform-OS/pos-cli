@@ -1,0 +1,20 @@
+{
+  "name": "@platformos/mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for platformOS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "nodemon",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "clean": "rm -rf dist coverage",
+    "prebuild": "npm run clean",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": ["mcp", "platformos"],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,6 @@
+{
+  \"default\": {
+    \"token\": \"client-secret\",
+    \"name\": \"Default Client\"
+  }
+}
