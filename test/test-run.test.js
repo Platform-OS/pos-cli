@@ -10,6 +10,10 @@ const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
 const Gateway = require('../lib/proxy');
 
+// Import test-runner modules
+const { TestLogStream } = require('../lib/test-runner/logStream');
+const { formatDuration, formatTestLog } = require('../lib/test-runner/formatters');
+
 const cwd = name => `${process.cwd()}/test/fixtures/test/${name}`;
 const run = (fixtureName, options) => exec(`${cliPath} test run ${options || ''}`, { cwd: cwd(fixtureName), env: process.env });
 const deploy = (fixtureName) => exec(`${cliPath} deploy staging`, { cwd: cwd(fixtureName), env: process.env });
@@ -56,7 +60,7 @@ describe('pos-cli test run', () => {
 
     describe('Gateway.testRunAsync()', () => {
       test('calls apiRequest with run_async endpoint (no .js extension for v1.1.0+)', async () => {
-        apiRequest.mockResolvedValue({ test_run_id: 'test-run-123' });
+        apiRequest.mockResolvedValue({ test_name: 'liquid_test_abc123' });
 
         const gateway = new Gateway({ url: 'http://example.com', token: '1234', email: 'test@example.com' });
         const result = await gateway.testRunAsync();
@@ -69,7 +73,7 @@ describe('pos-cli test run', () => {
           forever: undefined,
           request: expect.any(Function)
         });
-        expect(result).toEqual({ test_run_id: 'test-run-123' });
+        expect(result).toEqual({ test_name: 'liquid_test_abc123' });
       });
 
       test('handles error response', async () => {
@@ -83,13 +87,6 @@ describe('pos-cli test run', () => {
     });
 
     describe('formatTestLog', () => {
-      let formatTestLog;
-
-      beforeEach(() => {
-        const testRunModule = require('../bin/pos-cli-test-run');
-        formatTestLog = testRunModule.formatTestLog;
-      });
-
       test('highlights test log with test path (new test indicator)', () => {
         const logRow = {
           message: '{"path": "app/lib/test/example_test.liquid"}',
@@ -176,13 +173,6 @@ describe('pos-cli test run', () => {
     });
 
     describe('formatDuration', () => {
-      let formatDuration;
-
-      beforeEach(() => {
-        const testRunModule = require('../bin/pos-cli-test-run');
-        formatDuration = testRunModule.formatDuration;
-      });
-
       test('formats milliseconds under 1 second', () => {
         expect(formatDuration(0)).toBe('0ms');
         expect(formatDuration(1)).toBe('1ms');
@@ -211,13 +201,6 @@ describe('pos-cli test run', () => {
     });
 
     describe('TestLogStream', () => {
-      let TestLogStream;
-
-      beforeEach(() => {
-        const testRunModule = require('../bin/pos-cli-test-run');
-        TestLogStream = testRunModule.TestLogStream;
-      });
-
       describe('parseJsonSummary', () => {
         test('parses successful test completion JSON from tests module 1.1.1+', () => {
           const stream = new TestLogStream({});
@@ -228,7 +211,6 @@ describe('pos-cli test run', () => {
             total_assertions: 16,
             total_errors: 0,
             duration_ms: 26,
-            test_run_id: 'test-run-123',
             tests: [
               { name: "test/array_test", success: true, assertions: 2, errors: {} },
               { name: "test/examples/assertions_test", success: true, assertions: 4, errors: {} },
@@ -265,7 +247,6 @@ describe('pos-cli test run', () => {
             total_assertions: 10,
             total_errors: 1,
             duration_ms: 45,
-            test_run_id: 'test-run-123',
             tests: [
               { name: "test/passing_test", success: true, assertions: 3, errors: {} },
               { name: "test/failing_test", success: false, assertions: 2, errors: { expected: "field to be 2", actual: "field is 1" } },
@@ -297,7 +278,6 @@ describe('pos-cli test run', () => {
             total: 4,
             assertions: 8,
             duration: 30,
-            test_run_id: 'test-run-123',
             tests: [
               { name: "test1", success: true, assertions: 2, errors: {} },
               { name: "test2", success: true, assertions: 2, errors: {} },
@@ -422,7 +402,6 @@ describe('pos-cli test run', () => {
             total_tests: 5,
             total_assertions: 16,
             duration_ms: 26,
-            test_run_id: 'test-run-123',
             tests: []
           });
 
@@ -475,7 +454,6 @@ describe('pos-cli test run', () => {
             total_tests: 5,
             total_assertions: 16,
             duration_ms: 26,
-            test_run_id: 'test-run-123',
             tests: [
               { name: "test/array_test", success: true, assertions: 2, errors: {} },
               { name: "test/examples/assertions_test", success: true, assertions: 4, errors: {} },
@@ -502,66 +480,11 @@ describe('pos-cli test run', () => {
           expect(emittedResults.failed).toBe(0);
         });
 
-        test('only processes JSON summaries that match the testRunId', () => {
-          const stream = new TestLogStream({}, 30000, 'test-run-123');
-          const mockEmit = jest.fn();
-          stream.emit = mockEmit;
-
-          const matchingSummaryJson = JSON.stringify({
-            success: false,
-            total_tests: 2,
-            total_errors: 2,
-            test_run_id: 'test-run-123',
-            tests: [
-              { name: "test1", success: false, assertions: 1, errors: { message: "failed" } },
-              { name: "test2", success: false, assertions: 1, errors: { message: "failed" } }
-            ]
-          });
-
-          const nonMatchingSummaryJson = JSON.stringify({
-            success: true,
-            total_tests: 2,
-            test_run_id: 'test-run-456',
-            tests: [
-              { name: "test1", success: true, assertions: 1, errors: {} },
-              { name: "test2", success: true, assertions: 1, errors: {} }
-            ]
-          });
-
-          stream.processLogMessage({ id: 1, message: nonMatchingSummaryJson, error_type: '' });
-          stream.processLogMessage({ id: 2, message: matchingSummaryJson, error_type: '' });
-
-          expect(mockEmit).toHaveBeenCalledTimes(1);
-          expect(mockEmit).toHaveBeenCalledWith('testCompleted', expect.any(Object));
-
-          const emittedResults = mockEmit.mock.calls[0][1];
-          expect(emittedResults.total).toBe(2);
-          expect(emittedResults.passed).toBe(0);
-          expect(emittedResults.failed).toBe(2);
-        });
-
-        test('ignores JSON summaries when no testRunId is set (backward compatibility)', () => {
-          const stream = new TestLogStream({});
-          const mockEmit = jest.fn();
-          stream.emit = mockEmit;
-
-          const summaryWithIdJson = JSON.stringify({
-            success: true,
-            total_tests: 1,
-            test_run_id: 'test-run-123',
-            tests: [{ name: "test1", success: true, assertions: 1, errors: {} }]
-          });
-
-          stream.processLogMessage({ id: 1, message: summaryWithIdJson, error_type: '' });
-
-          expect(mockEmit).toHaveBeenCalledTimes(1);
-          expect(mockEmit).toHaveBeenCalledWith('testCompleted', expect.any(Object));
-        });
       });
 
       describe('testName filtering', () => {
         test('detects test start with matching testName type', () => {
-          const stream = new TestLogStream({}, 30000, null, 'liquid_test_abc123');
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
           const mockEmit = jest.fn();
           stream.emit = mockEmit;
 
@@ -578,7 +501,7 @@ describe('pos-cli test run', () => {
         });
 
         test('ignores test start with non-matching testName type', () => {
-          const stream = new TestLogStream({}, 30000, null, 'liquid_test_abc123');
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
           const mockEmit = jest.fn();
           stream.emit = mockEmit;
 
@@ -595,7 +518,7 @@ describe('pos-cli test run', () => {
         });
 
         test('detects test completion with testName SUMMARY type', () => {
-          const stream = new TestLogStream({}, 30000, null, 'liquid_test_abc123');
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
           stream.testStarted = true;
           const mockEmit = jest.fn();
           stream.emit = mockEmit;
@@ -622,7 +545,7 @@ describe('pos-cli test run', () => {
         });
 
         test('ignores summary with non-matching testName SUMMARY type', () => {
-          const stream = new TestLogStream({}, 30000, null, 'liquid_test_abc123');
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
           stream.testStarted = true;
           const mockEmit = jest.fn();
           stream.emit = mockEmit;
@@ -649,7 +572,7 @@ describe('pos-cli test run', () => {
         });
 
         test('emits testLog with isTestLog=true for logs with matching testName type', () => {
-          const stream = new TestLogStream({}, 30000, null, 'liquid_test_abc123');
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
           stream.testStarted = true;
           const mockEmit = jest.fn();
           stream.emit = mockEmit;
@@ -666,7 +589,7 @@ describe('pos-cli test run', () => {
         });
 
         test('emits testLog with isTestLog=false for logs with different type (debug logs)', () => {
-          const stream = new TestLogStream({}, 30000, null, 'liquid_test_abc123');
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
           stream.testStarted = true;
           const mockEmit = jest.fn();
           stream.emit = mockEmit;
@@ -683,7 +606,7 @@ describe('pos-cli test run', () => {
         });
 
         test('does not emit logs before test started', () => {
-          const stream = new TestLogStream({}, 30000, null, 'liquid_test_abc123');
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
           const mockEmit = jest.fn();
           stream.emit = mockEmit;
 
@@ -699,7 +622,7 @@ describe('pos-cli test run', () => {
         });
 
         test('does not emit logs after test completed', () => {
-          const stream = new TestLogStream({}, 30000, null, 'liquid_test_abc123');
+          const stream = new TestLogStream({}, 30000, 'liquid_test_abc123');
           stream.testStarted = true;
           stream.completed = true;
           const mockEmit = jest.fn();
@@ -717,7 +640,7 @@ describe('pos-cli test run', () => {
         });
 
         test('filters noise from past test runs by only processing logs with matching testName', () => {
-          const stream = new TestLogStream({}, 30000, null, 'liquid_test_current');
+          const stream = new TestLogStream({}, 30000, 'liquid_test_current');
           stream.testStarted = true;
           const mockEmit = jest.fn();
           stream.emit = mockEmit;
