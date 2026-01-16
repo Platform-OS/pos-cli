@@ -201,11 +201,12 @@ class TestLogStream extends EventEmitter {
           };
           
           // Handle errors - could be object with error details or array
+          // Check for array first since arrays are also objects in JavaScript
           if (test.errors) {
-            if (typeof test.errors === 'object' && Object.keys(test.errors).length > 0) {
-              testItem.error = JSON.stringify(test.errors);
-            } else if (Array.isArray(test.errors) && test.errors.length > 0) {
+            if (Array.isArray(test.errors) && test.errors.length > 0) {
               testItem.errors = test.errors;
+            } else if (typeof test.errors === 'object' && Object.keys(test.errors).length > 0) {
+              testItem.error = JSON.stringify(test.errors);
             }
           }
           
@@ -384,7 +385,7 @@ const runSingleTest = async (gateway, name) => {
 
 const formatTestLog = (logRow, isTestLog) => {
   const message = logRow.message || '';
-  const logType = logRow.type || '';
+  const logType = logRow.error_type || '';
   const fullMessage = typeof message === 'string' ? message : JSON.stringify(message);
   const cleanMessage = fullMessage.replace(/\n$/, '');
 
