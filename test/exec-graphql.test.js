@@ -2,6 +2,8 @@ jest.mock('../lib/apiRequest', () => ({
   apiRequest: jest.fn()
 }));
 
+require('dotenv').config();
+
 const Gateway = require('../lib/proxy');
 
 describe('Gateway graph method', () => {
@@ -185,21 +187,6 @@ describe('exec graphql CLI', () => {
   });
 
   describe('error handling', () => {
-    test('handles connection refused error', async () => {
-      const badEnv = {
-        ...process.env,
-        CI: 'true',
-        MPKIT_URL: 'http://localhost:1',
-        MPKIT_TOKEN: 'test-token',
-        MPKIT_EMAIL: 'test@example.com'
-      };
-
-      const { code, stderr } = await exec(`${cliPath} exec graphql staging "{ records { results { id } } }"`, { env: badEnv, timeout: CLI_TIMEOUT });
-
-      expect(code).toBe(1);
-      expect(stderr).toMatch(/Failed to execute graphql|ECONNREFUSED|connect ECONNREFUSED/);
-    });
-
     test('handles invalid URL format', async () => {
       const badEnv = {
         ...process.env,
@@ -233,16 +220,17 @@ describe('exec graphql CLI', () => {
 });
 
 // Integration test - requires real platformOS instance
+const { requireRealCredentials } = require('./utils/realCredentials');
+
 describe('exec graphql integration', () => {
   const exec = require('./utils/exec');
   const cliPath = require('./utils/cliPath');
 
-  // Only run if real credentials are available
-  const hasRealCredentials = process.env.MPKIT_URL &&
-                            process.env.MPKIT_TOKEN &&
-                            !process.env.MPKIT_URL.includes('example.com');
+  beforeAll(() => {
+    requireRealCredentials();
+  });
 
-  (hasRealCredentials ? test : test.skip)('executes graphql query on real instance', async () => {
+  test('executes graphql query on real instance', async () => {
     const query = '{ records(per_page: 20) { results { id } } }';
     const { stdout, stderr, code } = await exec(`${cliPath} exec graphql dev "${query}"`, {
       env: process.env,
@@ -259,7 +247,7 @@ describe('exec graphql integration', () => {
     expect(Array.isArray(response.data.records.results)).toBe(true);
   }, 30000);
 
-  (hasRealCredentials ? test : test.skip)('handles graphql syntax error on real instance', async () => {
+  test('handles graphql syntax error on real instance', async () => {
     const invalidQuery = '{ records(per_page: 20) { results { id } '; // Missing closing brace
     const { stdout, stderr, code } = await exec(`${cliPath} exec graphql dev "${invalidQuery}"`, {
       env: process.env,

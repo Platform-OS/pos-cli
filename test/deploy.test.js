@@ -7,6 +7,8 @@ const fs = require('fs');
 const path = require('path');
 
 require('dotenv').config();
+const { requireRealCredentials } = require('./utils/realCredentials');
+requireRealCredentials();
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
 

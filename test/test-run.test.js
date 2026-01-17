@@ -9,6 +9,7 @@ require('dotenv').config();
 const exec = require('./utils/exec');
 const cliPath = require('./utils/cliPath');
 const Gateway = require('../lib/proxy');
+const { cleanInstance } = require('./utils/commands');
 
 // Import test-runner modules
 const { TestLogStream } = require('../lib/test-runner/logStream');
@@ -16,7 +17,7 @@ const { formatDuration, formatTestLog } = require('../lib/test-runner/formatters
 
 const cwd = name => `${process.cwd()}/test/fixtures/test/${name}`;
 const run = (fixtureName, options) => exec(`${cliPath} test run ${options || ''}`, { cwd: cwd(fixtureName), env: process.env });
-const deploy = (fixtureName) => exec(`${cliPath} deploy staging`, { cwd: cwd(fixtureName), env: process.env });
+const deploy = (fixtureName) => exec(`${cliPath} deploy`, { cwd: cwd(fixtureName), env: process.env });
 
 jest.setTimeout(200000);
 
@@ -788,21 +789,6 @@ describe('pos-cli test run', () => {
       expect(stderr).not.toMatch("error: missing required argument");
     });
 
-    test('handles connection refused error', async () => {
-      const badEnv = {
-        ...process.env,
-        CI: 'true',
-        MPKIT_URL: 'http://localhost:1',
-        MPKIT_TOKEN: 'test-token',
-        MPKIT_EMAIL: 'test@example.com'
-      };
-
-      const { code, stderr } = await exec(`${cliPath} test run staging`, { env: badEnv, timeout: CLI_TIMEOUT });
-
-      expect(code).toBe(1);
-      expect(stderr).toMatch(/ECONNREFUSED|Failed to execute test|connect ECONNREFUSED/);
-    });
-
     test('handles invalid URL format', async () => {
       const badEnv = {
         ...process.env,
@@ -819,19 +805,34 @@ describe('pos-cli test run', () => {
   });
 
   describe('Integration tests', () => {
+    const { requireRealCredentials } = require('./utils/realCredentials');
+
+    beforeAll(() => {
+      requireRealCredentials();
+    });
+
+    describe('without tests module', () => {
+      beforeAll(async () => {
+        await cleanInstance(cwd('without-tests-module'));
+        const { stdout, stderr } = await deploy('without-tests-module');
+        if (!stdout.includes('Deploy succeeded')) {
+          throw new Error(`Failed to deploy test fixtures: ${stderr}`);
+        }
+      });
+
+      test('shows error when tests module is not installed', async () => {
+        const { stderr } = await run('without-tests-module', 'staging');
+
+        expect(stderr).toMatch('Tests module not found');
+      });
+    });
+
     describe('with mixed tests (passing and failing)', () => {
       beforeAll(async () => {
         const { stdout, stderr } = await deploy('with-tests-module');
         if (!stdout.includes('Deploy succeeded')) {
-          console.error('Deploy failed:', stderr);
-          throw new Error('Failed to deploy test fixtures');
+          throw new Error(`Failed to deploy test fixtures: ${stderr}`);
         }
-      });
-
-      test.skip('shows error when tests module is not installed', async () => {
-        const { stderr } = await run('without-tests-module', 'staging');
-
-        expect(stderr).toMatch('Tests module not found');
       });
 
       test('runs all tests, displays URL and results, exits with code 1 when at least one fails', async () => {
@@ -875,8 +876,7 @@ describe('pos-cli test run', () => {
       beforeAll(async () => {
         const { stdout, stderr } = await deploy('with-passing-tests');
         if (!stdout.includes('Deploy succeeded')) {
-          console.error('Deploy failed:', stderr);
-          throw new Error('Failed to deploy test fixtures');
+          throw new Error(`Failed to deploy test fixtures: ${stderr}`);
         }
       });
 

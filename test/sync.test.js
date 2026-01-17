@@ -8,6 +8,8 @@ const fs = require('fs');
 const stepTimeout = 3500;
 
 require('dotenv').config();
+const { requireRealCredentials } = require('./utils/realCredentials');
+requireRealCredentials();
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
 const run = (fixtureName, options, callback) => {
