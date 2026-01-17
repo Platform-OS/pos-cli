@@ -1,15 +1,14 @@
-/* global jest */
+import 'dotenv/config';
+import { describe, test, expect, afterAll, vi } from 'vitest';
+import exec from './utils/exec';
+import cliPath from './utils/cliPath';
+import path from 'path';
+import fs from 'fs';
+import { requireRealCredentials } from './utils/credentials';
 
-const exec = require('./utils/exec');
-const cliPath = require('./utils/cliPath');
-const path = require('path');
-const fs = require('fs');
+vi.setConfig({ testTimeout: 20000 });
 
 const stepTimeout = 3500;
-
-require('dotenv').config();
-const { requireRealCredentials } = require('./utils/realCredentials');
-requireRealCredentials();
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
 const run = (fixtureName, options, callback) => {
@@ -21,32 +20,28 @@ const run = (fixtureName, options, callback) => {
 };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-jest.setTimeout(20000); // default jasmine timeout is 5 seconds - we need more.
-
 const kill = p => {
   p.stdout.destroy();
   p.stderr.destroy();
   p.kill()
 }
 
-jest.retryTimes(2);
-
-// Store original content to restore after tests
 const barJsPath = path.join(cwd('correct_with_assets'), 'app/assets/bar.js');
 const originalBarJsContent = fs.readFileSync(barJsPath, 'utf8');
 
 afterAll(() => {
-  // Restore bar.js to original content after all tests
   fs.writeFileSync(barJsPath, originalBarJsContent);
 });
 
+// Skip all tests if credentials aren't available
 describe('Happy path', () => {
-  test('sync assets', async () => {
+  test('sync assets', { retry: 2 }, async () => {
+    requireRealCredentials();
 
     const steps = async (child) => {
-      await sleep(stepTimeout); //wait for sync to start
+      await sleep(stepTimeout);
       exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for syncing the file
+      await sleep(stepTimeout);
       kill(child);
     }
 
@@ -56,11 +51,11 @@ describe('Happy path', () => {
     expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
   });
 
-  test('sync with direct assets upload', async () => {
+  test('sync with direct assets upload', { retry: 2 }, async () => {
     const steps = async (child) => {
-      await sleep(stepTimeout); //wait for sync to start
+      await sleep(stepTimeout);
       exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for syncing the file
+      await sleep(stepTimeout);
       kill(child);
     }
     const { stdout, stderr } = await run('correct_with_assets', '-d', steps);
@@ -69,7 +64,7 @@ describe('Happy path', () => {
     expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
   });
 
-  test('delete synced file', async () => {
+  test('delete synced file', { retry: 2 }, async () => {
     const dir = 'model_schemas';
     const fileName = `${dir}/test.yml`;
     const validYML = `name: test
@@ -80,11 +75,11 @@ properties:
 
     const steps = async (child) => {
       await exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for syncing the file
+      await sleep(stepTimeout);
       await exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for syncing the file
+      await sleep(stepTimeout);
       await exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
-      await sleep(stepTimeout); //wait for deleting the file
+      await sleep(stepTimeout);
       kill(child);
     }
     const { stderr, stdout } = await run('correct_with_assets', null, steps);

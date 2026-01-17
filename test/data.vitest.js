@@ -1,5 +1,5 @@
-const exec = require('./utils/exec');
-const cliPath = require('./utils/cliPath');
+import exec from './utils/exec';
+import cliPath from './utils/cliPath';
 
 const env = Object.assign(process.env, {
   CI: true,
@@ -23,4 +23,3 @@ describe('Data import', () => {
     expect(code).toEqual(1);
   });
 });
-

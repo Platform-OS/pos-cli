@@ -1,4 +1,4 @@
-const manifest = require('../../../lib/assets/manifest');
+import { manifestGenerateForAssets } from '../lib/assets/manifest';
 
 const oldCwd = process.cwd();
 beforeEach(() => {
@@ -14,7 +14,7 @@ test('manifest for files on linux', () => {
     'modules/testModule/public/assets/bar.js'
   ];
 
-  const manifestFile = manifest.manifestGenerateForAssets(assets);
+  const manifestFile = manifestGenerateForAssets(assets);
   Object.entries(manifestFile).forEach(([key, value]) => delete value['updated_at']);
   expect(manifestFile).toEqual({
     "app/assets/foo.js": {
@@ -34,7 +34,7 @@ test('manifest for files on windows', () => {
     'modules\\testModule\\public\\assets\\bar.js'
   ];
 
-  const manifestFile = manifest.manifestGenerateForAssets(assets);
+  const manifestFile = manifestGenerateForAssets(assets);
   Object.entries(manifestFile).forEach(([key, value]) => delete value['updated_at']);
   expect(manifestFile).toEqual({
     "app/assets/foo.js": {

@@ -1,12 +1,6 @@
-const exec = require('./exec');
-const cliPath = require('./cliPath');
+import exec from './exec';
+import cliPath from './cliPath';
 
-/**
- * Clean the instance (remove all data and schemas).
- * Uses MPKIT_URL/MPKIT_TOKEN from environment variables.
- *
- * @param {string} cwd - Working directory for the command
- */
 const cleanInstance = async (cwd) => {
   const result = await exec(`${cliPath} data clean --auto-confirm --include-schema`, { cwd, env: process.env });
   if (result.code !== 0) {
@@ -15,4 +9,4 @@ const cleanInstance = async (cwd) => {
   return result;
 };
 
-module.exports = { cleanInstance };
+export { cleanInstance };

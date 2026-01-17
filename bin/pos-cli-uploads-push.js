@@ -1,26 +1,16 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  fs = require('fs'),
-  Gateway = require('../lib/proxy'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  uploadFile = require('../lib/s3UploadFile').uploadFile,
-  presignUrl = require('../lib/presignUrl').presignUrl,
-  logger = require('../lib/logger');
-
-// importing ESM modules in CommonJS project
-let ora;
-const initializeEsmModules = async () => {
-  if(!ora) {
-    await import('ora').then(imported => ora = imported.default);
-  }
-
-  return true;
-}
+import fs from 'fs';
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import { fetchSettings } from '../lib/settings.js';
+import { uploadFile } from '../lib/s3UploadFile.js';
+import { presignUrl } from '../lib/presignUrl.js';
+import logger from '../lib/logger.js';
+import ora from 'ora';
 
 const uploadZip = async (directory, gateway) => {
 
-  await initializeEsmModules();
   const spinner = ora({ text: 'Sending file', stream: process.stdout });
   spinner.start();
 
@@ -46,7 +36,7 @@ program
   .option('-p --path <path>', 'path of .zip file that contains files used in property of type upload', 'uploads.zip')
   .action((environment, params) => {
     const path = params.path;
-    const authData = fetchAuthData(environment, program);
+    const authData = fetchSettings(environment, program);
     Object.assign(process.env, { MARKETPLACE_TOKEN: authData.token, MARKETPLACE_URL: authData.url });
 
     if (!fs.existsSync(path)) logger.Error(`File not found: ${path}`);

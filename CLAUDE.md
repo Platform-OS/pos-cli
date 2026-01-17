@@ -90,14 +90,14 @@ pos-cli/
 Example:
 ```javascript
 // bin/pos-cli-deploy.js
-const fetchAuthData = require('../lib/settings').fetchSettings;
-const deployStrategy = require('../lib/deploy/strategy');
+import { fetchSettings } from '../lib/settings';
+import deployStrategy from '../lib/deploy/strategy.js';
 
 program
   .argument('[environment]', 'name of environment')
   .option('-p --partial-deploy', 'Partial deployment')
   .action(async (environment, params) => {
-    const authData = fetchAuthData(environment);
+    const authData = fetchSettings(environment);
     deployStrategy.run({ strategy: 'directAssetsUpload', opts: { ... } });
   });
 ```
@@ -139,11 +139,17 @@ Two deployment strategies:
 
 Strategy selection:
 ```javascript
+import defaultStrategy from './defaultStrategy.js';
+import directAssetsUploadStrategy from './directAssetsUploadStrategy.js';
+
 const strategies = {
-  default: require('./defaultStrategy'),
-  directAssetsUpload: require('./directAssetsUploadStrategy'),
+  default: defaultStrategy,
+  directAssetsUpload: directAssetsUploadStrategy,
 };
-module.exports = { run: ({ strategy, opts }) => strategies[strategy](opts) };
+
+const run = ({ strategy, opts }) => strategies[strategy](opts);
+
+export { run };
 ```
 
 #### 3. File Watching Pattern - Sync Mode

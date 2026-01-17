@@ -1,4 +1,4 @@
-const validFilePath = require('../lib/utils/valid-file-path');
+import validFilePath from '../lib/utils/valid-file-path.js';
 
 describe('Linux - Correct', () => {
   const correct = [

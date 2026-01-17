@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  degit = require('degit');
+import { program } from 'commander';
+import degit from 'degit';
 
-const logger = require('../lib/logger'),
-  report = require('../lib/logger/report'),
-  dir = require('../lib/directories');
+import logger from '../lib/logger.js';
+import report from '../lib/logger/report.js';
+import dir from '../lib/directories.js';
 
 const moduleRepo = 'Platform-OS/pos-module-template';
 

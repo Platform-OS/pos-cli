@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-const semver = require('semver');
-const engines = require('../package.json').engines;
-const logger = require('../lib/logger');
+import semver from 'semver';
+import pkg from '../package.json' with { type: "json" };
+import logger from '../lib/logger.js';
+
+const { engines } = pkg;
 const version = engines.node;
 
 if (!semver.satisfies(process.version, version)) {

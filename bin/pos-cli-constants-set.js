@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-      Gateway = require('../lib/proxy'),
-      validate = require('../lib/validators'),
-      queries = require('../lib/graph/queries'),
-      fetchAuthData = require('../lib/settings').fetchSettings,
-      logger = require('../lib/logger');
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import { existence as validateExistence } from '../lib/validators/index.js';
+import queries from '../lib/graph/queries.js';
+import { fetchSettings } from '../lib/settings.js';
+import logger from '../lib/logger.js';
 
 const help = () => {
   program.outputHelp();
@@ -13,8 +13,8 @@ const help = () => {
 }
 
 const checkParams = ({name, value}) => {
-  validate.existence({ argumentValue: value, argumentName: 'value', fail: help });
-  validate.existence({ argumentValue: name, argumentName: 'name', fail: help });
+  validateExistence({ argumentValue: value, argumentName: 'value', fail: help });
+  validateExistence({ argumentValue: name, argumentName: 'name', fail: help });
 }
 
 const success = (msg) => {
@@ -32,7 +32,7 @@ program
   .arguments('[environment]', 'name of environment. Example: staging')
   .action((environment, params) => {
     checkParams(params);
-    const authData = fetchAuthData(environment, program);
+    const authData = fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
     const constant = gateway

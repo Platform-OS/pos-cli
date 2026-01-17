@@ -1,24 +1,14 @@
 #!/usr/bin/env node
 
-const shell = require('shelljs');
-const { program } = require('commander');
-const logger = require('../lib/logger');
-const downloadFile = require('../lib/downloadFile');
-
-const { unzip } = require('../lib/unzip');
-const Portal = require('../lib/portal');
-const fs = require('fs');
-const path = require('path');
-
-// importing ESM modules in CommonJS project
-let ora;
-const initializeEsmModules = async () => {
-  if(!ora) {
-    await import('ora').then(imported => ora = imported.default);
-  }
-
-  return true;
-}
+import shell from 'shelljs';
+import { program } from 'commander';
+import logger from '../lib/logger.js';
+import downloadFile from '../lib/downloadFile.js';
+import { unzip } from '../lib/unzip.js';
+import Portal from '../lib/portal.js';
+import fs from 'fs';
+import path from 'path';
+import ora from 'ora';
 
 const downloadModule = async (module, lockData) => {
   const filename = 'modules.zip';
@@ -59,8 +49,6 @@ program
   .action(async (module, params) => {
     const lockFilePath = path.join('app', 'pos-modules.lock.json');
     const forceDependencies = params.forceDependencies;
-
-    await initializeEsmModules();
 
     let lockData;
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
 
-const audit = require('../lib/audit');
+import { run } from '../lib/audit.js';
 
-audit.run();
+run();

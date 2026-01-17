@@ -1,22 +1,13 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const logger = require('../lib/logger');
-const configFiles = require('../lib/modules/configFiles');
-const { findModuleVersion, resolveDependencies } = require('../lib/modules/dependencies')
-const Portal = require('../lib/portal');
-const path = require('path');
-const { createDirectory } = require('../lib/utils/create-directory');
-
-// importing ESM modules in CommonJS project
-let ora;
-const initializeEsmModules = async () => {
-  if(!ora) {
-    await import('ora').then(imported => ora = imported.default);
-  }
-
-  return true;
-}
+import { program } from 'commander';
+import logger from '../lib/logger.js';
+import { posConfigDirectory, posModulesFilePath, posModulesLockFilePath, readLocalModules, writePosModules, writePosModulesLock } from '../lib/modules/configFiles.js';
+import { findModuleVersion, resolveDependencies } from '../lib/modules/dependencies.js';
+import Portal from '../lib/portal.js';
+import path from 'path';
+import { createDirectory } from '../lib/utils/create-directory.js';
+import ora from 'ora';
 
 const addNewModule = async (moduleName, moduleVersion, localModules, getVersions) => {
   const newModule = await findModuleVersion(moduleName, moduleVersion, getVersions);
@@ -39,19 +30,18 @@ program
   .action(async (moduleNameWithVersion) => {
 
     try {
-      await createDirectory(path.join(process.cwd(), configFiles.posConfigDirectory));
+      await createDirectory(path.join(process.cwd(), posConfigDirectory));
       
-      await initializeEsmModules();
       const spinner = ora({ text: 'Modules install', stream: process.stdout });
       spinner.start();
 
       try {
-        let localModules = configFiles.readLocalModules();
+        let localModules = readLocalModules();
         if(moduleNameWithVersion){
           const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
           localModules = await addNewModule(moduleName, moduleVersion, localModules, Portal.moduleVersions);
-          configFiles.writePosModules(localModules);
-          spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]} to ${configFiles.posModulesFilePath}`);
+          writePosModules(localModules);
+          spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]} to ${posModulesFilePath}`);
         }
 
         if(!localModules) {
@@ -59,8 +49,8 @@ program
         } else {
           spinner.start('Resolving module dependencies');
           const modulesLocked = await resolveDependencies(localModules, Portal.moduleVersions);
-          configFiles.writePosModulesLock(modulesLocked);
-          spinner.succeed(`Modules lock file updated: ${configFiles.posModulesLockFilePath}`);
+          writePosModulesLock(modulesLocked);
+          spinner.succeed(`Modules lock file updated: ${posModulesLockFilePath}`);
         }
       } catch(e) {
         // throw e;
@@ -70,7 +60,7 @@ program
       }
     }
     catch(error) {
-      logger.Error(`Aborting - ${configFiles.posConfigDirectory} directory has not been created.`)
+      logger.Error(`Aborting - ${posConfigDirectory} directory has not been created.`)
     }
   });
 

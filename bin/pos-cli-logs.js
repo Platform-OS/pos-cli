@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 
-const EventEmitter = require('events'),
-  path = require('path'),
-  url = require('url');
+import EventEmitter from 'events';
+import path from 'path';
+import url from 'url';
+import { fileURLToPath } from 'url';
 
-const { program } = require('commander'),
-  notifier = require('node-notifier');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const fetchAuthData = require('../lib/settings').fetchSettings,
-  logger = require('../lib/logger'),
-  Gateway = require('../lib/proxy');
+import { program } from 'commander';
+import notifier from 'node-notifier';
+
+import { fetchSettings } from '../lib/settings.js';
+import logger from '../lib/logger.js';
+import Gateway from '../lib/proxy.js';
 
 class LogStream extends EventEmitter {
   constructor(authData, interval, filter) {
@@ -79,7 +83,7 @@ program
   .option('--filter <log type>', 'display only logs of given type, example: error')
   .option('-q, --quiet', 'show only log message, without context')
   .action((environment, program, argument) => {
-    const authData = fetchAuthData(environment, program);
+    const authData = fetchSettings(environment, program);
     const stream = new LogStream(authData, program.interval, program.filter);
 
     stream.on('message', ({ created_at, error_type, message, data }) => {
@@ -100,19 +104,19 @@ program
         logger.Info(text, options);
       } else {
         logger.Info(text, options);
-        if (!program.quiet && data) {
-          let parts = [];
-          if (data.url) {
-            requestUrl = url.parse(`https://${data.url}`);
-            let line = `path: ${requestUrl.pathname}`;
-            if (requestUrl.search) line += `${requestUrl.search}`;
-            parts.push(line);
-          }
-          if (data.page) parts.push(`page: ${data.page}`);
-          if (data.partial) parts.push(`partial: ${data.partial}`);
-          if (data.user && data.user.email) parts.push(`email: ${data.user.email}`);
-          if (parts.length > 0) logger.Info(parts.join(' '), options);
+      if (!program.quiet && data) {
+        let parts = [];
+        if (data.url) {
+          const requestUrl = url.parse(`https://${data.url}`);
+          let line = `path: ${requestUrl.pathname}`;
+          if (requestUrl.search) line += `${requestUrl.search}`;
+          parts.push(line);
         }
+        if (data.page) parts.push(`page: ${data.page}`);
+        if (data.partial) parts.push(`partial: ${data.partial}`);
+        if (data.user && data.user.email) parts.push(`email: ${data.user.email}`);
+        if (parts.length > 0) logger.Info(parts.join(' '), options);
+      }
       }
     });
 

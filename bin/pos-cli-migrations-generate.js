@@ -1,22 +1,21 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
+import fs from 'fs';
+import { program } from 'commander';
+import shell from 'shelljs';
 
-const { program } = require('commander'),
-  shell = require('shelljs');
-
-const Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger'),
-  report = require('../lib/logger/report'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  dir = require('../lib/directories');
+import Gateway from '../lib/proxy.js';
+import logger from '../lib/logger.js';
+import report from '../lib/logger/report.js';
+import { fetchSettings } from '../lib/settings.js';
+import dir from '../lib/directories.js';
 
 program
   .name('pos-cli migrations generate')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'base name of the migration. Example: cleanup_data')
   .action((environment, name) => {
-    const authData = fetchAuthData(environment, program);
+    const authData = fetchSettings(environment, program);
     const gateway = new Gateway(authData);
     const formData = { name: name };
 

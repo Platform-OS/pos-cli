@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger'),
-  fetchAuthData = require('../lib/settings').fetchSettings;
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import logger from '../lib/logger.js';
+import { fetchSettings } from '../lib/settings.js';
 
 const logMigration = migration => {
   const errorsMsg = migration.error_messages ? `- Errors: (${migration.error_messages})` : '';
@@ -14,7 +14,7 @@ program
   .name('pos-cli migrations list')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .action(environment => {
-    const authData = fetchAuthData(environment, program);
+    const authData = fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
     gateway.listMigrations().then(response => response.migrations.map(logMigration));

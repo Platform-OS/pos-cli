@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const logger = require('../lib/logger'),
-  files = require('../lib/files');
+import logger from '../lib/logger.js';
+import files from '../lib/files.js';
 
 const listEnvironments = () => {
   const settings = Object(files.getConfig());

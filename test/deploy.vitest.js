@@ -1,14 +1,13 @@
-/* global jest */
+import 'dotenv/config';
+import { describe, test, expect, vi } from 'vitest';
+import exec from './utils/exec';
+import cliPath from './utils/cliPath';
+import unzip from 'unzipper';
+import fs from 'fs';
+import path from 'path';
+import { hasRealCredentials, requireRealCredentials } from './utils/credentials';
 
-const exec = require('./utils/exec');
-const cliPath = require('./utils/cliPath');
-const unzip = require('unzipper');
-const fs = require('fs');
-const path = require('path');
-
-require('dotenv').config();
-const { requireRealCredentials } = require('./utils/realCredentials');
-requireRealCredentials();
+vi.setConfig({ testTimeout: 40000 });
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
 
@@ -18,10 +17,9 @@ const extract = async (inputPath, outputPath) => {
   return unzip.Open.file(inputPath).then(d => d.extract({ path: outputPath, concurrency: 5 }));
 };
 
-jest.setTimeout(40000); // default jasmine timeout is 5 seconds - we need more.
-
 describe('Happy path', () => {
   test('App directory + modules', async () => {
+    requireRealCredentials();
     const { stderr, stdout } = await run('correct');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
@@ -43,6 +41,7 @@ describe('Happy path', () => {
   });
 
   test('correct with direct upload', async () => {
+    requireRealCredentials();
     const { stdout, stderr } = await run('correct', '-d');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
@@ -59,6 +58,7 @@ describe('Happy path', () => {
   });
 
   test('correct with assets with direct upload', async () => {
+    requireRealCredentials();
     const { stdout, stderr } = await run('correct_with_assets', '-d');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
@@ -78,6 +78,7 @@ describe('Happy path', () => {
   });
 
   test('only assets with old upload', async () => {
+    requireRealCredentials();
     const { stdout, stderr } = await run('correct_only_assets', '-o');
     expect(stderr).not.toMatch('There are no files in release file, skipping.');
     expect(stdout).toMatch(process.env.MPKIT_URL);
@@ -85,8 +86,10 @@ describe('Happy path', () => {
   });
 
   test('only assets', async () => {
+    requireRealCredentials();
     const { stdout, stderr } = await run('correct_only_assets');
     expect(stderr).toMatch('There are no files in release file, skipping.');
+    expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('Deploy succeeded');
   });
 });
@@ -119,13 +122,25 @@ describe('Server errors', () => {
   });
 
   test('Network error and pos-cli exits with 1', async () => {
-    process.env.MPKIT_URL = 'https://incorrecturl123xyz.com'
+    const originalUrl = process.env.MPKIT_URL;
+    const originalToken = process.env.MPKIT_TOKEN;
+    const originalEmail = process.env.MPKIT_EMAIL;
 
-    const { stderr, stdout, code } = await run('correct');
+    try {
+      process.env.MPKIT_URL = 'https://incorrecturl123xyz.com'
+      process.env.MPKIT_TOKEN = 'test-token'
+      process.env.MPKIT_EMAIL = 'test@example.com'
 
-    expect(code).toEqual(1);
-    expect(stderr).toMatch(
-      'Deploy failed. RequestError: Error: getaddrinfo ENOTFOUND incorrecturl123xyz.com'
-    );
+      const { stderr, stdout, code } = await run('correct');
+
+      expect(code).toEqual(1);
+      expect(stderr).toMatch(
+        'Deploy failed. RequestError: fetch failed'
+      );
+    } finally {
+      process.env.MPKIT_URL = originalUrl;
+      process.env.MPKIT_TOKEN = originalToken;
+      process.env.MPKIT_EMAIL = originalEmail;
+    }
   });
 });

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const { program } = require("commander");
-const path = require("path");
-const glob = require('fast-glob');
-const table = require('text-table');
+import { program } from "commander";
+import path from "path";
+import glob from 'fast-glob';
+import table from 'text-table';
 
 program
   .name('pos-cli generate')

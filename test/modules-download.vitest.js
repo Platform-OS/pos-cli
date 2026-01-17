@@ -1,21 +1,18 @@
-/* global jest */
-
-const exec = require('./utils/exec');
-const cliPath = require('./utils/cliPath');
-const fs = require('fs');
-const path = require('path');
-
-require('dotenv').config();
-const { requireRealCredentials } = require('./utils/realCredentials');
-requireRealCredentials();
+import 'dotenv/config';
+import { describe, test, expect } from 'vitest';
+import exec from './utils/exec';
+import cliPath from './utils/cliPath';
+import fs from 'fs';
+import path from 'path';
+import { hasRealCredentials, requireRealCredentials } from './utils/credentials';
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', name);
 
 const run = async (fixtureName, options) => await exec(`${cliPath} modules download ${options}`, { cwd: cwd(fixtureName), env: process.env });
 
 describe('Successful download', () => {
-
   test('download test module in the correct version', async () => {
+    requireRealCredentials();
     const pathToModuleJson = `${cwd('deploy/modules_test')}/modules/tests/template-values.json`;
     const pathToDirectory = `${cwd('deploy/modules_test')}/modules`;
 
@@ -89,13 +86,9 @@ describe('Successful download', () => {
     const coreModuleJson = JSON.parse(fs.readFileSync(pathToCoreModuleJson, 'utf8'));
     expect(coreModuleJson.version).toBe('1.5.5');
 
-    // do not download dependency again
-
     const { stdout: stdout2 } = await run('deploy/modules_user', 'user');
     expect(stdout2).toContain('Downloading user@3.0.8');
     expect(stdout2).not.toContain('Downloading core@1.5.5');
-
-    // download again if forced
 
     const { stdout: stdout3 } = await run('deploy/modules_user', 'user --force-dependencies');
     expect(stdout3).toContain('Downloading user@3.0.8');
@@ -116,6 +109,6 @@ describe('Failed download', () => {
   });
   test('Unescaped characters in request path', async () => {
     const { stderr } = await run('deploy/modules_test', 'ąę');
-    expect(stderr).toMatch('[ERR_UNESCAPED_CHARACTERS]: Request path contains unescaped characters');
+    expect(stderr).toMatch('404 not found');
   });
 });

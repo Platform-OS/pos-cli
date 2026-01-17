@@ -1,13 +1,20 @@
-// Mock prompts module before requiring the module under test
-jest.mock('prompts');
-jest.mock('../lib/logger', () => ({
-  Warn: jest.fn(),
-  Info: jest.fn(),
-  Error: jest.fn()
+import { vi, describe, test, expect, beforeEach } from 'vitest';
+
+const prompts = vi.fn();
+vi.mock('prompts', () => ({
+  default: prompts
 }));
 
-const { isProductionEnvironment, confirmProductionExecution } = require('../lib/productionEnvironment');
-const prompts = require('prompts');
+const logger = {
+  Warn: vi.fn(),
+  Info: vi.fn(),
+  Error: vi.fn()
+};
+vi.mock('../lib/logger.js', () => ({
+  default: logger
+}));
+
+const { isProductionEnvironment, confirmProductionExecution } = await import('../lib/productionEnvironment.js');
 
 describe('isProductionEnvironment', () => {
   describe('returns true for production environments', () => {
@@ -40,8 +47,6 @@ describe('isProductionEnvironment', () => {
     });
 
     test('detects "preprod" as production (contains "prod")', () => {
-      // Note: This is current behavior - "preprod" contains "prod" so it triggers
-      // If this is undesirable, the regex should be updated to use word boundaries
       expect(isProductionEnvironment('preprod')).toBe(true);
     });
 
@@ -113,7 +118,7 @@ describe('isProductionEnvironment', () => {
 
 describe('confirmProductionExecution', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('returns true when user confirms', async () => {

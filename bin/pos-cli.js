@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  updateNotifier = require('update-notifier'),
-  pkg = require('../package.json'),
-  logger = require('../lib/logger'),
-  version = pkg.version;
+import { program } from 'commander';
+import updateNotifier from 'update-notifier';
+import pkg from '../package.json' with { type: "json" };
+import logger from '../lib/logger.js';
+
+const version = pkg.version;
 
 updateNotifier({
   pkg: pkg
-}).notify({
+ }).notify({
   defer: true,
   isGlobal: true
-});
+ });
 
 program.showHelpAfterError();
 program

@@ -1,10 +1,10 @@
-const { program } = require('commander');
-const logger = require('../lib/logger');
-const Portal = require('../lib/portal');
-const { readPassword } = require('../lib/utils/password');
-const fetchAuthData = require('../lib/settings').fetchSettings;
-const { storeEnvironment, deviceAuthorizationFlow } = require('../lib/environments');
-const ServerError = require('../lib/ServerError');
+import { program } from 'commander';
+import logger from '../lib/logger.js';
+import Portal from '../lib/portal.js';
+import { readPassword } from '../lib/utils/password.js';
+import { fetchSettings } from '../lib/settings.js';
+import { storeEnvironment, deviceAuthorizationFlow } from '../lib/environments.js';
+import ServerError from '../lib/ServerError.js';
 
 const saveToken = (settings, token) => {
   storeEnvironment(Object.assign(settings, { token: token }));
@@ -24,7 +24,7 @@ program
   .action(async (environment, params) => {
     try {
 
-      const authData = fetchAuthData(environment)
+      const authData = fetchSettings(environment)
 
       if (!authData.email){
         token = await deviceAuthorizationFlow(authData.url);

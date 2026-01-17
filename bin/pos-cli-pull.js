@@ -1,21 +1,13 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  downloadFile = require('../lib/downloadFile'),
-  waitForStatus = require('../lib/data/waitForStatus');
-  
-// importing ESM modules in CommonJS project
-let ora;
-const initializeEsmModules = async () => {
-  if(!ora) {
-    await import('ora').then(imported => ora = imported.default);
-  }
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import logger from '../lib/logger.js';
+import { fetchSettings } from '../lib/settings.js';
+import downloadFile from '../lib/downloadFile.js';
+import waitForStatus from '../lib/data/waitForStatus.js';
 
-  return true;
-}
+import ora from 'ora';
 
 program
   .name('pos-cli pull')
@@ -23,10 +15,9 @@ program
   .option('-p --path <export-file-path>', 'output for exported data', 'app.zip')
   .action(async (environment, params) => {
     const filename = params.path;
-    const authData = fetchAuthData(environment, program);
+    const authData = fetchSettings(environment, program);
     let gateway = new Gateway(authData);
 
-    await initializeEsmModules();
     const spinner = ora({ text: 'Exporting', stream: process.stdout });
     spinner.start();
 

@@ -1,19 +1,9 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  watch = require('../lib/watch');
+import { program } from 'commander';
+import { start as watchStart } from '../lib/watch.js';
 
-// importing ESM modules in CommonJS project
-let open;
-const initializeEsmModules = async () => {
-  if(!open) {
-    await import('open').then(imported => open = imported.default);
-  }
-
-  return true;
-}
-
-const fetchAuthData = require('../lib/settings').fetchSettings;
+import { fetchSettings } from '../lib/settings.js';
 
 const DEFAULT_CONCURRENCY = 3;
 
@@ -25,7 +15,7 @@ program
   .option('-o, --open', 'When ready, open default browser with instance')
   .option('-l, --livereload', 'Use livereload')
   .action(async (environment, params) => {
-    const authData = fetchAuthData(environment);
+    const authData = fetchSettings(environment);
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
@@ -33,10 +23,10 @@ program
       CONCURRENCY: process.env.CONCURRENCY || params.concurrency
     });
 
-    watch.start(env, params.directAssetsUpload, params.livereload);
+    watchStart(env, params.directAssetsUpload, params.livereload);
 
     if (params.open) {
-      await initializeEsmModules();
+      const open = (await import('open')).default;
       await open(`${authData.url}`);
     }
   });

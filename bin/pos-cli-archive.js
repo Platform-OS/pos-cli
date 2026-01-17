@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-const { program } = require('commander');
+import { program } from 'commander';
 
-const audit = require('../lib/audit');
-const archive = require('../lib/archive');
+import { run as auditRun } from '../lib/audit.js';
+import archive from '../lib/archive.js';
 
 const createArchive = async (env) => {
   const numberOfFiles = await archive.makeArchive(env, { withoutAssets: false });
@@ -14,7 +14,7 @@ const runAudit = async () => {
     return;
   }
 
-  await audit.run();
+  await auditRun();
 };
 
 program
