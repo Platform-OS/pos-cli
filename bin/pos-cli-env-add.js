@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const ServerError = require('../lib//ServerError');
-const logger = require('../lib/logger');
-const addEnv = require('../lib/envs/add')
+import { program } from 'commander';
+import ServerError from '../lib/ServerError.js';
+import logger from '../lib/logger.js';
+import addEnv from '../lib/envs/add.js'
 
 program.showHelpAfterError();
 program

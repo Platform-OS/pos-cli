@@ -1,5 +1,5 @@
-const exec = require('../utils/exec');
-const cliPath = require('../utils/cliPath');
+import exec from '../utils/exec';
+import cliPath from '../utils/cliPath';
 
 const getEnvs = () => {
   const env = Object.assign({}, process.env, { CI: true });
@@ -60,13 +60,13 @@ test('should run help on env add', async () => {
 
 test('should run help on gui serve', async () => {
   const { stderr, code } = await run('gui serve');
-  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]`');
   expect(code).toEqual(1);
 });
 
 test('should run help on logs', async () => {
   const { stderr, code } = await run('logs');
-  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]`');
   expect(code).toEqual(1);
 });
 
@@ -118,8 +118,6 @@ test('should run help on init', async () => {
   expect(code).toEqual(0);
 });
 
-// LOGSV2
-//
 test('should run help on logsv2', async () => {
   const { stderr, code } = await run('logsv2');
   expect(stderr).toMatch('Usage: pos-cli logsv2 [options] [command]');

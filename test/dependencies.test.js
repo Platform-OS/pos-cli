@@ -1,5 +1,5 @@
-const dependencies = require('../../../lib/modules/dependencies');
-const isEqual = require('lodash.isequal');
+import { resolveDependencies, findModuleVersion } from '../lib/modules/dependencies';
+import isEqual from 'lodash.isequal';
 
 test('resolveDependencies ok', async () => {
   const core = {"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}, "1.6.0":{"dependencies":{}}, "1.8.0":{"dependencies":{}}}};
@@ -28,7 +28,7 @@ test('resolveDependencies ok', async () => {
     "a": "1.0.0"
   };
 
-  const data = await dependencies.resolveDependencies(rootModules, modulesVersions);
+  const data = await resolveDependencies(rootModules, modulesVersions);
 
   expect(data).toEqual(
     {
@@ -61,7 +61,7 @@ test('resolveDependencies do not use newest available version but the one define
     "core": "1.6.1"
   };
 
-  const data = await dependencies.resolveDependencies(rootModules, modulesVersions, rootModules);
+  const data = await resolveDependencies(rootModules, modulesVersions, rootModules);
 
   expect(data).toEqual(
     {
@@ -77,7 +77,7 @@ test('find module with newest version', async () => {
     return [{"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}}}];
   };
 
-  const data = await dependencies.findModuleVersion("core", null, modulesVersions);
+  const data = await findModuleVersion("core", null, modulesVersions);
 
   expect(data).toEqual({ "core": "1.5.0" });
 });
@@ -87,7 +87,7 @@ test('find module with newest stable version', async () => {
     return [{"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}, "1.5.1-beta.1":{"dependencies":{}}}}];
   };
 
-  const data = await dependencies.findModuleVersion("core", null, modulesVersions);
+  const data = await findModuleVersion("core", null, modulesVersions);
 
   expect(data).toEqual({ "core": "1.5.0" });
 });
@@ -95,7 +95,7 @@ test('find module with newest stable version', async () => {
 test('find module with requested version', async () => {
   const modulesVersions = async (modulesNames) => [{"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}}}];
 
-  const data = await dependencies.findModuleVersion("core", "1.0.0", modulesVersions);
+  const data = await findModuleVersion("core", "1.0.0", modulesVersions);
 
   expect(data).toEqual({ "core": "1.0.0" });
 });
@@ -103,7 +103,7 @@ test('find module with requested version', async () => {
 test('find module with requested version even if it is beta', async () => {
   const modulesVersions = async (modulesNames) => [{"module":"core","versions":{"1.0.0-beta.1":{"dependencies":{}}, "1.5.0":{"dependencies":{}}}}];
 
-  const data = await dependencies.findModuleVersion("core", "1.0.0-beta.1", modulesVersions);
+  const data = await findModuleVersion("core", "1.0.0-beta.1", modulesVersions);
 
   expect(data).toEqual({ "core": "1.0.0-beta.1" });
 });
@@ -111,8 +111,7 @@ test('find module with requested version even if it is beta', async () => {
 test('can not find module with requested version', async () => {
   const modulesVersions = async (modulesNames) => [{"module":"core","versions":{"1.0.0":{"dependencies":{}}, "1.5.0":{"dependencies":{}}}}];
 
-  const data = await dependencies.findModuleVersion("core", "1.0.1", modulesVersions);
+  const data = await findModuleVersion("core", "1.0.1", modulesVersions);
 
   expect(data).toEqual(null);
 });
-

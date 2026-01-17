@@ -1,29 +1,19 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  fs = require('fs'),
-  shell = require('shelljs'),
-  crypto = require('crypto'),
-  Gateway = require('../lib/proxy'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  transform = require('../lib/data/uploadFiles'),
-  isValidJSON = require('../lib/data/isValidJSON'),
-  waitForStatus = require('../lib/data/waitForStatus'),
-  uploadFile = require('../lib/s3UploadFile').uploadFile,
-  presignUrl = require('../lib/presignUrl').presignUrl;
-
-const logger = require('../lib/logger'),
-  report = require('../lib/logger/report');
-
-// importing ESM modules in CommonJS project
-let ora;
-const initializeEsmModules = async () => {
-  if(!ora) {
-    await import('ora').then(imported => ora = imported.default);
-  }
-
-  return true;
-}
+import fs from 'fs';
+import shell from 'shelljs';
+import crypto from 'crypto';
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import { fetchSettings } from '../lib/settings.js';
+import transform from '../lib/data/uploadFiles.js';
+import isValidJSON from '../lib/data/isValidJSON.js';
+import waitForStatus from '../lib/data/waitForStatus.js';
+import { uploadFile } from '../lib/s3UploadFile.js';
+import { presignUrl } from '../lib/presignUrl.js';
+import logger from '../lib/logger.js';
+import report from '../lib/logger/report.js';
+import ora from 'ora';
   
 let gateway;
 
@@ -38,7 +28,6 @@ Do you want to import a zip file? Use --zip.
 
 const dataImport = async (filename, rawIds, isZipFile) => {
 
-  await initializeEsmModules();
   const spinner = ora({ text: 'Sending data', stream: process.stdout });
 
   spinner.start();
@@ -104,7 +93,7 @@ program
     const filename = params.path;
     const rawIds = params.rawIds;
     const zip = params.zip;
-    const authData = fetchAuthData(environment);
+    const authData = fetchSettings(environment);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url,

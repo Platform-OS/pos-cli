@@ -1,26 +1,16 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  fs = require('fs'),
-  shell = require('shelljs'),
-  Gateway = require('../lib/proxy'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  fetchFiles = require('../lib/data/fetchFiles'),
-  waitForStatus = require('../lib/data/waitForStatus'),
-  downloadFile = require('../lib/downloadFile');
-
-const logger = require('../lib/logger'),
-  report = require('../lib/logger/report');
-
-// importing ESM modules in CommonJS project
-let ora;
-const initializeEsmModules = async () => {
-  if(!ora) {
-    await import('ora').then(imported => ora = imported.default);
-  }
-
-  return true;
-}
+import fs from 'fs';
+import { program } from 'commander';
+import shell from 'shelljs';
+import Gateway from '../lib/proxy.js';
+import { fetchSettings } from '../lib/settings.js';
+import fetchFiles from '../lib/data/fetchFiles.js';
+import waitForStatus from '../lib/data/waitForStatus.js';
+import downloadFile from '../lib/downloadFile.js';
+import logger from '../lib/logger.js';
+import report from '../lib/logger/report.js';
+import ora from 'ora';
 
 let gateway;
 
@@ -58,7 +48,6 @@ program
   .option('-z --zip', 'export to zip archive', false)
   .action(async (environment, params) => {
 
-    await initializeEsmModules();
     const spinner = ora({ text: 'Exporting', stream: process.stdout });
 
     const isZipFile = params.zip;
@@ -67,7 +56,7 @@ program
       filename = isZipFile ? 'data.zip' : 'data.json';
     }
     const exportInternalIds = params.exportInternalIds;
-    const authData = fetchAuthData(environment, program);
+    const authData = fetchSettings(environment, program);
     gateway = new Gateway(authData);
 
     const exportFinished = () => {

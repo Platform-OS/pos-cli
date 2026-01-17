@@ -1,28 +1,17 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  fs = require('fs'),
-  shell = require('shelljs'),
-  Gateway = require('../lib/proxy'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  fetchFiles = require('../lib/data/fetchFiles'),
-  waitForStatus = require('../lib/data/waitForStatus'),
-  downloadFile = require('../lib/downloadFile');
+import fs from 'fs';
+import { program } from 'commander';
+import shell from 'shelljs';
+import Gateway from '../lib/proxy.js';
+import { fetchSettings } from '../lib/settings.js';
+import fetchFiles from '../lib/data/fetchFiles.js';
+import waitForStatus from '../lib/data/waitForStatus.js';
+import downloadFile from '../lib/downloadFile.js';
+import logger from '../lib/logger.js';
+import report from '../lib/logger/report.js';
+import ora from 'ora';
 
-const logger = require('../lib/logger'),
-  report = require('../lib/logger/report');
-
-// importing ESM modules in CommonJS project
-let ora;
-const initializeEsmModules = async () => {
-  if(!ora) {
-    await import('ora').then(imported => ora = imported.default);
-  }
-
-  return true;
-}
-
-let gateway;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 program.showHelpAfterError();
@@ -32,12 +21,11 @@ program
   .arguments('[targetEnv]', 'target environment. Example: staging2')
   .action(async (sourceEnv, targetEnv, params) => {
 
-    await initializeEsmModules();
     const spinner = ora({ text: 'InstanceClone initilized', stream: process.stdout, interval: 500 });
 
     try {
-      const sourceAuthData = fetchAuthData(sourceEnv, program);
-      const targetAuthData = fetchAuthData(targetEnv, program);
+      const sourceAuthData = fetchSettings(sourceEnv, program);
+      const targetAuthData = fetchSettings(targetEnv, program);
 
       sourceGateway = new Gateway(sourceAuthData);
       targetGateway = new Gateway(targetAuthData);

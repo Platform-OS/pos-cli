@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const { program } = require('commander');
-const Gateway = require('../lib/proxy');
-const fetchAuthData = require('../lib/settings').fetchSettings;
-const logger = require('../lib/logger');
-const { isProductionEnvironment, confirmProductionExecution } = require('../lib/productionEnvironment');
+import fs from 'fs';
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import { fetchSettings } from '../lib/settings.js';
+import logger from '../lib/logger.js';
+import { isProductionEnvironment, confirmProductionExecution } from '../lib/productionEnvironment.js';
 
 program
   .name('pos-cli exec graphql')
@@ -28,7 +28,7 @@ program
       process.exit(1);
     }
 
-    const authData = fetchAuthData(environment, program);
+    const authData = fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
     if (isProductionEnvironment(environment)) {

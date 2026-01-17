@@ -1,0 +1,25 @@
+mutation create_<%= modelName %>(
+<% attributes.forEach((attr) => { -%>
+  $<%= attr.name %>: <%= graphqlArgumentMap[attr.type] %>!
+<% }); -%>
+) {
+  record: record_create(
+    record: {
+      table: "<%= modelName %>"
+      properties: [
+      <% attributes.forEach((attr) => { -%>
+        { name: "<%= attr.name %>" <%= graphqlArgumentValueMap[attr.type] %>: $<%= attr.name %> }
+      <% }); -%>
+      ]
+    }
+  ){
+    id
+    created_at
+    deleted_at
+    type: table
+
+ <% attributes.forEach((attr) => { -%>
+   <%= attr.name %>: <%= graphqlPropertyMap[attr.type] %>(name: "<%= attr.name %>")
+ <% }); -%>
+    }
+}

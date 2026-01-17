@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const logger = require('../lib/logger');
+import { program } from 'commander';
+import logger from '../lib/logger.js';
 
 program.showHelpAfterError();
 program

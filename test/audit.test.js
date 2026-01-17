@@ -1,6 +1,7 @@
-const exec = require('./utils/exec');
-const cliPath = require('./utils/cliPath');
-const path = require('path');
+import exec from './utils/exec';
+import cliPath from './utils/cliPath';
+import path from 'path';
+
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'audit', name);
 
 const run = fixtureName => exec(`${cliPath} audit`, { cwd: cwd(fixtureName) });
@@ -81,11 +82,4 @@ describe('Audit - orphaned includes', () => {
     expect(stderr).not.toMatch(path.join('app', 'views', 'partials', 'included_partial_2.liquid'));
     expect(stderr).not.toMatch(path.join('app', 'views', 'partials', 'shared', 'head.liquid'));
   });
-
-  // test('Drops out on variable include', async () => {
-  //   const { stderr } = await run('orphanedIncludes_variable');
-
-  //   expect(stderr).toMatch('Found partial included using a variable in: app/views/pages/home.liquid');
-  //   expect(stderr).toMatch('[Audit] 0 rules detected issues.');
-  // });
 });

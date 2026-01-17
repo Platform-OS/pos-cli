@@ -1,0 +1,14 @@
+---
+slug: <%= modelNamePlural %>
+method: post
+---
+{% liquid
+  function object = 'commands/<%= modelNamePlural %>/create', object: context.params.<%= modelName %>
+  if object.valid
+    # platformos-check-disable ConvertIncludeToRender
+    include 'modules/core/helpers/redirect_to', url: '/<%= modelNamePlural %>'
+    # platformos-check-enable ConvertIncludeToRender
+  else
+    render 'theme/simple/<%= modelNamePlural %>/new', object: object
+  endif
+%}

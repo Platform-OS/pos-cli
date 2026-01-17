@@ -1,24 +1,33 @@
 #!/usr/bin/env node
 
-const { program } = require("commander");
-const yeoman = require("yeoman-environment");
-const yeomanEnv = yeoman.createEnv();
-const path = require("path");
-const chalk = require("chalk");
-const dir = require('../lib/directories');
-const compact = require('lodash.compact');
-const spawn = require('execa');
-const reject = require('lodash.reject');
-const table = require('text-table');
-const logger = require('../lib/logger');
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const require = createRequire(import.meta.url);
+
+import { program } from 'commander';
+import { createEnv } from 'yeoman-environment';
+const yeomanEnv = createEnv();
+import express from 'express';
+import dir from '../lib/directories.js';
+import compact from 'lodash.compact';
+import spawn from 'execa';
+import reject from 'lodash.reject';
+import table from 'text-table';
+import logger from '../lib/logger.js';
 
 const registerGenerator = (generatorPath) => {
   const generatorName = path.basename(generatorPath);
-  const generatorPathFull = `./${generatorPath}/index.js`;
+  const generatorPathFull = path.resolve(generatorPath, 'index.js');
   yeomanEnv.register(generatorPathFull, generatorName);
 
+  let generator;
   try {
-    const generator = yeomanEnv.get(generatorName);
+    generator = yeomanEnv.get(generatorName);
   } catch(e) {
     if (e.message.includes('Cannot find module')){
       installModulesAndLoadGenerator(generatorPath, generatorName);
@@ -55,7 +64,30 @@ const optionsHelp = (generatorOptions) => {
     ];
   })
 
-  return table(rows);
+  return table(rows)
+}
+
+const getGeneratorHelp = (generator) => {
+  const help = { arguments: [], options: [], usage: '' };
+
+  try {
+    if (generator._arguments && Array.isArray(generator._arguments)) {
+      help.arguments = generator._arguments;
+      help.usage = generator._arguments.map(arg => `<${arg.name}> `).join(' ');
+    }
+  } catch (e) {
+    // Ignore - internal API not available
+  }
+
+  try {
+    if (generator._options && Array.isArray(generator._options)) {
+      help.options = generator._options;
+    }
+  } catch (e) {
+    // Ignore - internal API not available
+  }
+
+  return help;
 }
 
 const showHelpForGenerator = (generatorPath) => {
@@ -63,16 +95,29 @@ const showHelpForGenerator = (generatorPath) => {
   const generator = yeomanEnv.get(generatorName);
   const generatorInstance = yeomanEnv.instantiate(generator, ['']);
   console.log(`Generator: ${generatorName}`);
-  console.log(`  ${generatorInstance.description}`);
+  console.log(`  ${generatorInstance.description || 'No description available'}`);
   console.log(`\nUsage: `);
-  const usage = generatorInstance._arguments.map(arg => `<${arg.name}> `).join(' ')
+
+  const help = getGeneratorHelp(generatorInstance);
   console.log(
-    `  pos-cli generate ${generatorPath} ${usage}`
+    `  pos-cli generate ${generatorPath} ${help.usage}`
   );
+
   console.log('\nArguments:');
-  console.log(generatorInstance.argumentsHelp());
-  console.log(optionsHelp(generatorInstance._options));
+  try {
+    console.log(generatorInstance.argumentsHelp ? generatorInstance.argumentsHelp() : formatArgumentsHelp(help.arguments));
+  } catch (e) {
+    console.log(formatArgumentsHelp(help.arguments));
+  }
+  console.log(optionsHelp(help.options));
   console.log('');
+}
+
+const formatArgumentsHelp = (args) => {
+  if (!args || args.length === 0) {
+    return '  (No arguments required)';
+  }
+  return args.map(arg => `  <${arg.name}>  ${arg.description || ''}`).join('\n');
 }
 
 const unknownOptions = (command) => {
@@ -88,7 +133,7 @@ const unknownOptions = (command) => {
   return options;
 }
 
-spawnCommand = (command, args, opt) => {
+const spawnCommand = (command, args, opt) => {
   return spawn.sync(command, args, {
     stdio: 'inherit',
     cwd: '',

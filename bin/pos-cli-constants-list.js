@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-      Gateway = require('../lib/proxy'),
-      queries = require('../lib/graph/queries'),
-      fetchAuthData = require('../lib/settings').fetchSettings,
-      logger = require('../lib/logger');
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import queries from '../lib/graph/queries.js';
+import { fetchSettings } from '../lib/settings.js';
+import logger from '../lib/logger.js';
 
 const success = (msg) => {
   msg.data.constants.results.forEach(x => console.log(x.name.padEnd(50), safe(x.value)))
@@ -22,7 +22,7 @@ program
   .name('pos-cli constants list')
   .arguments('[environment]', 'name of environment. Example: staging')
   .action((environment, params) => {
-    const authData = fetchAuthData(environment, program);
+    const authData = fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
     gateway

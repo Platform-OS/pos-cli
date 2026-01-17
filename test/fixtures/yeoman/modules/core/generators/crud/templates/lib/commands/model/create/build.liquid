@@ -1,0 +1,16 @@
+{% parse_json object %}
+  {
+    "id": {{ object.id | json }},
+<% attributes.forEach((attr, i) => { -%>
+  <% if (attr.type == 'integer' || attr.type == 'float') { %>
+    "<%= attr.name %>": {{ object.<%= attr.name %> | plus: 0 | json }}<% if (i+1 < attributes.length){ %>,<% } %>
+  <%} else { %>
+    "<%= attr.name %>": {{ object.<%= attr.name %> | json }}<% if (i+1 < attributes.length){ %>,<% } %>
+  <% } %>
+<% }); -%>
+  }
+{% endparse_json %}
+
+{% liquid
+  return object
+%}

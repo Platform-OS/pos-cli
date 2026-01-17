@@ -1,17 +1,12 @@
-/* global jest */
+import 'dotenv/config';
+import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest';
+import { spawn } from 'child_process';
+import path from 'path';
+import Gateway from '../lib/proxy.js';
+import { fetchSettings } from '../lib/settings.js';
+import { hasRealCredentials, requireRealCredentials } from './utils/credentials';
 
-require('dotenv').config();
-
-const { spawn } = require('child_process');
-const path = require('path');
-const Gateway = require('../lib/proxy');
-const { fetchSettings } = require('../lib/settings');
-const { requireRealCredentials } = require('./utils/realCredentials');
-
-requireRealCredentials();
-
-jest.setTimeout(20000);
-jest.retryTimes(2);
+vi.setConfig({ testTimeout: 20000 });
 
 const generateUniqueId = () => `test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
@@ -76,7 +71,11 @@ const execLiquidLog = async (message, type) => {
 };
 
 describe('pos-cli logs integration', () => {
-  test('displays log messages with and without type', async () => {
+  beforeAll(() => {
+    requireRealCredentials();
+  });
+
+  test('displays log messages with and without type', { retry: 2 }, async () => {
     const testId = generateUniqueId();
     const logWithType = { message: `With type: ${testId}`, type: 'pos-cli-test' };
     const logWithoutType = { message: `Default type: ${testId}` };
@@ -106,7 +105,7 @@ describe('pos-cli logs integration', () => {
     }
   });
 
-  test('filters logs to show only matching type', async () => {
+  test('filters logs to show only matching type', { retry: 2 }, async () => {
     const testId = generateUniqueId();
     const matchingLog = { message: `Matching: ${testId}`, type: 'filter-test-type' };
     const nonMatchingLog = { message: `Non-matching: ${testId}`, type: 'other-type' };

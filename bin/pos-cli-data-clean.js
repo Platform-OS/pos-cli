@@ -1,22 +1,13 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  prompts = require('prompts'),
-  Gateway = require('../lib/proxy'),
-  waitForStatus = require('../lib/data/waitForStatus'),
-  fetchAuthData = require('../lib/settings').fetchSettings,
-  logger = require('../lib/logger'),
-  ServerError = require('../lib/ServerError');
-
-// importing ESM modules in CommonJS project
-let ora;
-const initializeEsmModules = async () => {
-  if(!ora) {
-    await import('ora').then(imported => ora = imported.default);
-  }
-
-  return true;
-}
+import { program } from 'commander';
+import prompts from 'prompts';
+import Gateway from '../lib/proxy.js';
+import waitForStatus from '../lib/data/waitForStatus.js';
+import { fetchSettings } from '../lib/settings.js';
+import logger from '../lib/logger.js';
+import ServerError from '../lib/ServerError.js';
+import ora from 'ora';
 
 const confirmationText = process.env.CONFIRMATION_TEXT || 'CLEAN DATA';
 
@@ -48,11 +39,10 @@ program
   .option('-i, --include-schema', 'also remove instance files: pages, schemas etc.')
   .action(async (environment, params) => {
 
-    await initializeEsmModules();
     const spinner = ora({ text: 'Sending data', stream: process.stdout });
     
     try {
-      const gateway = new Gateway(fetchAuthData(environment));
+      const gateway = new Gateway(fetchSettings(environment));
       const confirmed = await confirmCleanup(params.autoConfirm, params.includeSchema, gateway.url)
       if (confirmed) {
         spinner.start(`Cleaning instance`);

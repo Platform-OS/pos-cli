@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  degit = require('degit'),
-  inquirer = require('inquirer');
+import { program } from 'commander';
+import degit from 'degit';
+import inquirer from 'inquirer';
 
-const logger = require('../lib/logger'),
-  report = require('../lib/logger/report');
+import logger from '../lib/logger.js';
+import report from '../lib/logger/report.js';
 
 const repos = {
   empty: 'mdyd-dev/directory-structure',

@@ -1,6 +1,6 @@
-const { exec } = require('child_process');
+import { exec } from 'child_process';
 
-module.exports = (cmd, opts, callback) =>
+const execCommand = (cmd, opts, callback) =>
   new Promise((resolve, reject) => {
     const child = exec(cmd, opts, (err, stdout, stderr) => {
       let code = err ? err.code : 0;
@@ -9,3 +9,5 @@ module.exports = (cmd, opts, callback) =>
     if (callback) callback(child);
     return child;
   });
+
+export default execCommand;
