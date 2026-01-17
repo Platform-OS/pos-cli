@@ -20,7 +20,7 @@ test('resolveDependencies ok', async () => {
         {"module":"c","versions":{"1.0.0":{"dependencies":{}}}}
       ].concat(core);
     }
-    console.log('dont know', modulesNames);
+    throw new Error(`Unexpected modulesNames: ${JSON.stringify(modulesNames)}`);
   };
   const rootModules = {
     "payments_stripe": "1.0.6",
@@ -47,7 +47,6 @@ test('resolveDependencies do not use newest available version but the one define
   const core = {"module":"core","versions":{"1.6.0":{"dependencies":{}}, "1.6.1":{"dependencies":{}}, "1.8.0":{"dependencies":{}}}};
   const tests = {"module":"tests","versions":{"1.0.7":{"dependencies":{"core":"^1.6.0"}}}}
   const modulesVersions = async (modulesNames) => {
-    // console.log('hit');
     if(isEqual(modulesNames, ['tests', 'core'])) {
       return [tests, core];
     } else if(isEqual(modulesNames, ['tests'])) {
@@ -55,7 +54,7 @@ test('resolveDependencies do not use newest available version but the one define
     } else if(isEqual(modulesNames, ['core'])) {
       return [core]
     }
-    console.log('dont know', modulesNames);
+    throw new Error(`Unexpected modulesNames: ${JSON.stringify(modulesNames)}`);
   };
   const rootModules = {
     "tests": "1.0.7",

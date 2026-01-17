@@ -1,0 +1,30 @@
+{% liquid
+  assign result = '{}' | parse_json
+  assign total_assertions = 0
+
+  assign tests_array = '[]' | parse_json
+  for contract in contracts
+    assign total_assertions = total_assertions | plus: contract.total
+
+    assign test_result = '{}' | parse_json
+    hash_assign test_result['name'] = contract.test_path
+    hash_assign test_result['success'] = contract.success
+    hash_assign test_result['assertions'] = contract.total
+    hash_assign test_result['errors'] = contract.errors
+
+    assign tests_array = tests_array | add_to_array: test_result
+  endfor
+
+  if total_errors > 0
+    hash_assign result['success'] = false
+  else
+    hash_assign result['success'] = true
+  endif
+
+  hash_assign result['total_tests'] = contracts.size
+  hash_assign result['total_assertions'] = total_assertions
+  hash_assign result['total_errors'] = total_errors
+  hash_assign result['duration_ms'] = total_duration
+  hash_assign result['tests'] = tests_array
+%}
+{{ result | json }}

@@ -1,0 +1,12 @@
+query count_test_partials($path: String, $per_page: Int!){
+  admin_liquid_partials(
+    per_page: $per_page
+    filter: {
+      path: { ends_with: "_test", contains: $path }
+    }
+
+  ) {
+    total_entries
+    total_pages
+  }
+}

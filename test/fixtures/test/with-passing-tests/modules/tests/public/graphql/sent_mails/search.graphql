@@ -1,0 +1,20 @@
+query mails($id: ID, $limit: Int = 20, $page: Int = 1) {
+  mails: admin_sent_notifications(
+    per_page: $limit
+    page: $page
+    filter: { id: { value: $id }, notification_type: { value: EMAIL } }
+    sort: { created_at: { order: DESC } }
+  ) {
+    total_entries
+    total_pages
+    current_page
+    has_previous_page
+    has_next_page
+    results {
+      id
+      created_at
+      content
+      options
+    }
+  }
+}

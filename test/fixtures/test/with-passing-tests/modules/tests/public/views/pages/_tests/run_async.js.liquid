@@ -1,0 +1,13 @@
+---
+layout: ''
+---
+{% if context.environment == 'staging' or context.environment == 'development' %}
+  {% assign test_name = 5 | random_string | prepend: "liquid_test_" %}
+  {% background source_name: "liquid_tests", test_name: test_name %}
+    {% include 'modules/tests/commands/run', format: 'log_js', test_name: test_name %}
+  {% endbackground %}
+  {% assign result = '{}' | parse_json | hash_merge: test_name: test_name %}
+  {{ result }}
+{% else %}
+  {"success":false,"error":"Tests can only be run in staging or development environment"}
+{% endif %}

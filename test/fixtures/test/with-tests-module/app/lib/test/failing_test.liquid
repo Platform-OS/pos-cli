@@ -1,0 +1,4 @@
+{% liquid
+    assign var = '{"field": 1 }' | parse_json
+    include 'modules/tests/assertions/equal', contract: contract, given: var.field, expected: 2, field_name: 'field'
+%}
