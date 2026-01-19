@@ -7,21 +7,21 @@ import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
 
 const success = (msg) => {
-  msg.data.constants.results.forEach(x => console.log(x.name.padEnd(50), safe(x.value)))
-  logger.Print("\n")
-}
+  msg.data.constants.results.forEach(x => console.log(x.name.padEnd(50), safe(x.value)));
+  logger.Print('\n');
+};
 
 const safe = (str) => {
   if ( process.env.SAFE )
-    return JSON.stringify(str)
+    return JSON.stringify(str);
   else
-    return JSON.stringify(str.slice(0,2) + '...')
-}
+    return JSON.stringify(str.slice(0,2) + '...');
+};
 
 program
   .name('pos-cli constants list')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .action((environment, params) => {
+  .action((environment, _params) => {
     const authData = fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 

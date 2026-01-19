@@ -15,15 +15,15 @@ test('manifest for files on linux', () => {
   ];
 
   const manifestFile = manifestGenerateForAssets(assets);
-  Object.entries(manifestFile).forEach(([key, value]) => delete value['updated_at']);
+  Object.entries(manifestFile).forEach(([_key, value]) => delete value['updated_at']);
   expect(manifestFile).toEqual({
-    "app/assets/foo.js": {
-      "file_size": 20,
-      "physical_file_path": "app/assets/foo.js"
+    'app/assets/foo.js': {
+      'file_size': 20,
+      'physical_file_path': 'app/assets/foo.js'
     },
-    "modules/testModule/bar.js": {
-      "file_size": 20,
-      "physical_file_path": "modules/testModule/public/assets/bar.js",
+    'modules/testModule/bar.js': {
+      'file_size': 20,
+      'physical_file_path': 'modules/testModule/public/assets/bar.js'
     }
   });
 });
@@ -35,15 +35,15 @@ test('manifest for files on windows', () => {
   ];
 
   const manifestFile = manifestGenerateForAssets(assets);
-  Object.entries(manifestFile).forEach(([key, value]) => delete value['updated_at']);
+  Object.entries(manifestFile).forEach(([_key, value]) => delete value['updated_at']);
   expect(manifestFile).toEqual({
-    "app/assets/foo.js": {
-      "file_size": 20,
-      "physical_file_path": "app/assets/foo.js"
+    'app/assets/foo.js': {
+      'file_size': 20,
+      'physical_file_path': 'app/assets/foo.js'
     },
-    "modules/testModule/bar.js": {
-      "file_size": 20,
-      "physical_file_path": "modules/testModule/public/assets/bar.js"
+    'modules/testModule/bar.js': {
+      'file_size': 20,
+      'physical_file_path': 'modules/testModule/public/assets/bar.js'
     }
   });
 });

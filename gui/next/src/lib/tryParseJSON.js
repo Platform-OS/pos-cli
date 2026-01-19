@@ -16,9 +16,9 @@ const tryParseJSON = (argument) => {
     if(o && typeof o === 'object'){
       return o;
     }
+  } catch {
+    // catch the error from parsing JSON but do nothing
   }
-  // catch the error from parsing JSON but do nothing
-  catch(e){};
 
   // if everything failed we can assumen the argument is not parsable JSON
   return false;
@@ -29,4 +29,4 @@ const tryParseJSON = (argument) => {
 
 // exports
 // ------------------------------------------------------------------------
-export { tryParseJSON }
+export { tryParseJSON };

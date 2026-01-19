@@ -165,7 +165,8 @@ test('filtering record array by not_value_array', async ({ page }) => {
 });
 
 
-// MISSING: Filtering array by 'not_value_in'. It works, but it also filters out the empty arrays even when there is no empty element in the filter
+// MISSING: Filtering array by 'not_value_in'. It works, but it also filters out the empty arrays
+// even when there is no empty element in the filter
 
 
 test('filtering record int by value_int', async ({ page }) => {

@@ -9,14 +9,14 @@ test('ignores file if template values are empty', () => {
 });
 
 test('returns oryginal file body if it runs into error', () => {
-  expect(fillInTemplateValues(missformatedTemplatePath, Object({ "aKey": 1}))).toEqual(fs.readFileSync(missformatedTemplatePath, 'utf8'));
+  expect(fillInTemplateValues(missformatedTemplatePath, Object({ 'aKey': 1}))).toEqual(fs.readFileSync(missformatedTemplatePath, 'utf8'));
 });
 
 test('fills template with values ', () => {
   const templateValues = Object({
-    "aKey": "aStringValue",
-    "otherKey": 1
-  })
+    'aKey': 'aStringValue',
+    'otherKey': 1
+  });
   expect(fillInTemplateValues(fileWithTemplatePath, templateValues)).toEqual(`---
 slug: aStringValue
 ---
@@ -27,8 +27,8 @@ Page number: 1
 
 test('render nothing for non existing keys ', () => {
   const templateValues = Object({
-    "otherKey": 1
-  })
+    'otherKey': 1
+  });
   expect(fillInTemplateValues(fileWithTemplatePath, templateValues)).toEqual(`---
 slug: 
 ---

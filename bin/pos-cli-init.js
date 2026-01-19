@@ -11,7 +11,7 @@ const repos = {
   empty: 'mdyd-dev/directory-structure',
   'Hello world': 'mdyd-dev/hello-world',
   'Todo app': 'mdyd-dev/todo-app',
-  'Product Marketplace Template': 'mdyd-dev/product-marketplace-template',
+  'Product Marketplace Template': 'mdyd-dev/product-marketplace-template'
 };
 
 function createStructure(url, branch) {
@@ -46,20 +46,20 @@ program
             name: 'repo',
             message: 'Example app',
             default: 'empty',
-            choices: Object.keys(repos),
+            choices: Object.keys(repos)
           },
           {
             type: 'string',
             name: 'branch',
             message: 'Branch',
-            default: 'master',
-          },
+            default: 'master'
+          }
         ])
         .then((answers) => {
           createStructure(repos[answers.repo], answers.branch);
 
           report('Init: Wizard');
-        })
+        });
       return;
     }
 

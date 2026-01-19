@@ -53,8 +53,8 @@ test('should run env list', async () => {
 });
 
 test('should run help on env add', async () => {
-  const { stdout, code, stderr } = await run('env add');
-  expect(stderr).toMatch('Usage: pos-cli env add [options] <environment>')
+  const { code, stderr } = await run('env add');
+  expect(stderr).toMatch('Usage: pos-cli env add [options] <environment>');
   expect(code).toEqual(1);
 });
 
@@ -72,25 +72,25 @@ test('should run help on logs', async () => {
 
 test('should run help on migrations run', async () => {
   const { stderr, code } = await run('migrations run');
-  expect(stderr).toMatch("error: missing required argument 'timestamp'")
+  expect(stderr).toMatch("error: missing required argument 'timestamp'");
   expect(code).toEqual(1);
 });
 
 test('should run help on migrations run with timestamp', async () => {
   const { stderr, code } = await run('migrations run 900000000');
-  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]')
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
   expect(code).toEqual(1);
 });
 
 test('should run help on migrations list', async () => {
   const { stderr, code } = await run('migrations list');
-  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]')
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
   expect(code).toEqual(1);
 });
 
 test('should run help on modules list', async () => {
   const { stderr, code } = await run('modules list');
-  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]')
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
   expect(code).toEqual(1);
 });
 
@@ -108,7 +108,7 @@ test('should run help on modules push', async () => {
 
 test('should run help on sync', async () => {
   const { stderr, code } = await run('sync');
-  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]')
+  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]');
   expect(code).toEqual(1);
 });
 

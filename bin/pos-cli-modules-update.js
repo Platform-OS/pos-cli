@@ -53,9 +53,8 @@ program
         spinner.stopAndPersist();
         logger.Error(e.message);
       }
-    }
-    catch(error) {
-      logger.Error(`Aborting - ${posConfigDirectory} directory has not been created.`)
+    } catch {
+      logger.Error(`Aborting - ${posConfigDirectory} directory has not been created.`);
     }
   });
 

@@ -23,8 +23,8 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const kill = p => {
   p.stdout.destroy();
   p.stderr.destroy();
-  p.kill()
-}
+  p.kill();
+};
 
 const barJsPath = path.join(cwd('correct_with_assets'), 'app/assets/bar.js');
 const originalBarJsContent = fs.readFileSync(barJsPath, 'utf8');
@@ -43,9 +43,9 @@ describe('Happy path', () => {
       exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout);
       kill(child);
-    }
+    };
 
-    const { stdout, stderr } = await run('correct_with_assets', null, steps);
+    const { stdout } = await run('correct_with_assets', null, steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
@@ -57,8 +57,8 @@ describe('Happy path', () => {
       exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout);
       kill(child);
-    }
-    const { stdout, stderr } = await run('correct_with_assets', '-d', steps);
+    };
+    const { stdout } = await run('correct_with_assets', '-d', steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
@@ -81,8 +81,8 @@ properties:
       await exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
       await sleep(stepTimeout);
       kill(child);
-    }
-    const { stderr, stdout } = await run('correct_with_assets', null, steps);
+    };
+    const { stdout } = await run('correct_with_assets', null, steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch(`[Sync] Synced: ${fileName}`);

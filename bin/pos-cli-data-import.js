@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import fs from 'fs';
-import shell from 'shelljs';
 import crypto from 'crypto';
 import { program } from 'commander';
 import Gateway from '../lib/proxy.js';
@@ -96,7 +95,7 @@ program
     const authData = fetchSettings(environment);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
-      MARKETPLACE_URL: authData.url,
+      MARKETPLACE_URL: authData.url
     });
 
     if (!fs.existsSync(filename)) {

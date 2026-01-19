@@ -12,14 +12,16 @@ program
   .action(async (environment, params) => {
     try {
       const client = await SwaggerProxy.client(environment);
-      const response = await client.triggerAlert(params)
+      const response = await client.triggerAlert(params);
 
       if (!params.json)
-        console.log(response)
+        console.log(response);
       else
-        console.log(response)
+        console.log(response);
 
-    } catch(e) { logger.Error(e) }
+    } catch(e) {
+      logger.Error(e); 
+    }
   });
 
 program.parse(process.argv);

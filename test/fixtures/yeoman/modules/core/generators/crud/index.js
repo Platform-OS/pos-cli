@@ -24,34 +24,34 @@ export default class extends Generator {
       modelNamePlural: pluralize(this.options.modelName),
       attributes: attributes,
       graphqlArgumentMap: {
-        string: "String",
-        text: "String",
-        integer: "Int",
-        boolean: "Boolean",
-        float: "Float",
-        date: "String",
-        datetime: "String",
-        array: "[String]"
+        string: 'String',
+        text: 'String',
+        integer: 'Int',
+        boolean: 'Boolean',
+        float: 'Float',
+        date: 'String',
+        datetime: 'String',
+        array: '[String]'
       },
       graphqlArgumentValueMap: {
-        string: "value",
-        text: "value",
-        integer: "value_int",
-        boolean: "value_boolean",
-        float: "value_float",
-        date: "value",
-        datetime: "value",
-        array: "value_array"
+        string: 'value',
+        text: 'value',
+        integer: 'value_int',
+        boolean: 'value_boolean',
+        float: 'value_float',
+        date: 'value',
+        datetime: 'value',
+        array: 'value_array'
       },
       graphqlPropertyMap: {
-        string: "property",
-        text: "property",
-        integer: "property_int",
-        boolean: "property_boolean",
-        float: "property_float",
-        date: "property",
-        datetime: "property",
-        array: "property_array"
+        string: 'property',
+        text: 'property',
+        integer: 'property_int',
+        boolean: 'property_boolean',
+        float: 'property_float',
+        date: 'property',
+        datetime: 'property',
+        array: 'property_array'
       }
     };
   }
@@ -85,7 +85,7 @@ export default class extends Generator {
       );
       this.fs.copyTpl(
         this.templatePath('./config.yml'),
-        this.destinationPath(`app/config.yml`),
+        this.destinationPath('app/config.yml'),
         this.props
       );
       if(this.options.includeViews) {
@@ -101,7 +101,7 @@ export default class extends Generator {
         );
         this.fs.copyTpl(
           this.templatePath('./views/partials/theme/simple/field_error.liquid'),
-          this.destinationPath(`app/views/partials/theme/simple/field_error.liquid`),
+          this.destinationPath('app/views/partials/theme/simple/field_error.liquid'),
           this.props
         );
       }

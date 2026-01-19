@@ -1,0 +1,63 @@
+{
+  "env": {
+    "browser": true,
+    "es2024": true,
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:n/recommended",
+    "plugin:import/recommended",
+    "plugin:import/typescript"
+  ],
+  "plugins": ["n", "import", "promise"],
+  "rules": {
+    "no-console": "off",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-magic-numbers": "off",
+    "no-underscore-dangle": "off",
+    "comma-dangle": ["error", "never"],
+    "quotes": ["error", "single", { "avoidEscape": true }],
+    "semi": ["error", "always"],
+    "indent": ["error", 2, { "SwitchCase": 1 }],
+    "brace-style": ["error", "1tbs"],
+    "padded-blocks": "off",
+    "spaced-comment": ["warn", "always"],
+    "quote-props": "off",
+    "prefer-arrow-callback": "off",
+    "space-before-function-paren": "off",
+    "no-new": "off",
+    "func-names": "off",
+    "new-cap": "off",
+    "arrow-body-style": "off",
+    "class-methods-use-this": "off",
+    "consistent-return": "off",
+    "max-len": ["warn", { "code": 140, "ignoreUrls": true }],
+    "n/no-missing-import": ["error", { "tryExtensions": [".js", ".json"] }],
+    "n/no-extraneous-import": "off",
+    "n/no-extraneous-require": "off",
+    "n/no-unsupported-features/es-syntax": "off",
+    "n/no-process-exit": "off",
+    "import/no-unresolved": ["error", { "ignore": ["^@platformos/"] }],
+    "import/extensions": ["error", "ignorePackages", { "js": "always" }]
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "gui/*/node_modules/",
+    "gui/*/dist/",
+    "gui/*/build/",
+    "coverage/",
+    "*.min.js"
+  ],
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "extensions": [".js", ".json"]
+      }
+    }
+  }
+}

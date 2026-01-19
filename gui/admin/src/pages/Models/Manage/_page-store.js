@@ -13,7 +13,7 @@ const createStore = () => {
       });
     },
     setSchemaId: id => {
-      update(s => ({ ...s, schemaId: id }))
+      update(s => ({ ...s, schemaId: id }));
     },
     reset: () => update(s => ({ ...s, page: 1 })),
     increment: () => {

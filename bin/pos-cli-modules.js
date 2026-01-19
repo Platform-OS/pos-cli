@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
-import logger from '../lib/logger.js';
 
 program.showHelpAfterError();
 program

@@ -4,7 +4,7 @@ import exec from './utils/exec';
 import cliPath from './utils/cliPath';
 import fs from 'fs';
 import path from 'path';
-import { hasRealCredentials, requireRealCredentials, noCredentials, applyCredentials } from './utils/credentials';
+import { requireRealCredentials, noCredentials, applyCredentials } from './utils/credentials';
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', name);
 const run = async (fixtureName, options) => await exec(`${cliPath} modules update ${options}`, { cwd: cwd(fixtureName), env: process.env });
@@ -14,7 +14,7 @@ describe('Successful update', () => {
     requireRealCredentials();
     const pathToLockFile = `${cwd('deploy/modules_update')}/app/pos-modules.lock.json`;
 
-    const { stdout, stderr } = await run('deploy/modules_update', 'core');
+    const { stdout } = await run('deploy/modules_update', 'core');
     expect(stdout).toMatch('Updating module');
     const fileContent = fs.readFileSync(pathToLockFile, { encoding: 'utf8' });
     const lockFile = JSON.parse(fileContent);
@@ -28,7 +28,7 @@ describe('Failed download', () => {
     const savedPortalHost = process.env.PARTNER_PORTAL_HOST;
     delete process.env.PARTNER_PORTAL_HOST;
     try {
-      const { stdout, stderr } = await run('deploy/modules_update', 'moduleNotFound');
+      const { stderr } = await run('deploy/modules_update', 'moduleNotFound');
       expect(stderr).toMatch("Can't find module moduleNotFound");
     } finally {
       applyCredentials(savedCreds);
@@ -42,7 +42,7 @@ describe('Failed download', () => {
     const savedPortalHost = process.env.PARTNER_PORTAL_HOST;
     delete process.env.PARTNER_PORTAL_HOST;
     try {
-      const { stdout, stderr } = await run('deploy/modules_update', '');
+      const { stderr } = await run('deploy/modules_update', '');
       expect(stderr).toMatch("error: missing required argument 'module-name'");
     } finally {
       applyCredentials(savedCreds);

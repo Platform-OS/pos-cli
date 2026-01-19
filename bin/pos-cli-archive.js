@@ -29,7 +29,7 @@ program
         TARGET: params.output
       });
 
-    await createArchive(env)
+    await createArchive(env);
   });
 
 program.parse(process.argv);

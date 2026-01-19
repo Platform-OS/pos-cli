@@ -52,4 +52,7 @@ const restoreCredentials = (saved) => {
   applyCredentials(saved);
 };
 
-export { exampleCredentials, noCredentials, applyCredentials, hasRealCredentials, requireRealCredentials, saveCredentials, restoreCredentials };
+export {
+  exampleCredentials, noCredentials, applyCredentials,
+  hasRealCredentials, requireRealCredentials, saveCredentials, restoreCredentials
+};

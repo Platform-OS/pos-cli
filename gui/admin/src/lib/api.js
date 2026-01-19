@@ -1,11 +1,9 @@
-import { NotificationDisplay, notifier } from '@beyonk/svelte-notifications';
+import { notifier } from '@beyonk/svelte-notifications';
 import { get } from 'svelte/store';
 import filtersStore from '../pages/Models/Manage/_filters-store';
 import pageStore from '../pages/Models/Manage/_page-store';
 
 import typeMap from './_typemap';
-
-let timeout = 5000;
 
 const getPropsString = (props) => {
   return Object.keys(props)
@@ -30,11 +28,11 @@ const getPropertiesFilter = (f) => {
   return filterString;
 };
 
-const graph = (body, successMessage = "Success") => {
+const graph = (body, successMessage = 'Success') => {
   return fetch(`http://localhost:${parseInt(window.location.port)-1}/api/graph`, {
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify(body)
   })
     .then((res) => res.json())
     .then((res) => {
@@ -48,7 +46,7 @@ const graph = (body, successMessage = "Success") => {
       }
 
       return res && res.data;
-    })
+    });
 };
 
 export default {
@@ -80,7 +78,7 @@ export default {
       propertyFilter = getPropertiesFilter(f);
     }
 
-    const deletedFilter = deleted ? `deleted_at: { exists: true }` : '';
+    const deletedFilter = deleted ? 'deleted_at: { exists: true }' : '';
     const idFilter = id ? `id: { value: ${id} }` : '';
     const schemaIdFilter = schemaId ? `model_schema_id: { value: ${schemaId} }` : '';
     const query = `query {
@@ -167,7 +165,7 @@ export default {
 
     return graph({ query });
   },
-  getUsers(email = "", fn = "", ln = "") {
+  getUsers(email = '', fn = '', ln = '') {
     const query = `query getUsers {
       users(per_page: 20,
         page: 1,
@@ -212,7 +210,7 @@ export default {
       }
     }`;
 
-    return graph({ query }, "Constant updated");
+    return graph({ query }, 'Constant updated');
   },
   unsetConstant(name) {
     const query = `mutation {
@@ -221,6 +219,6 @@ export default {
       }
     }`;
 
-    return graph({ query }, "Constant unset");
+    return graph({ query }, 'Constant unset');
   }
 };

@@ -25,7 +25,9 @@ const waitForServer = async (server, port, maxWait = 5000, waitForSync = false) 
           }
           return true;
         }
-      } catch (e) { }
+      } catch {
+        // JSON parse failed, ignore
+      }
     }
 
     const serverHasError = server.getStderr().includes('Error') ||
@@ -50,8 +52,12 @@ const startServer = (args, env = process.env, cwd = process.cwd()) => {
   let stdout = '';
   let stderr = '';
 
-  child.stdout.on('data', data => { stdout += data.toString(); });
-  child.stderr.on('data', data => { stderr += data.toString(); });
+  child.stdout.on('data', data => {
+    stdout += data.toString(); 
+  });
+  child.stderr.on('data', data => {
+    stderr += data.toString(); 
+  });
 
   return {
     process: child,

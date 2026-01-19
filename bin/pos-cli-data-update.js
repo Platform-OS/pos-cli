@@ -22,7 +22,7 @@ program
     const authData = fetchSettings(environment, program);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
-      MARKETPLACE_URL: authData.url,
+      MARKETPLACE_URL: authData.url
     });
 
     const spinner = ora({ text: 'Sending data', stream: process.stdout });
@@ -56,7 +56,7 @@ For example: https://jsonlint.com`
       .catch((e) => {
         spinner.fail('Update failed');
         logger.Error(e.message);
-          report('[ERR] Data: Update');
+        report('[ERR] Data: Update');
       });
 
   });

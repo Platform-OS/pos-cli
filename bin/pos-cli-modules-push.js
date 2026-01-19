@@ -18,8 +18,9 @@ program
       if (params.path) process.chdir(params.path);
       checkParams(params);
       await publishVersion(params);
+    } catch(e) {
+      console.log(e); 
     }
-    catch(e) { console.log(e) }
   });
 
 program.showHelpAfterError();

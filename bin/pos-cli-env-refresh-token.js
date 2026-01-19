@@ -15,16 +15,16 @@ const login = async (email, password, url) => {
   return Portal.login(email, password, url)
     .then(response => {
       if (response) return Promise.resolve(response[0].token);
-    })
-}
+    });
+};
 
 program
   .name('pos-cli env refresh-token')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .action(async (environment, params) => {
+  .action(async (environment, _params) => {
     try {
 
-      const authData = fetchSettings(environment)
+      const authData = fetchSettings(environment);
 
       if (!authData.email){
         token = await deviceAuthorizationFlow(authData.url);
@@ -44,7 +44,7 @@ program
 
     } catch (e) {
       if (ServerError.isNetworkError(e))
-        ServerError.handler(e)
+        ServerError.handler(e);
       else
         logger.Error(e);
       process.exit(1);

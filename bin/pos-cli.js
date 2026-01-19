@@ -2,17 +2,16 @@
 
 import { program } from 'commander';
 import updateNotifier from 'update-notifier';
-import pkg from '../package.json' with { type: "json" };
-import logger from '../lib/logger.js';
+import pkg from '../package.json' with { type: 'json' };
 
 const version = pkg.version;
 
 updateNotifier({
   pkg: pkg
- }).notify({
+}).notify({
   defer: true,
   isGlobal: true
- });
+});
 
 program.showHelpAfterError();
 program

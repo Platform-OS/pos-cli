@@ -1,9 +1,8 @@
 import 'dotenv/config';
-import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { spawn } from 'child_process';
 import path from 'path';
 import { requireRealCredentials } from './utils/credentials';
-import Gateway from '../lib/proxy.js';
 import { TestLogStream } from '../lib/test-runner/logStream.js';
 import { formatDuration, formatTestLog, transformTestResponse } from '../lib/test-runner/formatters.js';
 
@@ -20,8 +19,12 @@ const startCommand = (args, env = process.env) => {
   let stdout = '';
   let stderr = '';
 
-  child.stdout.on('data', data => { stdout += data.toString(); });
-  child.stderr.on('data', data => { stderr += data.toString(); });
+  child.stdout.on('data', data => {
+    stdout += data.toString(); 
+  });
+  child.stderr.on('data', data => {
+    stderr += data.toString(); 
+  });
 
   return {
     process: child,
@@ -45,8 +48,12 @@ const exec = (command, options = {}) => {
     let stdout = '';
     let stderr = '';
 
-    child.stdout.on('data', data => { stdout += data.toString(); });
-    child.stderr.on('data', data => { stderr += data.toString(); });
+    child.stdout.on('data', data => {
+      stdout += data.toString(); 
+    });
+    child.stderr.on('data', data => {
+      stderr += data.toString(); 
+    });
 
     child.on('close', code => {
       resolve({ stdout, stderr, code });
@@ -186,11 +193,11 @@ describe('pos-cli test-run command', () => {
           total_errors: 0,
           duration_ms: 26,
           tests: [
-            { name: "test/array_test", success: true, assertions: 2, errors: {} },
-            { name: "test/examples/assertions_test", success: true, assertions: 4, errors: {} },
-            { name: "test/example_test", success: true, assertions: 5, errors: {} },
-            { name: "test/object_test", success: true, assertions: 3, errors: {} },
-            { name: "test/string_test", success: true, assertions: 2, errors: {} }
+            { name: 'test/array_test', success: true, assertions: 2, errors: {} },
+            { name: 'test/examples/assertions_test', success: true, assertions: 4, errors: {} },
+            { name: 'test/example_test', success: true, assertions: 5, errors: {} },
+            { name: 'test/object_test', success: true, assertions: 3, errors: {} },
+            { name: 'test/string_test', success: true, assertions: 2, errors: {} }
           ]
         };
 
@@ -202,11 +209,11 @@ describe('pos-cli test-run command', () => {
           failed: 0,
           assertions: 16,
           tests: [
-            { name: "test/array_test", status: "passed", passed: true, assertions: 2 },
-            { name: "test/examples/assertions_test", status: "passed", passed: true, assertions: 4 },
-            { name: "test/example_test", status: "passed", passed: true, assertions: 5 },
-            { name: "test/object_test", status: "passed", passed: true, assertions: 3 },
-            { name: "test/string_test", status: "passed", passed: true, assertions: 2 }
+            { name: 'test/array_test', status: 'passed', passed: true, assertions: 2 },
+            { name: 'test/examples/assertions_test', status: 'passed', passed: true, assertions: 4 },
+            { name: 'test/example_test', status: 'passed', passed: true, assertions: 5 },
+            { name: 'test/object_test', status: 'passed', passed: true, assertions: 3 },
+            { name: 'test/string_test', status: 'passed', passed: true, assertions: 2 }
           ],
           duration: 26
         });
@@ -220,9 +227,9 @@ describe('pos-cli test-run command', () => {
           total_errors: 1,
           duration_ms: 45,
           tests: [
-            { name: "test/passing_test", success: true, assertions: 3, errors: {} },
-            { name: "test/failing_test", success: false, assertions: 2, errors: { expected: "field to be 2", actual: "field is 1" } },
-            { name: "test/another_passing_test", success: true, assertions: 5, errors: {} }
+            { name: 'test/passing_test', success: true, assertions: 3, errors: {} },
+            { name: 'test/failing_test', success: false, assertions: 2, errors: { expected: 'field to be 2', actual: 'field is 1' } },
+            { name: 'test/another_passing_test', success: true, assertions: 5, errors: {} }
           ]
         };
 
@@ -234,9 +241,9 @@ describe('pos-cli test-run command', () => {
           failed: 1,
           assertions: 10,
           tests: [
-            { name: "test/passing_test", status: "passed", passed: true, assertions: 3 },
-            { name: "test/failing_test", status: "failed", passed: false, assertions: 2, error: "{\"expected\":\"field to be 2\",\"actual\":\"field is 1\"}" },
-            { name: "test/another_passing_test", status: "passed", passed: true, assertions: 5 }
+            { name: 'test/passing_test', status: 'passed', passed: true, assertions: 3 },
+            { name: 'test/failing_test', status: 'failed', passed: false, assertions: 2, error: '{"expected":"field to be 2","actual":"field is 1"}' },
+            { name: 'test/another_passing_test', status: 'passed', passed: true, assertions: 5 }
           ],
           duration: 45
         });
@@ -249,10 +256,10 @@ describe('pos-cli test-run command', () => {
           assertions: 8,
           duration: 30,
           tests: [
-            { name: "test1", success: true, assertions: 2, errors: {} },
-            { name: "test2", success: true, assertions: 2, errors: {} },
-            { name: "test3", success: true, assertions: 2, errors: {} },
-            { name: "test4", success: true, assertions: 2, errors: {} }
+            { name: 'test1', success: true, assertions: 2, errors: {} },
+            { name: 'test2', success: true, assertions: 2, errors: {} },
+            { name: 'test3', success: true, assertions: 2, errors: {} },
+            { name: 'test4', success: true, assertions: 2, errors: {} }
           ]
         };
 
@@ -264,10 +271,10 @@ describe('pos-cli test-run command', () => {
           failed: 0,
           assertions: 8,
           tests: [
-            { name: "test1", status: "passed", passed: true, assertions: 2 },
-            { name: "test2", status: "passed", passed: true, assertions: 2 },
-            { name: "test3", status: "passed", passed: true, assertions: 2 },
-            { name: "test4", status: "passed", passed: true, assertions: 2 }
+            { name: 'test1', status: 'passed', passed: true, assertions: 2 },
+            { name: 'test2', status: 'passed', passed: true, assertions: 2 },
+            { name: 'test3', status: 'passed', passed: true, assertions: 2 },
+            { name: 'test4', status: 'passed', passed: true, assertions: 2 }
           ],
           duration: 30
         });
@@ -301,7 +308,7 @@ describe('pos-cli test-run command', () => {
           total_assertions: 0,
           duration_ms: 10,
           tests: [
-            { name: "test/empty_test", success: true, assertions: 0, errors: {} }
+            { name: 'test/empty_test', success: true, assertions: 0, errors: {} }
           ]
         };
 
@@ -319,17 +326,17 @@ describe('pos-cli test-run command', () => {
           duration_ms: 15,
           tests: [
             {
-              name: "test/multi_error_test",
+              name: 'test/multi_error_test',
               success: false,
               assertions: 3,
-              errors: ["Error 1", "Error 2", "Error 3"]
+              errors: ['Error 1', 'Error 2', 'Error 3']
             }
           ]
         };
 
         const result = transformTestResponse(response);
 
-        expect(result.tests[0].errors).toEqual(["Error 1", "Error 2", "Error 3"]);
+        expect(result.tests[0].errors).toEqual(['Error 1', 'Error 2', 'Error 3']);
       });
 
       test('handles missing test name gracefully', () => {
@@ -392,7 +399,7 @@ describe('pos-cli test-run command', () => {
           const stream = new TestLogStream({});
 
           const invalidMessage = JSON.stringify({
-            path: "test/array_test"
+            path: 'test/array_test'
           });
 
           expect(stream.isValidTestSummaryJson(invalidMessage)).toBe(false);
@@ -411,11 +418,11 @@ describe('pos-cli test-run command', () => {
             total_assertions: 16,
             duration_ms: 26,
             tests: [
-              { name: "test/array_test", success: true, assertions: 2, errors: {} },
-              { name: "test/examples/assertions_test", success: true, assertions: 4, errors: {} },
-              { name: "test/example_test", success: true, assertions: 5, errors: {} },
-              { name: "test/object_test", success: true, assertions: 3, errors: {} },
-              { name: "test/string_test", success: true, assertions: 2, errors: {} }
+              { name: 'test/array_test', success: true, assertions: 2, errors: {} },
+              { name: 'test/examples/assertions_test', success: true, assertions: 4, errors: {} },
+              { name: 'test/example_test', success: true, assertions: 5, errors: {} },
+              { name: 'test/object_test', success: true, assertions: 3, errors: {} },
+              { name: 'test/string_test', success: true, assertions: 2, errors: {} }
             ]
           });
 
@@ -489,8 +496,8 @@ describe('pos-cli test-run command', () => {
             success: true,
             total_tests: 2,
             tests: [
-              { name: "test1", success: true, assertions: 1, errors: {} },
-              { name: "test2", success: true, assertions: 1, errors: {} }
+              { name: 'test1', success: true, assertions: 1, errors: {} },
+              { name: 'test2', success: true, assertions: 1, errors: {} }
             ]
           });
 
@@ -516,8 +523,8 @@ describe('pos-cli test-run command', () => {
             success: true,
             total_tests: 2,
             tests: [
-              { name: "test1", success: true, assertions: 1, errors: {} },
-              { name: "test2", success: true, assertions: 1, errors: {} }
+              { name: 'test1', success: true, assertions: 1, errors: {} },
+              { name: 'test2', success: true, assertions: 1, errors: {} }
             ]
           });
 
@@ -651,13 +658,13 @@ describe('pos-cli test-run command', () => {
     test('accepts test name argument', async () => {
       const { stderr } = await exec(`${cliPath} test run staging my_test_name`, { env, timeout: CLI_TIMEOUT });
 
-      expect(stderr).not.toMatch("error: missing required argument");
+      expect(stderr).not.toMatch('error: missing required argument');
     });
 
     test('accepts test name with path', async () => {
       const { stderr } = await exec(`${cliPath} test run staging test/examples/assertions_test`, { env, timeout: CLI_TIMEOUT });
 
-      expect(stderr).not.toMatch("error: missing required argument");
+      expect(stderr).not.toMatch('error: missing required argument');
     });
 
     test('handles connection refused error', async () => {
@@ -732,7 +739,7 @@ describe('pos-cli test-run command', () => {
         }, 100);
       });
 
-      const hasModuleNotFoundError = proc.getStderr().includes('Tests module not found')
+      const hasModuleNotFoundError = proc.getStderr().includes('Tests module not found');
 
       expect(hasModuleNotFoundError).toBe(true);
       expect(proc.getStderr()).not.toContain('Cannot read properties of undefined');

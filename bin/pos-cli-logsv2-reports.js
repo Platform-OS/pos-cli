@@ -7,7 +7,6 @@ import { search } from '../lib/swagger-client.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import ServerError from '../lib/ServerError.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,12 +26,12 @@ program
       const client = await SwaggerProxy.client(environment);
 
       const report = JSON.parse(fs.readFileSync(path.join(__dirname, `../lib/reports/${program.report}.json`)));
-      const response = await client.searchSQLByQuery(report)
+      const response = await client.searchSQLByQuery(report);
 
       if (!program.json)
-        search.printReport(response, report)
+        search.printReport(response, report);
       else
-        console.log(JSON.stringify(response))
+        console.log(JSON.stringify(response));
 
     } catch(e) {
       logger.Error(e);

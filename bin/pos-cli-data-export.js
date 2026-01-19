@@ -18,7 +18,7 @@ const transform = ({ users = { results: [] }, transactables = { results: [] }, m
   return {
     users: users.results,
     transactables: transactables.results,
-    models: models.results,
+    models: models.results
   };
 };
 

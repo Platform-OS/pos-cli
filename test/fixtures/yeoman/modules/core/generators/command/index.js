@@ -1,5 +1,4 @@
 import Generator from 'yeoman-generator';
-import path from 'path';
 
 export default class extends Generator {
   constructor(args, opts) {

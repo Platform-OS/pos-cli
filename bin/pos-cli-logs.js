@@ -19,8 +19,8 @@ class LogStream extends EventEmitter {
     super();
     this.authData = authData;
     this.gateway = new Gateway(authData);
-    this.interval = interval
-    this.filter = !!filter && filter.toLowerCase()
+    this.interval = interval;
+    this.filter = !!filter && filter.toLowerCase();
   }
 
   start() {
@@ -33,11 +33,10 @@ class LogStream extends EventEmitter {
     if (!this.filter) return;
 
     try {
-      return this.filter !== (row.error_type || 'error').toLowerCase()
-    }
-    catch(e) {
-      logger.Error(`${row.error_type} error`)
-      return false
+      return this.filter !== (row.error_type || 'error').toLowerCase();
+    } catch {
+      logger.Error(`${row.error_type} error`);
+      return false;
     }
   }
 
@@ -59,7 +58,7 @@ class LogStream extends EventEmitter {
             this.emit('message', row);
           }
         }
-      })
+      });
   }
 }
 
@@ -70,7 +69,7 @@ const storage = {
     storage.logs[item.id] = item;
     storage.lastId = item.id;
   },
-  exists: (key) => storage.logs.hasOwnProperty(key),
+  exists: (key) => storage.logs.hasOwnProperty(key)
 };
 
 const isError = (msg) => /error/.test(msg.error_type);
@@ -81,13 +80,13 @@ program
   .option('-i, --interval <interval>', 'time to wait between updates in ms', 3000)
   .option('--filter <log type>', 'display only logs of given type, example: error')
   .option('-q, --quiet', 'show only log message, without context')
-  .action((environment, program, argument) => {
+  .action((environment, program, _argument) => {
     const authData = fetchSettings(environment, program);
     const stream = new LogStream(authData, program.interval, program.filter);
 
     stream.on('message', ({ created_at, error_type, message, data }) => {
       if (message == null) message = '';
-      if (typeof(message) != "string") message = JSON.stringify(message);
+      if (typeof(message) != 'string') message = JSON.stringify(message);
 
       const text = `[${created_at.replace('T', ' ')}] - ${error_type}: ${message.replace(/\n$/, '')}`;
       const options = { exit: false, hideTimestamp: true };
@@ -97,25 +96,25 @@ program
           title: error_type,
           message: message.slice(0, 100),
           icon: path.resolve(__dirname, '../lib/pos-logo.png'),
-          'app-name': 'pos-cli',
+          'app-name': 'pos-cli'
         });
 
         logger.Info(text, options);
       } else {
         logger.Info(text, options);
-      if (!program.quiet && data) {
-        let parts = [];
-        if (data.url) {
-          const requestUrl = new URL(`https://${data.url}`);
-          let line = `path: ${requestUrl.pathname}`;
-          if (requestUrl.search) line += `${requestUrl.search}`;
-          parts.push(line);
+        if (!program.quiet && data) {
+          let parts = [];
+          if (data.url) {
+            const requestUrl = new URL(`https://${data.url}`);
+            let line = `path: ${requestUrl.pathname}`;
+            if (requestUrl.search) line += `${requestUrl.search}`;
+            parts.push(line);
+          }
+          if (data.page) parts.push(`page: ${data.page}`);
+          if (data.partial) parts.push(`partial: ${data.partial}`);
+          if (data.user && data.user.email) parts.push(`email: ${data.user.email}`);
+          if (parts.length > 0) logger.Info(parts.join(' '), options);
         }
-        if (data.page) parts.push(`page: ${data.page}`);
-        if (data.partial) parts.push(`partial: ${data.partial}`);
-        if (data.user && data.user.email) parts.push(`email: ${data.user.email}`);
-        if (parts.length > 0) logger.Info(parts.join(' '), options);
-      }
       }
     });
 

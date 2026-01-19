@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import semver from 'semver';
-import pkg from '../package.json' with { type: "json" };
+import pkg from '../package.json' with { type: 'json' };
 import logger from '../lib/logger.js';
 
 const { engines } = pkg;

@@ -3,7 +3,6 @@
 import { program } from 'commander';
 import logger from '../lib/logger.js';
 import { SwaggerProxy, search } from '../lib/swagger-client.js';
-import ServerError from '../lib/ServerError.js';
 
 program
   .name('pos-cli logsv2 search')
@@ -17,12 +16,12 @@ program
   .action(async (environment, program) => {
     try {
       const client = await SwaggerProxy.client(environment);
-      const response = await client.searchSQL(program)
+      const response = await client.searchSQL(program);
 
       if (!program.json)
-        search.printLogs(response)
+        search.printLogs(response);
       else
-        console.log(response)
+        console.log(response);
 
     } catch(e) {
       logger.Error(e);

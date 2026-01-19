@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, test, expect, beforeAll, vi } from 'vitest';
 import { spawn } from 'child_process';
 import path from 'path';
 import Gateway from '../lib/proxy.js';
 import { fetchSettings } from '../lib/settings.js';
-import { hasRealCredentials, requireRealCredentials } from './utils/credentials';
+import { requireRealCredentials } from './utils/credentials';
 
 vi.setConfig({ testTimeout: 20000 });
 

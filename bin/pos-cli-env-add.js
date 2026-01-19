@@ -3,7 +3,7 @@
 import { program } from 'commander';
 import ServerError from '../lib/ServerError.js';
 import logger from '../lib/logger.js';
-import addEnv from '../lib/envs/add.js'
+import addEnv from '../lib/envs/add.js';
 
 program.showHelpAfterError();
 program
@@ -21,7 +21,7 @@ program
       await addEnv(environment, params);
     } catch (e) {
       if (ServerError.isNetworkError(e))
-        ServerError.handler(e)
+        ServerError.handler(e);
       else
         logger.Error(e);
     }

@@ -1,11 +1,11 @@
 import 'dotenv/config';
-import { describe, test, expect, vi, beforeAll, afterAll } from 'vitest';
+import { describe, test, expect, vi, beforeAll } from 'vitest';
 import exec from './utils/exec';
 import cliPath from './utils/cliPath';
 import unzip from 'unzipper';
 import fs from 'fs';
 import path from 'path';
-import { hasRealCredentials, requireRealCredentials } from './utils/credentials';
+import { requireRealCredentials } from './utils/credentials';
 import shell from 'shelljs';
 
 vi.setConfig({ testTimeout: 40000 });
@@ -34,10 +34,10 @@ const extract = async (inputPath, outputPath) => {
 describe('Happy path', () => {
   test('App directory + modules', async () => {
     requireRealCredentials();
-    await sleep(2000); // it's needed to run tests in parallel mode
+    await sleep(3000); // it's needed to run tests in parallel mode
 
 
-    const { stderr, stdout } = await run('correct');
+    const { stdout } = await run('correct');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('Deploy succeeded');
@@ -76,7 +76,7 @@ describe('Happy path', () => {
 
   test('correct with assets with direct upload', async () => {
     requireRealCredentials();
-    const { stdout, stderr } = await run('correct_with_assets', '-d');
+    const { stdout } = await run('correct_with_assets', '-d');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('Deploy succeeded');
@@ -113,7 +113,7 @@ describe('Happy path', () => {
 
 describe('Server errors', () => {
   test('Nothing to deploy', async () => {
-    const { stderr, stdout } = await run('empty');
+    const { stderr } = await run('empty');
     expect(stderr).toMatch('Could not find any directory to deploy. Looked for app, marketplace_builder and modules');
   });
 
@@ -144,11 +144,11 @@ describe('Server errors', () => {
     const originalEmail = process.env.MPKIT_EMAIL;
 
     try {
-      process.env.MPKIT_URL = 'https://incorrecturl123xyz.com'
-      process.env.MPKIT_TOKEN = 'test-token'
-      process.env.MPKIT_EMAIL = 'test@example.com'
+      process.env.MPKIT_URL = 'https://incorrecturl123xyz.com';
+      process.env.MPKIT_TOKEN = 'test-token';
+      process.env.MPKIT_EMAIL = 'test@example.com';
 
-      const { stderr, stdout, code } = await run('correct');
+      const { stderr, code } = await run('correct');
 
       expect(code).toEqual(1);
       expect(stderr).toMatch(

@@ -41,7 +41,7 @@ const setupTestProject = async () => {
   const testDir = path.join(__dirname, 'fixtures', 'temp-generator-test');
   try {
     await fs.rm(testDir, { recursive: true, force: true });
-  } catch (e) {
+  } catch {
     // Ignore if directory doesn't exist
   }
   await fs.mkdir(testDir, { recursive: true });
@@ -52,7 +52,7 @@ const setupTestProject = async () => {
 const cleanupTestProject = async (testDir) => {
   try {
     await fs.rm(testDir, { recursive: true, force: true });
-  } catch (e) {
+  } catch {
     // Ignore if cleanup fails
   }
 };
@@ -61,7 +61,7 @@ const fileExists = async (filePath) => {
   try {
     await fs.access(filePath);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };
@@ -69,7 +69,7 @@ const fileExists = async (filePath) => {
 const readFile = async (filePath) => {
   try {
     return await fs.readFile(filePath, 'utf8');
-  } catch (e) {
+  } catch {
     return null;
   }
 };
@@ -89,7 +89,7 @@ describe('pos-cli generate command', () => {
     });
 
     test('requires modelName argument', async () => {
-      const { stderr, code } = await run(
+      const { stderr } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud',
         { cwd: testDir, timeout: 5000 }
       );
@@ -313,7 +313,7 @@ describe('pos-cli generate command', () => {
     });
 
     test('requires commandName argument', async () => {
-      const { stderr, code } = await run(
+      const { stderr } = await run(
         'test/fixtures/yeoman/modules/core/generators/command',
         { cwd: testDir, timeout: 5000 }
       );

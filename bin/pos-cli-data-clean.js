@@ -25,9 +25,8 @@ const confirmCleanup = async (autoConfirm, includeSchema, url) => {
     const response = await prompts({ type: 'text', name: 'confirmation', message: message });
 
     return response.confirmation == confirmationText;
-  }
-  catch(e) {
-    logger.Error(e)
+  } catch(e) {
+    logger.Error(e);
     return false;
   }
 };
@@ -43,32 +42,32 @@ program
     
     try {
       const gateway = new Gateway(fetchSettings(environment));
-      const confirmed = await confirmCleanup(params.autoConfirm, params.includeSchema, gateway.url)
+      const confirmed = await confirmCleanup(params.autoConfirm, params.includeSchema, gateway.url);
       if (confirmed) {
-        spinner.start(`Cleaning instance`);
+        spinner.start('Cleaning instance');
 
-        const response = await gateway.dataClean(confirmationText, params.includeSchema)
+        const response = await gateway.dataClean(confirmationText, params.includeSchema);
         logger.Debug(`Cleanup request id: ${response}`);
 
-        const checkDataCleanJobStatus = () => { return gateway.dataCleanStatus(response.id) }
-        await waitForStatus(checkDataCleanJobStatus, 'pending', 'done')
+        const checkDataCleanJobStatus = () => {
+          return gateway.dataCleanStatus(response.id); 
+        };
+        await waitForStatus(checkDataCleanJobStatus, 'pending', 'done');
 
         spinner.stopAndPersist().succeed('DONE. Instance cleaned');
-      }
-      else logger.Error('Wrong confirmation. Closed without cleaning instance data.');
+      } else logger.Error('Wrong confirmation. Closed without cleaning instance data.');
 
-    }
-    catch(e) {
-      spinner.fail(`Instance cleanup has failed.`);
+    } catch(e) {
+      spinner.fail('Instance cleanup has failed.');
       console.log(e.name);
 
       // custom handle 422
       if (e.statusCode == 422)
         logger.Error('[422] Data clean is either not supported by the server or has been disabled.');
       else if (ServerError.isNetworkError(e))
-        ServerError.handler(e)
+        ServerError.handler(e);
       else
-        logger.Error(e)
+        logger.Error(e);
     }
   });
 

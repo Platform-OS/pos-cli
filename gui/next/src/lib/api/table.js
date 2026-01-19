@@ -37,7 +37,7 @@ const table = {
         }
       }`;
 
-    const variables = { per_page: 100, id: id }
+    const variables = { per_page: 100, id: id };
 
     return graphql({ query, variables }).then(data => data.admin_tables.results);
   }
@@ -47,4 +47,4 @@ const table = {
 
 // exports
 // ------------------------------------------------------------------------
-export { table }
+export { table };

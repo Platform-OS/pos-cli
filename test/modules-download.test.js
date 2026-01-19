@@ -4,7 +4,7 @@ import exec from './utils/exec';
 import cliPath from './utils/cliPath';
 import fs from 'fs';
 import path from 'path';
-import { hasRealCredentials, requireRealCredentials } from './utils/credentials';
+import { requireRealCredentials } from './utils/credentials';
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', name);
 

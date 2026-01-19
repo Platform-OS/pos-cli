@@ -1,6 +1,5 @@
-import { onMount } from "svelte";
 import { writable } from 'svelte/store';
-import api from "@/lib/api";
+import api from '@/lib/api';
 
 const createStore = () => {
   const { subscribe, set, update } = writable([]);

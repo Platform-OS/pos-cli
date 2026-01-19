@@ -10,20 +10,20 @@ import logger from '../lib/logger.js';
 const help = () => {
   program.outputHelp();
   process.exit(1);
-}
+};
 
 const checkParams = ({name, value}) => {
   validateExistence({ argumentValue: value, argumentName: 'value', fail: help });
   validateExistence({ argumentValue: name, argumentName: 'name', fail: help });
-}
+};
 
 const success = (msg) => {
-  logger.Success(`Constant variable <${msg.data.constant_set.name}> added successfuly.`)
-}
+  logger.Success(`Constant variable <${msg.data.constant_set.name}> added successfuly.`);
+};
 
 const error = (msg) => {
-  logger.Error(`Adding Constant variable <${msg.data.constant_set.name}> failed successfuly.`)
-}
+  logger.Error(`Adding Constant variable <${msg.data.constant_set.name}> failed successfuly.`);
+};
 
 program
   .name('pos-cli constants set')
@@ -35,10 +35,10 @@ program
     const authData = fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
-    const constant = gateway
-          .graph({query: queries.setConstant(params.name, params.value)})
-          .then(success)
-          .catch(error);
+    gateway
+      .graph({query: queries.setConstant(params.name, params.value)})
+      .then(success)
+      .catch(error);
   });
 
 program.parse(process.argv);

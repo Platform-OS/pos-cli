@@ -14,12 +14,12 @@ program
   .action(async (environment, params) => {
     try {
       const client = await SwaggerProxy.client(environment);
-      const response = await client.searchAround(params)
+      const response = await client.searchAround(params);
 
       if (!params.json)
-        search.printLogs(response, params.key)
+        search.printLogs(response, params.key);
       else
-        console.log(response)
+        console.log(response);
 
     } catch(e) {
       logger.Error(e);
