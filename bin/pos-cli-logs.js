@@ -2,7 +2,6 @@
 
 import EventEmitter from 'events';
 import path from 'path';
-import url from 'url';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -107,7 +106,7 @@ program
       if (!program.quiet && data) {
         let parts = [];
         if (data.url) {
-          const requestUrl = url.parse(`https://${data.url}`);
+          const requestUrl = new URL(`https://${data.url}`);
           let line = `path: ${requestUrl.pathname}`;
           if (requestUrl.search) line += `${requestUrl.search}`;
           parts.push(line);

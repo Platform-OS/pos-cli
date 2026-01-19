@@ -5,12 +5,10 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['test/**/*.{test,spec}.js'],
-    pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true
-      }
-    },
-    setupFiles: ['./test/vitest-setup.js']
+    fileParallelism: true,
+    setupFiles: ['./test/vitest-setup.js'],
+    testTimeout: 10000,
+    hookTimeout: 20000
+
   }
 });

@@ -1,25 +1,42 @@
 import 'dotenv/config';
-import { describe, test, expect, vi } from 'vitest';
+import { describe, test, expect, vi, beforeAll, afterAll } from 'vitest';
 import exec from './utils/exec';
 import cliPath from './utils/cliPath';
 import unzip from 'unzipper';
 import fs from 'fs';
 import path from 'path';
 import { hasRealCredentials, requireRealCredentials } from './utils/credentials';
+import shell from 'shelljs';
 
 vi.setConfig({ testTimeout: 40000 });
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
 
+const cleanupTmp = () => {
+  const tmpDir = path.join(process.cwd(), 'test', 'fixtures', 'deploy', 'correct', 'tmp');
+  if (fs.existsSync(tmpDir)) {
+    shell.rm('-rf', tmpDir);
+  }
+};
+
+beforeAll(() => {
+  cleanupTmp();
+});
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const run = (fixtureName, options) => exec(`${cliPath} deploy ${options || ''}`, { cwd: cwd(fixtureName), env: process.env });
 
 const extract = async (inputPath, outputPath) => {
   return unzip.Open.file(inputPath).then(d => d.extract({ path: outputPath, concurrency: 5 }));
 };
 
+
 describe('Happy path', () => {
   test('App directory + modules', async () => {
     requireRealCredentials();
+    await sleep(2000); // it's needed to run tests in parallel mode
+
+
     const { stderr, stdout } = await run('correct');
 
     expect(stdout).toMatch(process.env.MPKIT_URL);

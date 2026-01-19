@@ -3,6 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import { settingsFromDotPos } from '../lib/settings.js';
 
+vi.mock('open', () => ({
+  default: vi.fn(() => Promise.resolve())
+}));
+
 let addEnv;
 let storeEnvironment;
 

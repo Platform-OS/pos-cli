@@ -44,7 +44,7 @@ program
       }
 
       if (params.sync){
-        watch.start(env, true, false);
+        await watch(env, true, false);
       }
     } catch (e) {
       console.log(e);
