@@ -1,4 +1,4 @@
-import { manifestGenerateForAssets } from '../lib/assets/manifest';
+import { manifestGenerateForAssets } from '#lib/assets/manifest';
 
 const oldCwd = process.cwd();
 beforeEach(() => {
@@ -16,10 +16,12 @@ test('manifest for files on linux', () => {
 
   const manifestFile = manifestGenerateForAssets(assets);
   Object.entries(manifestFile).forEach(([_key, value]) => delete value['updated_at']);
+  // Manifest keys have app/assets/ and public/assets/ stripped
+  // physical_file_path has only the app directory prefix stripped
   expect(manifestFile).toEqual({
-    'app/assets/foo.js': {
+    'foo.js': {
       'file_size': 20,
-      'physical_file_path': 'app/assets/foo.js'
+      'physical_file_path': 'assets/foo.js'
     },
     'modules/testModule/bar.js': {
       'file_size': 20,
@@ -36,10 +38,12 @@ test('manifest for files on windows', () => {
 
   const manifestFile = manifestGenerateForAssets(assets);
   Object.entries(manifestFile).forEach(([_key, value]) => delete value['updated_at']);
+  // Windows paths are normalized to forward slashes
+  // Manifest keys have app/assets/ and public/assets/ stripped
   expect(manifestFile).toEqual({
-    'app/assets/foo.js': {
+    'foo.js': {
       'file_size': 20,
-      'physical_file_path': 'app/assets/foo.js'
+      'physical_file_path': 'assets/foo.js'
     },
     'modules/testModule/bar.js': {
       'file_size': 20,

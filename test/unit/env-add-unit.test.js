@@ -1,6 +1,6 @@
 import { vi, describe, test, expect, afterEach, beforeAll } from 'vitest';
 import fs from 'fs';
-import { settingsFromDotPos } from '../lib/settings.js';
+import { settingsFromDotPos } from '#lib/settings.js';
 
 vi.mock('open', () => ({
   default: vi.fn(() => Promise.resolve())
@@ -8,12 +8,12 @@ vi.mock('open', () => ({
 
 let mockAccessToken = 'mock-token-12345';
 
-vi.mock('../lib/data/waitForStatus.js', () => ({
+vi.mock('#lib/data/waitForStatus.js', () => ({
   default: () => Promise.resolve({ access_token: mockAccessToken, status: 'success' })
 }));
 
-vi.mock('../lib/portal.js', async () => {
-  const original = await vi.importActual('../lib/portal.js');
+vi.mock('#lib/portal.js', async () => {
+  const original = await vi.importActual('#lib/portal.js');
   return {
     default: {
       ...original,
@@ -29,8 +29,8 @@ vi.mock('../lib/portal.js', async () => {
   };
 });
 
-vi.mock('../lib/logger.js', async () => {
-  const module = await vi.importActual('../lib/logger.js');
+vi.mock('#lib/logger.js', async () => {
+  const module = await vi.importActual('#lib/logger.js');
   return {
     default: {
       ...module.default,
@@ -42,7 +42,7 @@ vi.mock('../lib/logger.js', async () => {
   };
 });
 
-vi.mock('../lib/validators/index.js', () => ({
+vi.mock('#lib/validators/index.js', () => ({
   existence: { directoryExists: () => true, fileExists: () => true },
   url: () => true,
   email: () => true,
@@ -53,7 +53,7 @@ vi.mock('../lib/validators/index.js', () => ({
 let addEnv;
 
 beforeAll(async () => {
-  const addMod = await import('../lib/envs/add.js');
+  const addMod = await import('#lib/envs/add.js');
   addEnv = addMod.default;
 });
 

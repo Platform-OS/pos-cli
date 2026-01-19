@@ -3,9 +3,15 @@
   "version": "5.5.0",
   "description": "Manage your platformOS application",
   "type": "module",
+  "imports": {
+    "#lib/*": "./lib/*",
+    "#test/*": "./test/*"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
     "lint": "eslint . --ext .js --max-warnings 0",
     "lint:fix": "eslint . --ext .js --fix",
     "postinstall": "node ./scripts/check-node-version.js"
@@ -29,6 +35,10 @@
     "pOS"
   ],
   "dependencies": {
+    "async": "^3.2.6",
+    "body-parser": "^2.0.2",
+    "execa": "^9.5.2",
+    "normalize-path": "^3.0.0",
     "archiver": "^7.0.1",
     "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
@@ -45,7 +55,6 @@
     "lodash.debounce": "^4.0.8",
     "lodash.flatten": "^4.4.0",
     "lodash.reject": "^4.6.0",
-    "lodash.startcase": "^4.4.0",
     "lodash.uniq": "^4.5.0",
     "mime": "^4.1.0",
     "multer": "^2.0.2",
@@ -59,8 +68,7 @@
     "text-table": "^0.2.0",
     "unzipper": "^0.12.3",
     "update-notifier": "^7.3.1",
-    "yeoman-environment": "^5.1.2",
-    "yeoman-generator": "^7.5.1"
+    "yeoman-environment": "^5.1.2"
   },
   "preferGlobal": true,
   "bin": {
@@ -95,6 +103,7 @@
     "eslint-plugin-n": "^17.15.1",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-promise": "^7.2.1",
+    "nock": "^14.0.4",
     "vitest": "^4.0.0"
   },
   "bundleDependencies": [

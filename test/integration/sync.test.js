@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import { describe, test, expect, afterAll, vi } from 'vitest';
-import exec from './utils/exec';
-import cliPath from './utils/cliPath';
+import exec from '#test/utils/exec';
+import cliPath from '#test/utils/cliPath';
 import path from 'path';
 import fs from 'fs';
-import { requireRealCredentials } from './utils/credentials';
+import { requireRealCredentials } from '#test/utils/credentials';
 
 vi.setConfig({ testTimeout: 20000 });
 

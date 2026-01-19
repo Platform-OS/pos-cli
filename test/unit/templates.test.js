@@ -1,4 +1,4 @@
-import { fillInTemplateValues } from '../lib/templates';
+import { fillInTemplateValues } from '#lib/templates';
 import fs from 'fs';
 
 const fileWithTemplatePath = 'test/fixtures/template.liquid';

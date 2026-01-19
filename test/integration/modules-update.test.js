@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import { describe, test, expect } from 'vitest';
-import exec from './utils/exec';
-import cliPath from './utils/cliPath';
+import exec from '#test/utils/exec';
+import cliPath from '#test/utils/cliPath';
 import fs from 'fs';
 import path from 'path';
-import { requireRealCredentials, noCredentials, applyCredentials } from './utils/credentials';
+import { requireRealCredentials, noCredentials, applyCredentials } from '#test/utils/credentials';
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', name);
 const run = async (fixtureName, options) => await exec(`${cliPath} modules update ${options}`, { cwd: cwd(fixtureName), env: process.env });

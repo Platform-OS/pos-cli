@@ -1,5 +1,5 @@
-import exec from '../utils/exec';
-import cliPath from '../utils/cliPath';
+import exec from '#test/utils/exec';
+import cliPath from '#test/utils/cliPath';
 
 const getEnvs = () => {
   const env = Object.assign({}, process.env, { CI: true });

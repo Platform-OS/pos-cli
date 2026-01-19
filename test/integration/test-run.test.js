@@ -2,9 +2,9 @@ import 'dotenv/config';
 import { describe, test, expect, vi } from 'vitest';
 import { spawn } from 'child_process';
 import path from 'path';
-import { requireRealCredentials } from './utils/credentials';
-import { TestLogStream } from '../lib/test-runner/logStream.js';
-import { formatDuration, formatTestLog, transformTestResponse } from '../lib/test-runner/formatters.js';
+import { requireRealCredentials } from '#test/utils/credentials';
+import { TestLogStream } from '#lib/test-runner/logStream.js';
+import { formatDuration, formatTestLog, transformTestResponse } from '#lib/test-runner/formatters.js';
 
 vi.setConfig({ testTimeout: 30000 });
 

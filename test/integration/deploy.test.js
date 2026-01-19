@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import { describe, test, expect, vi, beforeAll } from 'vitest';
-import exec from './utils/exec';
-import cliPath from './utils/cliPath';
+import exec from '#test/utils/exec';
+import cliPath from '#test/utils/cliPath';
 import unzip from 'unzipper';
 import fs from 'fs';
 import path from 'path';
-import { requireRealCredentials } from './utils/credentials';
+import { requireRealCredentials } from '#test/utils/credentials';
 import shell from 'shelljs';
 
 vi.setConfig({ testTimeout: 40000 });

@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { exec } from 'child_process';
 import path from 'path';
@@ -28,8 +27,9 @@ const execCommand = (cmd, opts = {}) => {
 
 const run = (args, opts = {}) => {
   // Convert relative generator paths to absolute paths
+  // __dirname is test/unit, so we need to go up two levels to reach project root
   const absoluteArgs = args.replace(/(test\/fixtures\/yeoman\/modules\/core\/generators\/\w+)/g, (match) => {
-    return path.resolve(__dirname, '..', match);
+    return path.resolve(__dirname, '../..', match);
   });
   return execCommand(`${cliPath} generate run ${absoluteArgs}`, {
     ...opts,

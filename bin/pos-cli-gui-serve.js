@@ -46,8 +46,7 @@ program
       if (params.sync){
         await watch(env, true, false);
       }
-    } catch (e) {
-      console.log(e);
+    } catch {
       logger.Error('✖ Failed.');
     }
   });

@@ -59,7 +59,6 @@ program
 
     } catch(e) {
       spinner.fail('Instance cleanup has failed.');
-      console.log(e.name);
 
       // custom handle 422
       if (e.statusCode == 422)

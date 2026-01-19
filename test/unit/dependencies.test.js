@@ -1,4 +1,4 @@
-import { resolveDependencies, findModuleVersion } from '../lib/modules/dependencies';
+import { resolveDependencies, findModuleVersion } from '#lib/modules/dependencies';
 import { isDeepStrictEqual } from 'node:util';
 
 test('resolveDependencies ok', async () => {

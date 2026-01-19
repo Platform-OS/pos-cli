@@ -1,8 +1,8 @@
 
 import process from 'process';
-import exec from './utils/exec';
-import cliPath from './utils/cliPath';
-import { settingsFromDotPos } from '../lib/settings.js';
+import exec from '#test/utils/exec';
+import cliPath from '#test/utils/cliPath';
+import { settingsFromDotPos } from '#lib/settings.js';
 
 process.env['CI'] = 'true';
 

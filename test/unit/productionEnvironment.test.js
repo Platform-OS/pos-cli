@@ -10,11 +10,11 @@ const logger = {
   Info: vi.fn(),
   Error: vi.fn()
 };
-vi.mock('../lib/logger.js', () => ({
+vi.mock('#lib/logger.js', () => ({
   default: logger
 }));
 
-const { isProductionEnvironment, confirmProductionExecution } = await import('../lib/productionEnvironment.js');
+const { isProductionEnvironment, confirmProductionExecution } = await import('#lib/productionEnvironment.js');
 
 describe('isProductionEnvironment', () => {
   describe('returns true for production environments', () => {

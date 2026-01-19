@@ -1,9 +1,9 @@
 import 'dotenv/config';
 import { describe, test, expect } from 'vitest';
-import exec from './utils/exec';
-import cliPath from './utils/cliPath';
+import exec from '#test/utils/exec';
+import cliPath from '#test/utils/cliPath';
 import path from 'path';
-import { requireRealCredentials } from './utils/credentials';
+import { requireRealCredentials } from '#test/utils/credentials';
 
 Object.assign(process.env, {
   DEBUG: true

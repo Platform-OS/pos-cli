@@ -1,5 +1,5 @@
-import exec from './utils/exec';
-import cliPath from './utils/cliPath';
+import exec from '#test/utils/exec';
+import cliPath from '#test/utils/cliPath';
 import path from 'path';
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'audit', name);

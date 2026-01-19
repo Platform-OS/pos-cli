@@ -1,4 +1,4 @@
-import files from '../lib/files';
+import files from '#lib/files';
 
 const configFileExample = 'test/fixtures/template-values.json';
 const ignoreListExample = 'test/fixtures/.posignore';

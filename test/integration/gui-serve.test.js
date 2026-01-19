@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { describe, test, expect, beforeAll, afterAll, vi } from 'vitest';
 import { spawn } from 'child_process';
 import path from 'path';
-import { requireRealCredentials } from './utils/credentials';
+import { requireRealCredentials } from '#test/utils/credentials';
 
 vi.setConfig({ testTimeout: 30000 });
 
