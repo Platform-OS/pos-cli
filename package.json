@@ -29,7 +29,7 @@
   ],
   "main": "./bin/pos-cli.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "keywords": [
     "pos-cli",

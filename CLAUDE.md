@@ -361,7 +361,7 @@ GUI apps are pre-built (in dist/ or build/ directories). To modify:
 
 ## Node.js Version
 
-- **Minimum**: Node.js 20
-- **Recommended**: Node.js 20+
-- **Tested on**: 20, 20.11, 22, 24
+- **Minimum**: Node.js 22
+- **Recommended**: Node.js 22+
+- **Tested on**: 22, 24
 - Check enforced by `scripts/check-node-version.js` postinstall hook

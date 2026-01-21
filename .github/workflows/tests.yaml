@@ -14,8 +14,8 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        version: ['20.20.0', '22', '24']
+        os: [windows-latest, ubuntu-latest]
+        version: ['22', '24']
 
     steps:
       - name: Checkout repository
