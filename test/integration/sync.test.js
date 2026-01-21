@@ -48,7 +48,7 @@ describe('Happy path', () => {
     const { stdout } = await run('correct_with_assets', null, steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
+    expect(stdout).toMatch(/\[Sync\] Synced asset: app\/assets\/bar\.js/);
   });
 
   test('sync with direct assets upload', { retry: 2 }, async () => {
@@ -61,7 +61,7 @@ describe('Happy path', () => {
     const { stdout } = await run('correct_with_assets', '-d', steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch('[Sync] Synced asset: app/assets/bar.js');
+    expect(stdout).toMatch(/\[Sync\] Synced asset: app\/assets\/bar\.js/);
   });
 
   test('delete synced file', { retry: 2 }, async () => {

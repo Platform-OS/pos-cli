@@ -17,7 +17,9 @@ test('fills template with values ', () => {
     'aKey': 'aStringValue',
     'otherKey': 1
   });
-  expect(fillInTemplateValues(fileWithTemplatePath, templateValues)).toEqual(`---
+  const result = fillInTemplateValues(fileWithTemplatePath, templateValues);
+  const normalized = result.replace(/\r\n/g, '\n');
+  expect(normalized).toEqual(`---
 slug: aStringValue
 ---
 
@@ -29,7 +31,9 @@ test('render nothing for non existing keys ', () => {
   const templateValues = Object({
     'otherKey': 1
   });
-  expect(fillInTemplateValues(fileWithTemplatePath, templateValues)).toEqual(`---
+  const result = fillInTemplateValues(fileWithTemplatePath, templateValues);
+  const normalized = result.replace(/\r\n/g, '\n');
+  expect(normalized).toEqual(`---
 slug: 
 ---
 

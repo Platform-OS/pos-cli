@@ -1,6 +1,7 @@
 import exec from '#test/utils/exec';
 import cliPath from '#test/utils/cliPath';
 import path from 'path';
+import normalize from 'normalize-path';
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'audit', name);
 
@@ -17,7 +18,7 @@ describe('Audit - app directory', () => {
 
     expect(stderr).toMatch('[Audit] 1 rule detected issues.');
     expect(stderr).toMatch('enable_profiler: true');
-    expect(stderr).toMatch(path.join('app', 'views', 'pages', 'error.liquid'));
+    expect(stderr).toMatch(normalize(path.join('app', 'views', 'pages', 'error.liquid')));
   });
 
   test('Reports 2 different errors in one file', async () => {
@@ -26,7 +27,7 @@ describe('Audit - app directory', () => {
     expect(stderr).toMatch('[Audit] 2 rules detected issues.');
     expect(stderr).toMatch('enable_profiler: true');
     expect(stderr).toMatch('[DEPRECATED TAG] query_graph');
-    expect(stderr).toMatch(path.join('app', 'views', 'pages', 'error.liquid'));
+    expect(stderr).toMatch(normalize(path.join('app', 'views', 'pages', 'error.liquid')));
   });
 
   test('Reports 3 different errors in two files', async () => {
@@ -35,8 +36,8 @@ describe('Audit - app directory', () => {
     expect(stderr).toMatch('[Audit] 3 rules detected issues.');
     expect(stderr).toMatch('enable_profiler: true');
     expect(stderr).toMatch('[DEPRECATED TAG] query_graph');
-    expect(stderr).toMatch(path.join('app', 'views', 'pages', 'error.liquid'));
-    expect(stderr).toMatch(path.join('app', 'views', 'pages', 'error2.liquid'));
+    expect(stderr).toMatch(normalize(path.join('app', 'views', 'pages', 'error.liquid')));
+    expect(stderr).toMatch(normalize(path.join('app', 'views', 'pages', 'error2.liquid')));
   });
 });
 
@@ -47,8 +48,8 @@ describe('Audit - marketplace_builder directory', () => {
     expect(stderr).toMatch('[Audit] 3 rules detected issues.');
     expect(stderr).toMatch('enable_profiler: true');
     expect(stderr).toMatch('[DEPRECATED TAG] query_graph');
-    expect(stderr).toMatch(path.join('marketplace_builder', 'views', 'pages', 'error.liquid'));
-    expect(stderr).toMatch(path.join('marketplace_builder', 'views', 'pages', 'error2.liquid'));
+    expect(stderr).toMatch(normalize(path.join('marketplace_builder', 'views', 'pages', 'error.liquid')));
+    expect(stderr).toMatch(normalize(path.join('marketplace_builder', 'views', 'pages', 'error2.liquid')));
   });
 });
 
@@ -60,14 +61,14 @@ describe('Audit - modules directory', () => {
     expect(stderr).toMatch('[Audit] 4 rules detected issues.');
     expect(stderr).toMatch('enable_profiler: true');
     expect(stderr).toMatch('[DEPRECATED TAG] query_graph');
-    expect(stderr).toMatch(path.join('modules', 'first', 'public', 'views', 'pages', 'error.liquid'));
-    expect(stderr).toMatch(path.join('modules', 'first', 'public', 'views', 'pages', 'error2.liquid'));
-    expect(stderr).toMatch(path.join('modules', 'second', 'private', 'views', 'pages', 'error.liquid'));
-    expect(stderr).toMatch(path.join('modules', 'second', 'private', 'views', 'pages', 'error2.liquid'));
+    expect(stderr).toMatch(normalize(path.join('modules', 'first', 'public', 'views', 'pages', 'error.liquid')));
+    expect(stderr).toMatch(normalize(path.join('modules', 'first', 'public', 'views', 'pages', 'error2.liquid')));
+    expect(stderr).toMatch(normalize(path.join('modules', 'second', 'private', 'views', 'pages', 'error.liquid')));
+    expect(stderr).toMatch(normalize(path.join('modules', 'second', 'private', 'views', 'pages', 'error2.liquid')));
 
     expect(stderr).toMatch('Only .graphql files should be in graphql directory');
-    expect(stderr).toMatch(path.join('modules', 'first', 'public', 'graphql', 'test.liquid'));
-    expect(stderr).not.toMatch(path.join('modules', 'graphql', 'public', 'views', 'pages', 'home.liquid'));
+    expect(stderr).toMatch(normalize(path.join('modules', 'first', 'public', 'graphql', 'test.liquid')));
+    expect(stderr).not.toMatch(normalize(path.join('modules', 'graphql', 'public', 'views', 'pages', 'home.liquid')));
   });
 });
 
@@ -76,10 +77,10 @@ describe('Audit - orphaned includes', () => {
     const { stderr } = await run('orphanedIncludes');
 
     expect(stderr).toMatch('[Audit] 1 rule detected issues.');
-    expect(stderr).toMatch(path.join('app', 'views', 'partials', 'not_included_partial.liquid'));
-    expect(stderr).toMatch(path.join('modules', 'test', 'private', 'views', 'partials', 'not_included_partial.liquid'));
-    expect(stderr).not.toMatch(path.join('app', 'views', 'partials', 'included_partial.liquid'));
-    expect(stderr).not.toMatch(path.join('app', 'views', 'partials', 'included_partial_2.liquid'));
-    expect(stderr).not.toMatch(path.join('app', 'views', 'partials', 'shared', 'head.liquid'));
+    expect(stderr).toMatch(normalize(path.join('app', 'views', 'partials', 'not_included_partial.liquid')));
+    expect(stderr).toMatch(normalize(path.join('modules', 'test', 'private', 'views', 'partials', 'not_included_partial.liquid')));
+    expect(stderr).not.toMatch(normalize(path.join('app', 'views', 'partials', 'included_partial.liquid')));
+    expect(stderr).not.toMatch(normalize(path.join('app', 'views', 'partials', 'included_partial_2.liquid')));
+    expect(stderr).not.toMatch(normalize(path.join('app', 'views', 'partials', 'shared', 'head.liquid')));
   });
 });
