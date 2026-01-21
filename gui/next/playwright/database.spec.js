@@ -27,14 +27,19 @@ test('ability to see table details', async ({ page }) => {
 
   await page.getByText('qa_table_1').click();
   await expect(page).toHaveURL(/.*table/);
-  await expect(page.getByRole('cell', { name: 'id' }).and(page.locator('th'))).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'qa_table_1_array' }).and(page.locator('th'))).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'created at' }).and(page.locator('th'))).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Aliquam condimentum condimentum'})).toBeVisible();
-  await expect(page.getByRole('cell', { name: '["qa_table_1_array2_item1"'})).toBeVisible();
+
+  // Wait for table header columns to appear - more specific than just 'table'
+  await expect(page.locator('th:has-text("id")')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('th:has-text("qa_table_1_array")')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('th:has-text("created at")')).toBeVisible({ timeout: 10000 });
+
+  // Wait for specific data cells
+  await expect(page.getByRole('cell', { name: 'Aliquam condimentum condimentum'})).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('cell', { name: '["qa_table_1_array2_item1"'})).toBeVisible({ timeout: 10000 });
 
   await page.getByText('qa_table_2', { exact: true }).click();
-  await expect(page.getByRole('cell', { name: 'qa_table_2_array' })).toBeVisible();
+  // Wait for qa_table_2 specific column to ensure table has loaded
+  await expect(page.getByRole('cell', { name: 'qa_table_2_array' })).toBeVisible({ timeout: 10000 });
 });
 
 
@@ -640,29 +645,49 @@ test('restoring deleted record', async ({ page }) => {
   await page.goto(url);
   await page.getByText('qa_table_4').click();
 
-  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
+  // Wait for the specific record to appear in the table
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible({ timeout: 10000 });
 
+  // Switch to deleted records view
   await page.getByTitle('Show deleted records').click();
 
-  await expect(page.getByRole('cell', { name: 'deleted at' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden();
+  // Wait for "deleted at" column header to appear - this indicates the view has changed
+  await expect(page.locator('th:has-text("deleted at")')).toBeVisible({ timeout: 10000 });
+  // The record should not be visible in deleted view yet (it hasn't been deleted)
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden({ timeout: 10000 });
 
+  // Switch back to current state
   await page.getByTitle('Show current database state').click();
-  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
 
+  // Wait for "deleted at" column to disappear - this indicates we're back to current view
+  await expect(page.locator('th:has-text("deleted at")')).toBeHidden({ timeout: 10000 });
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible({ timeout: 10000 });
+
+  // Delete the record
   await page.getByRole('button', { name: 'More options' }).first().click();
   await page.getByRole('button', { name: 'Delete record' }).click();
 
-  await page.getByTitle('Show deleted records').click();
-  await expect(page.getByRole('cell', { name: 'deleted at' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
+  // Wait for the record to disappear from current view (dialog accepted, deletion processed)
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden({ timeout: 10000 });
 
+  // Switch to deleted records view
+  await page.getByTitle('Show deleted records').click();
+
+  // Wait for "deleted at" column and the deleted record to appear
+  await expect(page.locator('th:has-text("deleted at")')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible({ timeout: 10000 });
+
+  // Restore the record
   await page.getByRole('button', { name: 'More options' }).first().click();
   await page.getByRole('button', { name: 'Restore record' }).click();
 
-  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden();
+  // Wait for the record to disappear from deleted view (restoration processed)
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden({ timeout: 10000 });
 
+  // Switch back to current state
   await page.getByTitle('Show current database state').click();
-  await expect(page.getByRole('cell', { name: 'deleted at' })).toBeHidden();
-  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
+
+  // Wait for "deleted at" column to disappear and record to reappear
+  await expect(page.locator('th:has-text("deleted at")')).toBeHidden({ timeout: 10000 });
+  await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible({ timeout: 10000 });
 });

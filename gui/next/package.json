@@ -9,7 +9,7 @@
     "test": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.53.1",
+    "@playwright/test": "1.57.0",
     "@sveltejs/adapter-auto": "^3.3.1",
     "@sveltejs/adapter-static": "^3.0.6",
     "@sveltejs/kit": "^2.7.3",

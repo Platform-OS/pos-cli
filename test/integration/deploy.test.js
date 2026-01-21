@@ -34,7 +34,7 @@ const extract = async (inputPath, outputPath) => {
 describe('Happy path', () => {
   test('App directory + modules', async () => {
     requireRealCredentials();
-    await sleep(3000); // it's needed to run tests in parallel mode
+    await sleep(3500); // it's needed to run tests in parallel mode
 
 
     const { stdout } = await run('correct');
