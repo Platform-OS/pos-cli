@@ -12,7 +12,12 @@ const cliPath = path.join(process.cwd(), 'bin', 'pos-cli.js');
 const execCommand = (cmd, opts = {}) => {
   return new Promise((resolve) => {
     const child = exec(cmd, { ...opts, stdio: ['pipe', 'pipe', 'pipe'] }, (err, stdout, stderr) => {
-      let code = err ? err.code : 0;
+      // Extract exit code from error or default to 0
+      // Different environments might use err.code, err.exitCode, or err.signal
+      let code = 0;
+      if (err) {
+        code = err.code || err.exitCode || (err.signal ? 1 : 0);
+      }
       return resolve({ stdout, stderr, code });
     });
 
@@ -31,7 +36,8 @@ const run = (args, opts = {}) => {
   const absoluteArgs = args.replace(/(test\/fixtures\/yeoman\/modules\/core\/generators\/\w+)/g, (match) => {
     return path.resolve(__dirname, '../..', match);
   });
-  return execCommand(`${cliPath} generate run ${absoluteArgs}`, {
+  // Use process.execPath to ensure we use the same node executable
+  return execCommand(`"${process.execPath}" "${cliPath}" generate run ${absoluteArgs}`, {
     ...opts,
     cwd: opts.cwd || process.cwd()
   });
@@ -104,6 +110,12 @@ describe('pos-cli generate command', () => {
         { cwd: testDir, timeout: 10000 }
       );
 
+      if (code !== 0) {
+        console.error('Generator failed with code:', code);
+        console.error('STDOUT:', stdout);
+        console.error('STDERR:', stderr);
+      }
+
       expect(code).toBe(0);
       expect(stdout).toContain('CRUD generated');
       expect(stderr).not.toContain('Error');
@@ -153,10 +165,16 @@ describe('pos-cli generate command', () => {
     });
 
     test('generates view files when --includeViews option is used', async () => {
-      const { stdout, code } = await run(
+      const { stdout, stderr, code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud article title:text --includeViews',
         { cwd: testDir, timeout: 10000 }
       );
+
+      if (code !== 0) {
+        console.error('Generator failed with code:', code);
+        console.error('STDOUT:', stdout);
+        console.error('STDERR:', stderr);
+      }
 
       expect(code).toBe(0);
       expect(stdout).toContain('CRUD generated');
@@ -327,6 +345,12 @@ describe('pos-cli generate command', () => {
         'test/fixtures/yeoman/modules/core/generators/command users/create',
         { cwd: testDir, timeout: 10000 }
       );
+
+      if (code !== 0) {
+        console.error('Generator failed with code:', code);
+        console.error('STDOUT:', stdout);
+        console.error('STDERR:', stderr);
+      }
 
       expect(code).toBe(0);
       expect(stdout).toContain('Command generated');
