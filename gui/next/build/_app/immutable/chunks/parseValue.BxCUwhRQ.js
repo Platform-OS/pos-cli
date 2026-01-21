@@ -1,1 +1,0 @@
-import{t as n}from"./tryParseJSON.x4PJc0Qf.js";const s=(r,t)=>{let e={value:r,type:t};return r==null?(e.value=null,e.type="null",{...e}):(t==="boolean"&&(r===!0?e.value="true":e.value="false"),typeof r=="object"?(e.value=r,e.type="json",{...e}):n(r)?(e.value=n(r),e.type="jsonEscaped",{...e}):{...e,original:{value:r,type:t}})};export{s as p};
