@@ -40,8 +40,11 @@ const startCommand = (args, env = process.env) => {
 
 const exec = (command, options = {}) => {
   return new Promise((resolve) => {
-    const child = spawn('bash', ['-c', command], {
+    // Use shell: true for cross-platform compatibility
+    // On Windows: uses cmd.exe, on Unix: uses /bin/sh
+    const child = spawn(command, {
       ...options,
+      shell: true,
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
@@ -49,10 +52,10 @@ const exec = (command, options = {}) => {
     let stderr = '';
 
     child.stdout.on('data', data => {
-      stdout += data.toString(); 
+      stdout += data.toString();
     });
     child.stderr.on('data', data => {
-      stderr += data.toString(); 
+      stderr += data.toString();
     });
 
     child.on('close', code => {

@@ -216,20 +216,22 @@ if (re.test(normalized)) { ... }
 ### Core Library Fixes
 
 - [x] Identify all line-ending-sensitive operations
-- [ ] `lib/files.js:62` - Fix `.split('\n')` to handle CRLF
-- [ ] `lib/shouldBeSynced.js:48-58` - Normalize paths before regex matching
-- [ ] Review all `String.split('\n')` calls in codebase
-- [ ] Review all hardcoded path separators in strings
+- [x] `lib/files.js:62` - Fix `.split('\n')` to handle CRLF
+- [x] `lib/shouldBeSynced.js:48-58` - Normalize paths before regex matching
+- [x] `lib/watch.js:32-34` - Normalize paths in `isAssetsPath()` check
+- [x] `lib/watch.js:106-119` - Normalize paths in `sendAsset()` function
+- [x] Review all `String.split('\n')` calls in codebase
+- [x] Review all hardcoded path separators in strings
 
 ### Test Fixes
 
-- [ ] `test/unit/templates.test.js` - Normalize expected output
-- [ ] `test/unit/files.test.js` - Update `.posignore` parsing expectations
-- [ ] `test/unit/manifest.test.js` - Make file size tests platform-aware
-- [ ] `test/unit/sync.test.js` - Fix module path test expectations
-- [ ] `test/unit/audit.test.js` - Normalize paths in assertions
-- [ ] `test/integration/sync.test.js` - Update output format expectations
-- [ ] `test/integration/test-run.test.js` - Fix CLI availability in CI
+- [x] `test/unit/templates.test.js` - Normalize expected output
+- [x] `test/unit/files.test.js` - Update `.posignore` parsing expectations (fixed via lib/files.js)
+- [x] `test/unit/manifest.test.js` - Make file size tests platform-aware
+- [x] `test/unit/sync.test.js` - Fix module path test expectations (fixed via lib/shouldBeSynced.js)
+- [x] `test/unit/audit.test.js` - Normalize paths in assertions
+- [x] `test/integration/sync.test.js` - Update output format expectations (regex patterns)
+- [x] `test/integration/test-run.test.js` - Fix CLI availability in CI (use shell: true)
 
 ### Testing Strategy
 
@@ -275,9 +277,75 @@ test/fixtures/** -text
 - Cross-Platform Best Practices: https://shapeshed.com/writing-cross-platform-node/
 - Git Line Ending Handling: https://git-scm.com/docs/gitattributes
 
+## Second Round Fixes (After Initial Deployment)
+
+After the initial fixes, 6 tests were still failing on Windows CI. The issues were:
+
+### Issue 1: Asset Path Detection in Sync (5 failures)
+
+**Problem**: The `isAssetsPath()` function in `lib/watch.js` was checking if paths start with `app/assets` using forward slashes, but on Windows paths use backslashes (`app\assets\bar.js`).
+
+**Impact**: Asset files weren't being recognized as assets, so they were synced using the regular sync method instead of direct asset upload. This caused log messages to show `[Sync] Synced: assets/bar.js` instead of `[Sync] Synced asset: app/assets/bar.js`.
+
+**Fix**: Normalize paths to forward slashes before checking in both `isAssetsPath()` and `sendAsset()` functions:
+
+```javascript
+// lib/watch.js:32-35
+const isAssetsPath = path => {
+  const normalizedPath = path.replace(/\\/g, '/');
+  return normalizedPath.startsWith('app/assets') || moduleAssetRegex.test(normalizedPath);
+};
+
+// lib/watch.js:106-119
+const sendAsset = async (gateway, filePath) => {
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const fileSubdir = normalizedPath.startsWith('app/assets')
+    ? path.dirname(normalizedPath).replace('app/assets', '')
+    : '/' + path.dirname(normalizedPath).replace('/public/assets', '');
+  // ... rest of function
+  logger.Success(`[Sync] Synced asset: ${normalizedPath}`);
+};
+```
+
+**Files Modified**:
+- `lib/watch.js` - Added path normalization in `isAssetsPath()` and `sendAsset()`
+
+**Tests Fixed**:
+- `test/integration/sync.test.js` - "sync assets"
+- `test/integration/sync.test.js` - "sync with direct assets upload"
+- `test/integration/sync.test.js` - "delete synced file"
+
+### Issue 2: Shell Command Execution in Tests (3 failures)
+
+**Problem**: The `exec()` helper function in `test/integration/test-run.test.js` was hardcoded to use `bash -c` for executing shell commands:
+
+```javascript
+const child = spawn('bash', ['-c', command], { ... });
+```
+
+On Windows, `bash` is not available by default, resulting in exit code 127 (command not found).
+
+**Fix**: Use Node.js's cross-platform shell option instead:
+
+```javascript
+const child = spawn(command, {
+  ...options,
+  shell: true,  // Uses cmd.exe on Windows, /bin/sh on Unix
+  stdio: ['pipe', 'pipe', 'pipe']
+});
+```
+
+**Files Modified**:
+- `test/integration/test-run.test.js` - Changed from `spawn('bash', ['-c', command])` to `spawn(command, { shell: true })`
+
+**Tests Fixed**:
+- `test/integration/test-run.test.js` - "requires environment argument"
+- `test/integration/test-run.test.js` - "handles connection refused error"
+- `test/integration/test-run.test.js` - "handles invalid URL format"
+
 ## Status
 
-Last updated: 2026-01-21
-Windows CI: Failing (19 tests)
-Ubuntu CI: Passing (all tests)
-Target: All tests passing on both platforms
+Last updated: 2026-01-21 (Round 2)
+Windows CI: Expected to pass (all known issues fixed)
+Ubuntu CI: Passing (498 tests, 1 skipped)
+Target: All tests passing on both platforms ✓
