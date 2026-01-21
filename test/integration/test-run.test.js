@@ -40,7 +40,12 @@ const startCommand = (args, env = process.env) => {
 
 const exec = (command, options = {}) => {
   return new Promise((resolve) => {
-    const child = spawn('bash', ['-c', command], {
+    // Use cross-platform shell: cmd.exe on Windows, sh on Unix
+    const isWindows = process.platform === 'win32';
+    const shell = isWindows ? 'cmd.exe' : 'sh';
+    const shellArgs = isWindows ? ['/c', command] : ['-c', command];
+
+    const child = spawn(shell, shellArgs, {
       ...options,
       stdio: ['pipe', 'pipe', 'pipe']
     });
@@ -49,10 +54,10 @@ const exec = (command, options = {}) => {
     let stderr = '';
 
     child.stdout.on('data', data => {
-      stdout += data.toString(); 
+      stdout += data.toString();
     });
     child.stderr.on('data', data => {
-      stderr += data.toString(); 
+      stderr += data.toString();
     });
 
     child.on('close', code => {

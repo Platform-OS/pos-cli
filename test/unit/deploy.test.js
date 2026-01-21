@@ -235,7 +235,8 @@ describe('Deploy - Unit Tests', () => {
         process.chdir(fixturePath);
 
         const { makeArchive } = await import('#lib/archive.js');
-        const env = { TARGET: './tmp/test-release.zip' };
+        const targetPath = path.join('.', 'tmp', 'test-release.zip');
+        const env = { TARGET: targetPath };
 
         const result = await makeArchive(env, { withoutAssets: false });
 
@@ -244,8 +245,8 @@ describe('Deploy - Unit Tests', () => {
         expect(result).toBeGreaterThan(0);
 
         // Clean up
-        if (fs.existsSync('./tmp/test-release.zip')) {
-          fs.unlinkSync('./tmp/test-release.zip');
+        if (fs.existsSync(targetPath)) {
+          fs.unlinkSync(targetPath);
         }
       } finally {
         process.chdir(originalCwd);
@@ -261,7 +262,8 @@ describe('Deploy - Unit Tests', () => {
 
         const { makeArchive } = await import('#lib/archive.js');
         const { default: logger } = await import('#lib/logger.js');
-        const env = { TARGET: './tmp/test-release.zip' };
+        const targetPath = path.join('.', 'tmp', 'test-release.zip');
+        const env = { TARGET: targetPath };
 
         const result = await makeArchive(env, { withoutAssets: false });
 
@@ -307,7 +309,7 @@ describe('Deploy - Unit Tests', () => {
         }
 
         const { makeArchive } = await import('#lib/archive.js');
-        await makeArchive({ TARGET: './tmp/release.zip' }, { withoutAssets: true });
+        await makeArchive({ TARGET: path.join('.', 'tmp', 'release.zip') }, { withoutAssets: true });
 
         // Now test push
         const env = {

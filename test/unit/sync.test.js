@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import fs from 'fs';
+import path from 'path';
 
 vi.mock('fs');
 vi.mock('#lib/logger.js', () => ({
@@ -17,6 +18,9 @@ vi.mock('#lib/utils/valid-file-path.js', () => ({
     return !invalidChars.test(filePath);
   })
 }));
+
+// Helper to create platform-native paths for testing
+const nativePath = (...parts) => parts.join(path.sep);
 
 const setupMocks = () => {
   fs.readFileSync = vi.fn((filePath) => {
@@ -88,25 +92,25 @@ describe('shouldBeSynced - unit tests', () => {
 
   test('syncs files in modules/public directory', async () => {
     const { default: shouldBeSynced } = await import('#lib/shouldBeSynced.js');
-    const result = shouldBeSynced('modules/mymodule/public/views/index.liquid', []);
+    const result = shouldBeSynced(nativePath('modules', 'mymodule', 'public', 'views', 'index.liquid'), []);
     expect(result).toBe(true);
   });
 
   test('syncs files in modules/private directory', async () => {
     const { default: shouldBeSynced } = await import('#lib/shouldBeSynced.js');
-    const result = shouldBeSynced('modules/mymodule/private/config.yml', []);
+    const result = shouldBeSynced(nativePath('modules', 'mymodule', 'private', 'config.yml'), []);
     expect(result).toBe(true);
   });
 
   test('does not sync module template-values.json', async () => {
     const { default: shouldBeSynced } = await import('#lib/shouldBeSynced.js');
-    const result = shouldBeSynced('modules/mymodule/template-values.json', []);
+    const result = shouldBeSynced(nativePath('modules', 'mymodule', 'template-values.json'), []);
     expect(result).toBe(false);
   });
 
   test('does not sync files outside public/private in modules', async () => {
     const { default: shouldBeSynced } = await import('#lib/shouldBeSynced.js');
-    const result = shouldBeSynced('modules/mymodule/README.md', []);
+    const result = shouldBeSynced(nativePath('modules', 'mymodule', 'README.md'), []);
     expect(result).toBe(false);
   });
 
@@ -167,7 +171,7 @@ describe('shouldBeSynced - unit tests', () => {
 
   test('one false condition prevents sync - invalid module file', async () => {
     const { default: shouldBeSynced } = await import('#lib/shouldBeSynced.js');
-    const result = shouldBeSynced('modules/mymodule/README.md', []);
+    const result = shouldBeSynced(nativePath('modules', 'mymodule', 'README.md'), []);
     expect(result).toBe(false);
   });
 });

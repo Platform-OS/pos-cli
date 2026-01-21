@@ -43,9 +43,9 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
-    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/release`);
+    await extract(path.join(deployDir, 'tmp', 'release.zip'), path.join(deployDir, 'tmp', 'release'));
     const nestedPartial = fs.readFileSync(
-      `${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`,
+      path.join(deployDir, 'tmp', 'release', 'modules', 'testModule', 'public', 'views', 'partials', 'dir', 'subdir', 'foo.liquid'),
       'utf8'
     );
     expect(nestedPartial).toMatch('dir/subdir/foo');
@@ -66,9 +66,9 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct');
-    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/release`);
+    await extract(path.join(deployDir, 'tmp', 'release.zip'), path.join(deployDir, 'tmp', 'release'));
     const nestedPartial = fs.readFileSync(
-      `${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`,
+      path.join(deployDir, 'tmp', 'release', 'modules', 'testModule', 'public', 'views', 'partials', 'dir', 'subdir', 'foo.liquid'),
       'utf8'
     );
     expect(nestedPartial).toMatch('dir/subdir/foo');
@@ -82,16 +82,16 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
 
     const deployDir = cwd('correct_with_assets');
-    await extract(`${deployDir}/tmp/release.zip`, `${deployDir}/tmp/release`);
+    await extract(path.join(deployDir, 'tmp', 'release.zip'), path.join(deployDir, 'tmp', 'release'));
     const nestedPartial = fs.readFileSync(
-      `${deployDir}/tmp/release/modules/testModule/public/views/partials/dir/subdir/foo.liquid`,
+      path.join(deployDir, 'tmp', 'release', 'modules', 'testModule', 'public', 'views', 'partials', 'dir', 'subdir', 'foo.liquid'),
       'utf8'
     );
     expect(nestedPartial).toMatch('dir/subdir/foo');
 
-    await extract(`${deployDir}/tmp/assets.zip`, `${deployDir}/tmp/release_assets`);
-    expect(fs.existsSync(`${deployDir}/tmp/release_assets/foo.js`)).toBeTruthy();
-    expect(fs.existsSync(`${deployDir}/tmp/release_assets/modules/testModule/bar.js`)).toBeTruthy();
+    await extract(path.join(deployDir, 'tmp', 'assets.zip'), path.join(deployDir, 'tmp', 'release_assets'));
+    expect(fs.existsSync(path.join(deployDir, 'tmp', 'release_assets', 'foo.js'))).toBeTruthy();
+    expect(fs.existsSync(path.join(deployDir, 'tmp', 'release_assets', 'modules', 'testModule', 'bar.js'))).toBeTruthy();
   });
 
   test('only assets with old upload', async () => {

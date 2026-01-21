@@ -6,6 +6,21 @@ import path from 'path';
 import fs from 'fs';
 import { requireRealCredentials } from '#test/utils/credentials';
 
+// Cross-platform helper functions for file operations
+const appendFile = (filePath, content) => {
+  fs.appendFileSync(filePath, content);
+};
+
+const mkdir = (dirPath) => {
+  fs.mkdirSync(dirPath, { recursive: true });
+};
+
+const removeFile = (filePath) => {
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+};
+
 vi.setConfig({ testTimeout: 20000 });
 
 const stepTimeout = 3500;
@@ -26,7 +41,7 @@ const kill = p => {
   p.kill();
 };
 
-const barJsPath = path.join(cwd('correct_with_assets'), 'app/assets/bar.js');
+const barJsPath = path.join(cwd('correct_with_assets'), 'app', 'assets', 'bar.js');
 const originalBarJsContent = fs.readFileSync(barJsPath, 'utf8');
 
 afterAll(() => {
@@ -40,7 +55,7 @@ describe('Happy path', () => {
 
     const steps = async (child) => {
       await sleep(stepTimeout);
-      exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
+      appendFile(path.join(cwd('correct_with_assets'), 'app', 'assets', 'bar.js'), 'x');
       await sleep(stepTimeout);
       kill(child);
     };
@@ -54,7 +69,7 @@ describe('Happy path', () => {
   test('sync with direct assets upload', { retry: 2 }, async () => {
     const steps = async (child) => {
       await sleep(stepTimeout);
-      exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
+      appendFile(path.join(cwd('correct_with_assets'), 'app', 'assets', 'bar.js'), 'x');
       await sleep(stepTimeout);
       kill(child);
     };
@@ -72,13 +87,16 @@ properties:
   - name: list_id
     type: string
 `;
+    const fixtureDir = cwd('correct_with_assets');
+    const appDirPath = path.join(fixtureDir, 'app', dir);
+    const filePath = path.join(fixtureDir, 'app', fileName);
 
     const steps = async (child) => {
-      await exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
+      mkdir(appDirPath);
       await sleep(stepTimeout);
-      await exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
+      appendFile(filePath, validYML);
       await sleep(stepTimeout);
-      await exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
+      removeFile(filePath);
       await sleep(stepTimeout);
       kill(child);
     };
