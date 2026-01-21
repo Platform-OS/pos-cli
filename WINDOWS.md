@@ -343,9 +343,108 @@ const child = spawn(command, {
 - `test/integration/test-run.test.js` - "handles connection refused error"
 - `test/integration/test-run.test.js` - "handles invalid URL format"
 
+## Third Round Fixes (Final Polish)
+
+After the second round of fixes, 4 tests were still failing on Windows CI:
+
+### Issue 1: Sync Test File Deletion (1 failure)
+
+**Problem**: The test used Unix shell commands (`mkdir -p`, `echo >>`, `rm`) to create and delete test files:
+
+```javascript
+await exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
+await exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
+await exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
+```
+
+These commands don't exist or behave differently on Windows:
+- `mkdir -p` → works in some shells but not all
+- `echo ... >>` → multi-line strings have issues
+- `rm` → doesn't exist (Windows uses `del`)
+
+**Fix**: Use Node.js `fs` module for cross-platform file operations:
+
+```javascript
+const testDir = path.join(cwd('correct_with_assets'), 'app', dir);
+const testFile = path.join(cwd('correct_with_assets'), 'app', fileName);
+
+// Cross-platform directory creation
+if (!fs.existsSync(testDir)) {
+  fs.mkdirSync(testDir, { recursive: true });
+}
+
+// Cross-platform file write
+fs.writeFileSync(testFile, validYML);
+
+// Cross-platform file delete
+fs.unlinkSync(testFile);
+```
+
+**Files Modified**:
+- `test/integration/sync.test.js` - Replaced shell commands with Node.js fs operations
+
+**Tests Fixed**:
+- `test/integration/sync.test.js` - "delete synced file"
+
+### Issue 2: Test-Run Command Invocation (3 failures)
+
+**Problem**: The tests were calling the CLI script directly without `node`:
+
+```javascript
+const { code } = await exec(`${cliPath} test run`, { ... });
+// cliPath = 'bin/pos-cli.js'
+```
+
+On Unix, the shell can execute `.js` files using the shebang (`#!/usr/bin/env node`). On Windows, `.js` files aren't directly executable, so the shell couldn't find or execute the command, returning exit code 0 instead of the expected error exit code 1.
+
+**Fix**: Explicitly invoke Node.js when calling the CLI:
+
+```javascript
+const { code } = await exec(`node "${cliPath}" test run`, { ... });
+```
+
+The quotes around `${cliPath}` handle paths with spaces on Windows.
+
+**Files Modified**:
+- `test/integration/test-run.test.js` - Added `node` prefix to all `exec` CLI invocations
+
+**Tests Fixed**:
+- `test/integration/test-run.test.js` - "requires environment argument"
+- `test/integration/test-run.test.js` - "handles connection refused error"
+- `test/integration/test-run.test.js` - "handles invalid URL format"
+
+## Key Lessons Learned
+
+### 1. Never Use Shell Commands in Tests
+Tests that need file operations should use Node.js `fs` module instead of shell commands. This ensures they work across all platforms without translation.
+
+### 2. Always Invoke Node Scripts with `node`
+When spawning Node.js scripts, always use `node script.js` instead of relying on shebangs or file associations. This works consistently across platforms.
+
+### 3. Quote File Paths in Shell Commands
+When passing paths to shell commands, always quote them to handle spaces:
+```javascript
+`node "${path}" args`  // ✓ Correct
+`node ${path} args`    // ✗ Breaks with spaces
+```
+
 ## Status
 
-Last updated: 2026-01-21 (Round 2)
+Last updated: 2026-01-21 (Round 3)
 Windows CI: Expected to pass (all known issues fixed)
 Ubuntu CI: Passing (498 tests, 1 skipped)
 Target: All tests passing on both platforms ✓
+
+## Summary of All Changes
+
+### Core Library Changes (6 files)
+1. **lib/files.js** - Line ending handling in `.posignore` parser
+2. **lib/shouldBeSynced.js** - Path normalization for module detection
+3. **lib/watch.js** - Asset path detection and logging normalization
+
+### Test Changes (5 files)
+1. **test/unit/templates.test.js** - Line ending normalization
+2. **test/unit/manifest.test.js** - Dynamic file size calculation
+3. **test/unit/audit.test.js** - Path normalization in assertions
+4. **test/integration/sync.test.js** - Regex patterns and fs operations
+5. **test/integration/test-run.test.js** - Shell invocation and node prefix

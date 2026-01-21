@@ -74,18 +74,27 @@ properties:
 `;
 
     const steps = async (child) => {
-      await exec(`mkdir -p app/${dir}`, { cwd: cwd('correct_with_assets') });
+      const testDir = path.join(cwd('correct_with_assets'), 'app', dir);
+      const testFile = path.join(cwd('correct_with_assets'), 'app', fileName);
+
+      // Use Node.js fs for cross-platform compatibility
+      if (!fs.existsSync(testDir)) {
+        fs.mkdirSync(testDir, { recursive: true });
+      }
       await sleep(stepTimeout);
-      await exec(`echo "${validYML}" >> app/${fileName}`, { cwd: cwd('correct_with_assets') });
+
+      fs.writeFileSync(testFile, validYML);
       await sleep(stepTimeout);
-      await exec(`rm app/${fileName}`, { cwd: cwd('correct_with_assets') });
+
+      fs.unlinkSync(testFile);
       await sleep(stepTimeout);
       kill(child);
     };
     const { stdout } = await run('correct_with_assets', null, steps);
 
     expect(stdout).toMatch(process.env.MPKIT_URL);
-    expect(stdout).toMatch(`[Sync] Synced: ${fileName}`);
-    expect(stdout).toMatch(`[Sync] Deleted: ${fileName}`);
+    // Use regex to handle potential path separator differences
+    expect(stdout).toMatch(new RegExp(`\\[Sync\\] Synced: ${fileName.replace(/\//g, '[/\\\\]')}`));
+    expect(stdout).toMatch(new RegExp(`\\[Sync\\] Deleted: ${fileName.replace(/\//g, '[/\\\\]')}`));
   });
 });

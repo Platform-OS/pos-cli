@@ -652,20 +652,20 @@ describe('pos-cli test-run command', () => {
     const CLI_TIMEOUT = 1000;
 
     test('requires environment argument', async () => {
-      const { code, stderr } = await exec(`${cliPath} test run`, { env, timeout: CLI_TIMEOUT });
+      const { code, stderr } = await exec(`node "${cliPath}" test run`, { env, timeout: CLI_TIMEOUT });
 
       expect(code).toBe(1);
       expect(stderr).toMatch("error: missing required argument 'environment'");
     });
 
     test('accepts test name argument', async () => {
-      const { stderr } = await exec(`${cliPath} test run staging my_test_name`, { env, timeout: CLI_TIMEOUT });
+      const { stderr } = await exec(`node "${cliPath}" test run staging my_test_name`, { env, timeout: CLI_TIMEOUT });
 
       expect(stderr).not.toMatch('error: missing required argument');
     });
 
     test('accepts test name with path', async () => {
-      const { stderr } = await exec(`${cliPath} test run staging test/examples/assertions_test`, { env, timeout: CLI_TIMEOUT });
+      const { stderr } = await exec(`node "${cliPath}" test run staging test/examples/assertions_test`, { env, timeout: CLI_TIMEOUT });
 
       expect(stderr).not.toMatch('error: missing required argument');
     });
@@ -679,7 +679,7 @@ describe('pos-cli test-run command', () => {
         MPKIT_EMAIL: 'test@example.com'
       };
 
-      const { code, stderr } = await exec(`${cliPath} test run staging`, { env: badEnv, timeout: CLI_TIMEOUT });
+      const { code, stderr } = await exec(`node "${cliPath}" test run staging`, { env: badEnv, timeout: CLI_TIMEOUT });
 
       expect(code).toBe(1);
       expect(stderr).toMatch(/Request to server failed|fetch failed|TypeError/);
@@ -694,7 +694,7 @@ describe('pos-cli test-run command', () => {
         MPKIT_EMAIL: 'test@example.com'
       };
 
-      const { code } = await exec(`${cliPath} test run staging`, { env: badEnv, timeout: CLI_TIMEOUT });
+      const { code } = await exec(`node "${cliPath}" test run staging`, { env: badEnv, timeout: CLI_TIMEOUT });
 
       expect(code).toBe(1);
     });
