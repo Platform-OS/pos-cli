@@ -10,7 +10,7 @@ import { program } from 'commander';
 import { createEnv } from 'yeoman-environment';
 const yeomanEnv = createEnv();
 import compact from 'lodash.compact';
-import spawn from 'execa';
+import { execaSync } from 'execa';
 import reject from 'lodash.reject';
 import table from 'text-table';
 import logger from '../lib/logger.js';
@@ -127,7 +127,7 @@ const unknownOptions = (command) => {
 };
 
 const spawnCommand = (command, args, opt) => {
-  return spawn.sync(command, args, {
+  return execaSync(command, args, {
     stdio: 'inherit',
     cwd: '',
     ...opt
