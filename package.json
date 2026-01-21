@@ -8,8 +8,10 @@
     "#test/*": "./test/*"
   },
   "scripts": {
+    "pretest": "npm install --prefix test/fixtures/yeoman --silent",
     "test": "vitest run",
     "test:watch": "vitest",
+    "pretest:unit": "npm install --prefix test/fixtures/yeoman --silent",
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
     "lint": "eslint . --ext .js --max-warnings 0",
