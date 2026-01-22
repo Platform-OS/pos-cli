@@ -428,16 +428,94 @@ When passing paths to shell commands, always quote them to handle spaces:
 `node ${path} args`    // ✗ Breaks with spaces
 ```
 
+### 4. Use `child_process.exec()` for Shell Commands in Tests
+For test helpers that execute shell commands:
+- Prefer `child_process.exec()` over `spawn()` with `shell: true`
+- `exec()` handles shell execution more reliably across platforms
+- Avoids race conditions between timeout handlers and close event handlers
+- Consistent with established patterns in the codebase
+
+### 5. Windows Process Cleanup Takes Longer
+When testing CLI tools with nested commands (Commander.js external commands):
+- Windows needs more time to propagate exit codes through process trees
+- Increase timeouts appropriately (5s instead of 1s for error cases)
+- The extra layers of shell wrapping (`cmd.exe` → `node` → Commander spawns) add latency
+
+## Fourth Round Fixes (Process Cleanup & Timeout Handling)
+
+After the third round of fixes, 3 tests were still failing on Windows CI:
+
+### Issue: Exit Code Timing on Windows (3 failures)
+
+**Problem**: The `exec` helper function in `test/integration/test-run.test.js` was using `spawn()` with a custom timeout handler. On Windows, the nested Commander.js process tree (`pos-cli` → `pos-cli-test` → `pos-cli-test-run`) takes longer to clean up and propagate exit codes.
+
+The custom timeout handler had a race condition:
+```javascript
+// Old implementation with spawn
+const child = spawn(command, { shell: true, stdio: ['pipe', 'pipe', 'pipe'] });
+
+child.on('close', code => {
+  resolve({ stdout, stderr, code });
+});
+
+if (options.timeout) {
+  setTimeout(() => {
+    child.kill();
+    resolve({ stdout, stderr, code: null });  // Resolves with null!
+  }, options.timeout);
+}
+```
+
+When the 1000ms timeout fired before the 'close' event, the promise resolved with `code: null` instead of the actual exit code.
+
+**Root Cause**: Windows process tree cleanup is slower than Unix when dealing with nested shell commands. The process structure involves:
+1. `cmd.exe` (from `shell: true`)
+2. `node.exe` running `pos-cli.js`
+3. `node.exe` running `pos-cli-test.js` (spawned by Commander)
+4. `node.exe` running `pos-cli-test-run.js` (spawned by Commander)
+
+Exit codes must propagate back through all layers, which takes more than 1 second on Windows.
+
+**Fix**: Replaced `spawn()` with `child_process.exec()` (the same pattern used successfully in `test/utils/exec.js`) and increased timeout from 1000ms to 5000ms:
+
+```javascript
+const exec = (command, options = {}) => {
+  return new Promise((resolve) => {
+    // Use child_process.exec instead of spawn for better cross-platform compatibility
+    cpExec(command, options, (err, stdout, stderr) => {
+      const code = err ? (err.code ?? 1) : 0;
+      resolve({ stdout, stderr, code });
+    });
+  });
+};
+
+const CLI_TIMEOUT = 5000;  // Increased from 1000ms
+```
+
+**Why this works**:
+- `child_process.exec()` properly handles shell command execution and buffers output
+- Increased timeout gives Windows enough time to clean up the nested process tree
+- No race condition between timeout and close event handlers
+- Consistent with the pattern used in other working integration tests
+
+**Files Modified**:
+- `test/integration/test-run.test.js` - Changed from `spawn()` to `exec()` and increased timeout
+
+**Tests Fixed**:
+- `test/integration/test-run.test.js` - "requires environment argument"
+- `test/integration/test-run.test.js` - "handles connection refused error"
+- `test/integration/test-run.test.js` - "handles invalid URL format"
+
 ## Status
 
-Last updated: 2026-01-21 (Round 3)
+Last updated: 2026-01-22 (Round 4)
 Windows CI: Expected to pass (all known issues fixed)
 Ubuntu CI: Passing (498 tests, 1 skipped)
 Target: All tests passing on both platforms ✓
 
 ## Summary of All Changes
 
-### Core Library Changes (6 files)
+### Core Library Changes (3 files)
 1. **lib/files.js** - Line ending handling in `.posignore` parser
 2. **lib/shouldBeSynced.js** - Path normalization for module detection
 3. **lib/watch.js** - Asset path detection and logging normalization
@@ -447,4 +525,4 @@ Target: All tests passing on both platforms ✓
 2. **test/unit/manifest.test.js** - Dynamic file size calculation
 3. **test/unit/audit.test.js** - Path normalization in assertions
 4. **test/integration/sync.test.js** - Regex patterns and fs operations
-5. **test/integration/test-run.test.js** - Shell invocation and node prefix
+5. **test/integration/test-run.test.js** - Switched to `exec()`, increased timeout, proper exit code handling

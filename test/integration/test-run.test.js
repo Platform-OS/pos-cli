@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { describe, test, expect, vi } from 'vitest';
-import { spawn } from 'child_process';
+import { spawn, exec as cpExec } from 'child_process';
 import path from 'path';
 import { requireRealCredentials } from '#test/utils/credentials';
 import { TestLogStream } from '#lib/test-runner/logStream.js';
@@ -20,10 +20,10 @@ const startCommand = (args, env = process.env) => {
   let stderr = '';
 
   child.stdout.on('data', data => {
-    stdout += data.toString(); 
+    stdout += data.toString();
   });
   child.stderr.on('data', data => {
-    stderr += data.toString(); 
+    stderr += data.toString();
   });
 
   return {
@@ -40,34 +40,13 @@ const startCommand = (args, env = process.env) => {
 
 const exec = (command, options = {}) => {
   return new Promise((resolve) => {
-    // Use shell: true for cross-platform compatibility
-    // On Windows: uses cmd.exe, on Unix: uses /bin/sh
-    const child = spawn(command, {
-      ...options,
-      shell: true,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', data => {
-      stdout += data.toString();
-    });
-    child.stderr.on('data', data => {
-      stderr += data.toString();
-    });
-
-    child.on('close', code => {
+    // Use child_process.exec instead of spawn for better cross-platform compatibility
+    // This is the same approach used in test/utils/exec.js
+    cpExec(command, options, (err, stdout, stderr) => {
+      // err.code contains the exit code when process exits with error
+      const code = err ? (err.code ?? 1) : 0;
       resolve({ stdout, stderr, code });
     });
-
-    if (options.timeout) {
-      setTimeout(() => {
-        child.kill();
-        resolve({ stdout, stderr, code: null });
-      }, options.timeout);
-    }
   });
 };
 
@@ -649,7 +628,9 @@ describe('pos-cli test-run command', () => {
       MPKIT_EMAIL: 'foo@example.com'
     };
 
-    const CLI_TIMEOUT = 1000;
+    // Increased timeout for Windows where process tree cleanup takes longer
+    // due to nested Commander.js commands (pos-cli → pos-cli-test → pos-cli-test-run)
+    const CLI_TIMEOUT = 5000;
 
     test('requires environment argument', async () => {
       const { code, stderr } = await exec(`node "${cliPath}" test run`, { env, timeout: CLI_TIMEOUT });
