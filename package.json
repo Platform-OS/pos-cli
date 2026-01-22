@@ -14,8 +14,8 @@
     "pretest:unit": "npm install --prefix test/fixtures/yeoman --silent",
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
-    "lint": "eslint . --ext .js --max-warnings 0",
-    "lint:fix": "eslint . --ext .js --fix",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
     "postinstall": "node ./scripts/check-node-version.js"
   },
   "files": [

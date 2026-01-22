@@ -471,7 +471,7 @@ describe('server - Express 5.x routing', () => {
     });
 
     test('POST method does not match /*splat (only GET)', async () => {
-      const response = await request(app)
+      const _response = await request(app)
         .post('/any-path')
         .send({ data: 'test' })
         .expect(404);

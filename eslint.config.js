@@ -1,4 +1,7 @@
 import js from '@eslint/js';
+import nodePlugin from 'eslint-plugin-n';
+import importPlugin from 'eslint-plugin-import';
+import promisePlugin from 'eslint-plugin-promise';
 
 export default [
   {
@@ -7,8 +10,16 @@ export default [
       'gui/*/node_modules/**',
       'gui/*/dist/**',
       'gui/*/build/**',
+      'gui/*/src/**',
+      'gui/*/tests/**',
+      'gui/*/*.config.js',
+      'gui/next/.svelte-kit/**',
+      'gui/next/test-results/**',
+      'gui/next/playwright-report/**',
+      'gui/next/playwright/**',
       'coverage/**',
       '*.min.js',
+      'test/fixtures/**',
       // Generated/vendor files
       'gui/graphql/public/**',
       'gui/admin/dist/**',
@@ -36,11 +47,26 @@ export default [
     },
     rules: {
       'no-undef': 'off',
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'import/extensions': 'off',
+      'import/no-unresolved': 'off',
+      'n/no-missing-import': 'off'
     }
   },
   {
     files: ['**/*.js', '!**/*.test.js', '!**/*.spec.js', '!test/**/*.js', '!gui/**'],
+    plugins: {
+      n: nodePlugin,
+      import: importPlugin,
+      promise: promisePlugin
+    },
+    settings: {
+      'import/resolver': {
+        node: {
+          extensions: ['.js', '.json']
+        }
+      }
+    },
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -70,7 +96,17 @@ export default [
     },
     rules: {
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-      'no-global-assign': 'off'
+      'no-global-assign': 'off',
+      'n/no-missing-import': ['error', {
+        tryExtensions: ['.js', '.json'],
+        allowModules: ['vitest']
+      }],
+      'n/no-extraneous-import': 'off',
+      'n/no-extraneous-require': 'off',
+      'n/no-unsupported-features/es-syntax': 'off',
+      'n/no-process-exit': 'off',
+      'import/no-unresolved': ['error', { ignore: ['^@platformos/', '^#lib/', '^#test/', '^vitest/'] }],
+      'import/extensions': 'off'
     }
   },
   {
