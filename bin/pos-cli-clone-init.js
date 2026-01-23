@@ -12,13 +12,13 @@ program
   .name('pos-cli clone init')
   .arguments('[sourceEnv]', 'source environment. Example: staging')
   .arguments('[targetEnv]', 'target environment. Example: staging2')
-  .action(async (sourceEnv, _targetEnv, _params) => {
+  .action(async (sourceEnv, targetEnv, _params) => {
 
     const spinner = ora({ text: 'InstanceClone initilized', stream: process.stdout, interval: 500 });
 
     try {
       const sourceAuthData = fetchSettings(sourceEnv, program);
-      const targetAuthData = fetchSettings(_targetEnv, program);
+      const targetAuthData = fetchSettings(targetEnv, program);
 
       const sourceGateway = new Gateway(sourceAuthData);
       const targetGateway = new Gateway(targetAuthData);
@@ -36,7 +36,7 @@ program
         spinner.text = formatResponse(msg);
       });
 
-      spinner.stopAndPersist().succeed(`${sourceEnv} instance clone to ${_targetEnv} succeeded.`);
+      spinner.stopAndPersist().succeed(`${sourceEnv} instance clone to ${targetEnv} succeeded.`);
     } catch(e) {
       spinner.stop();
       logger.Error(e);
