@@ -187,4 +187,39 @@ describe('env add with mocked portal', () => {
     const settings = settingsFromDotPos(environment);
     expect(settings['email']).toBe('user@example.com');
   });
+
+  test('displays error when instance is not registered in partner portal', async () => {
+    const Portal = await import('#lib/portal.js');
+    const logger = await import('#lib/logger.js');
+
+    const loggerErrorSpy = vi.spyOn(logger.default, 'Error');
+
+    // Mock Portal.requestDeviceAuthorization to throw 404 error
+    const originalRequestDeviceAuth = Portal.default.requestDeviceAuthorization;
+    Portal.default.requestDeviceAuthorization = vi.fn(() => {
+      const error = new Error('Not Found');
+      error.statusCode = 404;
+      error.options = { uri: 'https://partners.platformos.com/oauth/authorize_device' };
+      return Promise.reject(error);
+    });
+
+    const environment = 'unregistered';
+    const params = {
+      url: 'https://unregistered-instance.example.com'
+    };
+
+    await expect(addEnv(environment, params)).rejects.toThrow();
+
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Instance https://unregistered-instance.example.com/ is not registered in the Partner Portal'),
+      expect.objectContaining({ hideTimestamp: true, exit: false })
+    );
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Please double-check if the instance URL is correct'),
+      expect.objectContaining({ hideTimestamp: true, exit: false })
+    );
+
+    // Restore original mock
+    Portal.default.requestDeviceAuthorization = originalRequestDeviceAuth;
+  });
 });
