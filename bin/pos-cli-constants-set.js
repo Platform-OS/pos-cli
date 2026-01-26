@@ -18,11 +18,11 @@ const checkParams = ({name, value}) => {
 };
 
 const success = (msg) => {
-  logger.Success(`Constant variable <${msg.data.constant_set.name}> added successfuly.`);
+  logger.Success(`Constant variable <${msg.data.constant_set.name}> added successfully.`);
 };
 
 const error = (msg) => {
-  logger.Error(`Adding Constant variable <${msg.data.constant_set.name}> failed successfuly.`);
+  logger.Error(`Adding Constant variable <${msg.data.constant_set.name}> failed.`);
 };
 
 program

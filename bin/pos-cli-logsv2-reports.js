@@ -15,11 +15,11 @@ program.showHelpAfterError();
 program
   .name('pos-cli logsv2 reports')
   .arguments('[environment]', 'name of environment. Example: staging')
+  .option('--json', 'output as json')
   // .option('--from <from>', 'start from', 0)
   // .option('--size <size>', 'rows size', 20)
   // .option('--start_time <st>', 'starttime')
   // .option('--end_time <et>', 'endtime')
-  // .option('--json', 'output as json')
   .requiredOption('--report <report>', 'available reports: r-4xx, r-slow, r-slow-by-count')
   .action(async (environment, program) => {
     try {

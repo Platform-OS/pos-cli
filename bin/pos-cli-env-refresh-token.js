@@ -8,7 +8,7 @@ import ServerError from '../lib/ServerError.js';
 
 const saveToken = (settings, token) => {
   storeEnvironment(Object.assign(settings, { token: token }));
-  logger.Success(`Environment ${settings.url} as ${settings.environment} has been added successfuly.`);
+  logger.Success(`Environment ${settings.url} as ${settings.environment} has been added successfully.`);
 };
 
 const login = async (email, password, url) => {

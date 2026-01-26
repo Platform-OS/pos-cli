@@ -151,9 +151,8 @@ describe('Server errors', () => {
       const { stderr, code } = await run('correct');
 
       expect(code).toEqual(1);
-      expect(stderr).toMatch(
-        'Deploy failed. RequestError: fetch failed'
-      );
+      expect(stderr).toMatch('Deploy failed.');
+      expect(stderr).toMatch('Could not resolve hostname: incorrecturl123xyz.com');
     } finally {
       process.env.MPKIT_URL = originalUrl;
       process.env.MPKIT_TOKEN = originalToken;
