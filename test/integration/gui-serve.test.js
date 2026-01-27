@@ -128,4 +128,5 @@ describe('pos-cli gui serve command', () => {
       server.kill();
     }
   });
+
 });

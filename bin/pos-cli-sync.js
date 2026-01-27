@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
-import { start as watchStart } from '../lib/watch.js';
+import { start as watchStart, setupGracefulShutdown } from '../lib/watch.js';
 
 import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
@@ -24,7 +24,9 @@ program
       CONCURRENCY: process.env.CONCURRENCY || params.concurrency
     });
 
-    watchStart(env, params.directAssetsUpload, params.livereload);
+    const { watcher, liveReloadServer } = await watchStart(env, params.directAssetsUpload, params.livereload);
+
+    setupGracefulShutdown({ watcher, liveReloadServer, context: 'Sync' });
 
     if (params.open) {
       try {

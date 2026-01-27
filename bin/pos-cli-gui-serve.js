@@ -2,7 +2,7 @@
 import { SwaggerProxy } from '../lib/swagger-client.js';
 
 import { program } from 'commander';
-import { start as watch } from '../lib/watch.js';
+import { start as watch, setupGracefulShutdown } from '../lib/watch.js';
 
 import { fetchSettings } from '../lib/settings.js';
 import { start as server } from '../lib/server.js';
@@ -45,7 +45,8 @@ program
       }
 
       if (params.sync){
-        await watch(env, true, false);
+        const { watcher, liveReloadServer } = await watch(env, true, false);
+        setupGracefulShutdown({ watcher, liveReloadServer, context: 'GUI' });
       }
     } catch (e) {
       if (ServerError.isNetworkError(e)) {
