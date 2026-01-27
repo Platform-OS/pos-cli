@@ -88,7 +88,7 @@ program
       if (message == null) message = '';
       if (typeof(message) != 'string') message = JSON.stringify(message);
 
-      const text = `[${created_at.replace('T', ' ')}] - ${error_type}: ${message.replace(/\n$/, '')}`;
+      const text = `[${created_at.replace('T', ' ')}] - ${error_type}: ${message.replace(/\r?\n$/, '')}`;
       const options = { exit: false, hideTimestamp: true };
 
       if (isError(message)) {
