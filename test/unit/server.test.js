@@ -221,18 +221,12 @@ describe('server - Express 5.x routing', () => {
     test('/*splat matches root path', async () => {
       // Note: Root path / may be handled by static middleware first
       // Testing with any path should show the same behavior
-      const response = await request(app)
+      await request(app)
         .get('/')
         .expect((res) => {
           // Either static middleware serves or /*splat catches it
           expect([200, 404]).toContain(res.status);
         });
-
-      // If it returns 200, it should be from our SPA or static content
-      if (response.status === 200) {
-        // Either static file or SPA fallback - both are acceptable
-        expect(true).toBe(true);
-      }
     });
 
     test('/*splat matches single path segment', async () => {
@@ -314,18 +308,12 @@ describe('server - Express 5.x routing', () => {
   describe('Legacy app /*splat routing', () => {
     test('legacy /*splat matches root path', async () => {
       // Note: Root path / may be handled by static middleware first
-      const response = await request(legacy)
+      await request(legacy)
         .get('/')
         .expect((res) => {
           // Either static middleware serves or /*splat catches it
           expect([200, 404]).toContain(res.status);
         });
-
-      // If it returns 200, it should be from our SPA or static content
-      if (response.status === 200) {
-        // Either static file or SPA fallback - both are acceptable
-        expect(true).toBe(true);
-      }
     });
 
     test('legacy /*splat matches single path segment', async () => {
@@ -471,7 +459,7 @@ describe('server - Express 5.x routing', () => {
     });
 
     test('POST method does not match /*splat (only GET)', async () => {
-      const response = await request(app)
+      const _response = await request(app)
         .post('/any-path')
         .send({ data: 'test' })
         .expect(404);

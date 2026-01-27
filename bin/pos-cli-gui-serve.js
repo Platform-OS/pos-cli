@@ -7,6 +7,7 @@ import { start as watch } from '../lib/watch.js';
 import { fetchSettings } from '../lib/settings.js';
 import { start as server } from '../lib/server.js';
 import logger from '../lib/logger.js';
+import ServerError from '../lib/ServerError.js';
 
 const DEFAULT_CONCURRENCY = 3;
 
@@ -46,8 +47,12 @@ program
       if (params.sync){
         await watch(env, true, false);
       }
-    } catch {
-      logger.Error('✖ Failed.');
+    } catch (e) {
+      if (ServerError.isNetworkError(e)) {
+        ServerError.handler(e);
+      } else {
+        logger.Error(`Failed: ${e.message || e}`);
+      }
     }
   });
 

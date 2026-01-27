@@ -244,7 +244,7 @@ describe('s3UploadFile', () => {
 
     test('handles large file near 50MB limit with FormData', async () => {
       const filePath = '/path/to/large-asset.zip';
-      const fileSize = 49 * 1024 * 1024; // 49MB (simulated)
+      const _fileSize = 49 * 1024 * 1024; // 49MB (simulated)
       const largeBuffer = Buffer.alloc(1024); // Small buffer for testing
       const data = {
         url: 'https://s3.amazonaws.com/bucket',

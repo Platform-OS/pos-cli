@@ -14,7 +14,7 @@ describe('commander env add', () => {
   test('adding with email and token', async () => {
     const { stdout } = await run('--url https://example.com --email pos-cli-ci@platformos.com --token 12345 e1');
 
-    expect(stdout).toMatch('Environment https://example.com/ as e1 has been added successfuly');
+    expect(stdout).toMatch('Environment https://example.com/ as e1 has been added successfully');
 
     const settings = settingsFromDotPos('e1');
     expect(settings['token']).toMatch('12345');
@@ -23,7 +23,7 @@ describe('commander env add', () => {
   test('adding with email and token and partner_portal_url', async () => {
     const { stdout } = await run('--url https://example.com --email pos-cli-ci@platformos.com --token 12345 e2 --partner-portal-url http://portal.example.com');
 
-    expect(stdout).toMatch('Environment https://example.com/ as e2 has been added successfuly');
+    expect(stdout).toMatch('Environment https://example.com/ as e2 has been added successfully');
 
     const settings = settingsFromDotPos('e2');
     expect(settings['token']).toMatch('12345');

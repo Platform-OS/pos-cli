@@ -18,13 +18,13 @@ const checkParams = ({name}) => {
 
 const success = (msg) => {
   if (msg.data.constant_unset)
-    logger.Success(`Constant variable <${msg.data.constant_unset.name}> deleted successfuly.`);
+    logger.Success(`Constant variable <${msg.data.constant_unset.name}> deleted successfully.`);
   else
     logger.Success('Constant variable not found.');
 };
 
 const error = (msg) => {
-  logger.Error(`Adding Constant variable <${msg.data.constant_unset.name}> failed successfuly.`);
+  logger.Error(`Deleting Constant variable <${msg.data.constant_unset.name}> failed.`);
 };
 
 program
