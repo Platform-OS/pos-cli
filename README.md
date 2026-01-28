@@ -55,12 +55,20 @@ Include the `--open` (`-o`) option with your sync command to automatically launc
     
 #### Concurrency
 
-By default, the `sync` command establishes three concurrent connections to our server for syncing resources and assets. You have the option to modify this to better suit your network’s capabilities:
+By default, the `sync` command establishes three concurrent connections to our server for syncing resources and assets. You have the option to modify this to better suit your network's capabilities:
 
     pos-cli sync [environment] -c 10
 
 Adjust the number of concurrent connections based on your specific requirements and connection strength.
-    
+
+#### Syncing a Single File
+
+To sync a single file without entering watch mode, use the `-f` or `--file-path` option:
+
+    pos-cli sync [environment] -f path/to/file.liquid
+
+This command syncs only the specified file and exits immediately, making it useful for scripting where you need to update a specific file without keeping a persistent connection.
+
 ### Deploying Changes
 
 To deploy all changes to a specified environment, use the following command:
