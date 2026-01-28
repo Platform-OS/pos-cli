@@ -91,13 +91,13 @@ describe('ServerError', () => {
   });
 
   describe('responseHandler', () => {
-    test('handles 504 gateway timeout', () => {
+    test('handles 504 gateway timeout', async () => {
       const request = {
         statusCode: 504,
         options: { uri: 'https://example.com/api/deploy' }
       };
 
-      ServerError.responseHandler(request);
+      await ServerError.responseHandler(request);
 
       expect(logger.Error).toHaveBeenCalledWith(
         'Gateway timed out. \nWe have been notified about it.',
@@ -106,13 +106,13 @@ describe('ServerError', () => {
       expect(report).toHaveBeenCalledWith('[504] Gateway timeout');
     });
 
-    test('handles 502 bad gateway', () => {
+    test('handles 502 bad gateway', async () => {
       const request = {
         statusCode: 502,
         options: { uri: 'https://example.com/api/deploy' }
       };
 
-      ServerError.responseHandler(request);
+      await ServerError.responseHandler(request);
 
       expect(logger.Error).toHaveBeenCalledWith(
         'Bad gateway. \nWe have been notified about it.',
@@ -121,13 +121,13 @@ describe('ServerError', () => {
       expect(report).toHaveBeenCalledWith('[502] Bad Gateway');
     });
 
-    test('handles 500 internal server error', () => {
+    test('handles 500 internal server error', async () => {
       const request = {
         statusCode: 500,
         options: { uri: 'https://example.com/api/deploy' }
       };
 
-      ServerError.responseHandler(request);
+      await ServerError.responseHandler(request);
 
       expect(logger.Error).toHaveBeenCalledWith(
         'Something went wrong on the server. \nWe have been notified about it.',
@@ -345,36 +345,36 @@ describe('ServerError', () => {
   });
 
   describe('specific error methods', () => {
-    test('gatewayTimeout logs and reports', () => {
+    test('gatewayTimeout logs and reports', async () => {
       const request = {
         options: { uri: 'https://example.com/api/deploy' }
       };
 
-      ServerError.gatewayTimeout(request);
+      await ServerError.gatewayTimeout(request);
 
       expect(logger.Debug).toHaveBeenCalled();
       expect(logger.Error).toHaveBeenCalled();
       expect(report).toHaveBeenCalledWith('[504] Gateway timeout');
     });
 
-    test('badGateway logs and reports', () => {
+    test('badGateway logs and reports', async () => {
       const request = {
         options: { uri: 'https://example.com/api/deploy' }
       };
 
-      ServerError.badGateway(request);
+      await ServerError.badGateway(request);
 
       expect(logger.Debug).toHaveBeenCalled();
       expect(logger.Error).toHaveBeenCalled();
       expect(report).toHaveBeenCalledWith('[502] Bad Gateway');
     });
 
-    test('internal logs and reports', () => {
+    test('internal logs and reports', async () => {
       const request = {
         options: { uri: 'https://example.com/api/deploy' }
       };
 
-      ServerError.internal(request);
+      await ServerError.internal(request);
 
       expect(logger.Debug).toHaveBeenCalled();
       expect(logger.Error).toHaveBeenCalled();

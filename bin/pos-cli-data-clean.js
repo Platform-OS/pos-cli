@@ -62,11 +62,11 @@ program
 
       // custom handle 422
       if (e.statusCode == 422)
-        logger.Error('[422] Data clean is either not supported by the server or has been disabled.');
+        await logger.Error('[422] Data clean is either not supported by the server or has been disabled.');
       else if (ServerError.isNetworkError(e))
-        ServerError.handler(e);
+        await ServerError.handler(e);
       else
-        logger.Error(e);
+        await logger.Error(e);
     }
   });
 

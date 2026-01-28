@@ -50,9 +50,9 @@ program
       }
     } catch (e) {
       if (ServerError.isNetworkError(e)) {
-        ServerError.handler(e);
+        await ServerError.handler(e);
       } else {
-        logger.Error(`Failed: ${e.message || e}`);
+        await logger.Error(`Failed: ${e.message || e}`);
       }
     }
   });

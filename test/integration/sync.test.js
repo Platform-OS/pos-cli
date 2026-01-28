@@ -156,4 +156,30 @@ properties:
     }
   });
 
+  test('422 validation error shows proper format with single error message', { retry: 2 }, async () => {
+    requireRealCredentials();
+
+    // Use fixture with invalid schema file that triggers 422 validation error
+    const testFilePath = 'app/schema/invalid-property-type.yml';
+
+    // Run sync with -f option - this should fail with validation error
+    const { stderr, code } = await exec(
+      `${cliPath} sync -f ${testFilePath}`,
+      { cwd: cwd('invalid_schema'), env: process.env }
+    );
+
+    // Verify error output
+    expect(code).toBe(1);
+
+    // Should show [Sync] Failed to sync with timestamp and file path
+    expect(stderr).toMatch(/\[\d{2}:\d{2}:\d{2}\] \[Sync\] Failed to sync: schema\/invalid-property-type\.yml/);
+
+    // Should include the validation error message
+    expect(stderr).toMatch(/Validation failed/);
+
+    // Verify error is NOT duplicated - count occurrences of "Failed to sync"
+    const failedToSyncMatches = (stderr.match(/Failed to sync/g) || []).length;
+    expect(failedToSyncMatches).toBe(1);
+  });
+
 });

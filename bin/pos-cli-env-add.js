@@ -21,9 +21,9 @@ program
       await addEnv(environment, params);
     } catch (e) {
       if (ServerError.isNetworkError(e))
-        ServerError.handler(e);
+        await ServerError.handler(e);
       else
-        logger.Error(e);
+        await logger.Error(e);
     }
   });
 

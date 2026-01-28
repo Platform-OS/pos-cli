@@ -38,7 +38,11 @@ program
         await sendFile(gateway, params.filePath);
         process.exit(0);
       } catch (error) {
-        logger.Error(`Failed to sync file: ${error.message}`);
+        // If error was already logged (e.g., validation error), just exit
+        if (error.alreadyLogged) {
+          process.exit(1);
+        }
+        await logger.Error(`Failed to sync file: ${error.message}`);
         process.exit(1);
       }
     }
