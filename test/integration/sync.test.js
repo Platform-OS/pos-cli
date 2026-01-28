@@ -98,4 +98,62 @@ properties:
     expect(stdout).toMatch(new RegExp(`\\[Sync\\] Deleted: ${fileName.replace(/\//g, '[/\\\\]')}`));
   });
 
+  test('sync single file with -f option', { retry: 2 }, async () => {
+    requireRealCredentials();
+
+    // Create a temporary file to sync
+    const testFilePath = 'app/views/pages/test-single-sync.liquid';
+    const fullTestPath = path.join(cwd('correct_with_assets'), testFilePath);
+    const testContent = '<!-- Test single file sync -->\n<h1>Test Page</h1>\n';
+
+    // Write test file
+    fs.writeFileSync(fullTestPath, testContent);
+
+    try {
+      // Run sync with -f option (without callback, so it runs to completion)
+      const { stdout, code } = await exec(
+        `${cliPath} sync -f ${testFilePath}`,
+        { cwd: cwd('correct_with_assets'), env: process.env }
+      );
+
+      // Verify output - note that filePathUnixified removes the app/ prefix
+      expect(code).toBe(0);
+      expect(stdout).toMatch(/\[Sync\] Synced: views\/pages\/test-single-sync\.liquid/);
+    } finally {
+      // Clean up test file
+      if (fs.existsSync(fullTestPath)) {
+        fs.unlinkSync(fullTestPath);
+      }
+    }
+  });
+
+  test('sync single asset file with -f option', { retry: 2 }, async () => {
+    requireRealCredentials();
+
+    // Create a temporary asset file to sync
+    const testFilePath = 'app/assets/test-single-sync.js';
+    const fullTestPath = path.join(cwd('correct_with_assets'), testFilePath);
+    const testContent = '// Test single asset file sync\nconsole.log("test");\n';
+
+    // Write test file
+    fs.writeFileSync(fullTestPath, testContent);
+
+    try {
+      // Run sync with -f option (without callback, so it runs to completion)
+      const { stdout, code } = await exec(
+        `${cliPath} sync -f ${testFilePath}`,
+        { cwd: cwd('correct_with_assets'), env: process.env }
+      );
+
+      // Verify output
+      expect(code).toBe(0);
+      expect(stdout).toMatch(/\[Sync\] Synced asset: app\/assets\/test-single-sync\.js/);
+    } finally {
+      // Clean up test file
+      if (fs.existsSync(fullTestPath)) {
+        fs.unlinkSync(fullTestPath);
+      }
+    }
+  });
+
 });

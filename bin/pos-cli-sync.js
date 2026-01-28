@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
-import { start as watchStart, setupGracefulShutdown } from '../lib/watch.js';
+import { start as watchStart, setupGracefulShutdown, sendFile } from '../lib/watch.js';
 
 import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
+import Gateway from '../lib/proxy.js';
 
 const DEFAULT_CONCURRENCY = 3;
 
@@ -14,6 +15,7 @@ program
   .option('-c, --concurrency <number>', 'Maximum concurrent connections to the server', DEFAULT_CONCURRENCY)
   .option('-d, --direct-assets-upload', 'deprecated, this is the default strategy', true)
   .option('-o, --open', 'When ready, open default browser with instance')
+  .option('-f, --file-path <file-path>', 'sync single file and exit')
   .option('-l, --livereload', 'Use livereload')
   .action(async (environment, params) => {
     const authData = fetchSettings(environment);
@@ -24,6 +26,24 @@ program
       CONCURRENCY: process.env.CONCURRENCY || params.concurrency
     });
 
+    // Handle single file sync
+    if (params.filePath) {
+      const gateway = new Gateway({
+        email: env.MARKETPLACE_EMAIL,
+        token: env.MARKETPLACE_TOKEN,
+        url: env.MARKETPLACE_URL
+      });
+
+      try {
+        await sendFile(gateway, params.filePath);
+        process.exit(0);
+      } catch (error) {
+        logger.Error(`Failed to sync file: ${error.message}`);
+        process.exit(1);
+      }
+    }
+
+    // Continue with watch mode
     const { watcher, liveReloadServer } = await watchStart(env, params.directAssetsUpload, params.livereload);
 
     setupGracefulShutdown({ watcher, liveReloadServer, context: 'Sync' });
