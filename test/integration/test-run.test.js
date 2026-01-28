@@ -688,7 +688,7 @@ describe('pos-cli test-run command', () => {
     try {
       await new Promise((resolve, reject) => {
         const startTime = Date.now();
-        const maxWait = 10000;
+        const maxWait = 30000; // waitForStatus polls every 5s, need more cycles for Node 24 Windows
 
         const checkInterval = setInterval(() => {
           const stdout = cleanProc.getStdout();
