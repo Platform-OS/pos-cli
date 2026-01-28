@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { describe, test, expect, afterAll, vi } from 'vitest';
+import { describe, test, expect, afterAll, afterEach, vi } from 'vitest';
 import exec from '#test/utils/exec';
 import cliPath from '#test/utils/cliPath';
 import path from 'path';
@@ -7,6 +7,9 @@ import fs from 'fs';
 import { requireRealCredentials } from '#test/utils/credentials';
 
 vi.setConfig({ testTimeout: 20000 });
+
+// Force this test file to run in sequence to avoid race conditions with fixture files
+// @vitest-environment node
 
 const stepTimeout = 3500;
 
@@ -29,8 +32,22 @@ const kill = p => {
 const barJsPath = path.join(cwd('correct_with_assets'), 'app/assets/bar.js');
 const originalBarJsContent = fs.readFileSync(barJsPath, 'utf8');
 
+// Restore file after each test to prevent race conditions with other tests
+afterEach(() => {
+  try {
+    fs.writeFileSync(barJsPath, originalBarJsContent);
+  } catch (error) {
+    console.error('Failed to restore bar.js in afterEach:', error);
+  }
+});
+
+// Also restore after all tests as a final safeguard
 afterAll(() => {
-  fs.writeFileSync(barJsPath, originalBarJsContent);
+  try {
+    fs.writeFileSync(barJsPath, originalBarJsContent);
+  } catch (error) {
+    console.error('Failed to restore bar.js in afterAll:', error);
+  }
 });
 
 // Skip all tests if credentials aren't available

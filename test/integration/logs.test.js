@@ -65,7 +65,7 @@ const execLiquidLog = async (message, type) => {
     ? `{% log '${message}', type: '${type}' %}`
     : `{% log '${message}' %}`;
 
-  const authData = fetchSettings();
+  const authData = await fetchSettings();
   const gateway = new Gateway(authData);
   return gateway.liquid({ content: liquidCode });
 };
