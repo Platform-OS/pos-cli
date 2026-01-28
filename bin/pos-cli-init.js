@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  degit = require('degit'),
-  inquirer = require('inquirer');
+import { program } from 'commander';
+import degit from 'degit';
+import inquirer from 'inquirer';
 
-const logger = require('../lib/logger'),
-  report = require('../lib/logger/report');
+import logger from '../lib/logger.js';
+import report from '../lib/logger/report.js';
 
 const repos = {
   empty: 'mdyd-dev/directory-structure',
   'Hello world': 'mdyd-dev/hello-world',
   'Todo app': 'mdyd-dev/todo-app',
-  'Product Marketplace Template': 'mdyd-dev/product-marketplace-template',
+  'Product Marketplace Template': 'mdyd-dev/product-marketplace-template'
 };
 
 function createStructure(url, branch) {
@@ -46,20 +46,20 @@ program
             name: 'repo',
             message: 'Example app',
             default: 'empty',
-            choices: Object.keys(repos),
+            choices: Object.keys(repos)
           },
           {
             type: 'string',
             name: 'branch',
             message: 'Branch',
-            default: 'master',
-          },
+            default: 'master'
+          }
         ])
         .then((answers) => {
           createStructure(repos[answers.repo], answers.branch);
 
           report('Init: Wizard');
-        })
+        });
       return;
     }
 

@@ -1,0 +1,17 @@
+<div class="flex">
+  <div class="m-2 w-2/6 {% if contract.success %}text-green-700{%else%}text-red-800{% endif %}">
+    {% assign test_name = name | replace: 'test/', '' %}
+    {{ test_name }}
+    <a href="/_tests/run?name={{ test_name }}" class="{% if contract.success %}text-green-700{%else%}text-red-800{% endif %} !important">
+      (run test)
+    </a>
+  </div>
+  <div class="w-4/6">
+    {% for e in contract.errors %}
+      <div class="flex">
+        <div class="w-2/6 m-2 break-all"> {{ e[0] }} </div>
+        <div class="w-4/6 m-2"> {{ e[1] | join: ", <br/>" | html_safe }} </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>

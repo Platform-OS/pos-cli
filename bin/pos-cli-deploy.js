@@ -1,18 +1,9 @@
 #!/usr/bin/env node
-const { program } = require('commander');
+import { program } from 'commander';
 
-const fetchAuthData = require('../lib/settings').fetchSettings;
-const logger = require('../lib/logger');
-const deployStrategy = require('../lib/deploy/strategy');
-const audit = require('../lib/audit');
-
-const runAudit = async () => {
-  if (process.env.CI == 'true') {
-    return;
-  }
-
-  await audit.run();
-};
+import { fetchSettings } from '../lib/settings.js';
+import logger from '../lib/logger.js';
+import deployStrategy from '../lib/deploy/strategy.js';
 
 program
   .name('pos-cli deploy')
@@ -25,7 +16,7 @@ program
     if (params.force) logger.Warn('-f flag is deprecated and does not do anything.');
 
     const strategy = !params.oldAssetsUpload ? 'directAssetsUpload' : 'default';
-    const authData = fetchAuthData(environment, program);
+    const authData = await fetchSettings(environment, program);
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
@@ -38,7 +29,6 @@ program
       DIRECT_ASSETS_UPLOAD: !params.oldAssetsUpload
     });
 
-    // await runAudit();
     deployStrategy.run({ strategy, opts: { env, authData, params } });
   });
 

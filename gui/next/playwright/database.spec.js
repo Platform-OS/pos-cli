@@ -27,14 +27,14 @@ test('ability to see table details', async ({ page }) => {
 
   await page.getByText('qa_table_1').click();
   await expect(page).toHaveURL(/.*table/);
-  await expect(page.getByRole('cell', { name: 'id' }).and(page.locator('th'))).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'qa_table_1_array' }).and(page.locator('th'))).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'created at' }).and(page.locator('th'))).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'id' }).and(page.locator('th'))).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'qa_table_1_array' }).and(page.locator('th'))).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'created at' }).and(page.locator('th'))).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Aliquam condimentum condimentum'})).toBeVisible();
   await expect(page.getByRole('cell', { name: '["qa_table_1_array2_item1"'})).toBeVisible();
 
   await page.getByText('qa_table_2', { exact: true }).click();
-  await expect(page.getByRole('cell', { name: 'qa_table_2_array' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'qa_table_2_array' })).toBeVisible();
 });
 
 
@@ -643,7 +643,7 @@ test('restoring deleted record', async ({ page }) => {
 
   await page.getByTitle('Show deleted records').click();
 
-  await expect(page.getByRole('cell', { name: 'deleted at' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'deleted at' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden();
 
   await page.getByTitle('Show current database state').click();
@@ -653,7 +653,7 @@ test('restoring deleted record', async ({ page }) => {
   await page.getByRole('button', { name: 'Delete record' }).click();
 
   await page.getByTitle('Show deleted records').click();
-  await expect(page.getByRole('cell', { name: 'deleted at' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'deleted at' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
 
   await page.getByRole('button', { name: 'More options' }).first().click();
@@ -662,6 +662,6 @@ test('restoring deleted record', async ({ page }) => {
   await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden();
 
   await page.getByTitle('Show current database state').click();
-  await expect(page.getByRole('cell', { name: 'deleted at' })).toBeHidden();
+  await expect(page.getByRole('columnheader', { name: 'deleted at' })).toBeHidden();
   await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
 });

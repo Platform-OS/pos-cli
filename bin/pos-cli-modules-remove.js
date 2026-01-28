@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger'),
-  fetchAuthData = require('../lib/settings').fetchSettings;
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import logger from '../lib/logger.js';
+import { fetchSettings } from '../lib/settings.js';
 
 program
   .name('pos-cli modules remove')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'name of the module. Example: admin_cms')
-  .action((environment, name) => {
-    const authData = fetchAuthData(environment, program);
+  .action(async (environment, name) => {
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
     const formData = { pos_module_name: name };
 

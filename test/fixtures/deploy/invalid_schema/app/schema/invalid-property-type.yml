@@ -1,0 +1,4 @@
+name: invalid_test
+properties:
+  - name: test_field
+    type: invalid_type

@@ -65,4 +65,4 @@ const constant = {
 
 // exports
 // ------------------------------------------------------------------------
-export { constant }
+export { constant };

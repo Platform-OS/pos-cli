@@ -1,0 +1,20 @@
+{% liquid
+  hash_assign contract['total'] = contract['total'] | plus: 1
+
+  for property in object_contains
+    assign key = property[0]
+    assign value = property[1]
+
+    if given[key] == blank
+      assign message = 'modules/tests/should.have_key' | t: field_name: field_name
+      function contract = 'modules/tests/helpers/register_error', contract: contract, field_name: key, message: message
+    else
+      if given[key] != value
+        assign message = 'modules/tests/should.have_key_with_value' | t: value: value
+        function contract = 'modules/tests/helpers/register_error', contract: contract, field_name: key, message: message
+      endif
+    endif
+  endfor
+
+  return contract
+%}

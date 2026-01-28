@@ -8,13 +8,14 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
 
     strategy:
       max-parallel: 1
       matrix:
-        version: ['18', '20', '20.11']
+        os: [windows-latest, ubuntu-latest]
+        version: ['22', '24']
 
     steps:
       - name: Checkout repository
@@ -31,7 +32,7 @@ jobs:
           MPKIT_URL: ${{ secrets.TEST_MPKIT_URL }}
           POS_PORTAL_PASSWORD:  ${{secrets.POS_PORTAL_PASSWORD}}
           CI: true
-        shell: sh
+        shell: bash
         run: |
           npm ci
           npm test

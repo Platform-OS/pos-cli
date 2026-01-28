@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style>
+
+      /* utility classes */
+      .w-full {
+        width: 100%;
+      }
+
+      .h-auto {
+        height: auto;
+      }
+
+      .w-20 {
+        width: 5rem;
+      }
+
+      .m-2 {
+        margin: .5rem;
+      }
+
+      .mt {
+        margin-top: 2rem;
+      }
+
+      .mt-2 {
+        margin-top: .5rem;
+      }
+
+      .p-4 {
+        padding: 1rem;
+      }
+
+      .border {
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .border-full {
+        border: 1px solid #e2e8f0;
+      }
+
+      .table-spacing {
+        width: .5rem;
+      }
+
+      .rounded {
+        border-radius: .25rem;
+      }
+
+      .text-right {
+        text-align: right;
+      }
+
+      .text-center {
+        text-align: center;
+      }
+
+      /* global styling */
+      .body {
+        color: rgba(243, 244, 246, var(--tw-bg-opacity));
+      }
+
+      .container {
+        max-width: 40rem;
+        margin: 0 auto;
+
+        line-height: 1.5;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        color: rgba(55, 65, 81, 1);
+      }
+
+      .footer {
+        margin-top: 2rem;
+        padding-top: .75rem;
+
+        border-top: 1px solid #e2e8f0;
+
+        font-size: .75rem;
+        color: #4a586d;
+      }
+
+      /* titles and typography */
+      .subtitle {
+        margin-bottom: .25rem;
+
+        line-height: 1.75rem;
+        font-size: 1.25rem;
+        font-weight: normal;
+      }
+
+      .title {
+        margin-bottom: 3rem;
+	      line-height: 1.75rem;
+        font-size: 1.25rem;
+        text-align: center;
+      }
+
+      .sidenote {
+        font-size: .75rem;
+        color: #4a586d
+      }
+
+      /* links and buttons */
+      a {
+        text-decoration: none;
+        color: rgba(29, 78, 216, 1);
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+      }
+
+      a:hover {
+        color: rgba(52, 102, 227, 1);
+      }
+
+      .button {
+        padding: 0.5rem 1.25rem;
+        display: inline-block;
+        border-radius: 0.25rem;
+        border-width: 2px;
+        border-color: transparent;
+        background-color: rgba(29, 78, 216, 1);
+
+        color: rgba(255, 255, 255, 1);
+
+        transition-property: background-color, border-color, color;
+	      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	      transition-duration: 150ms;
+      }
+
+      .button:hover {
+        background-color: rgba(52, 102, 227, 1);
+
+        color: rgba(255, 255, 255, 1);
+      }
+
+      .text-interaction {
+        color: rgba(29, 78, 216, 1);
+      }
+
+     .table{display:block;width:100%;line-height:2}@media (min-width: 1024px){.table{display:table}.table{line-height:1.5}}.table header{display:none;text-transform:uppercase;font-size:.75rem;line-height:1rem}@media (min-width: 1024px){.table header{display:table-row}.table header>*{display:table-cell}.table header>*{padding-bottom:.5rem}.table header>*{vertical-align:bottom}.table header>*{padding-inline-start:1.5rem}.table header>*:first-child{padding-inline-start:0px}.table header>*:last-child{padding-inline-end:0px}}.table .table-content{border-radius:.25rem;--tw-bg-opacity: 1;background-color:rgba(var(--pos-color-panel),var(--tw-bg-opacity));padding:1rem;--tw-shadow: 0 1px 3px 0 rgba(0, 0, 0, .1), 0 1px 2px 0 rgba(0, 0, 0, .06);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000),var(--tw-ring-shadow, 0 0 #0000),var(--tw-shadow)}@media (min-width: 1024px){.table .table-content,.table .table-content-simple{display:table-row-group}}.table .table-content>ul,.table .table-content-simple>ul{margin-top:1rem;border-top-width:1px;padding-top:1rem}@media (min-width: 1024px){.table .table-content>ul,.table .table-content-simple>ul{margin-top:0}.table .table-content>ul,.table .table-content-simple>ul{display:table-row}.table .table-content>ul,.table .table-content-simple>ul{padding-top:0}}.table .table-content>ul:first-child,.table .table-content-simple>ul:first-child{margin-top:0;border-width:0px;padding-top:0}.table .table-content>ul>li,.table .table-content-simple>ul>li{vertical-align:middle}@media (min-width: 1024px){.table .table-content>ul>li,.table .table-content-simple>ul>li{display:table-cell}.table .table-content>ul>li,.table .table-content-simple>ul>li{border-top-width:1px}.table .table-content>ul>li,.table .table-content-simple>ul>li{padding-top:1rem;padding-bottom:1rem}.table .table-content>ul>li,.table .table-content-simple>ul>li{padding-inline-start:1.5rem}.table .table-content>ul:first-child>li{border-width:0px}.table .table-content>ul>li:first-child{padding-inline-start:1rem}.table .table-content-simple>ul>li:first-child{padding-inline-start:0px}.table .table-content>ul>li:last-child{padding-inline-end:1rem}.table .table-content-simple>ul>li:last-child{padding-inline-end:0px}}[dir=ltr] .table .table-content>ul:first-child>li:first-child{border-top-left-radius:.25rem}[dir=rtl] .table .table-content>ul:first-child>li:first-child{border-top-right-radius:.25rem}[dir=ltr] .table .table-content>ul:first-child>li:last-child{border-top-right-radius:.25rem}[dir=rtl] .table .table-content>ul:first-child>li:last-child{border-top-left-radius:.25rem}[dir=ltr] .table .table-content>ul:last-child>li:first-child{border-bottom-left-radius:.25rem}[dir=rtl] .table .table-content>ul:last-child>li:first-child{border-bottom-right-radius:.25rem}[dir=ltr] .table .table-content>ul:last-child>li:last-child{border-bottom-right-radius:.25rem}[dir=rtl] .table .table-content>ul:last-child>li:last-child{border-bottom-left-radius:.25rem}.table .table-content-simple>ul:last-child>li{padding-bottom:0}
+
+    </style>
+  </head>
+
+  <body class="font-sans antialiased leading-normal text-content bg-page">
+    <div class="container flex flex-col min-h-screen">
+      <main class="flex-1 my-5">
+        {{ content_for_layout }}
+      </main>
+    </div>
+  </body>
+</html>

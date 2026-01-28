@@ -82,7 +82,7 @@ const user = {
       }
     `;
 
-    return graphql({ query }, false)
+    return graphql({ query }, false);
   },
 
   // purpose:		creates a new user
@@ -147,4 +147,4 @@ const user = {
 
 // exports
 // ------------------------------------------------------------------------
-export { user }
+export { user };

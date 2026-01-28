@@ -16,8 +16,8 @@ const logs = {
 
     filters.page = filters.page ? parseInt(filters.page) - 1 : 0;
     filters.size = filters.size ?? 20;
-    filters.from = filters.page * filters.size ?? 0;
-    filters.stream_name = filters.stream_name ?? 'logs'
+    filters.from = filters.page * filters.size;
+    filters.stream_name = filters.stream_name ?? 'logs';
 
     // parse the dates from YYYY-MM-DD
     if(filters.start_time){
@@ -42,14 +42,14 @@ const logs = {
         end_time: filters.end_time || 0,
         track_total_hits: true
       }
-    }
+    };
 
     return fetch(`${url}`, {
       method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      },
+        'Content-Type': 'application/json'
+      }
     })
       .then(response => {
         if(response.ok){

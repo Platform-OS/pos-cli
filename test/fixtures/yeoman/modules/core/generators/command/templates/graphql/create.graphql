@@ -1,0 +1,20 @@
+mutation <%= actionName %>(
+  # some arguments
+  # $foo: String!
+) {
+  record: record_create(
+    record: {
+      table: "<%= modelName %>"
+      properties: [
+        # { name: "foo" property: $foo }
+      ]
+    }
+  ){
+    id
+    created_at
+    deleted_at
+    type: table
+
+    # foo: (name: "foo")
+  }
+}

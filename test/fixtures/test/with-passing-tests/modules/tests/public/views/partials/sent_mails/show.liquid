@@ -1,0 +1,8 @@
+<a href="/_tests/sent_mails">Back</a>
+<h1>Sent mail</h1>
+<h2>Sujbect: {{ mail.options.subject }}</h2>
+<h2>To: {{ mail.options.to | join: ',' }}</h2>
+<h2>Sent at: {{ mail.created_at | l }}</h2>
+<hr class="mb-10"/>
+
+{% print mail.content %}

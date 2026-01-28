@@ -7,5 +7,5 @@ export default {
   integer: 'value_int',
   string: 'value',
   text: 'value',
-  upload: 'value',
+  upload: 'value'
 };

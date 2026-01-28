@@ -15,7 +15,8 @@ import { buildMutationIngredients, columnTypeToVariableType } from '$lib/helpers
 //				    attribute_type, property, operation, value
 // returns:		GraphQL variables definitions, e.g. '($variable_name: String. $another_variable: Int)' (string)
 //            variables with their values to pass with the query, e.g. { variable_name: 'Variable value', another_variable: 5 } (object)
-//            filters used to filter properties in GraphQL requests, e.g. 'properties: [name: "variable_name", contains: $variable_value]' (string)
+//            filters used to filter properties in GraphQL requests,
+//            e.g. 'properties: [name: "variable_name", contains: $variable_value]' (string)
 // ------------------------------------------------------------------------
 const buildQueryIngredients = (filters = []) => {
   // graphql variables definition for the query (string)
@@ -50,26 +51,21 @@ const buildQueryIngredients = (filters = []) => {
     if(operationsForType.int.includes(filter.operation)){
       filterType = 'integer';
       parsedFilterValue = parseInt(filter.value);
-    }
-    else if (operationsForType.float.includes(filter.operation)){
+    } else if (operationsForType.float.includes(filter.operation)){
       filterType = 'float';
       parsedFilterValue = parseFloat(filter.value);
-    }
-    else if (operationsForType.bool.includes(filter.operation)){
+    } else if (operationsForType.bool.includes(filter.operation)){
       filterType = 'boolean';
       parsedFilterValue = filter.value === 'true' ? true : false;
-    }
-    else if(operationsForType.range.includes(filter.operation)){
+    } else if(operationsForType.range.includes(filter.operation)){
       filterType = 'range';
       parsedFilterValue = {};
       parsedFilterValue[filter.minFilter] = filter.minFilterValue;
       parsedFilterValue[filter.maxFilter] = filter.maxFilterValue;
-    }
-    else if(operationsForType.array.includes(filter.operation)){
+    } else if(operationsForType.array.includes(filter.operation)){
       filterType = 'array';
       parsedFilterValue = JSON.parse(filter.value);
-    }
-    else {
+    } else {
       filterType = 'string';
       parsedFilterValue = filter.value;
     }
@@ -141,10 +137,10 @@ const record = {
         sort = `properties: { name: "${params.sort.by}", order: ${params.sort.order} }`;
       }
     } else {
-      sort = `created_at: { order: DESC }`;
+      sort = 'created_at: { order: DESC }';
     }
 
-    const deletedFilter = params.deleted === 'true' ? `deleted_at: { exists: true }` : '';
+    const deletedFilter = params.deleted === 'true' ? 'deleted_at: { exists: true }' : '';
 
     const propertiesFilterData = buildQueryIngredients(params.filters?.attributes);
 
@@ -173,7 +169,9 @@ const record = {
         }
       }`;
 
-    return graphql({ query, variables: propertiesFilterData.variables }).then(data => { state.data('records', data.records) });
+    return graphql({ query, variables: propertiesFilterData.variables }).then(data => {
+      state.data('records', data.records); 
+    });
   },
 
 
@@ -285,4 +283,4 @@ const record = {
 
 // exports
 // ------------------------------------------------------------------------
-export { record }
+export { record };

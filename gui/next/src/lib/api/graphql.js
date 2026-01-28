@@ -15,24 +15,24 @@ const graphql = (body) => {
   return fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify(body)
   })
-  .then((res) => res.json())
-  .then((res) => {
-    if(res.errors) {
-      res.errors.forEach(error => {
-        console.log(body.query);
-        console.info(error);
-      });
-      return res;
-    }
+    .then((res) => res.json())
+    .then((res) => {
+      if(res.errors) {
+        res.errors.forEach(error => {
+          console.log(body.query);
+          console.info(error);
+        });
+        return res;
+      }
 
-    return res && res.data;
-  });
+      return res && res.data;
+    });
 };
 
 
 
 // exports
 // ------------------------------------------------------------------------
-export { graphql }
+export { graphql };

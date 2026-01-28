@@ -1,0 +1,4 @@
+{% liquid
+  graphql r = 'modules/tests/sent_mails/search', limit: limit, page: page
+  return r.mails
+%}

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const logger = require('../lib/logger');
-const overwrites = require('../lib/overwrites');
+import { program } from 'commander';
+import logger from '../lib/logger.js';
+import overwrites from '../lib/overwrites.js';
 
 program
   .name('pos-cli modules overwrites list')

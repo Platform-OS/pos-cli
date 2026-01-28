@@ -1,17 +1,15 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const semver = require('semver');
+import { program } from 'commander';
+import semver from 'semver';
 
-const dir = require('../lib/directories');
-const files = require('../lib/files');
-const logger = require('../lib/logger');
-const report = require('../lib/logger/report');
-const settings = require('../lib/settings');
-const { moduleConfig, moduleConfigFilePath } = require('../lib/modules');
+import files from '../lib/files.js';
+import logger from '../lib/logger.js';
+import report from '../lib/logger/report.js';
+import { moduleConfig, moduleConfigFilePath } from '../lib/modules.js';
 
-const readVersionFromPackage = (options, version) => {
-  let packageJSONPath = `package.json`;
+const readVersionFromPackage = (options) => {
+  let packageJSONPath = 'package.json';
   if (typeof options.package === 'string') {
     packageJSONPath = `${options.package}`;
   }
@@ -29,12 +27,12 @@ const validateVersions = (config, version, moduleName) => {
   if (!semver.valid(config.version)) {
     report('[ERR] The current version is not valid');
     logger.Error(`The "${moduleName}" module's version ("${config.version}") is not valid`);
-    return
+    return;
   }
   if (!semver.valid(version)) {
     report('[ERR] The given version is not valid');
     logger.Error(`The "${moduleName}" module's new version ("${version}") is not valid`);
-    return
+    return;
   }
 
   return true;

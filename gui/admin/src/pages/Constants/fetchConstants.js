@@ -1,5 +1,5 @@
-import api from "@/lib/api";
-import { constants } from "./store.js";
+import api from '@/lib/api';
+import { constants } from './store.js';
 
 export default function fetchConstants() {
   api

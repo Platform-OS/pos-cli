@@ -90,14 +90,14 @@ pos-cli/
 Example:
 ```javascript
 // bin/pos-cli-deploy.js
-const fetchAuthData = require('../lib/settings').fetchSettings;
-const deployStrategy = require('../lib/deploy/strategy');
+import { fetchSettings } from '../lib/settings';
+import deployStrategy from '../lib/deploy/strategy.js';
 
 program
   .argument('[environment]', 'name of environment')
   .option('-p --partial-deploy', 'Partial deployment')
   .action(async (environment, params) => {
-    const authData = fetchAuthData(environment);
+    const authData = fetchSettings(environment);
     deployStrategy.run({ strategy: 'directAssetsUpload', opts: { ... } });
   });
 ```
@@ -139,11 +139,17 @@ Two deployment strategies:
 
 Strategy selection:
 ```javascript
+import defaultStrategy from './defaultStrategy.js';
+import directAssetsUploadStrategy from './directAssetsUploadStrategy.js';
+
 const strategies = {
-  default: require('./defaultStrategy'),
-  directAssetsUpload: require('./directAssetsUploadStrategy'),
+  default: defaultStrategy,
+  directAssetsUpload: directAssetsUploadStrategy,
 };
-module.exports = { run: ({ strategy, opts }) => strategies[strategy](opts) };
+
+const run = ({ strategy, opts }) => strategies[strategy](opts);
+
+export { run };
 ```
 
 #### 3. File Watching Pattern - Sync Mode
@@ -354,6 +360,8 @@ GUI apps are pre-built (in dist/ or build/ directories). To modify:
 - **CDN** - Asset delivery and verification
 
 ## Node.js Version
-- **Minimum**: Node.js 18
-- **Tested on**: 18, 20, 20.11
+
+- **Minimum**: Node.js 22
+- **Recommended**: Node.js 22+
+- **Tested on**: 22, 24
 - Check enforced by `scripts/check-node-version.js` postinstall hook

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="{{ context.language }}">
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <style>
+
+      /* utility classes */
+      .w-full {
+        width: 100%;
+      }
+
+      .h-auto {
+        height: auto;
+      }
+
+      .w-20 {
+        width: 5rem;
+      }
+
+      .mt {
+        margin-top: 2rem;
+      }
+
+      .mt-2 {
+        margin-top: .5rem;
+      }
+
+      .p-4 {
+        padding: 1rem;
+      }
+
+      .border {
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .border-full {
+        border: 1px solid #e2e8f0;
+      }
+
+      .table-spacing {
+        width: .5rem;
+      }
+
+      .rounded {
+        border-radius: .25rem;
+      }
+
+      .text-right {
+        text-align: right;
+      }
+
+      .text-center {
+        text-align: center;
+      }
+
+      /* global styling */
+      .body {
+        color: rgba(243, 244, 246, var(--tw-bg-opacity));
+      }
+
+      .container {
+        max-width: 40rem;
+        margin: 0 auto;
+
+        line-height: 1.5;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        color: rgba(55, 65, 81, 1);
+      }
+
+      .footer {
+        margin-top: 2rem;
+        padding-top: .75rem;
+
+        border-top: 1px solid #e2e8f0;
+
+        font-size: .75rem;
+        color: #4a586d;
+      }
+
+      /* titles and typography */
+      .subtitle {
+        margin-bottom: .25rem;
+
+        line-height: 1.75rem;
+        font-size: 1.25rem;
+        font-weight: normal;
+      }
+
+      .title {
+        margin-bottom: 3rem;
+	      line-height: 1.75rem;
+        font-size: 1.25rem;
+        text-align: center;
+      }
+
+      .sidenote {
+        font-size: .75rem;
+        color: #4a586d
+      }
+
+      /* links and buttons */
+      a {
+        text-decoration: none;
+        color: rgba(29, 78, 216, 1);
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+      }
+
+      a:hover {
+        color: rgba(52, 102, 227, 1);
+      }
+
+      .button {
+        padding: 0.5rem 1.25rem;
+        display: inline-block;
+        border-radius: 0.25rem;
+        border-width: 2px;
+        border-color: transparent;
+        background-color: rgba(29, 78, 216, 1);
+
+        color: rgba(255, 255, 255, 1);
+
+        transition-property: background-color, border-color, color;
+	      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	      transition-duration: 150ms;
+      }
+
+      .button:hover {
+        background-color: rgba(52, 102, 227, 1);
+
+        color: rgba(255, 255, 255, 1);
+      }
+
+      .text-interaction {
+        color: rgba(29, 78, 216, 1);
+      }
+
+    </style>
+  </head>
+
+  <body class="body">
+    {% liquid
+      assign url = 'https://' | append: context.location.host
+    %}
+
+    <div class="container">
+      <h1 class="title">
+        <a class="" href="{{ url }}" class="text-center">
+          <img src="{{ 'images/logo.png' | asset_url }}" width="48" height="48" alt="" loading="eager"><br>
+          {{ 'app.title' | t: default: 'App' }}
+        </a>
+      </h1>
+
+      {{ content_for_layout }}
+
+      <div class="footer">
+        <p>This message was sent by <a href="https://platformos.com">PlatformOS</a>.</p>
+      </div>
+    </div>
+  </body>
+
+</html>

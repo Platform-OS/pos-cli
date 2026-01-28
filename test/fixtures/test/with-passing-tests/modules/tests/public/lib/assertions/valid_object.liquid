@@ -1,0 +1,8 @@
+{% liquid
+  hash_assign contract['total'] = contract['total'] | plus: 1
+  if object.valid != true
+    assign message = 'should be valid: ' | append: object.errors
+    function contract = 'modules/tests/helpers/register_error', contract: contract, field_name: field_name, message: message
+  endif
+  return contract
+%}

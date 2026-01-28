@@ -1,45 +1,47 @@
 #!/usr/bin/env node
 
-const { program } = require("commander");
-const yeoman = require("yeoman-environment");
-const yeomanEnv = yeoman.createEnv();
-const path = require("path");
-const chalk = require("chalk");
-const dir = require('../lib/directories');
-const compact = require('lodash.compact');
-const spawn = require('execa');
-const reject = require('lodash.reject');
-const table = require('text-table');
-const logger = require('../lib/logger');
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+import { program } from 'commander';
+import { createEnv } from 'yeoman-environment';
+const yeomanEnv = createEnv();
+import compact from 'lodash.compact';
+import { execaSync } from 'execa';
+import reject from 'lodash.reject';
+import table from 'text-table';
+import logger from '../lib/logger.js';
 
 const registerGenerator = (generatorPath) => {
   const generatorName = path.basename(generatorPath);
-  const generatorPathFull = `./${generatorPath}/index.js`;
+  const generatorPathFull = path.resolve(generatorPath, 'index.js');
   yeomanEnv.register(generatorPathFull, generatorName);
 
   try {
-    const generator = yeomanEnv.get(generatorName);
+    yeomanEnv.get(generatorName);
   } catch(e) {
     if (e.message.includes('Cannot find module')){
       installModulesAndLoadGenerator(generatorPath, generatorName);
     }
   }
   return generatorName;
-}
+};
 
-const installModulesAndLoadGenerator = (generatorPath, generatorName) => {
+const installModulesAndLoadGenerator = (generatorPath, _generatorName) => {
   console.log('# Trying to install missing packages');
-  const modulePath = generatorPath.match(/modules\/\w+/)
+  const modulePath = generatorPath.match(/modules\/\w+/);
   const moduleDir = `./${modulePath[0]}`;
   spawnCommand('npm', ['install'], { cwd: moduleDir });
-  const generator = yeomanEnv.get(generatorName);
-}
+};
 
 const runYeoman = async (generatorPath, attributes, options) => {
   const generatorName = registerGenerator(generatorPath);
   const generatorArgs = compact([generatorName].concat(attributes));
   await yeomanEnv.run(generatorArgs, options);
-}
+};
 
 const optionsHelp = (generatorOptions) => {
   const options = reject(generatorOptions, (x) => x.hide != 'no');
@@ -53,27 +55,63 @@ const optionsHelp = (generatorOptions) => {
         ? 'Default: ' + opt.default
         : ''
     ];
-  })
+  });
 
   return table(rows);
-}
+};
+
+const getGeneratorHelp = (generator) => {
+  const help = { arguments: [], options: [], usage: '' };
+
+  try {
+    if (generator._arguments && Array.isArray(generator._arguments)) {
+      help.arguments = generator._arguments;
+      help.usage = generator._arguments.map(arg => `<${arg.name}> `).join(' ');
+    }
+  } catch {
+    // Ignore - internal API not available
+  }
+
+  try {
+    if (generator._options && Array.isArray(generator._options)) {
+      help.options = generator._options;
+    }
+  } catch {
+    // Ignore - internal API not available
+  }
+
+  return help;
+};
 
 const showHelpForGenerator = (generatorPath) => {
   const generatorName = registerGenerator(generatorPath);
   const generator = yeomanEnv.get(generatorName);
   const generatorInstance = yeomanEnv.instantiate(generator, ['']);
   console.log(`Generator: ${generatorName}`);
-  console.log(`  ${generatorInstance.description}`);
-  console.log(`\nUsage: `);
-  const usage = generatorInstance._arguments.map(arg => `<${arg.name}> `).join(' ')
+  console.log(`  ${generatorInstance.description || 'No description available'}`);
+  console.log('\nUsage: ');
+
+  const help = getGeneratorHelp(generatorInstance);
   console.log(
-    `  pos-cli generate ${generatorPath} ${usage}`
+    `  pos-cli generate ${generatorPath} ${help.usage}`
   );
+
   console.log('\nArguments:');
-  console.log(generatorInstance.argumentsHelp());
-  console.log(optionsHelp(generatorInstance._options));
+  try {
+    console.log(generatorInstance.argumentsHelp ? generatorInstance.argumentsHelp() : formatArgumentsHelp(help.arguments));
+  } catch {
+    console.log(formatArgumentsHelp(help.arguments));
+  }
+  console.log(optionsHelp(help.options));
   console.log('');
-}
+};
+
+const formatArgumentsHelp = (args) => {
+  if (!args || args.length === 0) {
+    return '  (No arguments required)';
+  }
+  return args.map(arg => `  <${arg.name}>  ${arg.description || ''}`).join('\n');
+};
 
 const unknownOptions = (command) => {
   const options = {};
@@ -86,10 +124,10 @@ const unknownOptions = (command) => {
     }
   });
   return options;
-}
+};
 
-spawnCommand = (command, args, opt) => {
-  return spawn.sync(command, args, {
+const spawnCommand = (command, args, opt) => {
+  return execaSync(command, args, {
     stdio: 'inherit',
     cwd: '',
     ...opt
@@ -108,7 +146,7 @@ program
   .argument('[generatorArguments...]', 'generator arguments')
   .option('--generator-help', 'show help for given generator')
   .allowUnknownOption()
-  .usage("<generatorPath> <generatorArguments...>", 'arguments that will be passed to the generator')
+  .usage('<generatorPath> <generatorArguments...>', 'arguments that will be passed to the generator')
   .action(async function (generatorPath, generatorArguments, options, command) {
     try{
       if (options.generatorHelp){

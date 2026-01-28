@@ -11,7 +11,7 @@ const clickOutside = (node, callback) => {
     if (!path.includes(node)) {
       callback(event);
     }
-  }
+  };
 
   document.addEventListener('mousedown', handleClick);
 
@@ -19,7 +19,7 @@ const clickOutside = (node, callback) => {
     destroy() {
       document.removeEventListener('mousedown', handleClick);
     }
-  }
+  };
 };
 
 

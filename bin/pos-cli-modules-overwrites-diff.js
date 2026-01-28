@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const logger = require('../lib/logger');
-const { execSync } = require('child_process');
-const overwrites = require('../lib/overwrites');
+import { program } from 'commander';
+import logger from '../lib/logger.js';
+import { execSync } from 'child_process';
+import overwrites from '../lib/overwrites.js';
 
 function getGitChangesAsJSON(overwrites = []) {
   try {

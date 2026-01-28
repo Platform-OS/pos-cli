@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-      logger = require('../lib/logger'),
-      swagger = require('../lib/swagger-client');
-const ServerError = require('../lib/ServerError');
+import { program } from 'commander';
+import logger from '../lib/logger.js';
+import { SwaggerProxy, search } from '../lib/swagger-client.js';
 
 program
   .name('pos-cli logsv2 search')
@@ -16,13 +15,13 @@ program
   .option('--json', 'output as json')
   .action(async (environment, program) => {
     try {
-      const client = await swagger.SwaggerProxy.client(environment);
-      const response = await client.searchSQL(program)
+      const client = await SwaggerProxy.client(environment);
+      const response = await client.searchSQL(program);
 
       if (!program.json)
-        swagger.search.printLogs(response)
+        search.printLogs(response);
       else
-        console.log(response)
+        console.log(response);
 
     } catch(e) {
       logger.Error(e);

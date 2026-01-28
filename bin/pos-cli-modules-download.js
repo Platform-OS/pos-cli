@@ -1,24 +1,13 @@
 #!/usr/bin/env node
 
-const shell = require('shelljs');
-const { program } = require('commander');
-const logger = require('../lib/logger');
-const downloadFile = require('../lib/downloadFile');
-
-const { unzip } = require('../lib/unzip');
-const Portal = require('../lib/portal');
-const fs = require('fs');
-const path = require('path');
-
-// importing ESM modules in CommonJS project
-let ora;
-const initializeEsmModules = async () => {
-  if(!ora) {
-    await import('ora').then(imported => ora = imported.default);
-  }
-
-  return true;
-}
+import shell from 'shelljs';
+import { program } from 'commander';
+import logger from '../lib/logger.js';
+import downloadFile from '../lib/downloadFile.js';
+import { unzip } from '../lib/unzip.js';
+import Portal from '../lib/portal.js';
+import fs from 'fs';
+import path from 'path';
 
 const downloadModule = async (module, lockData) => {
   const filename = 'modules.zip';
@@ -35,7 +24,7 @@ const downloadModule = async (module, lockData) => {
 
     logger.Info(`Searching for ${module}...`);
     const moduleVersion = await Portal.moduleVersionsSearch(module);
-    const modulePath = `${process.cwd()}/modules/${module.split('@')[0]}`
+    const modulePath = `${process.cwd()}/modules/${module.split('@')[0]}`;
     logger.Info(`Downloading ${module}...`);
     await downloadFile(moduleVersion['public_archive'], filename);
     logger.Info(`Cleaning ${modulePath}...`);
@@ -50,7 +39,7 @@ const downloadModule = async (module, lockData) => {
       throw `${module}: ${error.message}`;
     }
   }
-}
+};
 
 program
   .name('pos-cli modules download')
@@ -60,19 +49,17 @@ program
     const lockFilePath = path.join('app', 'pos-modules.lock.json');
     const forceDependencies = params.forceDependencies;
 
-    await initializeEsmModules();
-
     let lockData;
 
     if (fs.existsSync(lockFilePath)) {
       lockData = JSON.parse(fs.readFileSync(lockFilePath, 'utf-8'))['modules'];
     } else {
-      logger.Warn(`Warning: Can't find app/pos-modules.lock.json`);
+      logger.Warn('Warning: Can\'t find app/pos-modules.lock.json');
     }
 
     try {
       await downloadModule(module, lockData);
-      logger.Info("Resolving dependencies...");
+      logger.Info('Resolving dependencies...');
       const templateValuesPath = path.join('modules', module.split('@')[0], 'template-values.json');
       if (fs.existsSync(templateValuesPath)) {
         const templateValuesContent = fs.readFileSync(templateValuesPath, 'utf-8');

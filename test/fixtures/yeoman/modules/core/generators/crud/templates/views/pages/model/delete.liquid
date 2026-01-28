@@ -1,0 +1,16 @@
+---
+slug: <%= modelNamePlural %>
+method: delete
+---
+{% liquid
+  function object = 'queries/<%= modelNamePlural %>/find', id: context.params.id
+  function object = 'commands/<%= modelNamePlural %>/delete', object: object
+
+  # platformos-check-disable ConvertIncludeToRender
+  if object.valid
+    include 'modules/core/helpers/redirect_to', url: '/<%= modelNamePlural %>', notice: 'modules/core/common.deleted'
+  else
+    include 'modules/core/helpers/redirect_to', url: '/<%= modelNamePlural %>', error: 'modules/core/common.delete_failed'
+  endif
+  # platformos-check-enable ConvertIncludeToRender
+%}

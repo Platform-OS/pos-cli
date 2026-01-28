@@ -1,0 +1,5 @@
+{% if errors %}
+  <small class="mt-1 flex text-danger">
+    {{ errors | join: ', ' }}
+  </small>
+{% endif %}

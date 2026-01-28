@@ -1,4 +1,9 @@
-const path = require('path');
-const bin = `node ${path.join(process.cwd(), 'bin', 'pos-cli.js')}`;
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-module.exports = bin;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const bin = `node ${path.join(__dirname, '../../bin', 'pos-cli.js')}`;
+
+export default bin;

@@ -1,45 +1,45 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-      Gateway = require('../lib/proxy'),
-      validate = require('../lib/validators'),
-      queries = require('../lib/graph/queries'),
-      fetchAuthData = require('../lib/settings').fetchSettings,
-      logger = require('../lib/logger');
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import { existence as validateExistence } from '../lib/validators/index.js';
+import queries from '../lib/graph/queries.js';
+import { fetchSettings } from '../lib/settings.js';
+import logger from '../lib/logger.js';
 
 const help = () => {
   program.outputHelp();
   process.exit(1);
-}
+};
 
-const checkParams = ({name, value}) => {
-  validate.existence({ argumentValue: name, argumentName: 'name', fail: help });
-}
+const checkParams = ({name}) => {
+  validateExistence({ argumentValue: name, argumentName: 'name', fail: help });
+};
 
 const success = (msg) => {
   if (msg.data.constant_unset)
-    logger.Success(`Constant variable <${msg.data.constant_unset.name}> deleted successfuly.`)
+    logger.Success(`Constant variable <${msg.data.constant_unset.name}> deleted successfully.`);
   else
-    logger.Success(`Constant variable not found.`)
-}
+    logger.Success('Constant variable not found.');
+};
 
 const error = (msg) => {
-  logger.Error(`Adding Constant variable <${msg.data.constant_unset.name}> failed successfuly.`)
-}
+  logger.Error(`Deleting Constant variable <${msg.data.constant_unset.name}> failed.`);
+};
 
 program
   .name('pos-cli constants unset')
   .option('--name <name>', 'name of constant. Example: TOKEN')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .action((environment, params) => {
+  .action(async (environment, params) => {
     checkParams(params);
-    const authData = fetchAuthData(environment, program);
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
-    const constant = gateway
-          .graph({query: queries.unsetConstant(params.name)})
-          .then(success)
-          .catch(error);
+    gateway
+      .graph({query: queries.unsetConstant(params.name)})
+      .then(success)
+      .catch(error);
   });
 
 program.parse(process.argv);

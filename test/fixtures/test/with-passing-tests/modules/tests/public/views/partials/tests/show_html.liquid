@@ -1,0 +1,25 @@
+<hr class="my-10 border"/>
+{% assign total = 0 %}
+{% liquid
+  for contract in contracts
+    render 'modules/tests/tests/test_report_html', name: contract.test_path, contract: contract
+    assign total = total | plus: contract.total
+  endfor
+%}
+
+{% if total_errors > 0 %}
+  <h2 class="text-xl text-red-700">Total errors: {{ total_errors }}</h2>
+  {% response_status 500 %}
+{% endif %}
+
+<hr class="my-10 border"/>
+
+<h2 class="text-xl">
+  {% if total_errors > 0 %}
+    <span style="color: red">Failure.</span>
+  {% else %}
+    <span style="color: green">Success.</span>
+  {% endif %}
+Assertions: {{ total }}. Failed: {{ total_errors }}. Time: {{ total_duration }}ms
+</h2>
+<hr class="my-10 border"/>

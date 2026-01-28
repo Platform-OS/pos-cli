@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+
+## 6.0.0
+
+* Feature: `pos-cli exec liquid` command to execute Liquid code directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
+* Feature: `pos-cli exec graphql` command to execute GraphQL queries directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
+* Feature: `pos-cli test run` command to run tests using the tests module
+
+### Major Dependency Upgrades
+
+We've completed a comprehensive modernization of the CLI including:
+
+**Node.js Version Requirement**: Now requires Node.js 20 or higher (up from Node.js 18)
+
+**Breaking Changes** that may require action from users:
+
+1. **Yeoman generators**: If you have custom generators using `yeoman-generator`, they need to be rewritten for the v7.x update:
+   - No kebab-case in option names (e.g., `skip-install` → `skipInstall`)
+   - `composeWith()` is now async (use `await`)
+   - The `install()` action has been removed; use `addDependencies()` instead
+   - See [yeoman-generator v5 to v7 migration guide](https://yeoman.github.io/generator/v5-to-v7-migration/)
+
+2. **Express v5 route syntax**: Routes using wildcards have changed from `/*` to `/*splat` format. This is handled automatically, but if you have custom Express middleware in your project, you may need to update route patterns.
+
+**Package Upgrades**: All major dependencies have been updated to their latest stable versions including:
+- chalk v5.6, chokidar v5.0, express v5.2, ora v9.0, open v11.0
+- inquirer v13.2, mime v4.1, multer v2.0, yeoman-environment v5.1, yeoman-generator v7.5
+- And many other dependency updates for security and stability
+
+**Test Framework Migration**: Migrated from Jest to Vitest to better support ESM
+
 ## 5.5.0
 
 * Feature: (GUI) Ability to add, edit and remove users

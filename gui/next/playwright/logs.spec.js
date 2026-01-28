@@ -29,7 +29,7 @@ test('viewing logs', async ({ page }) => {
 test('pinning a log message and managing pinned logs', async ({ page }) => {
   await page.goto(url);
 
-  const pinButton = page.getByRole('button', { name: 'Pin this log' }).first()
+  const pinButton = page.getByRole('button', { name: 'Pin this log' }).first();
 
   // pin log
   await pinButton.click();
