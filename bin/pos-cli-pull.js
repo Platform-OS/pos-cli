@@ -15,7 +15,7 @@ program
   .option('-p --path <export-file-path>', 'output for exported data', 'app.zip')
   .action(async (environment, params) => {
     const filename = params.path;
-    const authData = fetchSettings(environment, program);
+    const authData = await fetchSettings(environment, program);
     let gateway = new Gateway(authData);
 
     const spinner = ora({ text: 'Exporting', stream: process.stdout });

@@ -13,8 +13,8 @@ const logMigration = migration => {
 program
   .name('pos-cli migrations list')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .action(environment => {
-    const authData = fetchSettings(environment, program);
+  .action(async environment => {
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
     gateway.listMigrations().then(response => response.migrations.map(logMigration));

@@ -34,9 +34,9 @@ program
   .name('pos-cli uploads push')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .option('-p --path <path>', 'path of .zip file that contains files used in property of type upload', 'uploads.zip')
-  .action((environment, params) => {
+  .action(async (environment, params) => {
     const path = params.path;
-    const authData = fetchSettings(environment, program);
+    const authData = await fetchSettings(environment, program);
     Object.assign(process.env, { MARKETPLACE_TOKEN: authData.token, MARKETPLACE_URL: authData.url });
 
     if (!fs.existsSync(path)) logger.Error(`File not found: ${path}`);

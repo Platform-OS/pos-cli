@@ -24,7 +24,7 @@ program
   .action(async (environment, _params) => {
     try {
 
-      const authData = fetchSettings(environment);
+      const authData = await fetchSettings(environment);
 
       if (!authData.email){
         token = await deviceAuthorizationFlow(authData.url);

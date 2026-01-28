@@ -18,7 +18,7 @@ program
   .option('-o, --open', 'when ready, open default browser with graphiql')
   .option('-s, --sync', 'Sync files')
   .action(async (environment, params) => {
-    const authData = fetchSettings(environment, program);
+    const authData = await fetchSettings(environment, program);
 
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,

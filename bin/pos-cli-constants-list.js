@@ -21,8 +21,8 @@ const safe = (str) => {
 program
   .name('pos-cli constants list')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .action((environment, _params) => {
-    const authData = fetchSettings(environment, program);
+  .action(async (environment, _params) => {
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
     gateway

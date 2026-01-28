@@ -28,7 +28,7 @@ program
       process.exit(1);
     }
 
-    const authData = fetchSettings(environment, program);
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
     if (isProductionEnvironment(environment)) {

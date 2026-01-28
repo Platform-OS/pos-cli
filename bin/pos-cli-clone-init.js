@@ -17,8 +17,8 @@ program
     const spinner = ora({ text: 'InstanceClone initilized', stream: process.stdout, interval: 500 });
 
     try {
-      const sourceAuthData = fetchSettings(sourceEnv, program);
-      const targetAuthData = fetchSettings(targetEnv, program);
+      const sourceAuthData = await fetchSettings(sourceEnv, program);
+      const targetAuthData = await fetchSettings(targetEnv, program);
 
       const sourceGateway = new Gateway(sourceAuthData);
       const targetGateway = new Gateway(targetAuthData);

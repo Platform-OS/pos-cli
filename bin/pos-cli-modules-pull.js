@@ -18,7 +18,7 @@ program
 
     const filename = 'modules.zip';
     spinner.start();
-    const authData = fetchSettings(environment, program);
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
     gateway
       .appExportStart({ module_name: module })

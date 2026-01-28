@@ -18,7 +18,7 @@ program
   .option('-f, --file-path <file-path>', 'sync single file and exit')
   .option('-l, --livereload', 'Use livereload')
   .action(async (environment, params) => {
-    const authData = fetchSettings(environment);
+    const authData = await fetchSettings(environment);
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,

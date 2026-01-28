@@ -31,9 +31,9 @@ program
   .name('pos-cli constants unset')
   .option('--name <name>', 'name of constant. Example: TOKEN')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .action((environment, params) => {
+  .action(async (environment, params) => {
     checkParams(params);
-    const authData = fetchSettings(environment, program);
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
     gateway

@@ -80,8 +80,8 @@ program
   .option('-i, --interval <interval>', 'time to wait between updates in ms', 3000)
   .option('--filter <log type>', 'display only logs of given type, example: error')
   .option('-q, --quiet', 'show only log message, without context')
-  .action((environment, program, _argument) => {
-    const authData = fetchSettings(environment, program);
+  .action(async (environment, program, _argument) => {
+    const authData = await fetchSettings(environment, program);
     const stream = new LogStream(authData, program.interval, program.filter);
 
     stream.on('message', ({ created_at, error_type, message, data }) => {

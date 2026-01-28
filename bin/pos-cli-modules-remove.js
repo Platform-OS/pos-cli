@@ -9,8 +9,8 @@ program
   .name('pos-cli modules remove')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'name of the module. Example: admin_cms')
-  .action((environment, name) => {
-    const authData = fetchSettings(environment, program);
+  .action(async (environment, name) => {
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
     const formData = { pos_module_name: name };
 

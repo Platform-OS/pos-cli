@@ -56,7 +56,7 @@ program
       filename = isZipFile ? 'data.zip' : 'data.json';
     }
     const exportInternalIds = params.exportInternalIds;
-    const authData = fetchSettings(environment, program);
+    const authData = await fetchSettings(environment, program);
     gateway = new Gateway(authData);
 
     const exportFinished = () => {

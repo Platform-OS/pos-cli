@@ -19,7 +19,7 @@ program
   .action(async (environment, params) => {
 
     const filename = params.path;
-    const authData = fetchSettings(environment, program);
+    const authData = await fetchSettings(environment, program);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url

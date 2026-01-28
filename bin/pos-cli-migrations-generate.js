@@ -14,8 +14,8 @@ program
   .name('pos-cli migrations generate')
   .arguments('[environment]', 'name of the environment. Example: staging')
   .arguments('<name>', 'base name of the migration. Example: cleanup_data')
-  .action((environment, name) => {
-    const authData = fetchSettings(environment, program);
+  .action(async (environment, name) => {
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
     const formData = { name: name };
 

@@ -16,7 +16,7 @@ program
     if (params.force) logger.Warn('-f flag is deprecated and does not do anything.');
 
     const strategy = !params.oldAssetsUpload ? 'directAssetsUpload' : 'default';
-    const authData = fetchSettings(environment, program);
+    const authData = await fetchSettings(environment, program);
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,

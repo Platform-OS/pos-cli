@@ -63,12 +63,12 @@ describe('settings', () => {
   });
 
   describe('fetchSettings', () => {
-    test('returns settings from environment variables when all are set', () => {
+    test('returns settings from environment variables when all are set', async () => {
       process.env.MPKIT_URL = 'https://test.platformos.com';
       process.env.MPKIT_EMAIL = 'test@example.com';
       process.env.MPKIT_TOKEN = 'test-token-123';
 
-      const settings = fetchSettings('staging');
+      const settings = await fetchSettings('staging');
 
       expect(settings).toEqual({
         url: 'https://test.platformos.com',
@@ -77,7 +77,7 @@ describe('settings', () => {
       });
     });
 
-    test('returns settings from .pos config when env vars not set', () => {
+    test('returns settings from .pos config when env vars not set', async () => {
       files.getConfig.mockReturnValue({
         staging: {
           url: 'https://staging.example.com',
@@ -86,7 +86,7 @@ describe('settings', () => {
         }
       });
 
-      const settings = fetchSettings('staging');
+      const settings = await fetchSettings('staging');
 
       expect(settings).toEqual({
         url: 'https://staging.example.com',
@@ -95,7 +95,7 @@ describe('settings', () => {
       });
     });
 
-    test('prefers environment variables over .pos config', () => {
+    test('prefers environment variables over .pos config', async () => {
       process.env.MPKIT_URL = 'https://env.platformos.com';
       process.env.MPKIT_EMAIL = 'env@example.com';
       process.env.MPKIT_TOKEN = 'env-token';
@@ -108,7 +108,7 @@ describe('settings', () => {
         }
       });
 
-      const settings = fetchSettings('staging');
+      const settings = await fetchSettings('staging');
 
       expect(settings).toEqual({
         url: 'https://env.platformos.com',
@@ -117,45 +117,49 @@ describe('settings', () => {
       });
     });
 
-    test('logs error when environment not found in config', () => {
+    test('logs error when environment not found in config', async () => {
       files.getConfig.mockReturnValue({});
 
-      fetchSettings('nonexistent');
+      // fetchSettings should exit the process when no settings found
+      await expect(fetchSettings('nonexistent')).rejects.toThrow();
 
       expect(logger.Error).toHaveBeenCalledWith(
         'No settings for nonexistent environment, please see pos-cli env add'
       );
     });
 
-    test('logs error when no environment specified and no env vars', () => {
+    test('logs error when no environment specified and no env vars', async () => {
       files.getConfig.mockReturnValue({});
 
-      fetchSettings();
+      // fetchSettings should exit the process when no environment specified
+      await expect(fetchSettings()).rejects.toThrow();
 
       expect(logger.Error).toHaveBeenCalledWith(
         'No environment specified, please pass environment for a command `pos-cli <command> [environment]`'
       );
     });
 
-    test('returns undefined when partial env vars are set', () => {
+    test('returns undefined when partial env vars are set', async () => {
       process.env.MPKIT_URL = 'https://test.platformos.com';
       // Missing MPKIT_EMAIL and MPKIT_TOKEN
 
       files.getConfig.mockReturnValue({});
 
-      fetchSettings('staging');
+      // fetchSettings should exit the process when settings incomplete
+      await expect(fetchSettings('staging')).rejects.toThrow();
 
       expect(logger.Error).toHaveBeenCalled();
     });
 
-    test('returns undefined when only URL and email are set', () => {
+    test('returns undefined when only URL and email are set', async () => {
       process.env.MPKIT_URL = 'https://test.platformos.com';
       process.env.MPKIT_EMAIL = 'test@example.com';
       // Missing MPKIT_TOKEN
 
       files.getConfig.mockReturnValue({});
 
-      fetchSettings('staging');
+      // fetchSettings should exit the process when settings incomplete
+      await expect(fetchSettings('staging')).rejects.toThrow();
 
       expect(logger.Error).toHaveBeenCalled();
     });

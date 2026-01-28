@@ -9,8 +9,8 @@ program
   .name('pos-cli migrations run')
   .arguments('<timestamp>', 'timestamp the migration. Example: 20180701182602')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .action((timestamp, environment) => {
-    const authData = fetchSettings(environment, program);
+  .action(async (timestamp, environment) => {
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
     const formData = { timestamp: timestamp };
 

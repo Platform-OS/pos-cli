@@ -88,11 +88,11 @@ program
   )
   .option('--raw-ids <raw-ids>', 'do not remap ids after import', false)
   .option('-z --zip', 'import from zip archive', false)
-  .action((environment, params) => {
+  .action(async (environment, params) => {
     const filename = params.path;
     const rawIds = params.rawIds;
     const zip = params.zip;
-    const authData = fetchSettings(environment);
+    const authData = await fetchSettings(environment);
     Object.assign(process.env, {
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url

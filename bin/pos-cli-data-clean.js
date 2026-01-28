@@ -39,9 +39,9 @@ program
   .action(async (environment, params) => {
 
     const spinner = ora({ text: 'Sending data', stream: process.stdout });
-    
+
     try {
-      const gateway = new Gateway(fetchSettings(environment));
+      const gateway = new Gateway(await fetchSettings(environment));
       const confirmed = await confirmCleanup(params.autoConfirm, params.includeSchema, gateway.url);
       if (confirmed) {
         spinner.start('Cleaning instance');
