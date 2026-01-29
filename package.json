@@ -94,7 +94,10 @@
     "pos-cli-test": "bin/pos-cli-test.js",
     "pos-cli-test-run": "bin/pos-cli-test-run.js"
   },
-  "repository": "platform-OS/pos-cli",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/platform-OS/pos-cli.git"
+  },
   "license": "CC BY 3.0",
   "bugs": {
     "url": "https://github.com/Platform-OS/pos-cli/issues"
