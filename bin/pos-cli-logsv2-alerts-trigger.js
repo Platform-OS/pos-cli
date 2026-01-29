@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-      logger = require('../lib/logger'),
-      swagger = require('../lib/swagger-client');
+import { program } from 'commander';
+import logger from '../lib/logger.js';
+import { SwaggerProxy } from '../lib/swagger-client.js';
 
 program
   .name('pos-cli logsv2 alerts trigger')
@@ -11,15 +11,17 @@ program
   .option('--json', 'output as json')
   .action(async (environment, params) => {
     try {
-      const client = await swagger.SwaggerProxy.client(environment);
-      const response = await client.triggerAlert(params)
+      const client = await SwaggerProxy.client(environment);
+      const response = await client.triggerAlert(params);
 
       if (!params.json)
-        console.log(response)
+        console.log(response);
       else
-        console.log(response)
+        console.log(response);
 
-    } catch(e) { logger.Error(e) }
+    } catch(e) {
+      logger.Error(e); 
+    }
   });
 
 program.parse(process.argv);

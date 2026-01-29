@@ -5,7 +5,7 @@ const isBrowserTabFocused = () => !document.hidden;
 
 const scrollToBottom = () => {
   setTimeout(() => document.querySelector('footer').scrollIntoView(), 200);
-}
+};
 
 export default function () {
   // Make sure first load is always done (middle button click) by checking for cachedLastId
@@ -28,12 +28,12 @@ export default function () {
 
 class LogEntry {
   constructor(data) {
-    this.id = data.id || "missing"
-    this.message = data.message || "missing"
-    this.error_type = data.error_type || "missing"
-    this.data = data.data || {}
-    this.updated_at = data.updated_at || new Date()
+    this.id = data.id || 'missing';
+    this.message = data.message || 'missing';
+    this.error_type = data.error_type || 'missing';
+    this.data = data.data || {};
+    this.updated_at = data.updated_at || new Date();
 
-    this.isHighlighted = !!this.error_type.match(/error/i)
+    this.isHighlighted = !!this.error_type.match(/error/i);
   }
 }

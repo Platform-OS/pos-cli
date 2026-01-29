@@ -1,22 +1,13 @@
 #!/usr/bin/env node
-const swagger = require('../lib/swagger-client');
+import { SwaggerProxy } from '../lib/swagger-client.js';
 
-const { program } = require('commander'),
-  watch = require('../lib/watch');
+import { program } from 'commander';
+import { start as watch, setupGracefulShutdown } from '../lib/watch.js';
 
-// importing ESM modules in CommonJS project
-let open;
-const initializeEsmModules = async () => {
-  if(!open) {
-    await import('open').then(imported => open = imported.default);
-  }
-
-  return true;
-}
-
-const fetchAuthData = require('../lib/settings').fetchSettings,
-  server = require('../lib/server'),
-  logger = require('../lib/logger');
+import { fetchSettings } from '../lib/settings.js';
+import { start as server } from '../lib/server.js';
+import logger from '../lib/logger.js';
+import ServerError from '../lib/ServerError.js';
 
 const DEFAULT_CONCURRENCY = 3;
 
@@ -27,7 +18,7 @@ program
   .option('-o, --open', 'when ready, open default browser with graphiql')
   .option('-s, --sync', 'Sync files')
   .action(async (environment, params) => {
-    const authData = fetchAuthData(environment, program);
+    const authData = await fetchSettings(environment, program);
 
     const env = Object.assign(process.env, {
       MARKETPLACE_EMAIL: authData.email,
@@ -38,19 +29,31 @@ program
     });
 
     try {
-      const client = await swagger.SwaggerProxy.client(environment);
-      server.start(env, client);
+      const client = await SwaggerProxy.client(environment);
+      server(env, client);
       if (params.open) {
-        await initializeEsmModules();
-        await open(`http://localhost:${params.port}`);
+        try {
+          const open = (await import('open')).default;
+          await open(`http://localhost:${params.port}`);
+        } catch (error) {
+          if (error instanceof AggregateError) {
+            logger.Error(`Failed to open browser (${error.errors.length} attempts): ${error.message}`);
+          } else {
+            logger.Error(`Failed to open browser: ${error.message}`);
+          }
+        }
       }
 
       if (params.sync){
-        watch.start(env, true, false);
+        const { watcher, liveReloadServer } = await watch(env, true, false);
+        setupGracefulShutdown({ watcher, liveReloadServer, context: 'GUI' });
       }
     } catch (e) {
-      console.log(e);
-      logger.Error('✖ Failed.');
+      if (ServerError.isNetworkError(e)) {
+        await ServerError.handler(e);
+      } else {
+        await logger.Error(`Failed: ${e.message || e}`);
+      }
     }
   });
 

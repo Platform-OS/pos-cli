@@ -1,0 +1,14 @@
+---
+slug: <%= modelNamePlural %>
+method: put
+---
+{% liquid
+  function object = 'commands/<%= modelNamePlural %>/update', object: context.params.<%= modelName %>
+  if object.valid
+    # platformos-check-disable ConvertIncludeToRender
+    include 'modules/core/helpers/redirect_to', url: '/<%= modelNamePlural %>'
+    # platformos-check-enable ConvertIncludeToRender
+  else
+    render 'theme/simple/<%= modelNamePlural %>/edit', object: object
+  endif
+%}

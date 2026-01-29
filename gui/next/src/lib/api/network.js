@@ -14,9 +14,9 @@ const network = {
     // the URL to use to connect to the API, in development or preview mode we are using the default pos-cli gui serve port
     const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}/api/logsv2` : 'http://localhost:3333/api/logsv2';
 
-    filters.stream_name = filters.stream_name ?? 'requests'
+    filters.stream_name = filters.stream_name ?? 'requests';
     if(filters.aggregate === 'http_request_path'){
-      filters.aggregate = ' GROUP BY http_request_path, http_request_method'
+      filters.aggregate = ' GROUP BY http_request_path, http_request_method';
     }
 
     // parse the dates from YYYY-MM-DD
@@ -48,7 +48,7 @@ const network = {
 
     // request the filters aggregations
     if(!filters.sql){
-      aggregations.filters = `SELECT lb_status_code, count(lb_status_code) as count FROM query GROUP BY lb_status_code ORDER BY count DESC`
+      aggregations.filters = 'SELECT lb_status_code, count(lb_status_code) as count FROM query GROUP BY lb_status_code ORDER BY count DESC';
     }
 
     // request the aggregated results
@@ -72,14 +72,14 @@ const network = {
         start_time: filters.start_time || 0,
         end_time: filters.end_time || 0
       }
-    }
+    };
 
     return fetch(`${url}`, {
       method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      },
+        'Content-Type': 'application/json'
+      }
     })
       .then(response => {
         if(response.ok){

@@ -8,7 +8,7 @@ Run all commands from the project root directory, one level above the `app` or `
 
 ### Requirements
 
-`pos-cli` requires Node.js version 18 or higher to function correctly. [See instructions for installing Node.js on your platform](https://nodejs.org/en/download/).
+`pos-cli` requires Node.js version 22 or higher to function correctly. [See instructions for installing Node.js on your platform](https://nodejs.org/en/download/).
 
 ## Installation and Update
 
@@ -55,12 +55,20 @@ Include the `--open` (`-o`) option with your sync command to automatically launc
     
 #### Concurrency
 
-By default, the `sync` command establishes three concurrent connections to our server for syncing resources and assets. You have the option to modify this to better suit your network’s capabilities:
+By default, the `sync` command establishes three concurrent connections to our server for syncing resources and assets. You have the option to modify this to better suit your network's capabilities:
 
     pos-cli sync [environment] -c 10
 
 Adjust the number of concurrent connections based on your specific requirements and connection strength.
-    
+
+#### Syncing a Single File
+
+To sync a single file without entering watch mode, use the `-f` or `--file-path` option:
+
+    pos-cli sync [environment] -f path/to/file.liquid
+
+This command syncs only the specified file and exits immediately, making it useful for scripting where you need to update a specific file without keeping a persistent connection.
+
 ### Deploying Changes
 
 To deploy all changes to a specified environment, use the following command:
@@ -443,6 +451,60 @@ For example, the [core module](https://github.com/Platform-OS/pos-module-core) i
 If you need guidance or additional information about how to use a specific generator, you can access the **help documentation** with the following command:
 
     pos-cli generate modules/core/generators/command --generator-help
+
+### Executing Code
+
+#### Execute Liquid
+
+Execute Liquid code directly on your instance:
+
+    pos-cli exec liquid [environment] [code]
+
+Example:
+
+    pos-cli exec liquid staging "{{ 'hello' | upcase }}"
+
+You can also execute Liquid code from a file using the `-f` flag:
+
+    pos-cli exec liquid staging -f path/to/script.liquid
+
+#### Execute GraphQL
+
+Execute GraphQL queries directly on your instance:
+
+    pos-cli exec graphql [environment] [query]
+
+Example:
+
+    pos-cli exec graphql staging "{ users(per_page: 5) { results { id email } } }"
+
+You can also execute GraphQL from a file using the `-f` flag:
+
+    pos-cli exec graphql staging -f path/to/query.graphql
+
+**Note:** When executing on production environments (environment name contains "prod" or "production"), you will be prompted for confirmation before execution.
+
+### Running Tests
+
+To run tests on your instance, you need to have the [tests module](https://github.com/Platform-OS/pos-module-tests) installed.
+
+#### Run All Tests
+
+    pos-cli test run [environment]
+
+Example:
+
+    pos-cli test run staging
+
+This command runs all tests and streams the results in real-time, showing individual test outcomes and a summary at the end.
+
+#### Run a Single Test
+
+    pos-cli test run [environment] [test-name]
+
+Example:
+
+    pos-cli test run staging my_test
 
 ## Development
 

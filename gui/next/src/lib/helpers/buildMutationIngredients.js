@@ -109,6 +109,6 @@ export const buildMutationIngredients = (formData) => {
     variablesDefinition = `(${variablesDefinition})`; // add brackets to definition string
   }
 
-  return { variablesDefinition, variables, properties }
+  return { variablesDefinition, variables, properties };
 
 };

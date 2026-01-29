@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const { program } = require('commander'),
-  updateNotifier = require('update-notifier'),
-  pkg = require('../package.json'),
-  logger = require('../lib/logger'),
-  version = pkg.version;
+import { program } from 'commander';
+import updateNotifier from 'update-notifier';
+import pkg from '../package.json' with { type: 'json' };
+
+const version = pkg.version;
 
 updateNotifier({
   pkg: pkg
@@ -24,6 +24,7 @@ program
   .command('data', 'export, import or clean data on instance')
   .command('deploy <environment>', 'deploy code to environment').alias('d')
   .command('env', 'manage environments')
+  .command('exec', 'execute code on instance')
   .command('gui', 'gui for content editor, graphql, logs')
   .command('generate', 'generates files')
   .command('init', 'initialize directory structure')
@@ -33,5 +34,6 @@ program
   .command('modules', 'manage modules')
   .command('pull', 'export app data to a zip file')
   .command('sync <environment>', 'update environment on file change').alias('s')
+  .command('test', 'run tests on instance')
   .command('uploads', 'manage uploads files')
   .parse(process.argv);

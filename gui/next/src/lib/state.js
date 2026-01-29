@@ -24,57 +24,57 @@ function createStore(){
   // store properties
   // ------------------------------------------------------------------------
   const state = {};
-    // list of items pinned to the header navigation (array of strings)
-    state.header = browser && localStorage.header ? JSON.parse(localStorage.header) : ['database', 'users', 'logs'];
-    // if the app is connected to the instance (object or false)
-    state.online = undefined;
-    // logs data (object)
-    state.logs = {};
-    // new logs data (object)
-    state.logsv2 = {};
-    // currently active log (object)
-    state.logv2 = {};
-    // network logs data (object)
-    state.networks = {};
-    // currently active network log (object)
-    state.network = {};
-    // tables for current instance (array)
-    state.tables = [];
-    // currently active table (object)
-    state.table = {};
-    // type of view for the records ('table' or 'tiles')
-    state.view = {
-      database: view?.database ? view.database : 'table',
-      tableStyle: view?.tableStyle ? view.tableStyle : 'collapsed'
-    };
-    // currently viewed records list (object)
-    state.records = {};
-    // currently viewed/edited record (object)
-    state.record = null;
-    // currently highlighted ids (object)
-    state.highlighted = {
-      record: null,
-      constant: null
-    };
-    // filters for the records (object)
-    state.filters = {
-      page: 1,
-      attributes: [
-        { attribute_type: 'id', name: 'id', operation: 'value', value: '' }
-      ],
-      deleted: 'false'
-    };
-    // sort order for the records (object)
-    state.sort = {
-      by: 'created_at',
-      order: 'DESC'
-    };
-    // list of notifications (array of objects)
-    state.notifications = [];
-    // width of the aside panel in css units (string)
-    state.asideWidth = browser && localStorage.asideWidth ? localStorage.asideWidth : false;
-    // list of users
-    state.users = []
+  // list of items pinned to the header navigation (array of strings)
+  state.header = browser && localStorage.header ? JSON.parse(localStorage.header) : ['database', 'users', 'logs'];
+  // if the app is connected to the instance (object or false)
+  state.online = undefined;
+  // logs data (object)
+  state.logs = {};
+  // new logs data (object)
+  state.logsv2 = {};
+  // currently active log (object)
+  state.logv2 = {};
+  // network logs data (object)
+  state.networks = {};
+  // currently active network log (object)
+  state.network = {};
+  // tables for current instance (array)
+  state.tables = [];
+  // currently active table (object)
+  state.table = {};
+  // type of view for the records ('table' or 'tiles')
+  state.view = {
+    database: view?.database ? view.database : 'table',
+    tableStyle: view?.tableStyle ? view.tableStyle : 'collapsed'
+  };
+  // currently viewed records list (object)
+  state.records = {};
+  // currently viewed/edited record (object)
+  state.record = null;
+  // currently highlighted ids (object)
+  state.highlighted = {
+    record: null,
+    constant: null
+  };
+  // filters for the records (object)
+  state.filters = {
+    page: 1,
+    attributes: [
+      { attribute_type: 'id', name: 'id', operation: 'value', value: '' }
+    ],
+    deleted: 'false'
+  };
+  // sort order for the records (object)
+  state.sort = {
+    by: 'created_at',
+    order: 'DESC'
+  };
+  // list of notifications (array of objects)
+  state.notifications = [];
+  // width of the aside panel in css units (string)
+  state.asideWidth = browser && localStorage.asideWidth ? localStorage.asideWidth : false;
+  // list of users
+  state.users = [];
 
   // purpose:		creates the store with data provided in state object
   // ------------------------------------------------------------------------
@@ -131,7 +131,9 @@ function createStore(){
     });
 
     clearTimeout(highlightTimeout);
-    highlightTimeout = setTimeout(() => { highlight('record', null); highlight('constant', null) }, 7000);
+    highlightTimeout = setTimeout(() => {
+      highlight('record', null); highlight('constant', null); 
+    }, 7000);
   };
 
 
@@ -160,7 +162,7 @@ function createStore(){
 
         return state;
       });
-    },
+    }
 
   };
 
@@ -170,7 +172,7 @@ function createStore(){
   // ------------------------------------------------------------------------
   const setView = (newView) => {
     update(state => {
-      state.view = {...state.view, ...newView}
+      state.view = {...state.view, ...newView};
 
       if(browser){
         localStorage.view = JSON.stringify(state.view);
@@ -190,7 +192,7 @@ function createStore(){
     highlight,
     notification,
     setView
-  }
+  };
 
 };
 
@@ -198,4 +200,4 @@ function createStore(){
 
 // exports
 // ------------------------------------------------------------------------
-export { state }
+export { state };

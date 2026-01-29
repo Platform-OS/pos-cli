@@ -5,7 +5,7 @@ import alias from '@rollup/plugin-alias';
 import livereload from 'rollup-plugin-livereload';
 import copy from 'rollup-plugin-copy';
 import postcss from 'rollup-plugin-postcss';
-import esbuild from 'rollup-plugin-esbuild'
+import esbuild from 'rollup-plugin-esbuild';
 import path from 'path';
 import del from 'del';
 
@@ -23,12 +23,12 @@ function createConfig({ output, inlineDynamicImports, plugins = [] }) {
 
   return {
     inlineDynamicImports,
-    input: `src/main.js`,
+    input: 'src/main.js',
     output: {
       name: 'app',
       assetFileNames: '[name].[extname]',
       chunkFileNames: '[name].js',
-      ...output,
+      ...output
     },
     plugins: [
       postcss({
@@ -37,42 +37,42 @@ function createConfig({ output, inlineDynamicImports, plugins = [] }) {
           require('postcss-import')(),
           require('autoprefixer')(),
           require('tailwindcss')()
-        ],
+        ]
       }),
       alias({
-        entries: [{ find: '@', replacement: path.resolve('src') }],
+        entries: [{ find: '@', replacement: path.resolve('src') }]
       }),
       copy({
         targets: [
           { src: [staticDir + '/*', '!*/(__index.html)'], dest: distDir },
-          { src: `${staticDir}/__index.html`, dest: distDir, rename: '__app.html', transform },
+          { src: `${staticDir}/__index.html`, dest: distDir, rename: '__app.html', transform }
         ],
         copyOnce: true,
-        flatten: false,
+        flatten: false
       }),
 
       svelte({
         dev: !production,
-        hydratable: true,
+        hydratable: true
       }),
 
       resolve({
         browser: true,
-        dedupe: (importee) => importee === 'svelte' || importee.startsWith('svelte/'),
+        dedupe: (importee) => importee === 'svelte' || importee.startsWith('svelte/')
       }),
 
       commonjs(),
 
       esbuild({
         include: /\.js?$/, // default, inferred from `loaders` option
-        minify: process.env.NODE_ENV === 'production',
+        minify: process.env.NODE_ENV === 'production'
       }),
 
-      ...plugins,
+      ...plugins
     ],
     watch: {
-      clearScreen: false,
-    },
+      clearScreen: false
+    }
   };
 }
 
@@ -80,18 +80,18 @@ const bundledConfig = {
   inlineDynamicImports: true,
   output: {
     format: 'iife',
-    file: `${buildDir}/bundle.js`,
+    file: `${buildDir}/bundle.js`
   },
-  plugins: [!production && serve(), !production && livereload(distDir)],
+  plugins: [!production && serve(), !production && livereload(distDir)]
 };
 
 const dynamicConfig = {
   inlineDynamicImports: false,
   output: {
     format: 'esm',
-    dir: buildDir,
+    dir: buildDir
   },
-  plugins: [!production && livereload(distDir)],
+  plugins: [!production && livereload(distDir)]
 };
 
 const configs = [createConfig(bundledConfig)];
@@ -107,10 +107,10 @@ function serve() {
         started = true;
         require('child_process').spawn('npm', ['run', 'serve'], {
           stdio: ['ignore', 'inherit', 'inherit'],
-          shell: true,
+          shell: true
         });
       }
-    },
+    }
   };
 }
 
@@ -120,23 +120,23 @@ function prerender() {
       if (shouldPrerender) {
         require('child_process').spawn('npm', ['run', 'export'], {
           stdio: ['ignore', 'inherit', 'inherit'],
-          shell: true,
+          shell: true
         });
       }
-    },
+    }
   };
 }
 
 function bundledTransform(contents) {
   return contents.toString().replace(
     '__SCRIPT__',
-    `<script defer src="/build/bundle.js"></script>`
+    '<script defer src="/build/bundle.js"></script>'
   );
 }
 
 function dynamicTransform(contents) {
   return contents.toString().replace(
     '__SCRIPT__',
-    `<script type="module" defer src="/build/main.js"></script>`
+    '<script type="module" defer src="/build/main.js"></script>'
   );
 }

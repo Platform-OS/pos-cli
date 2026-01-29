@@ -1,0 +1,11 @@
+---
+layout: modules/tests/test
+---
+{% liquid
+  if context.environment == 'staging' or context.environment == 'development'
+    assign test_name = 5 | random_string | prepend: "liquid_test_"
+    # platformos-check-disable ConvertIncludeToRender
+    include 'modules/tests/commands/run', format: context.params.formatter, test_name: test_name
+    # platformos-check-enable ConvertIncludeToRender
+  endif
+%}

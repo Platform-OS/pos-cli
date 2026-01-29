@@ -1,30 +1,30 @@
-const { program } = require('commander');
-const logger = require('../lib/logger');
-const Portal = require('../lib/portal');
-const { readPassword } = require('../lib/utils/password');
-const fetchAuthData = require('../lib/settings').fetchSettings;
-const { storeEnvironment, deviceAuthorizationFlow } = require('../lib/environments');
-const ServerError = require('../lib/ServerError');
+import { program } from 'commander';
+import logger from '../lib/logger.js';
+import Portal from '../lib/portal.js';
+import { readPassword } from '../lib/utils/password.js';
+import { fetchSettings } from '../lib/settings.js';
+import { storeEnvironment, deviceAuthorizationFlow } from '../lib/environments.js';
+import ServerError from '../lib/ServerError.js';
 
 const saveToken = (settings, token) => {
   storeEnvironment(Object.assign(settings, { token: token }));
-  logger.Success(`Environment ${settings.url} as ${settings.environment} has been added successfuly.`);
+  logger.Success(`Environment ${settings.url} as ${settings.environment} has been added successfully.`);
 };
 
 const login = async (email, password, url) => {
   return Portal.login(email, password, url)
     .then(response => {
       if (response) return Promise.resolve(response[0].token);
-    })
-}
+    });
+};
 
 program
   .name('pos-cli env refresh-token')
   .arguments('[environment]', 'name of environment. Example: staging')
-  .action(async (environment, params) => {
+  .action(async (environment, _params) => {
     try {
 
-      const authData = fetchAuthData(environment)
+      const authData = await fetchSettings(environment);
 
       if (!authData.email){
         token = await deviceAuthorizationFlow(authData.url);
@@ -44,9 +44,9 @@ program
 
     } catch (e) {
       if (ServerError.isNetworkError(e))
-        ServerError.handler(e)
+        await ServerError.handler(e);
       else
-        logger.Error(e);
+        await logger.Error(e);
       process.exit(1);
     }
 

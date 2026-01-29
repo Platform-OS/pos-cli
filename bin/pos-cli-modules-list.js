@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
+import { program } from 'commander';
 
-const Gateway = require('../lib/proxy'),
-  logger = require('../lib/logger'),
-  fetchAuthData = require('../lib/settings').fetchSettings;
+import Gateway from '../lib/proxy.js';
+import logger from '../lib/logger.js';
+import { fetchSettings } from '../lib/settings.js';
 
 program
   .name('pos-cli modules list')
   .arguments('[environment]', 'name of the environment. Example: staging')
-  .action(environment => {
-    const authData = fetchAuthData(environment, program);
+  .action(async environment => {
+    const authData = await fetchSettings(environment, program);
     const gateway = new Gateway(authData);
 
     gateway.listModules().then(response => {

@@ -2,7 +2,7 @@ import { Selector } from 'testcafe';
 import faker from 'faker';
 
 fixture('Models')
-  .page(`http://localhost:3333/Models`)
+  .page('http://localhost:3333/Models')
   .beforeEach(async (t) => {
     await t.click(Selector('h1').withText('feedback'));
   });

@@ -23,8 +23,8 @@ git clone https://github.com/Platform-OS/pos-cli-gui-qa.git
 
 cd pos-cli-gui-qa
 
-pos-cli deploy
 pos-cli data clean --auto-confirm
+pos-cli deploy
 pos-cli data import --path seed/data.zip --zip
 
 cd ..
