@@ -3,17 +3,41 @@
 ## Unreleased
 
 
-## 6.0.0
+## 6.0.0-beta0
 
 * Feature: `pos-cli exec liquid` command to execute Liquid code directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
 * Feature: `pos-cli exec graphql` command to execute GraphQL queries directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
 * Feature: `pos-cli test run` command to run tests using the tests module
+* Feature: `pos-cli sync -f <file-path>` option to sync a single file and exit (useful for CI/CD workflows)
+* Improvement: Enhanced error handling for `pos-cli env add` with clearer messages when instance is not registered in Partner Portal
+* Improvement: Better error messages for sync validation errors (422 responses) with detailed error descriptions
+* Improvement: Added graceful shutdown handling for sync mode to properly cleanup watchers and LiveReload servers
+* Improvement: Improved browser opening error handling with better error messages for failed attempts
+* Improvement: Enhanced refresh token error handling during authentication flows
+* Improvement: Added test coverage measurement capability
+* Improvement: Updated ESLint configuration and fixed linting errors across the codebase
 
-### Major Dependency Upgrades
+### Major Modernization and Dependency Upgrades
 
 We've completed a comprehensive modernization of the CLI including:
 
-**Node.js Version Requirement**: Now requires Node.js 20 or higher (up from Node.js 18)
+**Node.js Version Requirement**: Now requires Node.js 22 or higher (up from Node.js 18)
+
+**Technical Improvements**:
+
+- **CommonJS to ESM Migration**: Entire codebase migrated from CommonJS (`require`/`module.exports`) to ES Modules (`import`/`export`)
+  - Better tree-shaking and bundle optimization
+  - Native ESM support throughout the codebase
+  - Improved compatibility with modern Node.js ecosystem
+
+- **Test Framework Migration**: Migrated from Jest to Vitest
+  - Better ESM support and faster test execution
+  - Improved watch mode and test coverage reporting
+  - Maintains all existing test functionality with enhanced performance
+
+- **Deprecation Warnings Removed**: All deprecation warnings across dependencies have been resolved for a cleaner development experience
+
+- **Code Quality Improvements**: Updated ESLint configuration, fixed linting issues, and improved error handling patterns throughout
 
 **Breaking Changes** that may require action from users:
 
@@ -29,8 +53,6 @@ We've completed a comprehensive modernization of the CLI including:
 - chalk v5.6, chokidar v5.0, express v5.2, ora v9.0, open v11.0
 - inquirer v13.2, mime v4.1, multer v2.0, yeoman-environment v5.1, yeoman-generator v7.5
 - And many other dependency updates for security and stability
-
-**Test Framework Migration**: Migrated from Jest to Vitest to better support ESM
 
 ## 5.5.0
 
