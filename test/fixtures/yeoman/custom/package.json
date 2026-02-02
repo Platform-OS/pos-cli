@@ -1,0 +1,7 @@
+{
+  "name": "custom-generator-test",
+  "type": "module",
+  "dependencies": {
+    "yeoman-generator": "^7.3.2"
+  }
+}

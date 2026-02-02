@@ -33,9 +33,13 @@ const execCommand = (cmd, opts = {}) => {
 const run = (args, opts = {}) => {
   // Convert relative generator paths to absolute paths
   // __dirname is test/unit, so we need to go up two levels to reach project root
-  const absoluteArgs = args.replace(/(test\/fixtures\/yeoman\/modules\/core\/generators\/\w+)/g, (match) => {
-    return path.resolve(__dirname, '../..', match);
-  });
+  const absoluteArgs = args
+    .replace(/(test\/fixtures\/yeoman\/modules\/core\/generators\/\w+)(?=\s|$)/g, (match) => {
+      return path.resolve(__dirname, '../..', match);
+    })
+    .replace(/(test\/fixtures\/yeoman\/custom\/generators\/\w+)(?=\s|$)/g, (match) => {
+      return path.resolve(__dirname, '../..', match);
+    });
   // Use process.execPath to ensure we use the same node executable
   return execCommand(`"${process.execPath}" "${cliPath}" generate run ${absoluteArgs}`, {
     ...opts,
@@ -561,6 +565,206 @@ describe('pos-cli generate command', () => {
       expect(stdout).toContain('Usage');
       expect(stdout).toContain('Arguments');
       expect(stdout).toContain('commandName');
+    });
+  });
+
+  describe('custom generators (non-module paths)', () => {
+    let testDir;
+
+    beforeEach(async () => {
+      testDir = await setupTestProject();
+    });
+
+    afterEach(async () => {
+      if (testDir) {
+        await cleanupTestProject(testDir);
+      }
+    });
+
+    test('runs custom generator from non-module path', async () => {
+      const { stdout, stderr, code } = await run(
+        'test/fixtures/yeoman/custom/generators/simple myitem --auto-confirm',
+        { cwd: testDir, timeout: 10000 }
+      );
+
+      if (code !== 0) {
+        console.error('Generator failed with code:', code);
+        console.error('STDOUT:', stdout);
+        console.error('STDERR:', stderr);
+      }
+
+      expect(code).toBe(0);
+      expect(stdout).toContain('Simple generator completed');
+
+      // Verify the file was created
+      const outputPath = path.join(testDir, 'app', 'myitem.txt');
+      const outputExists = await fileExists(outputPath);
+      expect(outputExists).toBe(true);
+
+      const content = await readFile(outputPath);
+      expect(content).toContain('Custom generator output: myitem');
+    });
+
+    test('shows help for custom generator', async () => {
+      const { stdout, code } = await run(
+        'test/fixtures/yeoman/custom/generators/simple --generator-help --auto-confirm',
+        { cwd: testDir, timeout: 5000 }
+      );
+
+      expect(code).toBe(0);
+      expect(stdout).toContain('Generator');
+      expect(stdout).toContain('Simple custom generator for testing');
+      expect(stdout).toContain('name');
+    });
+
+    test('installs dependencies for custom generator if needed', async () => {
+      // First, ensure node_modules doesn't exist
+      const customPath = path.resolve(__dirname, '../..', 'test/fixtures/yeoman/custom');
+      const nodeModulesPath = path.join(customPath, 'node_modules');
+
+      try {
+        await fs.rm(nodeModulesPath, { recursive: true, force: true });
+      } catch {
+        // Ignore if doesn't exist
+      }
+
+      const { stdout, code } = await run(
+        'test/fixtures/yeoman/custom/generators/simple testitem --auto-confirm',
+        { cwd: testDir, timeout: 15000 }
+      );
+
+      // Generator should still work after installing dependencies
+      expect(code).toBe(0);
+
+      // Verify dependencies were installed
+      const installed = await fileExists(nodeModulesPath);
+      expect(installed).toBe(true);
+    });
+  });
+
+  describe('error handling and validation', () => {
+    let testDir;
+
+    beforeEach(async () => {
+      testDir = await setupTestProject();
+    });
+
+    afterEach(async () => {
+      if (testDir) {
+        await cleanupTestProject(testDir);
+      }
+    });
+
+    test('fails with clear error for non-existent generator path', async () => {
+      const { stderr, code } = await run(
+        'test/fixtures/nonexistent/generator',
+        { cwd: testDir, timeout: 5000 }
+      );
+
+      expect(code).not.toBe(0);
+      expect(stderr).toMatch(/not found|does not exist/i);
+    });
+
+    test('fails with clear error when generator has no index.js', async () => {
+      // Create a directory without index.js
+      const badGenPath = path.join(testDir, 'bad-generator');
+      await fs.mkdir(badGenPath, { recursive: true });
+
+      const { stderr, code } = await run(
+        badGenPath,
+        { cwd: testDir, timeout: 5000 }
+      );
+
+      expect(code).not.toBe(0);
+      expect(stderr).toMatch(/index\.js not found|Cannot find module/i);
+    });
+
+    test('handles generator with no package.json gracefully', async () => {
+      // Create a minimal generator without package.json
+      const genPath = path.join(testDir, 'no-pkg-generator');
+      await fs.mkdir(genPath, { recursive: true });
+
+      // Create a minimal generator
+      const generatorCode = `import Generator from 'yeoman-generator';
+
+export default class extends Generator {
+  constructor(args, opts) {
+    super(args, opts);
+    this.description = 'No package generator';
+  }
+
+  writing() {
+    this.fs.write(
+      this.destinationPath('output.txt'),
+      'No package test'
+    );
+  }
+}`;
+
+      await fs.writeFile(path.join(genPath, 'index.js'), generatorCode);
+
+      // This should work but may fail due to missing yeoman-generator dependency
+      // The important thing is it doesn't crash with a different error
+      const { stderr, code } = await run(
+        genPath,
+        { cwd: testDir, timeout: 5000 }
+      );
+
+      // It's okay if this fails due to missing dependencies
+      // We just want to ensure the error is about dependencies, not path validation
+      if (code !== 0) {
+        expect(stderr).toMatch(/Cannot find module|yeoman-generator/i);
+      }
+    });
+
+    test('handles deeply nested generator paths', async () => {
+      const { stdout, code } = await run(
+        'test/fixtures/yeoman/modules/core/generators/crud product name:string',
+        { cwd: testDir, timeout: 10000 }
+      );
+
+      expect(code).toBe(0);
+      expect(stdout).toContain('CRUD generated');
+    });
+  });
+
+  describe('dependency management', () => {
+    let testDir;
+
+    beforeEach(async () => {
+      testDir = await setupTestProject();
+    });
+
+    afterEach(async () => {
+      if (testDir) {
+        await cleanupTestProject(testDir);
+      }
+    });
+
+    test('skips installation if node_modules already exists', async () => {
+      // Ensure node_modules exists
+      const modulePath = path.resolve(__dirname, '../..', 'test/fixtures/yeoman/modules/core');
+      const nodeModulesPath = path.join(modulePath, 'node_modules');
+
+      // Create a marker file to check if npm install was run
+      if (await fileExists(nodeModulesPath)) {
+        const markerPath = path.join(nodeModulesPath, '.test-marker');
+        await fs.writeFile(markerPath, 'test');
+
+        const { code } = await run(
+          'test/fixtures/yeoman/modules/core/generators/crud item name:string',
+          { cwd: testDir, timeout: 10000 }
+        );
+
+        expect(code).toBe(0);
+
+        // Marker should still exist (npm install wasn't run)
+        const markerExists = await fileExists(markerPath);
+        expect(markerExists).toBe(true);
+
+        // Clean up marker
+        await fs.unlink(markerPath);
+      }
     });
   });
 });
