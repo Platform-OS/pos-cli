@@ -448,7 +448,7 @@ The tool automatically handles dependency installation - if your generator has a
 
 #### Using Module Generators
 
-For example, the [core module](https://github.com/Platform-OS/pos-module-core) includes a `command` generator for creating command files:
+For example, the [core module](https://github.com/Platform-OS/pos-modules/tree/master/pos-module-core) includes a `command` generator for creating command files:
 
     pos-cli generate modules/core/generators/command users/create
 
@@ -510,7 +510,7 @@ You can also execute GraphQL from a file using the `-f` flag:
 
 ### Running Tests
 
-To run tests on your instance, you need to have the [tests module](https://github.com/Platform-OS/pos-module-tests) installed.
+To run tests on your instance, you need to have the [tests module](https://github.com/Platform-OS/pos-modules/tree/master/pos-module-tests) installed.
 
 #### Run All Tests
 
