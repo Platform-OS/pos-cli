@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { requireRealCredentials } from '#test/utils/credentials';
 
-vi.setConfig({ testTimeout: 20000 });
+vi.setConfig({ testTimeout: 30000 });
 
 // Force this test file to run in sequence to avoid race conditions with fixture files
 // @vitest-environment node
@@ -94,14 +94,17 @@ properties:
       const testDir = path.join(cwd('correct_with_assets'), 'app', dir);
       const testFile = path.join(cwd('correct_with_assets'), 'app', fileName);
 
+      // Wait for sync to initialize before creating file
+      await sleep(stepTimeout);
+
       // Use Node.js fs for cross-platform compatibility
       if (!fs.existsSync(testDir)) {
         fs.mkdirSync(testDir, { recursive: true });
       }
-      await sleep(stepTimeout);
 
       fs.writeFileSync(testFile, validYML);
-      await sleep(stepTimeout);
+      // Wait longer for sync to complete (stabilityThreshold 500ms + network time + queue processing)
+      await sleep(stepTimeout * 2);
 
       fs.unlinkSync(testFile);
       await sleep(stepTimeout);

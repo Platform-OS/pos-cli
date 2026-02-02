@@ -72,7 +72,8 @@
     "text-table": "^0.2.0",
     "unzipper": "^0.12.3",
     "update-notifier": "^7.3.1",
-    "yeoman-environment": "^5.1.2"
+    "yeoman-environment": "^5.1.2",
+    "yeoman-generator": "^7.5.1"
   },
   "preferGlobal": true,
   "bin": {

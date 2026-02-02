@@ -442,15 +442,39 @@ This interface allows you to test and refine Liquid code within the context of y
 
 ### Generators
 
-Generators are tools provided by various modules that allow you to quickly create files necessary for your project.
+Generators are tools that allow you to quickly create files necessary for your project. You can use generators from platformOS modules or create your own custom generators in any directory.
 
-For example, the [core module](https://github.com/Platform-OS/pos-module-core) includes a `command` generator, which you can use to quickly produce specific files like this:
+The tool automatically handles dependency installation - if your generator has a `package.json`, dependencies will be installed automatically when needed.
+
+#### Using Module Generators
+
+For example, the [core module](https://github.com/Platform-OS/pos-module-core) includes a `command` generator for creating command files:
 
     pos-cli generate modules/core/generators/command users/create
-      
-If you need guidance or additional information about how to use a specific generator, you can access the **help documentation** with the following command:
+
+The `crud` generator creates a complete CRUD setup with schema, GraphQL, commands, and optionally views:
+
+    pos-cli generate modules/core/generators/crud product name:string price:integer --includeViews
+
+#### Using Custom Generators
+
+You can create and use generators from any directory in your project:
+
+    pos-cli generate my/custom/generator arg1 arg2
+
+Custom generators should:
+- Have an `index.js` file that exports a Yeoman generator class
+- Optionally include a `package.json` with dependencies (will be auto-installed)
+- Follow the [yeoman-generator v7 API](https://yeoman.github.io/generator/)
+
+#### Generator Help
+
+For any generator, you can access help documentation with the `--generator-help` flag:
 
     pos-cli generate modules/core/generators/command --generator-help
+    pos-cli generate my/custom/generator --generator-help
+
+This displays available arguments, options, and usage examples for the generator.
 
 ### Executing Code
 
