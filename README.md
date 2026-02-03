@@ -91,6 +91,136 @@ Example: `pos-cli audit`
 
 This command checks your application files for issues using static analysis, helping you maintain code quality and identify potential errors.
 
+### Liquid Code Quality Check
+
+pos-cli provides a powerful Liquid code quality checker powered by platformos-check. This helps you catch issues early, enforce best practices, and maintain high-quality code.
+
+#### Initialize Configuration
+
+Before running checks, you can create a `.platformos-check.yml` configuration file to customize which checks to run:
+
+    pos-cli check init [path]
+
+Example: `pos-cli check init`
+
+This creates a `.platformos-check.yml` file that:
+- Extends the recommended platformos-check configuration
+- Ignores `node_modules/**` by default
+- Includes all available settings as comments for easy customization
+
+#### Run Checks
+
+To check your Liquid code quality, use:
+
+    pos-cli check run [path]
+
+Example: `pos-cli check run`
+
+This command analyzes Liquid templates for common issues, syntax errors, and best practices violations. By default, it checks the current directory, but you can specify a path to check a specific directory.
+
+The output includes:
+- **Severity levels**: Errors, warnings, and info messages color-coded for easy identification
+- **Code snippets**: Shows the actual problematic code with line numbers
+- **Grouped by file**: Offenses are organized by file for better readability
+- **Summary counts**: Total offenses broken down by severity
+
+#### Options
+
+- `-a` - Enable automatic fixing of issues where possible
+- `-f <format>` - Output format: `text` (default) or `json`
+- `-s, --silent` - Only show errors, no success messages
+
+#### Examples
+
+Check current directory:
+
+    pos-cli check run
+
+Check specific directory:
+
+    pos-cli check run ./app/views
+
+Auto-fix issues:
+
+    pos-cli check run -a
+
+JSON output for CI/CD:
+
+    pos-cli check run -f json
+
+Silent mode (no success message):
+
+    pos-cli check run -s
+
+Combined options:
+
+    pos-cli check run -a -f json
+
+The command exits with code 0 if no issues are found, or 1 if issues are detected, making it suitable for CI/CD pipelines.
+
+#### Output Format
+
+**Text output** displays offenses grouped by file with code snippets:
+
+```
+3 offenses found in 1 file:
+  3 warnings
+
+app/views/pages/index.liquid
+
+[warning] UndefinedObject
+  Unknown object 'user' used.
+
+   5  <p>{{ user.name }}</p>
+```
+
+**JSON output** provides structured data with severity counts:
+
+```json
+{
+  "offenseCount": 3,
+  "fileCount": 1,
+  "errorCount": 0,
+  "warningCount": 3,
+  "infoCount": 0,
+  "files": [
+    {
+      "path": "app/views/pages/index.liquid",
+      "offenses": [...],
+      "errorCount": 0,
+      "warningCount": 3,
+      "infoCount": 0
+    }
+  ]
+}
+```
+
+#### Configuration File
+
+After running `pos-cli check init`, you can customize `.platformos-check.yml`:
+
+```yaml
+extends: platformos-check:recommended
+ignore:
+  - node_modules/**
+  - dist/**
+
+# Customize individual checks
+UndefinedObject:
+  enabled: true
+  severity: error  # error (0), warning (1), or info (2)
+
+DeprecatedFilter:
+  enabled: true
+  severity: warning
+```
+
+The configuration file controls:
+- Which checks are enabled/disabled
+- Severity levels for each check
+- File patterns to ignore
+- Check-specific settings
+
 ### Reading Logs
 
 Use the `logs` command to access errors and logs that you or the system logs:
