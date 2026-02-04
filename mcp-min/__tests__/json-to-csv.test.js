@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { jsonToZipBuffer } from '../data/json-to-csv.js';
 import { createRequire } from 'module';
 import { Readable } from 'stream';

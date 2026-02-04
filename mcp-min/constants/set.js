@@ -1,9 +1,8 @@
 // platformos.constants.set tool - set a constant
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+import { fetchSettings } from '../../lib/settings.js';
+import Gateway from '../../lib/proxy.js';
 
-const settings = require('../../lib/settings');
-const Gateway = require('../../lib/proxy');
+const settings = { fetchSettings };
 
 function resolveAuth(env, settingsModule = settings) {
   const found = settingsModule.fetchSettings(env);

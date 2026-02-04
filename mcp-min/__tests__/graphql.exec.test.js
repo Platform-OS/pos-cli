@@ -1,9 +1,9 @@
-/* eslint-env jest */
+
 import { pathToFileURL } from 'url';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
-jest.unstable_mockModule('../../lib/proxy', () => {
+vi.mock('../../lib/proxy', () => {
   class GatewayMock {
     constructor() {}
     async graph(body) {

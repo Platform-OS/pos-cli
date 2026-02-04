@@ -1,13 +1,13 @@
-/* eslint-env jest */
+
 import { pathToFileURL } from 'url';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
-jest.useFakeTimers();
-jest.spyOn(global, 'setTimeout');
+vi.useFakeTimers();
+vi.spyOn(global, 'setTimeout');
 
 // Mock Gateway.logs
-jest.unstable_mockModule('../../lib/proxy', () => {
+vi.mock('../../lib/proxy', () => {
   class GatewayMock {
     constructor() { this.calls = 0; }
     async logs({ lastId }) {
@@ -37,7 +37,7 @@ describe('platformos.logs.stream', () => {
     // flush initial tick
     await Promise.resolve();
     // advance enough to include at least one scheduled tick and done
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     // Give microtasks a chance
     await Promise.resolve();
     expect(events.filter(e => e.event === 'data').length).toBeGreaterThanOrEqual(2);

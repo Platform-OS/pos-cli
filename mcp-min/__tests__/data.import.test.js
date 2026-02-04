@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -70,11 +70,11 @@ describe('data-import tool', () => {
         }
       }
 
-      const mockPresignUrl = jest.fn().mockResolvedValue({
+      const mockPresignUrl = vi.fn().mockResolvedValue({
         uploadUrl: 'https://s3.example.com/upload',
         accessUrl: 'https://s3.example.com/access/data.zip'
       });
-      const mockUploadFile = jest.fn().mockResolvedValue(true);
+      const mockUploadFile = vi.fn().mockResolvedValue(true);
 
       const result = await dataImportTool.handler(
         { env: 'staging', jsonData: { records: [{ id: '1', properties: { name: 'test' }, model_schema: 'todo' }] }, validate: false },
@@ -173,11 +173,11 @@ describe('data-import tool', () => {
         async dataImportStart() { return { id: 'import-users', status: 'pending' }; }
       }
 
-      const mockPresignUrl = jest.fn().mockResolvedValue({
+      const mockPresignUrl = vi.fn().mockResolvedValue({
         uploadUrl: 'https://s3.example.com/upload',
         accessUrl: 'https://s3.example.com/access/data.zip'
       });
-      const mockUploadFile = jest.fn().mockResolvedValue(true);
+      const mockUploadFile = vi.fn().mockResolvedValue(true);
 
       const result = await dataImportTool.handler(
         { env: 'staging', jsonData: { users: [] } },
@@ -193,11 +193,11 @@ describe('data-import tool', () => {
         async dataImportStart() { return { id: 'import-both', status: 'pending' }; }
       }
 
-      const mockPresignUrl = jest.fn().mockResolvedValue({
+      const mockPresignUrl = vi.fn().mockResolvedValue({
         uploadUrl: 'https://s3.example.com/upload',
         accessUrl: 'https://s3.example.com/access/data.zip'
       });
-      const mockUploadFile = jest.fn().mockResolvedValue(true);
+      const mockUploadFile = vi.fn().mockResolvedValue(true);
 
       const result = await dataImportTool.handler(
         { env: 'staging', jsonData: { records: [], users: [] } },
@@ -232,11 +232,11 @@ describe('data-import tool', () => {
         }
       }
 
-      const mockPresignUrl = jest.fn().mockResolvedValue({
+      const mockPresignUrl = vi.fn().mockResolvedValue({
         uploadUrl: 'https://s3.example.com/upload',
         accessUrl: 'https://s3.example.com/access/data.zip'
       });
-      const mockUploadFile = jest.fn().mockResolvedValue(true);
+      const mockUploadFile = vi.fn().mockResolvedValue(true);
 
       const result = await dataImportTool.handler(
         {
@@ -303,11 +303,11 @@ describe('data-import tool', () => {
           }
         }
 
-        const mockPresignUrl = jest.fn().mockResolvedValue({
+        const mockPresignUrl = vi.fn().mockResolvedValue({
           uploadUrl: 'https://s3.example.com/upload',
           accessUrl: 'https://s3.example.com/access/data.zip'
         });
-        const mockUploadFile = jest.fn().mockResolvedValue(true);
+        const mockUploadFile = vi.fn().mockResolvedValue(true);
 
         const result = await dataImportTool.handler(
           { env: 'staging', filePath: tmpFile },

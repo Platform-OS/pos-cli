@@ -1,12 +1,10 @@
 // platformos.data.clean - start data clean operation (removes data from instance)
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
 import { DEBUG, debugLog } from '../config.js';
+import files from '../../lib/files.js';
+import { fetchSettings } from '../../lib/settings.js';
+import Gateway from '../../lib/proxy.js';
 
-const files = require('../../lib/files');
-const settings = require('../../lib/settings');
-const Gateway = require('../../lib/proxy');
+const settings = { fetchSettings };
 
 const CONFIRMATION_TEXT = 'CLEAN DATA';
 

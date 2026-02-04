@@ -1,22 +1,19 @@
 // platformos.data.import - start a data import from JSON or ZIP
 // JSON is converted to CSV/ZIP format internally (JSON import is deprecated)
-import { createRequire } from 'module';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { jsonToZipBuffer } from './json-to-csv.js';
 import { validateRecords, validateJsonStructure } from './validate.js';
-
-const require = createRequire(import.meta.url);
-
 import { DEBUG, debugLog } from '../config.js';
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import { fetchSettings } from '../../lib/settings.js';
+import Gateway from '../../lib/proxy.js';
+import isValidJSON from '../../lib/data/isValidJSON.js';
+import { presignUrl } from '../../lib/presignUrl.js';
+import { uploadFile } from '../../lib/s3UploadFile.js';
 
-const settings = require('../../lib/settings');
-const Gateway = require('../../lib/proxy');
-const isValidJSON = require('../../lib/data/isValidJSON');
-const presignUrl = require('../../lib/presignUrl').presignUrl;
-const uploadFile = require('../../lib/s3UploadFile').uploadFile;
+const settings = { fetchSettings };
 
 function resolveAuth(env, settingsModule = settings) {
   const found = settingsModule.fetchSettings(env);

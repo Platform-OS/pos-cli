@@ -1,19 +1,21 @@
 // sync.singleFile tool extracted from tools.js for maintainability
 import fs from 'fs';
 import path from 'path';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
 
-// Reuse pos-cli internals (CJS)
-const files = require('../../lib/files');
-const settings = require('../../lib/settings');
-const shouldBeSynced = require('../../lib/shouldBeSynced');
-const Gateway = require('../../lib/proxy');
-const presignDirectory = require('../../lib/presignUrl').presignDirectory;
-const uploadFileFormData = require('../../lib/s3UploadFile').uploadFileFormData;
-const manifestGenerateForAssets = require('../../lib/assets/manifest').manifestGenerateForAssets;
-const templates = require('../../lib/templates');
-const dir = require('../../lib/directories');
+// Reuse pos-cli internals (ESM)
+import files from '../../lib/files.js';
+import { fetchSettings } from '../../lib/settings.js';
+import shouldBeSynced from '../../lib/shouldBeSynced.js';
+import Gateway from '../../lib/proxy.js';
+import { presignDirectory } from '../../lib/presignUrl.js';
+import { uploadFileFormData } from '../../lib/s3UploadFile.js';
+import { manifestGenerateForAssets } from '../../lib/assets/manifest.js';
+import { fillInTemplateValues } from '../../lib/templates.js';
+import dir from '../../lib/directories.js';
+
+// Alias for backwards compatibility
+const settings = { fetchSettings };
+const templates = { fillInTemplateValues };
 
 // Helpers (kept local to this module)
 function maskToken(token) {

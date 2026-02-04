@@ -1,18 +1,18 @@
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
 // Mock the pos-cli libs before importing tools
-jest.unstable_mockModule('../../lib/files', () => ({
+vi.mock('../../lib/files', () => ({
   default: { getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } }) },
   getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } })
 }));
 
-jest.unstable_mockModule('../../lib/settings', () => ({
+vi.mock('../../lib/settings', () => ({
   default: { fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' }) },
   fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' })
 }));
 
-jest.unstable_mockModule('request-promise', () => ({
-  default: jest.fn()
+vi.mock('request-promise', () => ({
+  default: vi.fn()
 }));
 
 describe('unit-tests-run tool', () => {
@@ -266,7 +266,7 @@ Assertions: 5. Failed: 5. Time: 123ms`;
     });
 
     test('returns parsed test results on success', async () => {
-      const mockRequest = jest.fn().mockResolvedValue({
+      const mockRequest = vi.fn().mockResolvedValue({
         statusCode: 200,
         body: `{"path":"tests/example"}
 ------------------------
@@ -289,7 +289,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
     });
 
     test('includes path filter in URL when provided', async () => {
-      const mockRequest = jest.fn().mockResolvedValue({
+      const mockRequest = vi.fn().mockResolvedValue({
         statusCode: 200,
         body: 'Assertions: 0. Failed: 0. Time: 10ms'
       });
@@ -305,7 +305,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
     });
 
     test('includes name filter in URL when provided', async () => {
-      const mockRequest = jest.fn().mockResolvedValue({
+      const mockRequest = vi.fn().mockResolvedValue({
         statusCode: 200,
         body: 'Assertions: 0. Failed: 0. Time: 10ms'
       });
@@ -321,7 +321,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
     });
 
     test('includes both path and name filters in URL when provided', async () => {
-      const mockRequest = jest.fn().mockResolvedValue({
+      const mockRequest = vi.fn().mockResolvedValue({
         statusCode: 200,
         body: 'Assertions: 0. Failed: 0. Time: 10ms'
       });
@@ -337,7 +337,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
     });
 
     test('returns error on HTTP failure', async () => {
-      const mockRequest = jest.fn().mockResolvedValue({
+      const mockRequest = vi.fn().mockResolvedValue({
         statusCode: 500,
         body: 'Internal Server Error'
       });
@@ -353,7 +353,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
     });
 
     test('returns error on network failure', async () => {
-      const mockRequest = jest.fn().mockRejectedValue(new Error('Network error'));
+      const mockRequest = vi.fn().mockRejectedValue(new Error('Network error'));
 
       const result = await testsRunTool.handler(
         { env: 'staging' },
@@ -366,7 +366,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
     });
 
     test('correctly identifies failed tests', async () => {
-      const mockRequest = jest.fn().mockResolvedValue({
+      const mockRequest = vi.fn().mockResolvedValue({
         statusCode: 200,
         body: `{"path":"tests/failing"}{"class_name":"AssertionError","message":"Expected true"}
 ------------------------

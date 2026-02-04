@@ -1,12 +1,10 @@
 // platformos.data.export.status - check the status of a data export job
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
 import { DEBUG, debugLog } from '../config.js';
+import files from '../../lib/files.js';
+import { fetchSettings } from '../../lib/settings.js';
+import Gateway from '../../lib/proxy.js';
 
-const files = require('../../lib/files');
-const settings = require('../../lib/settings');
-const Gateway = require('../../lib/proxy');
+const settings = { fetchSettings };
 
 function maskToken(token) {
   if (!token) return token;

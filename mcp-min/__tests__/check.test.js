@@ -1,7 +1,7 @@
-/* eslint-env jest */
+
 import { pathToFileURL } from 'url';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
 const checkModPath = pathToFileURL(path.resolve(process.cwd(), 'mcp-min', 'check', 'index.js')).href;
 

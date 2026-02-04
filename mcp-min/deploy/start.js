@@ -1,16 +1,18 @@
 // platformos.deploy.start - create archive and deploy to platformOS instance
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
+import fs from 'fs';
 import { DEBUG, debugLog } from '../config.js';
-const fs = require('fs');
+import files from '../../lib/files.js';
+import { fetchSettings } from '../../lib/settings.js';
+import Gateway from '../../lib/proxy.js';
+import { makeArchive } from '../../lib/archive.js';
+import { deployAssets } from '../../lib/assets.js';
 
-const files = require('../../lib/files');
-const settings = require('../../lib/settings');
-const Gateway = require('../../lib/proxy');
-const archive = require('../../lib/archive');
-const assets = require('../../lib/assets');
-const dir = require('../../lib/directories');
+// Aliases for backwards compatibility
+const archive = { makeArchive };
+const assets = { deployAssets };
+import dir from '../../lib/directories.js';
+
+const settings = { fetchSettings };
 
 function maskToken(token) {
   if (!token) return token;

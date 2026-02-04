@@ -1,14 +1,14 @@
 // platformos.uploads.push tool - upload property uploads ZIP to S3
-import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 
-const require = createRequire(import.meta.url);
-const files = require('../../lib/files');
-const settings = require('../../lib/settings');
-const Gateway = require('../../lib/proxy');
-const { presignUrl } = require('../../lib/presignUrl');
-const { uploadFile } = require('../../lib/s3UploadFile');
+import files from '../../lib/files.js';
+import { fetchSettings } from '../../lib/settings.js';
+import Gateway from '../../lib/proxy.js';
+import { presignUrl } from '../../lib/presignUrl.js';
+import { uploadFile } from '../../lib/s3UploadFile.js';
+
+const settings = { fetchSettings };
 
 function resolveAuth(env, settingsModule = settings) {
   const found = settingsModule.fetchSettings(env);

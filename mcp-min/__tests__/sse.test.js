@@ -1,4 +1,4 @@
-/* eslint-env jest */
+
 import http from 'http';
 import startHttp from '../http-server.js';
 import fixtures from '../../test/utils/fixtures';

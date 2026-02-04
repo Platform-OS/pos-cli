@@ -1,7 +1,7 @@
-/* eslint-env jest */
+
 import { pathToFileURL } from 'url';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
 // NOTE: keep imports single; file previously duplicated import lines causing parse error
 
@@ -15,10 +15,10 @@ const dummyInstance = {
 class DummyGen {}
 
 const env = {
-  register: jest.fn(),
-  get: jest.fn(() => DummyGen),
-  instantiate: jest.fn(() => dummyInstance),
-  run: jest.fn(async () => {})
+  register: vi.fn(),
+  get: vi.fn(() => DummyGen),
+  instantiate: vi.fn(() => dummyInstance),
+  run: vi.fn(async () => {})
 };
 
 const listUrl = pathToFileURL(path.resolve(process.cwd(), 'mcp-min', 'generators', 'list.js')).href;

@@ -1,12 +1,12 @@
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
 // Mock the pos-cli libs before importing tools
-jest.unstable_mockModule('../../lib/files', () => ({
+vi.mock('../../lib/files', () => ({
   default: { getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } }) },
   getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } })
 }));
 
-jest.unstable_mockModule('../../lib/settings', () => ({
+vi.mock('../../lib/settings', () => ({
   default: { fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' }) },
   fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' })
 }));
@@ -49,8 +49,8 @@ describe('data-clean tools', () => {
     });
 
     test('successfully starts clean with correct confirmation', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataClean: jest.fn().mockResolvedValue({ id: 'clean-job-123', status: 'pending' })
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataClean: vi.fn().mockResolvedValue({ id: 'clean-job-123', status: 'pending' })
       }));
 
       const result = await dataCleanTool.handler(
@@ -66,8 +66,8 @@ describe('data-clean tools', () => {
     });
 
     test('includes schema warning when includeSchema is true', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataClean: jest.fn().mockResolvedValue({ id: 'clean-job-456', status: 'pending' })
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataClean: vi.fn().mockResolvedValue({ id: 'clean-job-456', status: 'pending' })
       }));
 
       const result = await dataCleanTool.handler(
@@ -84,8 +84,8 @@ describe('data-clean tools', () => {
       const error = new Error('Not supported');
       error.statusCode = 422;
 
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataClean: jest.fn().mockRejectedValue(error)
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataClean: vi.fn().mockRejectedValue(error)
       }));
 
       const result = await dataCleanTool.handler(
@@ -99,8 +99,8 @@ describe('data-clean tools', () => {
     });
 
     test('handles generic errors', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataClean: jest.fn().mockRejectedValue(new Error('Network error'))
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataClean: vi.fn().mockRejectedValue(new Error('Network error'))
       }));
 
       const result = await dataCleanTool.handler(
@@ -130,8 +130,8 @@ describe('data-clean tools', () => {
     });
 
     test('successfully returns status for completed job', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataCleanStatus: jest.fn().mockResolvedValue({ id: 'job-123', status: { name: 'done' } })
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataCleanStatus: vi.fn().mockResolvedValue({ id: 'job-123', status: { name: 'done' } })
       }));
 
       const result = await dataCleanStatusTool.handler(
@@ -148,8 +148,8 @@ describe('data-clean tools', () => {
     });
 
     test('correctly identifies pending status', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataCleanStatus: jest.fn().mockResolvedValue({ id: 'job-456', status: 'pending' })
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataCleanStatus: vi.fn().mockResolvedValue({ id: 'job-456', status: 'pending' })
       }));
 
       const result = await dataCleanStatusTool.handler(
@@ -164,8 +164,8 @@ describe('data-clean tools', () => {
     });
 
     test('correctly identifies failed status', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataCleanStatus: jest.fn().mockResolvedValue({ id: 'job-789', status: 'failed' })
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataCleanStatus: vi.fn().mockResolvedValue({ id: 'job-789', status: 'failed' })
       }));
 
       const result = await dataCleanStatusTool.handler(
@@ -180,8 +180,8 @@ describe('data-clean tools', () => {
     });
 
     test('handles errors', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataCleanStatus: jest.fn().mockRejectedValue(new Error('Not found'))
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataCleanStatus: vi.fn().mockRejectedValue(new Error('Not found'))
       }));
 
       const result = await dataCleanStatusTool.handler(

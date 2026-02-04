@@ -1,12 +1,17 @@
 // platformos.tests.run - execute tests via /_tests/run?formatter=text
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
 import { DEBUG, debugLog } from '../config.js';
+import files from '../../lib/files.js';
+import { fetchSettings } from '../../lib/settings.js';
 
-const files = require('../../lib/files');
-const settings = require('../../lib/settings');
-const requestPromise = require('request-promise');
+const settings = { fetchSettings };
+
+// Helper to make HTTP requests (replaces request-promise)
+async function makeRequest(options) {
+  const { uri, method = 'GET', headers = {} } = options;
+  const response = await fetch(uri, { method, headers });
+  const body = await response.text();
+  return { statusCode: response.status, body };
+}
 
 function maskToken(token) {
   if (!token) return token;
@@ -300,17 +305,15 @@ const testsRunTool = {
 
       DEBUG && debugLog('Requesting tests', { url: testUrl });
 
-      // Make the request - use the request-promise library directly
-      const requestFn = ctx.request || requestPromise;
+      // Make the request
+      const requestFn = ctx.request || makeRequest;
       const response = await requestFn({
         method: 'GET',
         uri: testUrl,
         headers: {
           'Authorization': `Token ${auth.token}`,
           'UserTemporaryToken': auth.token
-        },
-        simple: false,
-        resolveWithFullResponse: true
+        }
       });
 
       const statusCode = response.statusCode;

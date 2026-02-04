@@ -1,13 +1,12 @@
 // platformos.migrations.generate - create a new migration via Gateway and optionally write the file locally
 import fs from 'fs';
 import path from 'path';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+import files from '../../lib/files.js';
+import { fetchSettings } from '../../lib/settings.js';
+import Gateway from '../../lib/proxy.js';
+import dir from '../../lib/directories.js';
 
-const files = require('../../lib/files');
-const settings = require('../../lib/settings');
-const Gateway = require('../../lib/proxy');
-const dir = require('../../lib/directories');
+const settings = { fetchSettings };
 
 function resolveAuth(params) {
   if (params?.url && params?.email && params?.token) {

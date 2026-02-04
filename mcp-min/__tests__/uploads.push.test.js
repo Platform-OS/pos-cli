@@ -1,6 +1,6 @@
-/* eslint-env jest */
+
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 
@@ -42,11 +42,11 @@ describe('uploads-push', () => {
       }
     }
 
-    const mockPresignUrl = jest.fn().mockResolvedValue({
+    const mockPresignUrl = vi.fn().mockResolvedValue({
       uploadUrl: 'https://s3.example.com/upload',
       accessUrl: 'https://cdn.example.com/uploads.zip'
     });
-    const mockUploadFile = jest.fn().mockResolvedValue('https://s3.example.com/upload');
+    const mockUploadFile = vi.fn().mockResolvedValue('https://s3.example.com/upload');
 
     const res = await uploadsTool.handler(
       { env: 'staging', filePath: tempFile },
@@ -106,8 +106,8 @@ describe('uploads-push', () => {
       }
     }
 
-    const mockPresignUrl = jest.fn().mockRejectedValue(new Error('S3 service unavailable'));
-    const mockUploadFile = jest.fn();
+    const mockPresignUrl = vi.fn().mockRejectedValue(new Error('S3 service unavailable'));
+    const mockUploadFile = vi.fn();
 
     const res = await uploadsTool.handler(
       { env: 'staging', filePath: tempFile },
@@ -127,11 +127,11 @@ describe('uploads-push', () => {
       }
     }
 
-    const mockPresignUrl = jest.fn().mockResolvedValue({
+    const mockPresignUrl = vi.fn().mockResolvedValue({
       uploadUrl: 'https://s3.example.com/upload',
       accessUrl: 'https://cdn.example.com/uploads.zip'
     });
-    const mockUploadFile = jest.fn().mockRejectedValue(new Error('Upload timeout'));
+    const mockUploadFile = vi.fn().mockRejectedValue(new Error('Upload timeout'));
 
     const res = await uploadsTool.handler(
       { env: 'staging', filePath: tempFile },
@@ -151,12 +151,12 @@ describe('uploads-push', () => {
     }
 
     let capturedToken, capturedUrl;
-    const mockPresignUrl = jest.fn().mockImplementation(() => {
+    const mockPresignUrl = vi.fn().mockImplementation(() => {
       capturedToken = process.env.MARKETPLACE_TOKEN;
       capturedUrl = process.env.MARKETPLACE_URL;
       return Promise.resolve({ uploadUrl: 'https://s3.example.com/upload', accessUrl: 'https://cdn.example.com/file.zip' });
     });
-    const mockUploadFile = jest.fn().mockResolvedValue('ok');
+    const mockUploadFile = vi.fn().mockResolvedValue('ok');
 
     await uploadsTool.handler(
       { env: 'staging', filePath: tempFile },
@@ -174,11 +174,11 @@ describe('uploads-push', () => {
       }
     }
 
-    const mockPresignUrl = jest.fn().mockResolvedValue({
+    const mockPresignUrl = vi.fn().mockResolvedValue({
       uploadUrl: 'https://s3.example.com/upload',
       accessUrl: 'https://cdn.example.com/uploads.zip'
     });
-    const mockUploadFile = jest.fn().mockResolvedValue('ok');
+    const mockUploadFile = vi.fn().mockResolvedValue('ok');
 
     const res = await uploadsTool.handler(
       { env: 'production', filePath: tempFile },

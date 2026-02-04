@@ -1,5 +1,5 @@
-/* eslint-env jest */
-import { jest } from '@jest/globals';
+
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
 import constantsListTool from '../constants/list.js';
 import constantsSetTool from '../constants/set.js';

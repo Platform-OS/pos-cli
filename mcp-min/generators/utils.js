@@ -1,11 +1,11 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const path = require('path');
-const table = require('text-table');
-const spawn = require('execa');
+import path from 'path';
+import table from 'text-table';
+import { execaSync } from 'execa';
+import fastGlob from 'fast-glob';
+import yeoman from 'yeoman-environment';
 
 function listGeneratorPathsSync(globSync) {
-  const glob = globSync || require('fast-glob').sync;
+  const glob = globSync || fastGlob.sync;
   const files = glob('**/generators/*/index.js', { dot: false, ignore: ['**/node_modules/**', '**/.git/**'] });
   const entries = files.map((f) => {
     const generatorPath = f.replace(/\/index\.js$/, '');
@@ -17,7 +17,6 @@ function listGeneratorPathsSync(globSync) {
 
 function ensureEnv(yeomanEnv) {
   if (yeomanEnv) return yeomanEnv;
-  const yeoman = require('yeoman-environment');
   return yeoman.createEnv();
 }
 
@@ -45,7 +44,7 @@ function registerGenerator(generatorPath, yeomanEnv) {
 
       for (const dir of candidates) {
         try {
-          spawn.sync('npm', ['install'], { stdio: 'inherit', cwd: dir });
+          execaSync('npm', ['install'], { stdio: 'inherit', cwd: dir });
         } catch (_) {}
       }
       // Retry loading the generator

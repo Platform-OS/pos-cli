@@ -1,12 +1,9 @@
 // Define tools for the minimal MCP server
 import { DEBUG, debugLog } from './config.js';
-import { createRequire } from 'module';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-
-const require = createRequire(import.meta.url);
-const files = require('../lib/files');
+import files from '../lib/files.js';
 
 // Load tool configuration (descriptions and enabled/disabled state)
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -1,10 +1,9 @@
 // platformos.deploy.status - check deployment status via Gateway.getStatus
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+import files from '../../lib/files.js';
+import { fetchSettings } from '../../lib/settings.js';
+import Gateway from '../../lib/proxy.js';
 
-const files = require('../../lib/files');
-const settings = require('../../lib/settings');
-const Gateway = require('../../lib/proxy');
+const settings = { fetchSettings };
 
 function resolveAuth(params) {
   if (params?.url && params?.email && params?.token) {

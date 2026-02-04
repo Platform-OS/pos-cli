@@ -1,12 +1,12 @@
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
 // Mock the pos-cli libs before importing tools
-jest.unstable_mockModule('../../lib/files', () => ({
+vi.mock('../../lib/files', () => ({
   default: { getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } }) },
   getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } })
 }));
 
-jest.unstable_mockModule('../../lib/settings', () => ({
+vi.mock('../../lib/settings', () => ({
   default: { fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' }) },
   fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' })
 }));
@@ -31,8 +31,8 @@ describe('data-export tools', () => {
     });
 
     test('successfully starts JSON export', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataExportStart: jest.fn().mockResolvedValue({ id: 'export-job-123', status: 'pending' })
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataExportStart: vi.fn().mockResolvedValue({ id: 'export-job-123', status: 'pending' })
       }));
 
       const result = await dataExportTool.handler(
@@ -47,8 +47,8 @@ describe('data-export tools', () => {
     });
 
     test('successfully starts ZIP export', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataExportStart: jest.fn().mockResolvedValue({ id: 'export-zip-456', status: 'pending' })
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataExportStart: vi.fn().mockResolvedValue({ id: 'export-zip-456', status: 'pending' })
       }));
 
       const result = await dataExportTool.handler(
@@ -65,8 +65,8 @@ describe('data-export tools', () => {
       const error = new Error('Not found');
       error.statusCode = 404;
 
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataExportStart: jest.fn().mockRejectedValue(error)
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataExportStart: vi.fn().mockRejectedValue(error)
       }));
 
       const result = await dataExportTool.handler(
@@ -79,8 +79,8 @@ describe('data-export tools', () => {
     });
 
     test('handles generic errors', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataExportStart: jest.fn().mockRejectedValue(new Error('Network error'))
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataExportStart: vi.fn().mockRejectedValue(new Error('Network error'))
       }));
 
       const result = await dataExportTool.handler(
@@ -108,8 +108,8 @@ describe('data-export tools', () => {
     });
 
     test('returns pending status', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataExportStatus: jest.fn().mockResolvedValue({ id: 'job-123', status: 'pending' })
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataExportStatus: vi.fn().mockResolvedValue({ id: 'job-123', status: 'pending' })
       }));
 
       const result = await dataExportStatusTool.handler(
@@ -124,8 +124,8 @@ describe('data-export tools', () => {
     });
 
     test('returns completed JSON export with data', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataExportStatus: jest.fn().mockResolvedValue({
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataExportStatus: vi.fn().mockResolvedValue({
           id: 'job-456',
           status: 'done',
           data: {
@@ -149,8 +149,8 @@ describe('data-export tools', () => {
     });
 
     test('returns completed ZIP export with download URL', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataExportStatus: jest.fn().mockResolvedValue({
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataExportStatus: vi.fn().mockResolvedValue({
           id: 'job-789',
           status: 'done',
           zip_file_url: 'https://s3.example.com/export.zip'
@@ -168,8 +168,8 @@ describe('data-export tools', () => {
     });
 
     test('handles failed status', async () => {
-      const MockGateway = jest.fn().mockImplementation(() => ({
-        dataExportStatus: jest.fn().mockResolvedValue({ id: 'job-fail', status: 'failed' })
+      const MockGateway = vi.fn().mockImplementation(() => ({
+        dataExportStatus: vi.fn().mockResolvedValue({ id: 'job-fail', status: 'failed' })
       }));
 
       const result = await dataExportStatusTool.handler(
