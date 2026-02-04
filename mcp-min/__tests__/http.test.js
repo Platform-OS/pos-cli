@@ -47,7 +47,7 @@ test('GET /tools lists tools', async () => {
   expect(res.status).toBe(200);
   const parsed = JSON.parse(res.body);
   expect(Array.isArray(parsed.tools)).toBe(true);
-  expect(parsed.tools.find(t => t.id === 'echo')).toBeDefined();
+  expect(parsed.tools.find(t => t.id === 'envs-list')).toBeDefined();
 });
 
 test('POST /call returns 400 when tool missing', async () => {
@@ -62,12 +62,12 @@ test('POST /call returns 404 for unknown tool', async () => {
   expect(res.status).toBe(404);
 });
 
-test('POST /call echo returns echoed params', async () => {
-  const res = await httpRequest({ method: 'POST', path: '/call', body: { tool: 'echo', params: { msg: 'hello' } } });
+test('POST /call envs-list returns environments', async () => {
+  const res = await httpRequest({ method: 'POST', path: '/call', body: { tool: 'envs-list', params: {} } });
   expect(res.status).toBe(200);
   const parsed = JSON.parse(res.body);
   expect(parsed.result).toBeDefined();
-  expect(parsed.result.echoed.msg).toBe('hello');
+  expect(Array.isArray(parsed.result.environments)).toBe(true);
 });
 
 // JSON-RPC initialize path
@@ -88,9 +88,9 @@ test('POST /call-stream tools/list returns tools array', async () => {
   expect(Array.isArray(parsed.result.tools)).toBe(true);
 });
 
-// JSON-RPC tools/call -> list-envs
-test('POST /call-stream tools/call list-envs returns environments', async () => {
-  const res = await httpRequest({ method: 'POST', path: '/call-stream', body: { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'list-envs' } } });
+// JSON-RPC tools/call -> envs-list
+test('POST /call-stream tools/call envs-list returns environments', async () => {
+  const res = await httpRequest({ method: 'POST', path: '/call-stream', body: { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'envs-list' } } });
   expect(res.status).toBe(200);
   const parsed = JSON.parse(res.body);
   expect(parsed.result).toBeDefined();

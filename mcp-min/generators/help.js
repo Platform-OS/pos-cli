@@ -1,3 +1,4 @@
+import path from 'path';
 import { showHelp } from './utils.js';
 
 const helpTool = {

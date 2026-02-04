@@ -45,8 +45,8 @@ describe('mcp-min list-envs tool (CJS)', () => {
     }
   });
 
-  test('HTTP /call list-envs returns environments array', async () => {
-    const res = await httpRequest({ method: 'POST', path: '/call', body: { tool: 'list-envs', params: {} } });
+  test('HTTP /call envs-list returns environments array', async () => {
+    const res = await httpRequest({ method: 'POST', path: '/call', body: { tool: 'envs-list', params: {} } });
     expect(res.status).toBe(200);
     const parsed = JSON.parse(res.body);
     expect(Array.isArray(parsed.result.environments)).toBe(true);
@@ -55,7 +55,7 @@ describe('mcp-min list-envs tool (CJS)', () => {
   });
 
   test('JSON-RPC tools/call returns text content with environments', async () => {
-    const res = await httpRequest({ method: 'POST', path: '/call-stream', body: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'list-envs', arguments: {} } } });
+    const res = await httpRequest({ method: 'POST', path: '/call-stream', body: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'envs-list', arguments: {} } } });
     expect(res.status).toBe(200);
     const parsed = JSON.parse(res.body);
     expect(parsed.result).toBeDefined();

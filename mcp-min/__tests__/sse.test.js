@@ -20,21 +20,25 @@ function sseRequest(path = '/') {
   return new Promise((resolve, reject) => {
     const opts = { hostname: '127.0.0.1', port: PORT, path, method: 'GET', headers: { Accept: 'text/event-stream' } };
     let captured = '';
+    let statusCode = 200;
     const req = http.request(opts, (res) => {
+      statusCode = res.statusCode;
       res.on('data', (chunk) => {
         captured += chunk.toString();
         if (captured.includes('event: endpoint')) {
           // Close as soon as we see the initial event
+          resolve({ status: statusCode, body: captured });
           req.destroy();
         }
       });
-      res.on('end', () => resolve({ status: res.statusCode, body: captured }));
+      res.on('end', () => resolve({ status: statusCode, body: captured }));
     });
     req.on('error', (err) => {
       // Treat expected abort-related errors as a successful early return with captured data
       const msg = String(err).toLowerCase();
-      if (msg.includes('econnreset') || msg.includes('socket hang up')) {
-        return resolve({ status: 200, body: captured });
+      if (msg.includes('econnreset') || msg.includes('socket hang up') || msg.includes('aborted')) {
+        // Already resolved above if endpoint was seen
+        return;
       }
       reject(err);
     });
@@ -63,8 +67,8 @@ function postCallStream(body) {
   });
 }
 
-test('POST /call-stream legacy returns SSE initial events and error for no streamHandler', async () => {
-  const res = await postCallStream({ tool: 'echo', params: { msg: 'hi' } });
+test('POST /call-stream legacy returns SSE initial events', async () => {
+  const res = await postCallStream({ tool: 'envs-list', params: {} });
   // server responds with text/event-stream framing but via express it will return 200 and then close; we check body
   expect(res.status).toBe(200);
   expect(res.body.includes('event: endpoint')).toBe(true);
