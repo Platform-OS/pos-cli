@@ -49,12 +49,12 @@ describe('data-clean tools', () => {
     });
 
     test('successfully starts clean with correct confirmation', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataClean: vi.fn().mockResolvedValue({ id: 'clean-job-123', status: 'pending' })
-      }));
+      class MockGateway {
+        dataClean = vi.fn().mockResolvedValue({ id: 'clean-job-123', status: 'pending' });
+      }
 
       const result = await dataCleanTool.handler(
-        { env: 'staging', confirmation: 'CLEAN DATA' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', confirmation: 'CLEAN DATA' },
         { Gateway: MockGateway }
       );
 
@@ -66,12 +66,12 @@ describe('data-clean tools', () => {
     });
 
     test('includes schema warning when includeSchema is true', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataClean: vi.fn().mockResolvedValue({ id: 'clean-job-456', status: 'pending' })
-      }));
+      class MockGateway {
+        dataClean = vi.fn().mockResolvedValue({ id: 'clean-job-456', status: 'pending' });
+      }
 
       const result = await dataCleanTool.handler(
-        { env: 'staging', confirmation: 'CLEAN DATA', includeSchema: true },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', confirmation: 'CLEAN DATA', includeSchema: true },
         { Gateway: MockGateway }
       );
 
@@ -84,12 +84,12 @@ describe('data-clean tools', () => {
       const error = new Error('Not supported');
       error.statusCode = 422;
 
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataClean: vi.fn().mockRejectedValue(error)
-      }));
+      class MockGateway {
+        dataClean = vi.fn().mockRejectedValue(error);
+      }
 
       const result = await dataCleanTool.handler(
-        { env: 'staging', confirmation: 'CLEAN DATA' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', confirmation: 'CLEAN DATA' },
         { Gateway: MockGateway }
       );
 
@@ -99,12 +99,12 @@ describe('data-clean tools', () => {
     });
 
     test('handles generic errors', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataClean: vi.fn().mockRejectedValue(new Error('Network error'))
-      }));
+      class MockGateway {
+        dataClean = vi.fn().mockRejectedValue(new Error('Network error'));
+      }
 
       const result = await dataCleanTool.handler(
-        { env: 'staging', confirmation: 'CLEAN DATA' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', confirmation: 'CLEAN DATA' },
         { Gateway: MockGateway }
       );
 
@@ -122,7 +122,7 @@ describe('data-clean tools', () => {
     });
 
     test('returns validation error when jobId not provided', async () => {
-      const result = await dataCleanStatusTool.handler({ env: 'staging' });
+      const result = await dataCleanStatusTool.handler({ url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token' });
 
       expect(result.ok).toBe(false);
       expect(result.error.code).toBe('VALIDATION_ERROR');
@@ -130,12 +130,12 @@ describe('data-clean tools', () => {
     });
 
     test('successfully returns status for completed job', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataCleanStatus: vi.fn().mockResolvedValue({ id: 'job-123', status: { name: 'done' } })
-      }));
+      class MockGateway {
+        dataCleanStatus = vi.fn().mockResolvedValue({ id: 'job-123', status: { name: 'done' } });
+      }
 
       const result = await dataCleanStatusTool.handler(
-        { env: 'staging', jobId: 'job-123' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-123' },
         { Gateway: MockGateway }
       );
 
@@ -148,12 +148,12 @@ describe('data-clean tools', () => {
     });
 
     test('correctly identifies pending status', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataCleanStatus: vi.fn().mockResolvedValue({ id: 'job-456', status: 'pending' })
-      }));
+      class MockGateway {
+        dataCleanStatus = vi.fn().mockResolvedValue({ id: 'job-456', status: 'pending' });
+      }
 
       const result = await dataCleanStatusTool.handler(
-        { env: 'staging', jobId: 'job-456' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-456' },
         { Gateway: MockGateway }
       );
 
@@ -164,12 +164,12 @@ describe('data-clean tools', () => {
     });
 
     test('correctly identifies failed status', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataCleanStatus: vi.fn().mockResolvedValue({ id: 'job-789', status: 'failed' })
-      }));
+      class MockGateway {
+        dataCleanStatus = vi.fn().mockResolvedValue({ id: 'job-789', status: 'failed' });
+      }
 
       const result = await dataCleanStatusTool.handler(
-        { env: 'staging', jobId: 'job-789' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-789' },
         { Gateway: MockGateway }
       );
 
@@ -180,12 +180,12 @@ describe('data-clean tools', () => {
     });
 
     test('handles errors', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataCleanStatus: vi.fn().mockRejectedValue(new Error('Not found'))
-      }));
+      class MockGateway {
+        dataCleanStatus = vi.fn().mockRejectedValue(new Error('Not found'));
+      }
 
       const result = await dataCleanStatusTool.handler(
-        { env: 'staging', jobId: 'invalid-job' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'invalid-job' },
         { Gateway: MockGateway }
       );
 

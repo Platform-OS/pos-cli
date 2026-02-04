@@ -6,6 +6,7 @@ const fs = require('fs');
 let server;
 
 const PORT = 5921;
+const CONFIG_FILE = path.resolve(`.pos.test-${PORT}`);
 
 function httpRequest({ method = 'GET', path = '/', body = null, headers = {} }) {
   return new Promise((resolve, reject) => {
@@ -24,12 +25,11 @@ function httpRequest({ method = 'GET', path = '/', body = null, headers = {} }) 
 }
 
 describe('mcp-min list-envs tool (CJS)', () => {
-  const dotPosPath = path.resolve('.pos');
-  const originalDotPos = fs.existsSync(dotPosPath) ? fs.readFileSync(dotPosPath, 'utf8') : null;
-
   beforeAll(async () => {
-    // Write a temp .pos with two envs
-    fs.writeFileSync(dotPosPath, JSON.stringify({ staging: { url: 'https://staging.example.com' }, prod: { url: 'https://prod.example.com' } }, null, 2));
+    // Write a unique config file for this test
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify({ staging: { url: 'https://staging.example.com' }, prod: { url: 'https://prod.example.com' } }, null, 2));
+    // Set env var so files.getConfig() uses our test config
+    process.env.CONFIG_FILE_PATH = CONFIG_FILE;
 
     // Start the server using node to require ESM module via child process wrapper
     const start = (await import('../http-server.js')).default;
@@ -38,11 +38,11 @@ describe('mcp-min list-envs tool (CJS)', () => {
 
   afterAll(() => {
     if (server) server.close();
-    if (originalDotPos != null) {
-      fs.writeFileSync(dotPosPath, originalDotPos);
-    } else if (fs.existsSync(dotPosPath)) {
-      fs.unlinkSync(dotPosPath);
+    // Clean up test config file
+    if (fs.existsSync(CONFIG_FILE)) {
+      fs.unlinkSync(CONFIG_FILE);
     }
+    delete process.env.CONFIG_FILE_PATH;
   });
 
   test('HTTP /call envs-list returns environments array', async () => {

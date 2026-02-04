@@ -31,12 +31,12 @@ describe('data-export tools', () => {
     });
 
     test('successfully starts JSON export', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataExportStart: vi.fn().mockResolvedValue({ id: 'export-job-123', status: 'pending' })
-      }));
+      class MockGateway {
+        dataExportStart = vi.fn().mockResolvedValue({ id: 'export-job-123', status: 'pending' });
+      }
 
       const result = await dataExportTool.handler(
-        { env: 'staging' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token' },
         { Gateway: MockGateway }
       );
 
@@ -47,12 +47,12 @@ describe('data-export tools', () => {
     });
 
     test('successfully starts ZIP export', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataExportStart: vi.fn().mockResolvedValue({ id: 'export-zip-456', status: 'pending' })
-      }));
+      class MockGateway {
+        dataExportStart = vi.fn().mockResolvedValue({ id: 'export-zip-456', status: 'pending' });
+      }
 
       const result = await dataExportTool.handler(
-        { env: 'staging', zip: true },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', zip: true },
         { Gateway: MockGateway }
       );
 
@@ -65,12 +65,12 @@ describe('data-export tools', () => {
       const error = new Error('Not found');
       error.statusCode = 404;
 
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataExportStart: vi.fn().mockRejectedValue(error)
-      }));
+      class MockGateway {
+        dataExportStart = vi.fn().mockRejectedValue(error);
+      }
 
       const result = await dataExportTool.handler(
-        { env: 'staging' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token' },
         { Gateway: MockGateway }
       );
 
@@ -79,12 +79,12 @@ describe('data-export tools', () => {
     });
 
     test('handles generic errors', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataExportStart: vi.fn().mockRejectedValue(new Error('Network error'))
-      }));
+      class MockGateway {
+        dataExportStart = vi.fn().mockRejectedValue(new Error('Network error'));
+      }
 
       const result = await dataExportTool.handler(
-        { env: 'staging' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token' },
         { Gateway: MockGateway }
       );
 
@@ -101,19 +101,19 @@ describe('data-export tools', () => {
     });
 
     test('returns validation error when jobId not provided', async () => {
-      const result = await dataExportStatusTool.handler({ env: 'staging' });
+      const result = await dataExportStatusTool.handler({ url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token' });
 
       expect(result.ok).toBe(false);
       expect(result.error.code).toBe('VALIDATION_ERROR');
     });
 
     test('returns pending status', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataExportStatus: vi.fn().mockResolvedValue({ id: 'job-123', status: 'pending' })
-      }));
+      class MockGateway {
+        dataExportStatus = vi.fn().mockResolvedValue({ id: 'job-123', status: 'pending' });
+      }
 
       const result = await dataExportStatusTool.handler(
-        { env: 'staging', jobId: 'job-123' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-123' },
         { Gateway: MockGateway }
       );
 
@@ -124,8 +124,8 @@ describe('data-export tools', () => {
     });
 
     test('returns completed JSON export with data', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataExportStatus: vi.fn().mockResolvedValue({
+      class MockGateway {
+        dataExportStatus = vi.fn().mockResolvedValue({
           id: 'job-456',
           status: 'done',
           data: {
@@ -133,11 +133,11 @@ describe('data-export tools', () => {
             transactables: { results: [] },
             models: { results: [{ id: 2, name: 'product' }] }
           }
-        })
-      }));
+        });
+      }
 
       const result = await dataExportStatusTool.handler(
-        { env: 'staging', jobId: 'job-456' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-456' },
         { Gateway: MockGateway }
       );
 
@@ -149,16 +149,16 @@ describe('data-export tools', () => {
     });
 
     test('returns completed ZIP export with download URL', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataExportStatus: vi.fn().mockResolvedValue({
+      class MockGateway {
+        dataExportStatus = vi.fn().mockResolvedValue({
           id: 'job-789',
           status: 'done',
           zip_file_url: 'https://s3.example.com/export.zip'
-        })
-      }));
+        });
+      }
 
       const result = await dataExportStatusTool.handler(
-        { env: 'staging', jobId: 'job-789', isZip: true },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-789', isZip: true },
         { Gateway: MockGateway }
       );
 
@@ -168,12 +168,12 @@ describe('data-export tools', () => {
     });
 
     test('handles failed status', async () => {
-      const MockGateway = vi.fn().mockImplementation(() => ({
-        dataExportStatus: vi.fn().mockResolvedValue({ id: 'job-fail', status: 'failed' })
-      }));
+      class MockGateway {
+        dataExportStatus = vi.fn().mockResolvedValue({ id: 'job-fail', status: 'failed' });
+      }
 
       const result = await dataExportStatusTool.handler(
-        { env: 'staging', jobId: 'job-fail' },
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-fail' },
         { Gateway: MockGateway }
       );
 
