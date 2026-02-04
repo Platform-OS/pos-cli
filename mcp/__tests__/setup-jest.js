@@ -1,4 +1,5 @@
-// setup for ESM/experimental-vm-modules environment compatibility
+// This file is referenced by jest.setupFiles and should not contain tests.
+// Keep it empty so Jest doesn't collect it as a test suite.// setup for ESM/experimental-vm-modules environment compatibility
 // Provide global require shim used by some older tests
 if (typeof global.require === 'undefined') {
   try {
@@ -14,3 +15,4 @@ if (typeof global.require === 'undefined') {
 process.env.MPKIT_URL = process.env.MPKIT_URL || 'https://example.com';
 process.env.MPKIT_EMAIL = process.env.MPKIT_EMAIL || 'pos-cli@example.com';
 process.env.MPKIT_TOKEN = process.env.MPKIT_TOKEN || 'test-token';
+

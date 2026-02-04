@@ -1,0 +1,114 @@
+{
+  "$schema": "./tools.config.schema.json",
+  "_comment": "Tool configuration for mcp-min. Edit descriptions and enable/disable tools without touching JS code.",
+  "tools": {
+    "envs-list": {
+      "enabled": true,
+      "description": "List configured environments from .pos (name and url)"
+    },
+    "logs-fetch": {
+      "enabled": true,
+      "description": "Fetch recent logs in batches (NDJSON semantics, returns JSON array here). Mirrors pos-cli fetch-logs."
+    },
+    "liquid-exec": {
+      "enabled": true,
+      "description": "Render a Liquid template on a platformOS instance (pass-through to /api/app_builder/liquid_exec)."
+    },
+    "graphql-exec": {
+      "enabled": true,
+      "description": "Execute GraphQL query/mutation on a platformOS instance via /api/graph."
+    },
+    "generators-list": {
+      "enabled": true,
+      "description": "List available generators discovered under **/generators/*/index.js with required and optional args"
+    },
+    "generators-help": {
+      "enabled": true,
+      "description": "Show detailed help for a specific generator"
+    },
+    "generators-run": {
+      "enabled": true,
+      "description": "Run a yeoman generator by path with arguments and options"
+    },
+    "migrations-list": {
+      "enabled": true,
+      "description": "List migrations deployed to the server with their current status."
+    },
+    "migrations-generate": {
+      "enabled": true,
+      "description": "Generate a migration on server and write local file unless skipWrite=true."
+    },
+    "migrations-run": {
+      "enabled": true,
+      "description": "Run a specific migration identified by timestamp or full name."
+    },
+    "deploy-start": {
+      "enabled": true,
+      "description": "Deploy to platformOS instance. Creates archive from app/ and modules/ directories, uploads it, and deploys assets directly to S3."
+    },
+    "deploy-status": {
+      "enabled": true,
+      "description": "Get current deployment status using Gateway.getStatus(id)."
+    },
+    "deploy-wait": {
+      "enabled": true,
+      "description": "Wait for deployment to finish. Polls Gateway.getStatus(id) every intervalMs (default 1000ms) and errors on status=error."
+    },
+    "data-import": {
+      "enabled": true,
+      "description": "Import data to platformOS instance. Accepts JSON (converted to CSV internally) or ZIP file with CSV files."
+    },
+    "data-import-status": {
+      "enabled": true,
+      "description": "Check the status of a data import job. Poll until status is \"done\" or \"failed\"."
+    },
+    "data-export": {
+      "enabled": true,
+      "description": "Start data export from platformOS instance. Returns job ID for status polling. When complete, status will include data or zip_file_url."
+    },
+    "data-export-status": {
+      "enabled": true,
+      "description": "Check the status of a data export job. When done, returns data (JSON) or zip_file_url (ZIP)."
+    },
+    "data-clean": {
+      "enabled": true,
+      "description": "Start data clean operation to remove data from a platformOS instance. DESTRUCTIVE - requires confirmation. Returns job ID for status polling."
+    },
+    "data-clean-status": {
+      "enabled": true,
+      "description": "Check the status of a data clean job. Poll until status is \"done\" or \"failed\"."
+    },
+    "data-validate": {
+      "enabled": true,
+      "description": "Validate JSON data against platformOS schemas before import. Checks required fields (id, type, properties, created_at, updated_at), verifies types match schema files in app/schema/, and validates property names and types."
+    },
+    "unit-tests-run": {
+      "enabled": true,
+      "description": "Run platformOS tests via /_tests/run endpoint. Returns parsed test results with assertions count, failures, and timing."
+    },
+    "check": {
+      "enabled": true,
+      "description": "Run platformos-check linter to analyze the app for best practice violations. Checks Liquid and JSON files."
+    },
+    "sync-file": {
+      "enabled": true,
+      "description": "Sync a file with a platformOS instance (upload or delete)."
+    },
+    "uploads-push": {
+      "enabled": true,
+      "description": "Upload a ZIP file containing property uploads to platformOS instance. The ZIP should contain files referenced by upload-type properties."
+    },
+    "constants-list": {
+      "enabled": true,
+      "description": "List all constants configured on a platformOS instance."
+    },
+    "constants-set": {
+      "enabled": true,
+      "description": "Set a constant on a platformOS instance. Creates or updates the constant."
+    },
+    "constants-unset": {
+      "enabled": true,
+      "description": "Delete a constant from a platformOS instance."
+    }
+  }
+}

@@ -1,7 +1,7 @@
 models:
   anthropic:
-    provider: xai
-    model: grok-4-1-fast-reasoning
+    provider: openai
+    model: gpt-5
     max_tokens: 8192
 
   openai:
@@ -11,7 +11,7 @@ models:
 
   dmr:
     provider: xai
-    model: grok-4-1-fast-non-reasoning
+    model: grok-code-fast-1
     max_tokens: 8192
 
 agents:

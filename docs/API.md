@@ -90,6 +90,56 @@ curl -X POST http://localhost:3030/call \\
 }
 ```
 
+### `POST /call-stream` (Client - SSE Streaming) ⚡ **NEW** ⚡
+**Execute MCP tool with Server-Sent Events streaming**
+
+```bash
+curl -X POST http://localhost:3030/call-stream \\
+  -H \"Authorization: Bearer client-secret\" \\
+  -H \"Content-Type: application/json\" \\
+  -d '{\"tool\":\"platformos.logs.stream\",\"input\":{\"env\":\"staging\"}}'
+```
+
+**Request Body**
+```json
+{
+  \"tool\": \"platformos.logs.stream\",
+  \"input\": {
+    \"env\": \"staging\",
+    \"interval\": 3000,
+    \"filter\": \"error\"
+  }
+}
+```
+
+**SSE Response Format**
+```
+: heartbeat
+
+event: data
+data: {\"type\":\"text\",\"text\":\"{\\\"id\\\":\\\"123\\\",\\\"timestamp\\\":\\\"2024-01-01T12:00:00Z\\\",\\\"type\\\":\\\"info\\\",\\\"message\\\":\\\"Log message\\\",\\\"env\\\":\\\"staging\\\"}\"}
+
+
+event: done
+data: [DONE]
+
+```
+
+**Supported Streaming Tools**
+- `platformos.logs.stream` - Real-time log streaming with automatic polling
+- `platformos.logs.live` - Live log monitoring with duplicate detection and heartbeats
+
+**Streaming Events**
+- `data` - Log entry or tool result chunk
+- `error` - Error occurred during streaming
+- `done` - Stream completed successfully
+- Heartbeat events (`:` prefix) - Keep connection alive
+
+**Connection Management**
+- Server maintains active connection count
+- Automatic cleanup on connection close/error
+- Graceful shutdown handling for all active streams
+
 ## Error Responses
 
 ```json
@@ -102,11 +152,11 @@ curl -X POST http://localhost:3030/call \\
 
 - **Tools List**: `/tools` returns JSON schema approximations
 - **Tool Calls**: `/call` validates with Zod, returns MCP `content[]` format
-- **Streaming**: Not yet implemented (future)
+- **Streaming**: Now supported via Server-Sent Events on `/call-stream`
 
 ## GraphQL Schema
 
 All tools use Zod schemas internally. Full TypeScript types in `src/types/index.ts`.
 
 ---
-*See [TOOLS.md](TOOLS.md) for complete tool specifications.*","path":"docs/API.md
+*See [TOOLS.md](TOOLS.md) for complete tool specifications.*

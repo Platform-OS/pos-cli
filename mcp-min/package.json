@@ -1,0 +1,17 @@
+{
+  "name": "mcp-min",
+  "version": "0.1.0",
+  "description": "Minimal MCP server (stdio + HTTP with SSE) as a subpackage",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:stdio": "node stdio-server.js",
+    "start:debug": "MCP_MIN_DEBUG=1 node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
+    "morgan": "^1.10.0"
+  }
+}
