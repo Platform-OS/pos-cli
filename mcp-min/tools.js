@@ -59,6 +59,13 @@ import constantsListTool from './constants/list.js';
 import constantsSetTool from './constants/set.js';
 import constantsUnsetTool from './constants/unset.js';
 
+// portal tools
+import instanceCreateTool from './portal/instance-create.js';
+import partnersListTool from './portal/partners-list.js';
+import partnerGetTool from './portal/partner-get.js';
+import endpointsListTool from './portal/endpoints-list.js';
+import envAddTool from './portal/env-add.js';
+
 const tools = {
 
   // list-envs tool based on pos-cli-env list
@@ -124,7 +131,14 @@ const tools = {
   // constants: manage instance constants
   'constants-list': constantsListTool,
   'constants-set': constantsSetTool,
-  'constants-unset': constantsUnsetTool
+  'constants-unset': constantsUnsetTool,
+
+  // portal: Partner Portal instance management
+  'instance-create': instanceCreateTool,
+  'partners-list': partnersListTool,
+  'partner-get': partnerGetTool,
+  'endpoints-list': endpointsListTool,
+  'env-add': envAddTool
 };
 
 // Apply configuration: override descriptions and filter disabled tools

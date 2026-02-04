@@ -109,6 +109,26 @@
     "constants-unset": {
       "enabled": true,
       "description": "Delete a constant from a platformOS instance."
+    },
+    "instance-create": {
+      "enabled": true,
+      "description": "Create a new platformOS instance via Partner Portal API. Returns job acknowledgment."
+    },
+    "partners-list": {
+      "enabled": true,
+      "description": "List partners from Partner Portal. Optionally fetch billing plans for a specific partner."
+    },
+    "partner-get": {
+      "enabled": true,
+      "description": "Get partner details including available billing plans from Partner Portal."
+    },
+    "endpoints-list": {
+      "enabled": true,
+      "description": "List available regions/endpoints for instance creation from Partner Portal."
+    },
+    "env-add": {
+      "enabled": true,
+      "description": "Add environment to .pos config. Streams verification URL for user to open, polls for authorization (up to 60s), then saves token."
     }
   }
 }
