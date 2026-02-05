@@ -10,7 +10,7 @@ function maskToken(token) {
   return token.slice(0, 3) + '...' + token.slice(-3);
 }
 
-function resolveAuth(params) {
+async function resolveAuth(params) {
   // precedence: explicit params -> MPKIT_* env -> .pos by env -> first .pos
   if (params?.url && params?.email && params?.token) {
     return { url: params.url, email: params.email, token: params.token, source: 'params' };
@@ -20,7 +20,7 @@ function resolveAuth(params) {
     return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
   }
   if (params?.env) {
-    const found = settings.fetchSettings(params.env);
+    const found = await settings.fetchSettings(params.env);
     if (found) return { ...found, source: `.pos(${params.env})` };
   }
   const conf = files.getConfig();
@@ -49,7 +49,7 @@ const fetchLogsTool = {
   },
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    const auth = resolveAuth(params);
+    const auth = await resolveAuth(params);
 
     // Allow endpoint override (CLI option --endpoint)
     const baseUrl = params?.endpoint ? params.endpoint : auth.url;

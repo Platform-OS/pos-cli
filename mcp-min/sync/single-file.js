@@ -27,7 +27,7 @@ function toPosix(p) {
   return p.replace(/\\/g, '/');
 }
 
-function resolveAuth(params) {
+async function resolveAuth(params) {
   // precedence: explicit params -> env (MPKIT_*) -> .pos
   if (params?.url && params?.email && params?.token) {
     return { url: params.url, email: params.email, token: params.token, source: 'params' };
@@ -37,7 +37,7 @@ function resolveAuth(params) {
     return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
   }
   if (params?.env) {
-    const found = settings.fetchSettings(params.env);
+    const found = await settings.fetchSettings(params.env);
     if (found) return { ...found, source: `.pos(${params.env})` };
   }
   // fallback: first env from .pos if present
@@ -164,7 +164,7 @@ const singleFileTool = {
     const op = opParam || (exists ? 'upload' : 'delete');
 
     // Resolve auth and prepare Gateway
-    const auth = resolveAuth(params);
+    const auth = await resolveAuth(params);
     // set env vars expected by pos-cli internals (presignDirectory)
     process.env.MARKETPLACE_EMAIL = auth.email;
     process.env.MARKETPLACE_TOKEN = auth.token;

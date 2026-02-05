@@ -19,7 +19,7 @@ function maskToken(token) {
   return token.slice(0, 3) + '...' + token.slice(-3);
 }
 
-function resolveAuth(params) {
+async function resolveAuth(params) {
   if (params?.url && params?.email && params?.token) {
     return { url: params.url, email: params.email, token: params.token, source: 'params' };
   }
@@ -28,7 +28,7 @@ function resolveAuth(params) {
     return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
   }
   if (params?.env) {
-    const found = settings.fetchSettings(params.env);
+    const found = await settings.fetchSettings(params.env);
     if (found) return { ...found, source: `.pos(${params.env})` };
   }
   const conf = files.getConfig();
@@ -58,7 +58,7 @@ const startDeployTool = {
     DEBUG && debugLog('tool:deploy-start invoked', { env: params?.env, partial: params?.partial });
 
     try {
-      const auth = resolveAuth(params);
+      const auth = await resolveAuth(params);
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 

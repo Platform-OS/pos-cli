@@ -10,8 +10,8 @@ import { uploadFile } from '../../lib/s3UploadFile.js';
 
 const settings = { fetchSettings };
 
-function resolveAuth(env, settingsModule = settings) {
-  const found = settingsModule.fetchSettings(env);
+async function resolveAuth(env, settingsModule = settings) {
+  const found = await settingsModule.fetchSettings(env);
   if (found) return { ...found, source: `.pos(${env})` };
   throw new Error(`Environment "${env}" not found in .pos config`);
 }
@@ -31,7 +31,7 @@ const uploadsPushTool = {
     const startedAt = new Date().toISOString();
 
     try {
-      const auth = resolveAuth(params.env, ctx.settings || settings);
+      const auth = await resolveAuth(params.env, ctx.settings || settings);
 
       // Set env vars required by presignUrl
       process.env.MARKETPLACE_TOKEN = auth.token;

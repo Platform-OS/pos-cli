@@ -1,4 +1,5 @@
 
+const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -50,5 +51,41 @@ describe('sync.singleFile handler dry-run', () => {
       process.chdir(cwdOrig);
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('sync.singleFile with env parameter', () => {
+  let tmpDir;
+  let originalCwd;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-env-test-'));
+    originalCwd = process.cwd();
+    process.chdir(tmpDir);
+
+    fs.mkdirSync(path.join(tmpDir, 'app', 'assets'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.pos'), JSON.stringify({
+      staging: { url: 'https://test.staging.com', token: 'test-token', email: 'test@test.com' }
+    }));
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('resolves auth from .pos when env parameter is provided', async () => {
+    const appDir = path.join(tmpDir, 'app');
+    fs.writeFileSync(path.join(appDir, 'assets', 'test.css'), 'body { color: red; }');
+
+    const res = await singleFileTool.handler({
+      filePath: path.join(appDir, 'assets', 'test.css'),
+      env: 'staging',
+      dryRun: true
+    }, { transport: 'test' });
+
+    expect(res.success).toBe(true);
+    expect(res.auth.source).toBe('.pos(staging)');
+    expect(res.auth.url).toBe('https://test.staging.com');
   });
 });

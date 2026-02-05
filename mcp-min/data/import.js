@@ -15,8 +15,8 @@ import { uploadFile } from '../../lib/s3UploadFile.js';
 
 const settings = { fetchSettings };
 
-function resolveAuth(env, settingsModule = settings) {
-  const found = settingsModule.fetchSettings(env);
+async function resolveAuth(env, settingsModule = settings) {
+  const found = await settingsModule.fetchSettings(env);
   if (found) return { ...found, source: `.pos(${env})` };
   throw new Error(`Environment "${env}" not found in .pos config`);
 }
@@ -62,7 +62,7 @@ const dataImportTool = {
     DEBUG && debugLog('tool:data-import invoked', { env: params.env });
 
     try {
-      const auth = resolveAuth(params.env, ctx.settings || settings);
+      const auth = await resolveAuth(params.env, ctx.settings || settings);
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 

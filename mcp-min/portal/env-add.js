@@ -3,12 +3,64 @@ import { DEBUG, debugLog } from '../config.js';
 import { getPortalConfig, portalRequest } from './portal-client.js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { mkdirSync, appendFileSync } from 'fs';
+import { homedir } from 'os';
 
 // Default Partner Portal URL
 const DEFAULT_PORTAL_URL = 'https://partners.platformos.com';
 
 // Track active background waiters
 const activeWaiters = new Map();
+
+// Logging setup - write to both console and log file
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const LOG_DIR = path.join(homedir(), '.pos-cli', 'logs');
+const LOG_FILE = path.join(LOG_DIR, 'env-add.log');
+
+let logInitialized = false;
+
+function initLog() {
+  if (logInitialized) return;
+  try {
+    mkdirSync(LOG_DIR, { recursive: true });
+    logInitialized = true;
+  } catch (err) {
+    // Silently ignore if we can't create log directory
+  }
+}
+
+function log(message, data = null) {
+  const ts = new Date().toISOString();
+  const dataStr = data !== undefined ? ` ${JSON.stringify(data)}` : '';
+  const line = `[${ts}] ${message}${dataStr}`;
+
+  // Write to log file
+  initLog();
+  try {
+    appendFileSync(LOG_FILE, line + '\n');
+  } catch (err) {
+    // Silently ignore logging errors
+  }
+}
+
+// Cleanup on process exit
+process.on('exit', () => {
+  log('Process exit, clearing', { waiterCount: activeWaiters.size });
+  activeWaiters.clear();
+});
+
+// Handle unhandled promise rejections in background waiters
+process.on('unhandledRejection', (reason, promise) => {
+  log('Unhandled rejection in background waiter', reason);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  log('Uncaught exception', err.message);
+});
 
 /**
  * Get Portal URL with priority:
@@ -71,12 +123,12 @@ const envAddTool = {
 
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:env-add invoked', { environment: params.environment, url: params.url });
+    log('handler:START', { environment: params.environment, url: params.url, params });
 
     try {
       const portalUrl = ctx.portalUrl || getPortalUrl(params.partner_portal_url);
-      DEBUG && debugLog('env-add: using portal URL', { portalUrl });
       const timeoutSeconds = Math.min(params.timeout_seconds || 60, 120);
+      log('handler:config', { portalUrl, timeoutSeconds });
 
       // Normalize URL (ensure trailing slash)
       let instanceUrl = params.url;
@@ -100,7 +152,7 @@ const envAddTool = {
 
       // Direct token provided - skip device auth
       if (params.token) {
-        DEBUG && debugLog('env-add: using provided token');
+        log('handler:usingProvidedToken');
 
         const storeEnvFn = ctx.storeEnvironment || storeEnvironment;
         storeEnvFn({
@@ -123,12 +175,12 @@ const envAddTool = {
       }
 
       // Device authorization flow - get verification URL
-      DEBUG && debugLog('env-add: starting device authorization', { instanceDomain, portalUrl });
+      log('handler:startingDeviceAuth', { instanceDomain, portalUrl });
 
       let deviceAuthResponse;
       try {
         const authUrl = `${portalUrl}/oauth/authorize_device`;
-        DEBUG && debugLog('env-add: requesting device auth', { authUrl });
+        log('handler:requestingDeviceAuth', { authUrl });
 
         const response = await fetchFn(authUrl, {
           method: 'POST',
@@ -166,7 +218,7 @@ const envAddTool = {
       const pollInterval = (deviceAuthResponse.interval || 5) * 1000;
       const waiterId = `${params.environment}-${Date.now()}`;
 
-      DEBUG && debugLog('env-add: spawning background waiter', { waiterId, verificationUrl, deviceCode });
+      log('handler:deviceAuthSuccess', { verificationUrl, waiterId, pollInterval });
 
       // Spawn background waiter
       const waiterPromise = spawnBackgroundWaiter({
@@ -185,6 +237,15 @@ const envAddTool = {
       // Store waiter reference
       activeWaiters.set(waiterId, waiterPromise);
 
+      // Log waiter completion (success or failure)
+      waiterPromise.then(result => {
+        log('handler:waiterComplete', { waiterId, result });
+        activeWaiters.delete(waiterId);
+      }).catch(err => {
+        log('handler:waiterError', { waiterId, error: err.message });
+        activeWaiters.delete(waiterId);
+      });
+
       // Return immediately with verification URL
       return {
         ok: true,
@@ -199,7 +260,7 @@ const envAddTool = {
       };
 
     } catch (e) {
-      DEBUG && debugLog('env-add: error', { error: e.message });
+      log('handler:error', { error: e.message });
       return {
         ok: false,
         error: { code: 'ENV_ADD_ERROR', message: String(e.message || e) },
@@ -224,76 +285,93 @@ async function spawnBackgroundWaiter({
   fetchFn,
   storeEnvFn
 }) {
-  DEBUG && debugLog('background-waiter: started', { waiterId, timeoutSeconds });
+  log('waiter:start', { waiterId, timeoutSeconds, pollInterval, environment, instanceUrl });
 
   const pollEndTime = Date.now() + (timeoutSeconds * 1000);
 
   try {
+    let pollCount = 0;
     while (Date.now() < pollEndTime) {
+      pollCount++;
+      const remaining = Math.ceil((pollEndTime - Date.now()) / 1000);
+      log('waiter:poll', { pollCount, remaining, waiterId });
       await sleep(pollInterval);
 
       // Check if waiter was cancelled
       if (!activeWaiters.has(waiterId)) {
-        DEBUG && debugLog('background-waiter: cancelled', { waiterId });
+        log('waiter:cancelled', { waiterId });
         return { status: 'cancelled' };
       }
 
       try {
         const tokenUrl = `${portalUrl}/oauth/device_token`;
+        log('waiter:fetchingToken', { tokenUrl });
         const tokenResponse = await fetchFn(tokenUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: `grant_type=urn:ietf:params:oauth:grant-type:device_code&device_code=${encodeURIComponent(deviceCode)}`
         });
 
+        log('waiter:tokenResponseStatus', { status: tokenResponse.status });
         const tokenData = await tokenResponse.json();
+        log('waiter:tokenData', tokenData);
 
         if (tokenData.access_token) {
-          DEBUG && debugLog('background-waiter: received token, saving environment', { waiterId, environment });
+          log('waiter:accessTokenReceived');
 
-          // Save to .pos
-          storeEnvFn({
-            environment,
-            url: instanceUrl,
-            token: tokenData.access_token,
-            email,
-            partner_portal_url: portalUrl
-          });
+          try {
+            log('waiter:callingStoreEnvironment');
+            storeEnvFn({
+              environment,
+              url: instanceUrl,
+              token: tokenData.access_token,
+              email,
+              partner_portal_url: portalUrl
+            });
+            log('waiter:storeEnvironmentSuccess');
+          } catch (e) {
+            log('waiter:storeEnvironmentError', { error: e.message });
+            activeWaiters.delete(waiterId);
+            return { status: 'error', error: `Failed to save environment: ${e.message}` };
+          }
 
           activeWaiters.delete(waiterId);
-          DEBUG && debugLog('background-waiter: success', { waiterId, environment });
+          log('waiter:success', { environment });
           return { status: 'success', environment };
         }
 
         if (tokenData.error === 'authorization_pending') {
-          DEBUG && debugLog('background-waiter: pending', { waiterId, remaining: Math.ceil((pollEndTime - Date.now()) / 1000) });
+          log('waiter:authorizationPending');
           continue;
         }
 
         if (tokenData.error === 'slow_down') {
+          log('waiter:slowDown');
           await sleep(pollInterval);
           continue;
         }
 
         if (tokenData.error === 'expired_token' || tokenData.error === 'access_denied') {
-          DEBUG && debugLog('background-waiter: auth failed', { waiterId, error: tokenData.error });
+          log('waiter:authFailed', { error: tokenData.error });
           activeWaiters.delete(waiterId);
           return { status: 'failed', error: tokenData.error };
         }
 
+        log('waiter:unknownError', tokenData.error);
+
       } catch (e) {
-        DEBUG && debugLog('background-waiter: poll error', { waiterId, error: e.message });
+        log('waiter:pollError', { error: e.message });
         // Continue polling on network errors
       }
     }
 
     // Timeout
-    DEBUG && debugLog('background-waiter: timeout', { waiterId });
+    log('waiter:timeout', { waiterId });
     activeWaiters.delete(waiterId);
     return { status: 'timeout' };
 
   } catch (e) {
-    DEBUG && debugLog('background-waiter: exception', { waiterId, error: e.message });
+    log('waiter:exception', { error: e.message });
     activeWaiters.delete(waiterId);
     return { status: 'error', error: e.message };
   }
@@ -304,16 +382,23 @@ function sleep(ms) {
 }
 
 function storeEnvironment(settings) {
-  // Find .pos file (look in cwd and parents)
-  let configPath = findConfigFile() || path.join(process.cwd(), '.pos');
+  log('storeEnvironment:start', settings);
+
+  // Use .pos file in the directory where MCP server was started
+  const configPath = path.join(process.cwd(), '.pos');
+  log('storeEnvironment:configPath', { configPath, cwd: process.cwd() });
 
   let config = {};
   if (fs.existsSync(configPath)) {
+    log('storeEnvironment:existingFileFound');
     try {
       config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    } catch {
-      // Invalid JSON, start fresh
+      log('storeEnvironment:existingConfig', config);
+    } catch (e) {
+      log('storeEnvironment:parseError', { error: e.message });
     }
+  } else {
+    log('storeEnvironment:creatingNew');
   }
 
   config[settings.environment] = {
@@ -323,20 +408,15 @@ function storeEnvironment(settings) {
     partner_portal_url: settings.partner_portal_url
   };
 
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  DEBUG && debugLog('env-add: stored environment', { configPath, environment: settings.environment });
-}
+  log('storeEnvironment:newConfig', config);
 
-function findConfigFile() {
-  let dir = process.cwd();
-  while (dir !== path.dirname(dir)) {
-    const configPath = path.join(dir, '.pos');
-    if (fs.existsSync(configPath)) {
-      return configPath;
-    }
-    dir = path.dirname(dir);
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    log('storeEnvironment:success', { configPath });
+  } catch (e) {
+    log('storeEnvironment:writeError', { error: e.message });
+    throw new Error(`Failed to write .pos file: ${e.message}`);
   }
-  return null;
 }
 
 export default envAddTool;
