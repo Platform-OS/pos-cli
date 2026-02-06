@@ -43,7 +43,7 @@ function parseCheckOutput(stdout, format) {
 }
 
 const checkTool = {
-  description: 'Run platformos-check linter to analyze the app for best practice violations. Checks Liquid and JSON files.',
+  description: 'Run the platformos-check linter to analyze the app for best practice violations, errors, and style issues in Liquid and JSON files. Returns structured results (JSON by default). Supports category filtering, auto-correct, and custom config. Requires the platformos-check gem installed.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,

@@ -32,18 +32,18 @@ async function resolveAuth(params) {
 }
 
 const execGraphqlTool = {
-  description: 'Execute GraphQL query/mutation on a platformOS instance via /api/graph.',
+  description: 'Execute a GraphQL query or mutation on a platformOS instance via /api/graph. Returns JSON data and errors from the instance. Auth resolved from: explicit params > MPKIT_* env vars > .pos config. Use variables to pass dynamic values safely instead of string interpolation.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
-      endpoint: { type: 'string', description: 'Override base URL' },
-      query: { type: 'string' },
-      variables: { type: 'object', additionalProperties: true }
+      env: { type: 'string', description: 'Environment name from .pos config (e.g., staging, production). Used to resolve auth when url/email/token are not provided.' },
+      url: { type: 'string', description: 'Instance URL (e.g., https://my-app.staging.oregon.platform-os.com). Requires email and token.' },
+      email: { type: 'string', description: 'Email for instance authentication. Required with url and token.' },
+      token: { type: 'string', description: 'API token for instance authentication. Required with url and email.' },
+      endpoint: { type: 'string', description: 'Override the base URL for the GraphQL endpoint. Defaults to the resolved instance URL.' },
+      query: { type: 'string', description: 'GraphQL query or mutation string (e.g., "{ users { results { id email } } }").' },
+      variables: { type: 'object', additionalProperties: true, description: 'Variables to pass to the GraphQL query/mutation. Preferred over string interpolation for dynamic values.' }
     },
     required: ['query']
   },

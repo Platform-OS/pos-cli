@@ -12,7 +12,7 @@ import { uploadFileFormData } from '../../lib/s3UploadFile.js';
 import { manifestGenerateForAssets } from '../../lib/assets/manifest.js';
 import { fillInTemplateValues } from '../../lib/templates.js';
 import dir from '../../lib/directories.js';
-import logger from '../../lib/logger.js';
+import log from '../log.js';
 
 // Alias for backwards compatibility
 const settings = { fetchSettings };
@@ -73,8 +73,7 @@ async function uploadAsset({ gateway, relPath, log }) {
   // Prepare direct upload data
   const instance = await gateway.getInstance();
   const remoteAssetsDir = `instances/${instance.id}/assets`;
-  const contentType = (await import('mime')).default.getType(relPath);
-  const data = await presignDirectory(remoteAssetsDir, contentType);
+  const data = await presignDirectory(remoteAssetsDir);
 
   const dirname = path.posix.dirname(relPath);
   const fileSubdir = relPath.startsWith('app/assets')
@@ -120,25 +119,25 @@ async function deleteRemote({ gateway, relPath }) {
 }
 
 const singleFileTool = {
-  description: 'Sync a file with a platformOS instance (upload or delete).',
+  description: 'Sync a single file to a platformOS instance (upload or delete). Handles assets (direct S3 upload + manifest) and non-assets (gateway sync) automatically. Respects .posignore rules. Auth resolved from: explicit params > MPKIT_* env vars > .pos config. Use dryRun to validate without sending.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      filePath: { type: 'string' },
-      env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
-      op: { type: 'string', enum: ['upload', 'delete'] },
-      dryRun: { type: 'boolean' },
-      confirmDelete: { type: 'boolean' }
+      filePath: { type: 'string', description: 'Absolute or relative path to the file to sync. Must be inside app/, marketplace_builder/, or modules/.' },
+      env: { type: 'string', description: 'Environment name from .pos config (e.g., staging, production). Used to resolve auth when url/email/token are not provided.' },
+      url: { type: 'string', description: 'Instance URL (e.g., https://my-app.staging.oregon.platform-os.com). Requires email and token.' },
+      email: { type: 'string', description: 'Email for instance authentication. Required with url and token.' },
+      token: { type: 'string', description: 'API token for instance authentication. Required with url and email.' },
+      op: { type: 'string', enum: ['upload', 'delete'], description: 'Operation: "upload" to push file, "delete" to remove from instance. Auto-detected from file existence if omitted.' },
+      dryRun: { type: 'boolean', description: 'Validate file path, auth, and sync rules without actually uploading. Default: false.' },
+      confirmDelete: { type: 'boolean', description: 'Safety flag — must be true to execute delete operations. Default: false.' }
     },
     required: ['filePath']
   },
 handler: async (params, ctx) => {
     const startedAt = new Date().toISOString();
-    const log = ctx?.log || logger.Debug;
+    const logFn = ctx?.log || log.info.bind(log);
     const { filePath, op: opParam, dryRun = false, confirmDelete = false } = params || {};
     if (!filePath || typeof filePath !== 'string') {
       throw new Error('INVALID_PARAM: filePath is required');
@@ -147,13 +146,13 @@ handler: async (params, ctx) => {
     const relPath = normalizeLocalPath(filePath);
     const absPath = path.resolve(filePath);
 
-    log(`[sync-file] Processing file: ${filePath} (normalized: ${relPath})`);
+    logFn(`[sync-file] Processing file: ${filePath} (normalized: ${relPath})`);
 
     // Validate location
     const allowedPrefixes = [dir.APP + '/', dir.LEGACY_APP + '/', dir.MODULES + '/'];
     const inAllowedDir = allowedPrefixes.some((p) => toPosix(relPath).startsWith(p));
     if (!inAllowedDir) {
-      log(`[sync-file] File outside allowed directories: ${relPath}`);
+      logFn(`[sync-file] File outside allowed directories: ${relPath}`);
       return {
         success: false,
         operation: 'noop',
@@ -164,7 +163,7 @@ handler: async (params, ctx) => {
 
     const ignoreList = files.getIgnoreList();
     const should = shouldBeSynced(relPath, ignoreList);
-    log(`[sync-file] Sync check for ${relPath}: shouldSync=${should}, ignoreList rules=${ignoreList.length}`);
+    logFn(`[sync-file] Sync check for ${relPath}: shouldSync=${should}, ignoreList rules=${ignoreList.length}`);
     if (!should && opParam !== 'delete') {
       return {
         success: false,
@@ -176,11 +175,11 @@ handler: async (params, ctx) => {
 
     const exists = fs.existsSync(absPath);
     const op = opParam || (exists ? 'upload' : 'delete');
-    log(`[sync-file] Operation determined: ${op} (file exists: ${exists})`);
+    logFn(`[sync-file] Operation determined: ${op} (file exists: ${exists})`);
 
     // Resolve auth and prepare Gateway
     const auth = await resolveAuth(params);
-    log(`[sync-file] Auth resolved from: ${auth.source}, URL: ${auth.url}`);
+    logFn(`[sync-file] Auth resolved from: ${auth.source}, URL: ${auth.url}`);
     // set env vars expected by pos-cli internals (presignDirectory)
     process.env.MARKETPLACE_EMAIL = auth.email;
     process.env.MARKETPLACE_TOKEN = auth.token;
@@ -207,7 +206,7 @@ handler: async (params, ctx) => {
 
     try {
       if (op === 'delete') {
-        log(`[sync-file] Starting delete operation for: ${relPath}`);
+        logFn(`[sync-file] Starting delete operation for: ${relPath}`);
         if (!confirmDelete) {
           return {
             success: false,
@@ -217,7 +216,7 @@ handler: async (params, ctx) => {
           };
         }
         const result = await deleteRemote({ gateway, relPath });
-        log(`[sync-file] Delete completed for: ${relPath}`);
+        logFn(`[sync-file] Delete completed for: ${relPath}`);
         return {
           success: true,
           operation: 'delete',
@@ -237,9 +236,9 @@ handler: async (params, ctx) => {
       }
 
       if (isAssetsPath(relPath)) {
-        log(`[sync-file] Uploading asset: ${relPath}`);
-        await uploadAsset({ gateway, relPath, log });
-        log(`[sync-file] Asset upload completed: ${relPath}`);
+        logFn(`[sync-file] Uploading asset: ${relPath}`);
+        await uploadAsset({ gateway, relPath, log: logFn });
+        logFn(`[sync-file] Asset upload completed: ${relPath}`);
         return {
           success: true,
           operation: 'update',
@@ -248,9 +247,9 @@ handler: async (params, ctx) => {
           timings: { startedAt, finishedAt: new Date().toISOString() }
         };
       } else {
-        log(`[sync-file] Uploading non-asset: ${relPath}`);
-        const res = await uploadNonAsset({ gateway, relPath, log });
-        log(`[sync-file] Non-asset upload completed: ${relPath}, response status: ${res.response?.status || 'unknown'}`);
+        logFn(`[sync-file] Uploading non-asset: ${relPath}`);
+        const res = await uploadNonAsset({ gateway, relPath, log: logFn });
+        logFn(`[sync-file] Non-asset upload completed: ${relPath}, response status: ${res.response?.status || 'unknown'}`);
         return {
           success: true,
           operation: 'update',
@@ -261,7 +260,7 @@ handler: async (params, ctx) => {
       }
     } catch (e) {
       // Fail hard: surface the underlying request error to the caller to allow pipelines to stop
-      log(`[sync-file] Error during ${op} operation for ${relPath}: ${e.message}`);
+      logFn(`[sync-file] Error during ${op} operation for ${relPath}: ${e.message}`);
       const errPayload = {
         code: 'GATEWAY_ERROR',
         message: String(e?.message || e),
