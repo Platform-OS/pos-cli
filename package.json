@@ -97,6 +97,7 @@
     "pos-cli-modules": "bin/pos-cli-modules.js",
     "pos-cli-sync": "bin/pos-cli-sync.js",
     "pos-cli-test": "bin/pos-cli-test.js",
+    "pos-cli-mcp": "bin/pos-cli-mcp.js",
     "pos-cli-test-run": "bin/pos-cli-test-run.js"
   },
   "repository": {
