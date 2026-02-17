@@ -6,14 +6,15 @@ import { dirname, join } from 'path';
 import files from '../lib/files.js';
 
 // Load tool configuration (descriptions and enabled/disabled state)
+// MCP_TOOLS_CONFIG env var overrides the bundled config
 const __dirname = dirname(fileURLToPath(import.meta.url));
 let toolsConfig = { tools: {} };
+const configPath = process.env.MCP_TOOLS_CONFIG || join(__dirname, 'tools.config.json');
 try {
-  const configPath = join(__dirname, 'tools.config.json');
   toolsConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
-  log.debug('tools.config.json loaded', { tools: Object.keys(toolsConfig.tools || {}).length });
+  log.debug('tools config loaded', { path: configPath, tools: Object.keys(toolsConfig.tools || {}).length });
 } catch (err) {
-  log.debug('tools.config.json not found or invalid, using defaults', { error: String(err) });
+  log.debug('tools config not found or invalid, using defaults', { path: configPath, error: String(err) });
 }
 
 // Keep tools.js lean by extracting complex tools into modules
