@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "6.0.0-beta.4",
+  "version": "6.0.0-beta.5",
   "description": "Manage your platformOS application",
   "type": "module",
   "imports": {
