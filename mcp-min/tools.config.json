@@ -99,8 +99,8 @@
       "description": "Run platformos-check linter to analyze the app for best practice violations. Checks Liquid and JSON files. Requires Ruby gem. Superseded by check-run."
     },
     "check-run": {
-      "enabled": false,
-      "description": "Run platformos-check Node.js linter on the app. Analyzes Liquid/JSON files for violations. No Ruby required. Requires @platformos/platformos-check-node (not yet published)."
+      "enabled": true,
+      "description": "Run platformos-check Node.js linter on the app. Analyzes Liquid/JSON files for violations. No Ruby required. Requires @platformos/platformos-check-node."
     },
     "sync-file": {
       "enabled": true,
