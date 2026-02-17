@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "6.0.0-beta.2",
+  "version": "6.0.0-beta.3",
   "description": "Manage your platformOS application",
   "type": "module",
   "imports": {
@@ -98,6 +98,7 @@
     "pos-cli-sync": "bin/pos-cli-sync.js",
     "pos-cli-test": "bin/pos-cli-test.js",
     "pos-cli-mcp": "bin/pos-cli-mcp.js",
+    "pos-cli-mcp-config": "bin/pos-cli-mcp-config.js",
     "pos-cli-test-run": "bin/pos-cli-test-run.js"
   },
   "repository": {
