@@ -75,16 +75,16 @@ const checkRunTool = {
       };
     }
 
-    // Dynamically import platformos-check-node
+    // Dynamically import @platformos/platformos-check-node
     let themeCheck;
     try {
-      themeCheck = await import('@platformos/theme-check-node');
+      themeCheck = await import('@platformos/platformos-check-node');
     } catch {
       return {
         ok: false,
         error: {
           code: 'MISSING_DEPENDENCY',
-          message: 'The @platformos/theme-check-node package is not installed. Install it with: npm install @platformos/theme-check-node'
+          message: 'The @platformos/platformos-check-node package is not installed. Install it with: npm install @platformos/platformos-check-node'
         }
       };
     }

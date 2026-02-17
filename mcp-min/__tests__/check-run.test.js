@@ -67,7 +67,7 @@ describe('platformos.check-run', () => {
     } else {
       // theme-check-node is not installed — graceful handling
       expect(result.error.code).toBe('MISSING_DEPENDENCY');
-      expect(result.error.message).toContain('theme-check-node');
+      expect(result.error.message).toContain('@platformos/platformos-check-node');
     }
   });
 

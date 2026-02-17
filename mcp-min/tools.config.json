@@ -100,7 +100,7 @@
     },
     "check-run": {
       "enabled": false,
-      "description": "Run platformos-check Node.js linter on the app. Analyzes Liquid/JSON files for violations. No Ruby required. Requires @platformos/theme-check-node (not yet published)."
+      "description": "Run platformos-check Node.js linter on the app. Analyzes Liquid/JSON files for violations. No Ruby required. Requires @platformos/platformos-check-node (not yet published)."
     },
     "sync-file": {
       "enabled": true,
