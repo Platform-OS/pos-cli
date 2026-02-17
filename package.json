@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "6.0.0-beta.5",
+  "version": "6.0.0-beta.6",
   "description": "Manage your platformOS application",
   "type": "module",
   "imports": {
@@ -41,6 +41,7 @@
     "pOS"
   ],
   "dependencies": {
+    "@platformos/platformos-check-node": "^0.0.4",
     "archiver": "^7.0.1",
     "async": "^3.2.6",
     "body-parser": "^2.0.2",
