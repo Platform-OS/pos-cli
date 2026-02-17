@@ -1,47 +1,12 @@
 import { createInterface } from 'readline';
 import { fileURLToPath } from 'url';
-import { mkdirSync, appendFileSync } from 'fs';
-import { homedir } from 'os';
 import path from 'path';
 import tools from './tools.js';
 import { DEBUG } from './config.js';
+import log from './log.js';
 
 // MCP stdio server implementing JSON-RPC 2.0 protocol
 // Supports: initialize, notifications/initialized, tools/list, tools/call
-
-// File logging setup
-// Default: ~/.pos-cli/logs/stdio-server.log
-// Custom: set MCP_STDIO_LOG env variable
-const DEFAULT_LOG_DIR = path.join(homedir(), '.pos-cli', 'logs');
-const DEFAULT_LOG_FILE = path.join(DEFAULT_LOG_DIR, 'stdio-server.log');
-const LOG_FILE = process.env.MCP_STDIO_LOG || DEFAULT_LOG_FILE;
-
-let logInitialized = false;
-
-function initLog() {
-  if (logInitialized) return;
-  try {
-    const logDir = path.dirname(LOG_FILE);
-    mkdirSync(logDir, { recursive: true });
-    logInitialized = true;
-  } catch (err) {
-    // Silently ignore if we can't create log directory
-  }
-}
-
-function log(message, data) {
-  initLog();
-  if (!logInitialized) return;
-  try {
-    const ts = new Date().toISOString();
-    const line = data !== undefined
-      ? `[${ts}] ${message} ${JSON.stringify(data)}\n`
-      : `[${ts}] ${message}\n`;
-    appendFileSync(LOG_FILE, line);
-  } catch (err) {
-    // Silently ignore logging errors
-  }
-}
 
 const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
 
@@ -55,8 +20,17 @@ const SERVER_CAPABILITIES = {
 };
 
 function send(obj) {
+  if (!process.stdout.writable) return;
   const line = JSON.stringify(obj);
-  process.stdout.write(line + '\n');
+  try {
+    process.stdout.write(line + '\n');
+  } catch (err) {
+    if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
+      log.debug('stdout closed, exiting');
+      process.exit(0);
+    }
+    throw err;
+  }
 }
 
 function sendResult(id, result) {
@@ -81,7 +55,7 @@ function getToolsList() {
 // MCP protocol handlers
 const mcpHandlers = {
   'initialize': async (params, id) => {
-    DEBUG && log('MCP initialize', { params });
+    log.debug('MCP initialize', { params });
     sendResult(id, {
       protocolVersion: '2024-11-05',
       serverInfo: SERVER_INFO,
@@ -91,17 +65,18 @@ const mcpHandlers = {
 
   'notifications/initialized': async () => {
     // Notification - no response needed
-    DEBUG && log('MCP initialized notification received');
+    log.debug('MCP initialized notification received');
   },
 
   'tools/list': async (params, id) => {
-    DEBUG && log('MCP tools/list');
+    log.debug('MCP tools/list');
     sendResult(id, { tools: getToolsList() });
   },
 
   'tools/call': async (params, id) => {
-    const { name, arguments: args } = params || {};
-    DEBUG && log('MCP tools/call', { name, args });
+    const { name, arguments: args, _meta } = params || {};
+    const progressToken = _meta?.progressToken;
+    log.debug('MCP tools/call', { name, args, progressToken });
 
     const tool = tools[name];
     if (!tool) {
@@ -109,19 +84,54 @@ const mcpHandlers = {
       return;
     }
 
+    // Send progress notification (keeps connection alive, prevents client timeout)
+    let progressCounter = 0;
+    function sendProgress(current, total, message) {
+      if (!progressToken) return;
+      const notification = {
+        jsonrpc: '2.0',
+        method: 'notifications/progress',
+        params: { progressToken, progress: current }
+      };
+      if (total != null) notification.params.total = total;
+      if (message) notification.params.message = message;
+      send(notification);
+    }
+
+    // Heartbeat: send periodic progress while tool runs to prevent timeout
+    const heartbeat = progressToken
+      ? setInterval(() => { sendProgress(++progressCounter, undefined, 'working'); }, 5000)
+      : null;
+
     try {
-      const result = await tool.handler(args || {}, { transport: 'stdio', debug: DEBUG, log });
+      const result = await tool.handler(args || {}, {
+        transport: 'stdio',
+        debug: DEBUG,
+        log: log.info.bind(log),
+        sendProgress
+      });
       sendResult(id, {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
       });
     } catch (err) {
       sendError(id, -32000, String(err));
+    } finally {
+      if (heartbeat) clearInterval(heartbeat);
     }
   }
 };
 
 export default function startStdio() {
-  log('stdio transport started (MCP protocol)');
+  log.info('stdio transport started (MCP protocol)');
+
+  // Exit cleanly when the MCP client disconnects (closes the pipe)
+  process.stdout.on('error', (err) => {
+    if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
+      log.debug('stdout pipe closed, exiting');
+      process.exit(0);
+    }
+    log.error('stdout error', err.message);
+  });
 
   rl.on('line', async (line) => {
     const raw = line;
@@ -132,13 +142,13 @@ export default function startStdio() {
     try {
       msg = JSON.parse(line);
     } catch (e) {
-      DEBUG && log('STDIO received invalid JSON', { raw });
+      log.debug('STDIO received invalid JSON', { raw });
       sendError(null, -32700, 'Parse error');
       return;
     }
 
     const { jsonrpc, id, method, params } = msg;
-    DEBUG && log('STDIO request', { id, method, params });
+    log.debug('STDIO request', { id, method, params });
 
     // Handle MCP protocol methods
     const mcpHandler = mcpHandlers[method];
@@ -151,20 +161,20 @@ export default function startStdio() {
     const tool = tools[method];
     if (tool) {
       try {
-        const result = await tool.handler(params || {}, { transport: 'stdio', debug: DEBUG, log });
+        const result = await tool.handler(params || {}, { transport: 'stdio', debug: DEBUG, log: log.info.bind(log) });
         if (jsonrpc === '2.0') {
           sendResult(id, result);
         } else {
           send({ id, result });
         }
-        DEBUG && log('STDIO response', { id, method, result });
+        log.debug('STDIO response', { id, method, result });
       } catch (err) {
         if (jsonrpc === '2.0') {
           sendError(id, -32000, String(err));
         } else {
           send({ id, error: String(err) });
         }
-        DEBUG && log('STDIO error', { id, method, err: String(err) });
+        log.debug('STDIO error', { id, method, err: String(err) });
       }
       return;
     }
@@ -175,7 +185,7 @@ export default function startStdio() {
     } else {
       send({ id, error: `unknown_method: ${method}` });
     }
-    DEBUG && log('STDIO unknown method', { id, method });
+    log.debug('STDIO unknown method', { id, method });
   });
 }
 
@@ -198,8 +208,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const cwd = parseCwd(process.argv);
   if (cwd) {
     process.chdir(path.resolve(cwd));
-    log(`working directory set to ${process.cwd()}`);
+    log.info(`working directory set to ${process.cwd()}`);
   }
-  log(`log file: ${LOG_FILE}`);
+  log.info(`log file: ${log.LOG_FILE}`);
   startStdio();
 }

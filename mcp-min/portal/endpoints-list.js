@@ -1,5 +1,5 @@
 // endpoints-list tool - List available regions/endpoints from Partner Portal API
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import { getPortalConfig, portalRequest } from './portal-client.js';
 
 const endpointsListTool = {
@@ -13,14 +13,14 @@ const endpointsListTool = {
 
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:endpoints-list invoked');
+    log.debug('tool:endpoints-list invoked');
 
     try {
       const configFn = ctx.getPortalConfig || getPortalConfig;
       const requestFn = ctx.portalRequest || portalRequest;
       const config = ctx.portalConfig || configFn();
 
-      DEBUG && debugLog('endpoints-list: fetching endpoints');
+      log.debug('endpoints-list: fetching endpoints');
       const response = await requestFn({
         method: 'GET',
         path: '/api/endpoints',
@@ -43,7 +43,7 @@ const endpointsListTool = {
         meta: { startedAt, finishedAt: new Date().toISOString() }
       };
     } catch (e) {
-      DEBUG && debugLog('endpoints-list: error', { error: e.message, status: e.status });
+      log.error('endpoints-list: error', { error: e.message, status: e.status });
       return {
         ok: false,
         error: {

@@ -1,5 +1,5 @@
 // platformos.logs.stream - streaming logs via SSE with polling
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import files from '../../lib/files.js';
 import { fetchSettings } from '../../lib/settings.js';
 import Gateway from '../../lib/proxy.js';

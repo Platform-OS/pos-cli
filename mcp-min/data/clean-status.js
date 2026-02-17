@@ -1,5 +1,5 @@
 // platformos.data.clean.status - check the status of a data clean job
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import files from '../../lib/files.js';
 import { fetchSettings } from '../../lib/settings.js';
 import Gateway from '../../lib/proxy.js';
@@ -47,7 +47,7 @@ const dataCleanStatusTool = {
     required: ['jobId']
   },
   handler: async (params, ctx = {}) => {
-    DEBUG && debugLog('tool:data-clean-status invoked', { jobId: params?.jobId });
+    log.debug('tool:data-clean-status invoked', { jobId: params?.jobId });
 
     try {
       const auth = await resolveAuth(params);
@@ -80,7 +80,7 @@ const dataCleanStatusTool = {
         }
       };
     } catch (e) {
-      DEBUG && debugLog('tool:data-clean-status error', { error: String(e) });
+      log.error('tool:data-clean-status error', { error: String(e) });
       return { ok: false, error: { code: 'DATA_CLEAN_STATUS_ERROR', message: String(e.message || e) } };
     }
   }

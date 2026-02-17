@@ -1,9 +1,14 @@
 
 import { pathToFileURL } from 'url';
 import path from 'path';
-import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { describe, test, expect, beforeAll } from 'vitest';
 
+const execAsync = promisify(exec);
 const checkModPath = pathToFileURL(path.resolve(process.cwd(), 'mcp-min', 'check', 'index.js')).href;
+
+let cliAvailable = false;
 
 describe('platformos.check', () => {
   let checkTool;
@@ -11,6 +16,14 @@ describe('platformos.check', () => {
   beforeAll(async () => {
     const mod = await import(checkModPath);
     checkTool = mod.default;
+
+    // Check if platformos-check CLI is available
+    try {
+      await execAsync('platformos-check --version');
+      cliAvailable = true;
+    } catch {
+      cliAvailable = false;
+    }
   });
 
   test('has correct description', () => {
@@ -29,27 +42,43 @@ describe('platformos.check', () => {
   test('lists enabled checks with list=true', async () => {
     const result = await checkTool.handler({ list: true });
 
+    if (!cliAvailable) {
+      expect(result.ok).toBe(false);
+      expect(result.error.code).toBe('CHECK_ERROR');
+      return;
+    }
+
     expect(result.ok).toBe(true);
     expect(result.data).toBeDefined();
     expect(result.data.listChecks).toBe(true);
     expect(typeof result.data.result).toBe('string');
-    // Output should contain check names
     expect(result.data.result).toMatch(/SyntaxError|InvalidArgs|MissingTemplate/);
   });
 
   test('prints config with print=true', async () => {
     const result = await checkTool.handler({ print: true });
 
+    if (!cliAvailable) {
+      expect(result.ok).toBe(false);
+      expect(result.error.code).toBe('CHECK_ERROR');
+      return;
+    }
+
     expect(result.ok).toBe(true);
     expect(result.data).toBeDefined();
     expect(result.data.printConfig).toBe(true);
     expect(typeof result.data.result).toBe('string');
-    // Config output should contain YAML-like content
     expect(result.data.result.length).toBeGreaterThan(100);
   });
 
   test('runs check and returns results', async () => {
     const result = await checkTool.handler({ format: 'json', appPath: '.' });
+
+    if (!cliAvailable) {
+      expect(result.ok).toBe(false);
+      expect(result.error.code).toBe('CHECK_ERROR');
+      return;
+    }
 
     expect(result.ok).toBe(true);
     expect(result.data).toBeDefined();
@@ -67,6 +96,11 @@ describe('platformos.check', () => {
       appPath: '.'
     });
 
+    if (!cliAvailable) {
+      expect(result.ok).toBe(false);
+      return;
+    }
+
     expect(result.ok).toBe(true);
   });
 
@@ -76,6 +110,11 @@ describe('platformos.check', () => {
       excludeCategory: ['performance'],
       appPath: '.'
     });
+
+    if (!cliAvailable) {
+      expect(result.ok).toBe(false);
+      return;
+    }
 
     expect(result.ok).toBe(true);
   });
@@ -88,12 +127,22 @@ describe('platformos.check', () => {
       list: false
     });
 
+    if (!cliAvailable) {
+      expect(result.ok).toBe(false);
+      return;
+    }
+
     expect(result.ok).toBe(true);
     expect(result.data.autoCorrect).toBe(true);
   });
 
   test('includes timing metadata', async () => {
     const result = await checkTool.handler({ list: true });
+
+    if (!cliAvailable) {
+      expect(result.ok).toBe(false);
+      return;
+    }
 
     expect(result.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(result.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);

@@ -1,5 +1,5 @@
 // platformos.data.export.status - check the status of a data export job
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import files from '../../lib/files.js';
 import { fetchSettings } from '../../lib/settings.js';
 import Gateway from '../../lib/proxy.js';
@@ -48,7 +48,7 @@ const dataExportStatusTool = {
     required: ['jobId']
   },
   handler: async (params, ctx = {}) => {
-    DEBUG && debugLog('tool:data-export-status invoked', { jobId: params?.jobId });
+    log.debug('tool:data-export-status invoked', { jobId: params?.jobId });
 
     try {
       const auth = await resolveAuth(params);
@@ -96,7 +96,7 @@ const dataExportStatusTool = {
 
       return result;
     } catch (e) {
-      DEBUG && debugLog('tool:data-export-status error', { error: String(e) });
+      log.error('tool:data-export-status error', { error: String(e) });
       return { ok: false, error: { code: 'DATA_EXPORT_STATUS_ERROR', message: String(e.message || e) } };
     }
   }

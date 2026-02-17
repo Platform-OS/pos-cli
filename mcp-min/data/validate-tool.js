@@ -1,7 +1,7 @@
 // platformos.data.validate - Validate JSON data against platformOS schemas
 import { createRequire } from 'module';
 import { validateRecords, validateJsonStructure } from './validate.js';
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 
 const require = createRequire(import.meta.url);
 const fs = require('fs');
@@ -46,7 +46,7 @@ const dataValidateTool = {
   },
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:data-validate invoked', { env: params.env });
+    log.debug('tool:data-validate invoked', { env: params.env });
 
     try {
       const {
@@ -150,7 +150,7 @@ const dataValidateTool = {
         }
       };
     } catch (e) {
-      DEBUG && debugLog('tool:data-validate error', { error: String(e) });
+      log.error('tool:data-validate error', { error: String(e) });
       return {
         ok: false,
         error: {

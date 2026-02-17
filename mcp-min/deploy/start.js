@@ -1,6 +1,6 @@
 // platformos.deploy.start - create archive and deploy to platformOS instance
 import fs from 'fs';
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import files from '../../lib/files.js';
 import { fetchSettings } from '../../lib/settings.js';
 import Gateway from '../../lib/proxy.js';
@@ -55,7 +55,7 @@ const startDeployTool = {
   },
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:deploy-start invoked', { env: params?.env, partial: params?.partial });
+    log.debug('tool:deploy-start invoked', { env: params?.env, partial: params?.partial });
 
     try {
       const auth = await resolveAuth(params);
@@ -106,18 +106,23 @@ const startDeployTool = {
 
       const pushResponse = await gateway.push(formData);
 
-      // Deploy assets directly to S3
-      let assetsDeployed = null;
+      // Deploy assets in the background (S3 upload + CDN wait can take 90s+)
+      let assetsInfo = null;
       try {
         const assetsToDeploy = await files.getAssets();
         if (assetsToDeploy.length > 0) {
-          await assets.deployAssets(gateway);
-          assetsDeployed = { count: assetsToDeploy.length };
+          // Fire and forget - don't block the MCP response
+          assets.deployAssets(gateway).then(() => {
+            log.info('Background asset deployment completed');
+          }).catch(err => {
+            log.error('Background asset deployment failed', { error: String(err) });
+          });
+          assetsInfo = { count: assetsToDeploy.length, status: 'deploying_in_background' };
         } else {
-          assetsDeployed = { count: 0, skipped: true };
+          assetsInfo = { count: 0, skipped: true };
         }
       } catch (assetErr) {
-        assetsDeployed = { error: String(assetErr) };
+        assetsInfo = { error: String(assetErr) };
       }
 
       return {
@@ -127,7 +132,7 @@ const startDeployTool = {
           status: pushResponse.status
         },
         archive: { path: archivePath, fileCount: numberOfFiles },
-        assets: assetsDeployed,
+        assets: assetsInfo,
         meta: {
           startedAt,
           finishedAt: new Date().toISOString(),
@@ -136,7 +141,7 @@ const startDeployTool = {
         }
       };
     } catch (e) {
-      DEBUG && debugLog('tool:deploy-start error', { error: String(e) });
+      log.error('tool:deploy-start error', { error: String(e) });
       return { ok: false, error: { code: 'DEPLOY_START_ERROR', message: String(e.message || e) } };
     }
   }

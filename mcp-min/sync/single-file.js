@@ -259,18 +259,26 @@ handler: async (params, ctx) => {
         };
       }
     } catch (e) {
-      // Fail hard: surface the underlying request error to the caller to allow pipelines to stop
-      logFn(`[sync-file] Error during ${op} operation for ${relPath}: ${e.message}`);
+      // Extract response body details (422 validation errors, etc.)
+      const body = e?.response?.body;
+      const serverError = body?.error || (Array.isArray(body?.errors) && body.errors.join(', ')) || null;
+      const serverDetails = body?.details || null;
+      const statusCode = e?.statusCode || e?.response?.statusCode || null;
+
+      const detail = serverError || String(e?.message || e);
+      logFn(`[sync-file] Error during ${op} for ${relPath} (${statusCode}): ${detail}`);
+
       const errPayload = {
         code: 'GATEWAY_ERROR',
-        message: String(e?.message || e),
+        message: detail,
+        statusCode,
         details: {
           operation: op,
-          file: { localPath: filePath, normalizedPath: relPath }
+          file: { localPath: filePath, normalizedPath: relPath },
+          ...(serverDetails && { server: serverDetails })
         }
       };
-      const err = new Error(`${errPayload.code}: ${errPayload.message}`);
-      // Attach structured info for HTTP/JSON-RPC layers that may include it in responses
+      const err = new Error(`${errPayload.code}: ${detail}`);
       err._pos = errPayload;
       throw err;
     }

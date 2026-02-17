@@ -170,7 +170,7 @@ export default [
       'no-global-assign': 'off',
       'n/no-missing-import': ['error', {
         tryExtensions: ['.js', '.json'],
-        allowModules: ['vitest']
+        allowModules: ['vitest', '@platformos/theme-check-node']
       }],
       'n/no-extraneous-import': 'off',
       'n/no-extraneous-require': 'off',

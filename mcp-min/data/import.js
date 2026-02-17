@@ -6,7 +6,7 @@ import path from 'path';
 import os from 'os';
 import { jsonToZipBuffer } from './json-to-csv.js';
 import { validateRecords, validateJsonStructure } from './validate.js';
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import { fetchSettings } from '../../lib/settings.js';
 import Gateway from '../../lib/proxy.js';
 import isValidJSON from '../../lib/data/isValidJSON.js';
@@ -59,7 +59,7 @@ const dataImportTool = {
   },
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:data-import invoked', { env: params.env });
+    log.debug('tool:data-import invoked', { env: params.env });
 
     try {
       const auth = await resolveAuth(params.env, ctx.settings || settings);
@@ -192,7 +192,7 @@ const dataImportTool = {
         }
       };
     } catch (e) {
-      DEBUG && debugLog('tool:data-import error', { error: String(e) });
+      log.error('tool:data-import error', { error: String(e) });
       return {
         ok: false,
         error: { code: 'DATA_IMPORT_ERROR', message: String(e.message || e) },

@@ -1,5 +1,5 @@
 // Define tools for the minimal MCP server
-import { DEBUG, debugLog } from './config.js';
+import log from './log.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -11,9 +11,9 @@ let toolsConfig = { tools: {} };
 try {
   const configPath = join(__dirname, 'tools.config.json');
   toolsConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
-  DEBUG && debugLog('tools.config.json loaded', { tools: Object.keys(toolsConfig.tools || {}).length });
+  log.debug('tools.config.json loaded', { tools: Object.keys(toolsConfig.tools || {}).length });
 } catch (err) {
-  DEBUG && debugLog('tools.config.json not found or invalid, using defaults', { error: String(err) });
+  log.debug('tools.config.json not found or invalid, using defaults', { error: String(err) });
 }
 
 // Keep tools.js lean by extracting complex tools into modules
@@ -47,9 +47,12 @@ import dataValidateTool from './data/validate-tool.js';
 
 // tests tools
 import testsRunTool from './tests/run.js';
+import testsRunAsyncTool from './tests/run-async.js';
+import testsRunAsyncResultTool from './tests/run-async-result.js';
 
-// check tool
+// check tools
 import checkTool from './check/index.js';
+import checkRunTool from './check/run.js';
 
 // uploads tool
 import uploadsPushTool from './uploads/push.js';
@@ -72,7 +75,7 @@ const tools = {
   'envs-list': {
     description: 'List configured environments from .pos (name and url)',
     handler: async (_params, ctx) => {
-      DEBUG && debugLog('tool:list-envs invoked', { transport: ctx.transport });
+      log.debug('tool:list-envs invoked', { transport: ctx.transport });
       const settingsMap = Object(files.getConfig());
       const names = Object.keys(settingsMap);
       const environments = names.map((name) => ({ name, url: settingsMap[name]?.url }));
@@ -118,9 +121,12 @@ const tools = {
 
   // tests
   'unit-tests-run': testsRunTool,
+  'tests-run-async': testsRunAsyncTool,
+  'tests-run-async-result': testsRunAsyncResultTool,
 
   // check: run platformos-check linter
   'check': checkTool,
+  'check-run': checkRunTool,
 
   // sync.singleFile: upload or delete a single file to platformOS instance
   'sync-file': singleFileTool,
@@ -149,7 +155,7 @@ function applyConfig(allTools, config) {
 
     // Skip disabled tools
     if (cfg && cfg.enabled === false) {
-      DEBUG && debugLog('tool disabled by config', { name });
+      log.debug('tool disabled by config', { name });
       continue;
     }
 

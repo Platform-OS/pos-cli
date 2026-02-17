@@ -1,5 +1,5 @@
 // partner-get tool - Get partner details and billing plans from Partner Portal API
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import { getPortalConfig, portalRequest } from './portal-client.js';
 
 const partnerGetTool = {
@@ -18,14 +18,14 @@ const partnerGetTool = {
 
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:partner-get invoked', { partner_id: params.partner_id });
+    log.debug('tool:partner-get invoked', { partner_id: params.partner_id });
 
     try {
       const configFn = ctx.getPortalConfig || getPortalConfig;
       const requestFn = ctx.portalRequest || portalRequest;
       const config = ctx.portalConfig || configFn();
 
-      DEBUG && debugLog('partner-get: fetching partner details', { partner_id: params.partner_id });
+      log.debug('partner-get: fetching partner details', { partner_id: params.partner_id });
       const partner = await requestFn({
         method: 'GET',
         path: `/api/partners/${params.partner_id}`,
@@ -57,7 +57,7 @@ const partnerGetTool = {
         meta: { startedAt, finishedAt: new Date().toISOString() }
       };
     } catch (e) {
-      DEBUG && debugLog('partner-get: error', { error: e.message, status: e.status });
+      log.error('partner-get: error', { error: e.message, status: e.status });
       return {
         ok: false,
         error: {

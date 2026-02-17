@@ -1,46 +1,8 @@
 // platformos.check - run platformos-check linter on the app
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const execAsync = promisify(exec);
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-function parseCheckOutput(stdout, format) {
-  if (format === 'json') {
-    try {
-      return JSON.parse(stdout);
-    } catch (e) {
-      return { raw: stdout, parseError: e.message };
-    }
-  }
-
-  // Parse text output into structured format
-  const lines = stdout.split('\n').filter(l => l.trim());
-  const summary = {
-    checks: [],
-    summary: {}
-  };
-
-  let currentCheck = null;
-  for (const line of lines) {
-    if (line.includes('error') || line.includes('warning') || line.includes('suggestion')) {
-      currentCheck = {
-        message: line,
-        severity: line.includes('error') ? 'error' : line.includes('warning') ? 'warning' : 'suggestion'
-      };
-      summary.checks.push(currentCheck);
-    } else if (line.match(/^\d+\s+(error|warning|suggestion)/)) {
-      const match = line.match(/^(\d+)\s+(error|warning|suggestion)/);
-      if (match) {
-        summary.summary[match[2]] = parseInt(match[1]);
-      }
-    }
-  }
-
-  return summary;
-}
 
 const checkTool = {
   description: 'Run the platformos-check linter to analyze the app for best practice violations, errors, and style issues in Liquid and JSON files. Returns structured results (JSON by default). Supports category filtering, auto-correct, and custom config. Requires the platformos-check gem installed.',
@@ -107,7 +69,7 @@ const checkTool = {
     try {
 
       // Build command
-      let command = `platformos-check`;
+      let command = 'platformos-check';
 
       // Add options
       if (listChecks) {
@@ -154,7 +116,7 @@ const checkTool = {
       if (format === 'json' && !listChecks && !printConfig) {
         try {
           result = JSON.parse(stdout);
-        } catch (e) {
+        } catch {
           // If JSON parse fails, return as raw string
           result = { raw: stdout };
         }
@@ -185,12 +147,11 @@ const checkTool = {
       // Treat as successful if it's a known linter condition (not a real error)
       if (noFilesFound || error.stdout) {
         let result = error.stdout || error.stderr;
-        const format = params.format || 'json';
 
         if (format === 'json' && result && !noFilesFound) {
           try {
             result = JSON.parse(result);
-          } catch (e) {
+          } catch {
             result = { raw: result };
           }
         }
@@ -200,7 +161,7 @@ const checkTool = {
           data: {
             result: result || 'No platformos_app files found',
             format,
-            appPath: params.appPath || '.',
+            appPath,
             issues_found: !noFilesFound,
             no_files_found: noFilesFound,
             autoCorrect: autoCorrect,

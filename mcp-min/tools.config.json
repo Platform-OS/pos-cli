@@ -86,9 +86,21 @@
       "enabled": true,
       "description": "Run platformOS tests via /_tests/run endpoint. Returns parsed test results with assertions count, failures, and timing."
     },
-    "check": {
+    "tests-run-async": {
       "enabled": true,
-      "description": "Run platformos-check linter to analyze the app for best practice violations. Checks Liquid and JSON files."
+      "description": "Trigger a background platformOS test run via /_tests/run_async. Returns immediately with a run ID. Use tests-run-async-result to poll for completion."
+    },
+    "tests-run-async-result": {
+      "enabled": true,
+      "description": "Check the result of an async test run by ID via /_tests/results/:id. Returns status: pending, success, failed, or error. Poll until done=true."
+    },
+    "check": {
+      "enabled": false,
+      "description": "Run platformos-check linter to analyze the app for best practice violations. Checks Liquid and JSON files. Requires Ruby gem. Superseded by check-run."
+    },
+    "check-run": {
+      "enabled": true,
+      "description": "Run platformos-check Node.js linter on the app. Analyzes Liquid/JSON files for violations. No Ruby required."
     },
     "sync-file": {
       "enabled": true,

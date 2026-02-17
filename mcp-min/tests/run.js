@@ -1,5 +1,5 @@
 // platformos.tests.run - execute tests via /_tests/run?formatter=text
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import files from '../../lib/files.js';
 import { fetchSettings } from '../../lib/settings.js';
 
@@ -263,7 +263,7 @@ function extractJsonObjects(str) {
           objects.push(parsed);
         } catch (e) {
           // Invalid JSON, skip
-          DEBUG && debugLog('Failed to parse JSON object', { jsonStr, error: e.message });
+          log.debug('Failed to parse JSON object', { jsonStr, error: e.message });
         }
         start = -1;
       }
@@ -284,12 +284,13 @@ const testsRunTool = {
       email: { type: 'string', description: 'Account email (alternative to env)' },
       token: { type: 'string', description: 'API token (alternative to env)' },
       path: { type: 'string', description: 'Optional test path filter (e.g., "tests/users")' },
-      name: { type: 'string', description: 'Optional test name filter' }
-    }
+      name: { type: 'string', description: 'Test name filter (e.g., "create_user_test"). Required to avoid running all tests which causes timeouts.' }
+    },
+    required: ['env', 'name']
   },
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:unit-tests-run invoked', { env: params?.env, path: params?.path });
+    log.debug('tool:unit-tests-run invoked', { env: params?.env, path: params?.path });
 
     try {
       const auth = await resolveAuth(params);
@@ -303,7 +304,7 @@ const testsRunTool = {
         testUrl += `&name=${encodeURIComponent(params.name)}`;
       }
 
-      DEBUG && debugLog('Requesting tests', { url: testUrl });
+      log.debug('Requesting tests', { url: testUrl });
 
       // Make the request
       const requestFn = ctx.request || makeRequest;
@@ -357,7 +358,7 @@ const testsRunTool = {
         }
       };
     } catch (e) {
-      DEBUG && debugLog('tool:unit-tests-run error', { error: String(e) });
+      log.error('tool:unit-tests-run error', { error: String(e) });
       return {
         ok: false,
         error: { code: 'TESTS_RUN_ERROR', message: String(e.message || e) }

@@ -46,6 +46,40 @@ describe('mcp-min stdio server', () => {
     }) + '\n');
   }, 15000);
 
+  test('exits cleanly with code 0 on EPIPE (client disconnects)', (done) => {
+    const child = runServer();
+
+    child.stdout.on('data', (c) => {
+      const s = c.toString();
+      if (s.includes('protocolVersion')) {
+        // Close the parent's read end of stdout pipe to simulate client disconnect
+        child.stdout.destroy();
+
+        // Send another request — the response write will hit a broken pipe
+        child.stdin.write(JSON.stringify({
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'tools/list',
+          params: {}
+        }) + '\n');
+      }
+    });
+
+    child.on('exit', (code, signal) => {
+      // Should exit cleanly, not crash
+      expect(code === 0 || signal === 'SIGPIPE').toBe(true);
+      done();
+    });
+
+    // Bootstrap with MCP initialize
+    child.stdin.write(JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: { protocolVersion: '2024-11-05', capabilities: {} }
+    }) + '\n');
+  }, 15000);
+
   test('handles invalid JSON input gracefully', (done) => {
     const child = runServer();
     let initialized = false;

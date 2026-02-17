@@ -1,5 +1,5 @@
 // platformos.data.export - start data export from platformOS instance
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import files from '../../lib/files.js';
 import { fetchSettings } from '../../lib/settings.js';
 import Gateway from '../../lib/proxy.js';
@@ -56,7 +56,7 @@ const dataExportTool = {
   },
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:data-export invoked', { env: params?.env, zip: params?.zip });
+    log.debug('tool:data-export invoked', { env: params?.env, zip: params?.zip });
 
     try {
       const auth = await resolveAuth(params);
@@ -82,7 +82,7 @@ const dataExportTool = {
         }
       };
     } catch (e) {
-      DEBUG && debugLog('tool:data-export error', { error: String(e) });
+      log.error('tool:data-export error', { error: String(e) });
 
       if (e.statusCode === 404) {
         return {

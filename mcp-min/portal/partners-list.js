@@ -1,5 +1,5 @@
 // partners-list tool - List partners and their billing plans from Partner Portal API
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import { getPortalConfig, portalRequest } from './portal-client.js';
 
 const partnersListTool = {
@@ -18,7 +18,7 @@ const partnersListTool = {
 
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:partners-list invoked', { partner_id: params.partner_id });
+    log.debug('tool:partners-list invoked', { partner_id: params.partner_id });
 
     try {
       const configFn = ctx.getPortalConfig || getPortalConfig;
@@ -27,7 +27,7 @@ const partnersListTool = {
 
       if (params.partner_id) {
         // Fetch specific partner with billing plans
-        DEBUG && debugLog('partners-list: fetching partner details', { partner_id: params.partner_id });
+        log.debug('partners-list: fetching partner details', { partner_id: params.partner_id });
         const partner = await requestFn({
           method: 'GET',
           path: `/api/partners/${params.partner_id}`,
@@ -52,7 +52,7 @@ const partnersListTool = {
       }
 
       // List all partners
-      DEBUG && debugLog('partners-list: fetching all partners');
+      log.debug('partners-list: fetching all partners');
       const response = await requestFn({
         method: 'GET',
         path: '/api/partners',
@@ -73,7 +73,7 @@ const partnersListTool = {
         meta: { startedAt, finishedAt: new Date().toISOString() }
       };
     } catch (e) {
-      DEBUG && debugLog('partners-list: error', { error: e.message, status: e.status });
+      log.error('partners-list: error', { error: e.message, status: e.status });
       return {
         ok: false,
         error: {

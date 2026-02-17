@@ -1,5 +1,5 @@
 // platformos.data.clean - start data clean operation (removes data from instance)
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import files from '../../lib/files.js';
 import { fetchSettings } from '../../lib/settings.js';
 import Gateway from '../../lib/proxy.js';
@@ -58,7 +58,7 @@ const dataCleanTool = {
   },
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:data-clean invoked', { env: params?.env, includeSchema: params?.includeSchema });
+    log.debug('tool:data-clean invoked', { env: params?.env, includeSchema: params?.includeSchema });
 
     try {
       // Validate confirmation
@@ -99,7 +99,7 @@ const dataCleanTool = {
         }
       };
     } catch (e) {
-      DEBUG && debugLog('tool:data-clean error', { error: String(e) });
+      log.error('tool:data-clean error', { error: String(e) });
 
       // Handle specific error cases
       if (e.statusCode === 422) {

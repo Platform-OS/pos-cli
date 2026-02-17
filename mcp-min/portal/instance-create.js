@@ -1,5 +1,5 @@
 // instance-create tool - Create a new platformOS instance via Partner Portal API
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import { getPortalConfig, portalRequest } from './portal-client.js';
 
 const instanceCreateTool = {
@@ -35,7 +35,7 @@ const instanceCreateTool = {
 
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    DEBUG && debugLog('tool:instance-create invoked', { name: params.name });
+    log.debug('tool:instance-create invoked', { name: params.name });
 
     try {
       // Allow injection for testing
@@ -44,7 +44,7 @@ const instanceCreateTool = {
       const config = ctx.portalConfig || configFn();
 
       // 1. Validate instance name availability
-      DEBUG && debugLog('instance-create: checking name availability', { name: params.name });
+      log.debug('instance-create: checking name availability', { name: params.name });
       const nameCheck = await requestFn({
         method: 'GET',
         path: `/api/instance_name_checks/${encodeURIComponent(params.name)}`,
@@ -63,7 +63,7 @@ const instanceCreateTool = {
       }
 
       // 2. Create instance
-      DEBUG && debugLog('instance-create: creating instance', { name: params.name, partner_id: params.partner_id });
+      log.debug('instance-create: creating instance', { name: params.name, partner_id: params.partner_id });
       const response = await requestFn({
         method: 'POST',
         path: '/api/tasks/instance/create',
@@ -89,7 +89,7 @@ const instanceCreateTool = {
         meta: { startedAt, finishedAt: new Date().toISOString() }
       };
     } catch (e) {
-      DEBUG && debugLog('instance-create: error', { error: e.message, status: e.status });
+      log.error('instance-create: error', { error: e.message, status: e.status });
       return {
         ok: false,
         error: {

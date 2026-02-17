@@ -1,9 +1,9 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import morgan from 'morgan';
 import tools from './tools.js';
 import { sseHandler, writeSSE } from './sse.js';
-import { DEBUG, debugLog } from './config.js';
+import { DEBUG } from './config.js';
+import log from './log.js';
 
 let currentSSE = null; // minimal session: last SSE connection
 
@@ -12,100 +12,23 @@ export default async function startHttp({ port = 5910 } = {}) {
 
   const router = express.Router();
 
-  // Enhanced logging in debug mode
-  if (DEBUG) {
-    app.use(morgan('combined'));
-    // Detailed request logger
-    app.use((req, res, next) => {
-      const start = process.hrtime.bigint();
-      debugLog('HTTP request', {
-        method: req.method,
-        url: req.originalUrl || req.url,
-        httpVersion: req.httpVersion,
-        remoteAddress: req.ip || req.connection?.remoteAddress,
-        headers: req.headers
-      });
-      res.on('finish', () => {
-        const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
-        debugLog('HTTP response', {
-          method: req.method,
-          url: req.originalUrl || req.url,
-          status: res.statusCode,
-          headers: res.getHeaders ? res.getHeaders() : {},
-          duration_ms: durationMs.toFixed(2)
-        });
-      });
-      next();
+  // Request logging middleware (replaces morgan)
+  app.use((req, res, next) => {
+    const start = process.hrtime.bigint();
+    res.on('finish', () => {
+      const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+      log.info(`${req.method} ${req.originalUrl || req.url} ${res.statusCode} ${durationMs.toFixed(1)}ms`);
     });
-  } else {
-    app.use(morgan('tiny'));
-  }
+    log.debug('HTTP request', {
+      method: req.method,
+      url: req.originalUrl || req.url,
+      remoteAddress: req.ip || req.connection?.remoteAddress,
+      headers: req.headers
+    });
+    next();
+  });
 
   app.use(bodyParser.json({ limit: '1mb' }));
-
-  // Log request bodies for mutating methods in debug mode
-  if (DEBUG) {
-    app.use((req, res, next) => {
-      const method = (req.method || '').toUpperCase();
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-        try {
-          let bodyStr = '';
-          try {
-            bodyStr = JSON.stringify(req.body);
-          } catch (e) {
-            bodyStr = '[unserializable-body]';
-          }
-          debugLog('HTTP request body', {
-            method: req.method,
-            url: req.originalUrl || req.url,
-            body: bodyStr
-          });
-        } catch (e) {
-          debugLog('HTTP request body logging error', String(e));
-        }
-      }
-      next();
-    });
-
-    // Log response bodies (JSON/text) for easier debugging
-    app.use((req, res, next) => {
-      const origJson = res.json.bind(res);
-      const origSend = res.send.bind(res);
-
-      res.json = (payload) => {
-        try {
-          const bodyStr = (() => { try { return JSON.stringify(payload); } catch { return '[unserializable-json]'; } })();
-          debugLog('HTTP response body (json)', {
-            method: req.method,
-            url: req.originalUrl || req.url,
-            body: bodyStr
-          });
-        } catch (e) {
-          debugLog('HTTP response body logging error (json)', String(e));
-        }
-        return origJson(payload);
-      };
-
-      res.send = (payload) => {
-        try {
-          let bodyStr = '';
-          if (typeof payload === 'string') bodyStr = payload;
-          else if (Buffer.isBuffer(payload)) bodyStr = `[buffer ${payload.length}b]`;
-          else bodyStr = JSON.stringify(payload);
-          debugLog('HTTP response body (send)', {
-            method: req.method,
-            url: req.originalUrl || req.url,
-            body: bodyStr
-          });
-        } catch (e) {
-          debugLog('HTTP response body logging error (send)', String(e));
-        }
-        return origSend(payload);
-      };
-
-      next();
-    });
-  }
 
   // Root route for basic info and discovery
   const handleBaseRoot = (req, res) => {
@@ -157,12 +80,12 @@ export default async function startHttp({ port = 5910 } = {}) {
     if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
 
     try {
-      DEBUG && debugLog('HTTP /call', { tool, params, rawBodyKeys: Object.keys(body) });
+      log.debug('HTTP /call', { tool, params, rawBodyKeys: Object.keys(body) });
       const result = await entry.handler(params || {}, { transport: 'http', debug: DEBUG });
-      DEBUG && debugLog('HTTP /call result', { tool, result });
+      log.debug('HTTP /call result', { tool, result });
       res.json({ result });
     } catch (err) {
-      DEBUG && debugLog('HTTP /call error', { tool, err: String(err), details: err && err._pos });
+      log.debug('HTTP /call error', { tool, err: String(err), details: err && err._pos });
       const payload = { error: String(err) };
       if (err && err._pos) payload.details = err._pos;
       res.status(500).json(payload);
@@ -185,20 +108,20 @@ export default async function startHttp({ port = 5910 } = {}) {
         if (id == null) {
           try { res.set('Mcp-Protocol-Version', responsePayload.result?.protocolVersion || '2025-06-18'); } catch {}
           try { res.set('Mcp-Session-Id', 'mcpmin-1'); } catch {}
-          DEBUG && debugLog('JSON-RPC notify -> 202 Accepted');
+          log.debug('JSON-RPC notify -> 202 Accepted');
           res.status(202).end();
           return true;
         }
         // For requests with id: emit on SSE (if present) and also return JSON
         if (currentSSE) {
-          DEBUG && debugLog('JSON-RPC respond on SSE channel', { method, id });
+          log.debug('JSON-RPC respond on SSE channel', { method, id });
           writeSSE(currentSSE, { event: 'message', data: JSON.stringify(responsePayload) });
         }
         try { res.set('Mcp-Protocol-Version', responsePayload.result?.protocolVersion || '2025-06-18'); } catch {}
         try { res.set('Mcp-Session-Id', 'mcpmin-1'); } catch {}
         // Always return 200 for JSON-RPC responses; include errors in payload per protocol expectations
         const status = 200;
-        DEBUG && debugLog(`JSON-RPC respond ${status} JSON`, { method, id, response: responsePayload });
+        log.debug(`JSON-RPC respond ${status} JSON`, { method, id, response: responsePayload });
         res.status(status).json(responsePayload);
         return true;
       };
@@ -282,45 +205,45 @@ export default async function startHttp({ port = 5910 } = {}) {
       writeSSE(res, { event: 'endpoint', data: 'call-stream' });
       // Extended info (optional secondary event)
       writeSSE(res, { event: 'endpoint_info', data: JSON.stringify({ base_url: baseUrl, transport: 'sse', path: '/call-stream' }) });
-      DEBUG && debugLog('SSE initial endpoint event(s) sent', { endpoint: 'call-stream' });
+      log.debug('SSE initial endpoint event(s) sent', { endpoint: 'call-stream' });
     } catch (e) {
-      DEBUG && debugLog('Failed to send initial endpoint event', String(e));
+      log.debug('Failed to send initial endpoint event', String(e));
     }
 
     let closed = false;
-    req.on('close', () => { closed = true; DEBUG && debugLog('SSE connection closed', { tool }); });
+    req.on('close', () => { closed = true; log.debug('SSE connection closed', { tool }); });
 
     // Provide a simple writer function to the tool
     const writer = (event) => {
       if (closed) return;
-      DEBUG && debugLog('SSE write', { tool, event });
+      log.debug('SSE write', { tool, event });
       writeSSE(res, event);
     };
 
     // Call the tool's stream handler if present
     if (typeof entry.streamHandler === 'function') {
       try {
-        DEBUG && debugLog('HTTP /call-stream start', { tool, params });
+        log.debug('HTTP /call-stream start', { tool, params });
         entry.streamHandler(params || {}, { transport: 'http', writer, debug: DEBUG })
           .then(() => {
             writeSSE(res, { event: 'done', data: '' });
             res.end();
-            DEBUG && debugLog('HTTP /call-stream done', { tool });
+            log.debug('HTTP /call-stream done', { tool });
           })
           .catch((err) => {
             writeSSE(res, { event: 'error', data: String(err) });
             res.end();
-            DEBUG && debugLog('HTTP /call-stream error', { tool, err: String(err) });
+            log.debug('HTTP /call-stream error', { tool, err: String(err) });
           });
       } catch (err) {
         writeSSE(res, { event: 'error', data: String(err) });
         res.end();
-        DEBUG && debugLog('HTTP /call-stream exception', { tool, err: String(err) });
+        log.debug('HTTP /call-stream exception', { tool, err: String(err) });
       }
     } else {
       writeSSE(res, { event: 'error', data: 'tool has no streamHandler' });
       res.end();
-      DEBUG && debugLog('HTTP /call-stream missing streamHandler', { tool });
+      log.debug('HTTP /call-stream missing streamHandler', { tool });
     }
   };
 
@@ -334,7 +257,7 @@ export default async function startHttp({ port = 5910 } = {}) {
 
   return new Promise((resolve) => {
     const server = app.listen(port, () => {
-      DEBUG && debugLog('HTTP server listening', { port });
+      log.info('HTTP server listening', { port });
       resolve(server);
     });
   });

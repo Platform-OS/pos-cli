@@ -1,5 +1,5 @@
 // platformos.data.import.status - check the status of a data import job
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 import { fetchSettings } from '../../lib/settings.js';
 import Gateway from '../../lib/proxy.js';
 
@@ -23,7 +23,7 @@ const dataImportStatusTool = {
     }
   },
   handler: async (params, ctx = {}) => {
-    DEBUG && debugLog('tool:data-import-status invoked', { jobId: params?.jobId });
+    log.debug('tool:data-import-status invoked', { jobId: params?.jobId });
     const startedAt = new Date().toISOString();
 
     try {
@@ -59,7 +59,7 @@ const dataImportStatusTool = {
         }
       };
     } catch (e) {
-      DEBUG && debugLog('tool:data-import-status error', { error: String(e) });
+      log.error('tool:data-import-status error', { error: String(e) });
       return {
         ok: false,
         error: { code: 'DATA_IMPORT_STATUS_ERROR', message: String(e.message || e) },

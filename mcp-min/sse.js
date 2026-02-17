@@ -1,5 +1,5 @@
 // Minimal SSE utilities: framing and heartbeat
-import { DEBUG, debugLog } from './config.js';
+import log from './log.js';
 
 export const HEARTBEAT_INTERVAL_MS = 15000; // 15s
 
@@ -11,13 +11,13 @@ export function sseHandler(req, res) {
   });
   // initial comment to establish stream
   res.write(': connected\n\n');
-  DEBUG && debugLog('SSE connection established');
+  log.debug('SSE connection established');
 
   // heartbeat
   const interval = setInterval(() => {
     try {
       res.write(': heartbeat\n\n');
-      DEBUG && debugLog('SSE heartbeat');
+      log.debug('SSE heartbeat');
     } catch (e) {
       // ignore
     }
@@ -25,7 +25,7 @@ export function sseHandler(req, res) {
 
   req.on('close', () => {
     clearInterval(interval);
-    DEBUG && debugLog('SSE connection cleaned up');
+    log.debug('SSE connection cleaned up');
   });
 }
 

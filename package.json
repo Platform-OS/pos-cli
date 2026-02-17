@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "6.0.0-beta.0",
+  "version": "6.0.0-beta.1",
   "description": "Manage your platformOS application",
   "type": "module",
   "imports": {
@@ -75,6 +75,7 @@
     "text-table": "^0.2.0",
     "unzipper": "^0.12.3",
     "update-notifier": "^7.3.1",
+    "yaml": "^2.8.2",
     "yeoman-environment": "^5.1.2",
     "yeoman-generator": "^7.5.1"
   },

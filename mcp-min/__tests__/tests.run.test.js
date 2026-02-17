@@ -263,6 +263,7 @@ Assertions: 5. Failed: 5. Time: 123ms`;
       expect(testsRunTool.inputSchema.properties).toHaveProperty('env');
       expect(testsRunTool.inputSchema.properties).toHaveProperty('path');
       expect(testsRunTool.inputSchema.properties).toHaveProperty('name');
+      expect(testsRunTool.inputSchema.required).toContain('name');
     });
 
     test('returns parsed test results on success', async () => {
@@ -274,7 +275,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
       });
 
       const result = await testsRunTool.handler(
-        { env: 'staging' },
+        { env: 'staging', name: 'example_test' },
         { request: mockRequest }
       );
 
@@ -295,7 +296,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
       });
 
       await testsRunTool.handler(
-        { env: 'staging', path: 'tests/users' },
+        { env: 'staging', name: 'users_test', path: 'tests/users' },
         { request: mockRequest }
       );
 
@@ -343,7 +344,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
       });
 
       const result = await testsRunTool.handler(
-        { env: 'staging' },
+        { env: 'staging', name: 'some_test' },
         { request: mockRequest }
       );
 
@@ -356,7 +357,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
       const mockRequest = vi.fn().mockRejectedValue(new Error('Network error'));
 
       const result = await testsRunTool.handler(
-        { env: 'staging' },
+        { env: 'staging', name: 'some_test' },
         { request: mockRequest }
       );
 
@@ -374,7 +375,7 @@ Assertions: 5. Failed: 2. Time: 150ms`
       });
 
       const result = await testsRunTool.handler(
-        { env: 'staging' },
+        { env: 'staging', name: 'failing_test' },
         { request: mockRequest }
       );
 

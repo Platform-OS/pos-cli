@@ -3,7 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { DEBUG, debugLog } from '../config.js';
+import log from '../log.js';
 
 /**
  * Get Portal configuration from ~/.config/pos-cli/config.json
@@ -40,7 +40,7 @@ async function portalRequest({ method = 'GET', path: apiPath, body, token, baseU
   const url = `${baseUrl || cfg.partner_portal_url}${apiPath}`;
   const authToken = token || cfg.master_token;
 
-  DEBUG && debugLog('portal:request', { method, url, hasBody: !!body });
+  log.debug('portal:request', { method, url, hasBody: !!body });
 
   const headers = {
     'Authorization': `Bearer ${authToken}`,
@@ -54,7 +54,7 @@ async function portalRequest({ method = 'GET', path: apiPath, body, token, baseU
     body: body ? JSON.stringify(body) : undefined
   });
 
-  DEBUG && debugLog('portal:response', { status: response.status, statusText: response.statusText });
+  log.debug('portal:response', { status: response.status, statusText: response.statusText });
 
   // Handle non-JSON responses
   const contentType = response.headers.get('content-type') || '';
