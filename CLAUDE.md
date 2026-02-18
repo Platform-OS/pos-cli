@@ -359,6 +359,174 @@ GUI apps are pre-built (in dist/ or build/ directories). To modify:
 - **OpenObserve** - Log aggregation and search (logs v2)
 - **CDN** - Asset delivery and verification
 
+## Cross-Platform Compatibility
+
+pos-cli must work correctly on both Windows and Linux/macOS. Follow these patterns to ensure cross-platform compatibility:
+
+### Path Handling Patterns
+
+#### 1. **Use Node.js `path` Module for Filesystem Operations**
+Always use `path` module functions for filesystem operations, never hardcode path separators:
+
+**✓ Correct:**
+```javascript
+const filePath = path.join(baseDir, 'app', 'views', 'page.liquid');
+const absPath = path.resolve(relativePath);
+const relPath = path.relative(baseDir, absPath);
+const dir = path.dirname(filePath);
+const filename = path.basename(filePath);
+const ext = path.extname(filePath);
+```
+
+**✗ Incorrect:**
+```javascript
+const filePath = baseDir + '/app/views/page.liquid';  // Breaks on Windows
+const parts = filePath.split('/');  // Breaks on Windows (use path.sep)
+```
+
+#### 2. **Normalize Paths to Forward Slashes for API/Output**
+The platformOS API and user-facing output should always use forward slashes. Use this pattern:
+
+```javascript
+// Pattern from lib/watch.js
+const filePathUnixified = filePath =>
+  filePath.replace(/\\/g, '/');  // Convert backslashes to forward slashes
+
+// Alternative pattern from lib/check.js
+const normalizedPath = filePath.split(path.sep).join('/');
+```
+
+**When to use:**
+- Before sending paths to platformOS API
+- For user-facing output (logs, error messages)
+- For pattern matching with regex
+- For JSON output
+
+#### 3. **Path Splitting with `path.sep`**
+When you need to split a path into components, use `path.sep`:
+
+```javascript
+// Extract module name from path like "modules/my-module/file.js"
+const moduleName = filePath.split(path.sep)[1];
+
+// Join path components
+const normalizedPath = filePath.split(path.sep).join('/');
+```
+
+#### 4. **Complete Path Normalization Pattern**
+For complex path operations (like in lib/check.js), use this comprehensive pattern:
+
+```javascript
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// 1. Convert URI to path (if from external source)
+let absolutePath = fileURLToPath(uri);
+
+// 2. Normalize OS-specific separators
+absolutePath = path.normalize(absolutePath);
+
+// 3. Generate relative path
+let filePath = absolutePath;
+if (basePath) {
+  const normalizedBase = path.normalize(path.resolve(basePath));
+  filePath = path.relative(normalizedBase, absolutePath);
+
+  // 4. Convert to forward slashes for output
+  filePath = filePath.split(path.sep).join('/');
+}
+```
+
+#### 5. **URI to Path Conversion**
+When converting file:// URIs to filesystem paths, use `fileURLToPath`:
+
+```javascript
+import { fileURLToPath } from 'url';
+
+const uriToPath = (uri) => {
+  try {
+    return fileURLToPath(uri);  // Handles Windows drive letters correctly
+  } catch (error) {
+    // Fallback for non-standard URIs
+    return uri.replace('file://', '');
+  }
+};
+```
+
+**Why:** On Windows, `file:///C:/path/file.txt` needs to become `C:\path\file.txt`, not `\C:\path\file.txt`.
+
+#### 6. **Third-Party Normalization: `normalize-path`**
+For consistent forward-slash conversion, the `normalize-path` package is available:
+
+```javascript
+import normalize from 'normalize-path';
+
+const normalizedPath = normalize(windowsPath);  // Always returns forward slashes
+```
+
+**Used in:**
+- `lib/shouldBeSynced.js` - For pattern matching
+- `lib/assets/manifest.js` - For asset path normalization
+
+#### 7. **Pattern Matching on Paths**
+Always normalize paths before regex matching:
+
+```javascript
+const isAssetsPath = path => {
+  const normalizedPath = path.replace(/\\/g, '/');
+  return normalizedPath.startsWith('app/assets') ||
+         /^modules\/\w+\/public\/assets/.test(normalizedPath);
+};
+```
+
+### Testing Cross-Platform Code
+
+When adding or modifying path-handling code:
+
+1. **Test locally if possible** - If on Windows, test Windows behavior; if on Linux, test Linux behavior
+2. **Check test output** - Look for path-related test failures in CI (tests run on both platforms)
+3. **Verify path separators** - Ensure output paths use forward slashes consistently
+4. **Test edge cases:**
+   - Paths with spaces
+   - Deeply nested paths
+   - Paths at root level
+   - Module paths vs app paths
+
+### Common Mistakes to Avoid
+
+**❌ Hardcoded path separators:**
+```javascript
+filePath.split('/');  // Breaks on Windows
+filePath.includes('/');  // May not work on Windows
+```
+
+**❌ String concatenation for paths:**
+```javascript
+const fullPath = dir + '/' + filename;  // Use path.join() instead
+```
+
+**❌ Not normalizing before pattern matching:**
+```javascript
+if (filePath.startsWith('app/assets'))  // May fail on Windows
+// Should be:
+if (filePath.replace(/\\/g, '/').startsWith('app/assets'))
+```
+
+**❌ Using `path.relative()` without normalizing base:**
+```javascript
+path.relative(basePath, absolutePath);  // May give incorrect results
+// Should normalize both first:
+path.relative(path.normalize(path.resolve(basePath)), path.normalize(absolutePath));
+```
+
+### Key Files Demonstrating Best Practices
+
+- **`lib/check.js`** - Comprehensive path normalization for linter output
+- **`lib/watch.js`** - API-ready path preparation (`filePathUnixified`)
+- **`lib/shouldBeSynced.js`** - Pattern matching with normalized paths
+- **`lib/overwrites.js`** - Relative path generation
+- **`lib/assets/manifest.js`** - Asset path normalization
+
 ## Node.js Version
 
 - **Minimum**: Node.js 22

@@ -72,6 +72,9 @@
     "text-table": "^0.2.0",
     "unzipper": "^0.12.3",
     "update-notifier": "^7.3.1",
+    "@platformos/platformos-check-node": "^0.0.4",
+    "@platformos/platformos-common": "^0.0.4",
+    "yaml": "^2.7.0",
     "yeoman-environment": "^5.1.2",
     "yeoman-generator": "^7.5.1"
   },
@@ -79,6 +82,9 @@
   "bin": {
     "pos-cli": "bin/pos-cli.js",
     "pos-cli-audit": "bin/pos-cli-audit.js",
+    "pos-cli-check": "bin/pos-cli-check.js",
+    "pos-cli-check-init": "bin/pos-cli-check-init.js",
+    "pos-cli-check-run": "bin/pos-cli-check-run.js",
     "pos-cli-deploy": "bin/pos-cli-deploy.js",
     "pos-cli-env": "bin/pos-cli-env.js",
     "pos-cli-env-add": "bin/pos-cli-env-add.js",
