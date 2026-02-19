@@ -151,6 +151,7 @@ export default [
         global: 'readonly',
         require: 'readonly',
         URL: 'readonly',
+        AbortController: 'readonly',
         module: 'readonly',
         program: 'readonly',
         token: 'readonly',

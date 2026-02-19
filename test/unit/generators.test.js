@@ -628,7 +628,7 @@ describe('pos-cli generate command', () => {
         // Ignore if doesn't exist
       }
 
-      const { stdout, code } = await run(
+      const { code } = await run(
         'test/fixtures/yeoman/custom/generators/simple testitem --auto-confirm',
         { cwd: testDir, timeout: 15000 }
       );
