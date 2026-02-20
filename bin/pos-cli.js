@@ -31,6 +31,7 @@ program
   .command('init', 'initialize directory structure')
   .command('logs <environment>', 'display logs and errors').alias('l')
   .command('logsv2', 'display logs and errors').alias('l2')
+  .command('lsp', 'start a Language Server Protocol server')
   .command('migrations', 'manage migrations')
   .command('modules', 'manage modules')
   .command('pull', 'export app data to a zip file')

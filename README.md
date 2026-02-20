@@ -221,6 +221,92 @@ The configuration file controls:
 - File patterns to ignore
 - Check-specific settings
 
+### Language Server Protocol (LSP)
+
+pos-cli includes a Language Server Protocol (LSP) server for platformOS Liquid, enabling rich editor support such as autocompletion, diagnostics, hover documentation, and go-to-definition in any LSP-compatible editor.
+
+The server communicates over **stdio** (standard input/output), which is the standard LSP transport. You do not start it manually — your editor launches it automatically based on your configuration.
+
+#### Step 1: Create a Wrapper Script
+
+Many editors expect to launch an LSP server using a plain executable on your PATH — not a multi-word command like `pos-cli lsp`. To bridge this gap, create a small wrapper script called `pos-cli-lsp`.
+
+Create the file `~/bin/pos-cli-lsp` with the following content:
+
+```sh
+#!/usr/bin/env sh
+exec pos-cli lsp "$@"
+```
+
+Then make it executable:
+
+```sh
+chmod +x ~/bin/pos-cli-lsp
+```
+
+Make sure `~/bin` is in your `PATH`. Add this to your shell config file (`~/.bashrc`, `~/.zshrc`, etc.) if it isn't already:
+
+```sh
+export PATH="$HOME/bin:$PATH"
+```
+
+Reload your shell (`source ~/.zshrc` or open a new terminal) and verify the script works:
+
+```sh
+pos-cli-lsp --help
+```
+
+#### Step 2: Configure Your Editor
+
+Once the wrapper script is in place, configure your editor to use it as the language server.
+
+##### Claude Code
+
+Add the following to your Claude Code MCP/LSP configuration (typically `.claude/settings.json` or your global Claude Code settings):
+
+```json
+{
+  "lsp": {
+    "platformos-liquid": {
+      "command": ["pos-cli-lsp"],
+      "extensions": [".liquid", ".graphql", ".json"]
+    }
+  }
+}
+```
+
+##### Open Code (open-vsx / VSCodium-compatible editors)
+
+Add the following to your editor's `settings.json` (`Ctrl+Shift+P` → "Open User Settings (JSON)"):
+
+```json
+{
+  "lsp": {
+    "platformos-liquid": {
+      "command": ["pos-cli-lsp"],
+      "extensions": [".liquid", ".graphql", ".json"]
+    }
+  }
+}
+```
+
+#### Supported File Types
+
+The language server provides IDE features for:
+
+- `.liquid` — platformOS Liquid templates
+- `.graphql` — GraphQL queries and mutations
+- `.json` — platformOS configuration files
+
+#### Features
+
+Once configured, the language server provides:
+
+- **Autocompletion** — Liquid tags, filters, and platformOS-specific variables
+- **Diagnostics** — Real-time error and warning highlighting
+- **Hover documentation** — Inline docs for tags and filters
+- **Go-to-definition** — Navigate to template, partial, and schema definitions
+
 ### Reading Logs
 
 Use the `logs` command to access errors and logs that you or the system logs:
