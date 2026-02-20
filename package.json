@@ -39,6 +39,8 @@
     "pOS"
   ],
   "dependencies": {
+    "@platformos/platformos-check-node": "^0.0.6",
+    "@platformos/platformos-common": "^0.0.6",
     "archiver": "^7.0.1",
     "async": "^3.2.6",
     "body-parser": "^2.0.2",
@@ -72,8 +74,6 @@
     "text-table": "^0.2.0",
     "unzipper": "^0.12.3",
     "update-notifier": "^7.3.1",
-    "@platformos/platformos-check-node": "^0.0.5",
-    "@platformos/platformos-common": "^0.0.5",
     "yaml": "^2.7.0",
     "yeoman-environment": "^5.1.2",
     "yeoman-generator": "^7.5.1"
@@ -129,5 +129,8 @@
   ],
   "optionalDependencies": {
     "fsevents": "^2.3.3"
+  },
+  "overrides": {
+    "minimatch": ">=10.2.2"
   }
 }
