@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     include: ['test/**/*.{test,spec}.js'],
     fileParallelism: true,
+    globalSetup: ['./test/global-setup.js'],
     setupFiles: ['./test/vitest-setup.js'],
     testTimeout: 10000,
     hookTimeout: 20000,
