@@ -50,8 +50,6 @@ program
     // Continue with watch mode
     const { watcher, liveReloadServer } = await watchStart(env, params.directAssetsUpload, params.livereload);
 
-    setupGracefulShutdown({ watcher, liveReloadServer, context: 'Sync' });
-
     if (params.open) {
       try {
         const open = (await import('open')).default;
@@ -64,6 +62,8 @@ program
         }
       }
     }
+
+    setupGracefulShutdown({ watcher, liveReloadServer, context: 'Sync' });
   });
 
 program.parse(process.argv);

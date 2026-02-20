@@ -37,8 +37,8 @@
     "pOS"
   ],
   "dependencies": {
-    "@platformos/platformos-check-node": "^0.0.6",
-    "@platformos/platformos-common": "^0.0.6",
+    "@platformos/platformos-check-node": "^0.0.7",
+    "@platformos/platformos-common": "^0.0.7",
     "archiver": "^7.0.1",
     "async": "^3.2.6",
     "body-parser": "^2.0.2",
@@ -122,8 +122,5 @@
   ],
   "optionalDependencies": {
     "fsevents": "^2.3.3"
-  },
-  "overrides": {
-    "minimatch": ">=10.2.2"
   }
 }

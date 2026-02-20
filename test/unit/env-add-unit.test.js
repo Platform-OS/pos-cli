@@ -1,5 +1,7 @@
-import { vi, describe, test, expect, afterEach, beforeAll } from 'vitest';
+import { vi, describe, test, expect, afterEach, beforeEach, beforeAll } from 'vitest';
 import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { settingsFromDotPos } from '#lib/settings.js';
 
 vi.mock('open', () => ({
@@ -51,18 +53,23 @@ vi.mock('#lib/validators/index.js', () => ({
 }));
 
 let addEnv;
+let originalCwd;
+let tempDir;
 
 beforeAll(async () => {
   const addMod = await import('#lib/envs/add.js');
   addEnv = addMod.default;
 });
 
+beforeEach(() => {
+  originalCwd = process.cwd();
+  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-test-'));
+  process.chdir(tempDir);
+});
+
 afterEach(() => {
-  try {
-    fs.unlinkSync('.pos');
-  } catch {
-    // File might not exist, ignore
-  }
+  process.chdir(originalCwd);
+  fs.rmSync(tempDir, { recursive: true, force: true });
   mockAccessToken = 'mock-token-12345';
 });
 
