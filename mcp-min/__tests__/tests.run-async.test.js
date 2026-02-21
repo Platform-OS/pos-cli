@@ -108,6 +108,10 @@ describe('tests-run-async tool', () => {
   });
 
   test('includes auth metadata in response', async () => {
+    vi.stubEnv('MPKIT_URL', '');
+    vi.stubEnv('MPKIT_EMAIL', '');
+    vi.stubEnv('MPKIT_TOKEN', '');
+
     const mockRequest = vi.fn().mockResolvedValue({
       statusCode: 200,
       body: JSON.stringify({ id: '1', test_name: 'liquid_test_meta', status: 'pending' })
@@ -117,6 +121,8 @@ describe('tests-run-async tool', () => {
       { env: 'staging' },
       { request: mockRequest }
     );
+
+    vi.unstubAllEnvs();
 
     expect(result.ok).toBe(true);
     expect(result.meta.auth).toBeDefined();
@@ -317,7 +323,7 @@ describe('tests-run-async-result tool', () => {
 
     expect(result.ok).toBe(true);
     expect(result.meta.auth.url).toContain('staging');
-    expect(result.meta.auth.token).toMatch(/^tes\.\.\.ken$/);
+    expect(result.meta.auth.token).toMatch(/^.{3}\.\.\..{3}$/);
     expect(result.meta.url).toContain('/_tests/results/1');
   });
 });

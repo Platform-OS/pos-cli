@@ -62,6 +62,10 @@ describe('sync.singleFile with env parameter', () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-env-test-'));
     originalCwd = process.cwd();
     process.chdir(tmpDir);
+    // Clear global MPKIT_* env vars so tests can control auth via .pos file
+    vi.stubEnv('MPKIT_URL', '');
+    vi.stubEnv('MPKIT_EMAIL', '');
+    vi.stubEnv('MPKIT_TOKEN', '');
 
     fs.mkdirSync(path.join(tmpDir, 'app', 'assets'), { recursive: true });
     fs.writeFileSync(path.join(tmpDir, '.pos'), JSON.stringify({
@@ -70,6 +74,7 @@ describe('sync.singleFile with env parameter', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     process.chdir(originalCwd);
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });

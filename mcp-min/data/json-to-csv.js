@@ -1,9 +1,5 @@
 // Convert JSON import format to CSV files for ZIP import
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
-const archiver = require('archiver');
-const { PassThrough } = require('stream');
+import { ZipFile } from 'yazl';
 
 // CSV column definitions based on platformOS format
 const RECORDS_COLUMNS = ['id', 'user_id', 'created_at', 'updated_at', 'properties', 'model_schema'];
@@ -80,31 +76,27 @@ function generateUsersCSV(users) {
 export async function jsonToZipBuffer(jsonData) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    const passThrough = new PassThrough();
+    const zipFile = new ZipFile();
 
-    passThrough.on('data', chunk => chunks.push(chunk));
-    passThrough.on('end', () => resolve(Buffer.concat(chunks)));
-    passThrough.on('error', reject);
-
-    const archive = archiver('zip', { zlib: { level: 9 } });
-    archive.on('error', reject);
-    archive.pipe(passThrough);
+    zipFile.outputStream.on('data', chunk => chunks.push(chunk));
+    zipFile.outputStream.on('end', () => resolve(Buffer.concat(chunks)));
+    zipFile.outputStream.on('error', reject);
 
     // Handle records (can be in 'records', 'models', or 'transactables')
     const records = jsonData.records || jsonData.models || jsonData.transactables || [];
     const recordsCSV = generateRecordsCSV(records);
     if (recordsCSV) {
-      archive.append(recordsCSV, { name: 'records.csv' });
+      zipFile.addBuffer(Buffer.from(recordsCSV, 'utf8'), 'records.csv', { compress: true });
     }
 
     // Handle users
     const users = jsonData.users || [];
     const usersCSV = generateUsersCSV(users);
     if (usersCSV) {
-      archive.append(usersCSV, { name: 'users.csv' });
+      zipFile.addBuffer(Buffer.from(usersCSV, 'utf8'), 'users.csv', { compress: true });
     }
 
-    archive.finalize();
+    zipFile.end();
   });
 }
 
