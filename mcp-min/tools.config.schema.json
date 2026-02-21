@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP-Min Tools Configuration",
+  "description": "Configuration for mcp-min tools: descriptions and enabled/disabled state",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "_comment": {
+      "type": "string",
+      "description": "Optional comment field"
+    },
+    "tools": {
+      "type": "object",
+      "description": "Tool configurations keyed by tool name",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this tool is available to MCP clients",
+            "default": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description shown to MCP clients"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["tools"],
+  "additionalProperties": false
+}
