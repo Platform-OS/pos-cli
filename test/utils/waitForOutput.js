@@ -1,22 +1,23 @@
-const waitForOutput = (child, pattern, timeout = 15000) => {
+const waitForOutput = (child, pattern, { timeout = 15000, stream = 'stdout' } = {}) => {
   return new Promise((resolve, reject) => {
     let buffer = '';
+    const source = child[stream];
 
     const onData = (chunk) => {
       buffer += chunk.toString();
       if (pattern.test(buffer)) {
         clearTimeout(timer);
-        child.stdout.off('data', onData);
+        source.off('data', onData);
         resolve();
       }
     };
 
     const timer = setTimeout(() => {
-      child.stdout.off('data', onData);
-      reject(new Error(`Timeout (${timeout}ms) waiting for output: ${pattern}`));
+      source.off('data', onData);
+      reject(new Error(`Timeout (${timeout}ms) waiting for ${stream} output: ${pattern}`));
     }, timeout);
 
-    child.stdout.on('data', onData);
+    source.on('data', onData);
   });
 };
 
