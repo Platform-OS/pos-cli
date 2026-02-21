@@ -227,38 +227,9 @@ pos-cli includes a Language Server Protocol (LSP) server for platformOS Liquid, 
 
 The server communicates over **stdio** (standard input/output), which is the standard LSP transport. You do not start it manually — your editor launches it automatically based on your configuration.
 
-#### Step 1: Create a Wrapper Script
+#### Configure Your Editor
 
-Many editors expect to launch an LSP server using a plain executable on your PATH — not a multi-word command like `pos-cli lsp`. To bridge this gap, create a small wrapper script called `pos-cli-lsp`.
-
-Create the file `~/bin/pos-cli-lsp` with the following content:
-
-```sh
-#!/usr/bin/env sh
-exec pos-cli lsp "$@"
-```
-
-Then make it executable:
-
-```sh
-chmod +x ~/bin/pos-cli-lsp
-```
-
-Make sure `~/bin` is in your `PATH`. Add this to your shell config file (`~/.bashrc`, `~/.zshrc`, etc.) if it isn't already:
-
-```sh
-export PATH="$HOME/bin:$PATH"
-```
-
-Reload your shell (`source ~/.zshrc` or open a new terminal) and verify the script works:
-
-```sh
-pos-cli-lsp --help
-```
-
-#### Step 2: Configure Your Editor
-
-Once the wrapper script is in place, configure your editor to use it as the language server.
+Installing pos-cli globally (`npm install -g @platformos/pos-cli`) automatically places `pos-cli-lsp` on your PATH — no wrapper script needed. Configure your editor to use it as the language server.
 
 ##### Claude Code
 
