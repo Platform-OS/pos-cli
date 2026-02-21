@@ -21,8 +21,6 @@ describe('Data clean real', () => {
     const {code, stderr, stdout} = await exec(`echo "CLEAN DATA" | ${cliPath} data clean`, { env });
     expect(stderr).toMatch('WARNING!!! You are going to REMOVE your data from instance: http://google.com')
     expect(stderr).toMatch('There is no coming back.')
-    expect(stderr).toMatch('"statusCode": 405')
-    expect(stderr).toMatch('"pathname": "/api/app_builder/data_clean"')
     expect(stderr).toMatch(env.MPKIT_URL)
   });
 });

@@ -43,6 +43,7 @@
   "dependencies": {
     "@platformos/platformos-check-node": "^0.0.4",
     "@platformos/platformos-common": "^0.0.4",
+    "@platformos/platformos-language-server-node": "^0.0.7",
     "archiver": "^7.0.1",
     "async": "^3.2.6",
     "body-parser": "^2.0.2",
@@ -99,6 +100,7 @@
     "pos-cli-modules": "bin/pos-cli-modules.js",
     "pos-cli-sync": "bin/pos-cli-sync.js",
     "pos-cli-test": "bin/pos-cli-test.js",
+    "pos-cli-lsp": "bin/pos-cli-lsp.js",
     "pos-cli-mcp": "bin/pos-cli-mcp.js",
     "pos-cli-mcp-config": "bin/pos-cli-mcp-config.js",
     "pos-cli-test-run": "bin/pos-cli-test-run.js"
