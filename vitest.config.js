@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['test/**/*.{test,spec}.js'],
+    include: ['test/**/*.{test,spec}.js', 'mcp-min/__tests__/**/*.{test,spec}.js', 'mcp-min/__tests__/*.test.js', 'mcp-min/__tests__/*.test.cjs.js'],
     fileParallelism: true,
     globalSetup: ['./test/global-setup.js'],
     setupFiles: ['./test/vitest-setup.js'],

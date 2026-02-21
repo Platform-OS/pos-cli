@@ -1,0 +1,14 @@
+{
+  "testMatch": ["<rootDir>/mcp-min/**/__tests__/**/*.js"],
+  "setupFiles": ["<rootDir>/mcp/jest.setup.js"],
+  "collectCoverage": true,
+  "collectCoverageFrom": ["mcp-min/**/*.js"],
+  "coverageThreshold": {
+    "./mcp-min/**": {
+      "branches": 50,
+      "functions": 50,
+      "lines": 55,
+      "statements": 55
+    }
+  }
+}

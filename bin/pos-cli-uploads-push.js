@@ -9,17 +9,17 @@ import { presignUrl } from '../lib/presignUrl.js';
 import logger from '../lib/logger.js';
 import ora from 'ora';
 
-const uploadZip = async (directory, gateway) => {
+const uploadZip = async (filepath, gateway) => {
 
   const spinner = ora({ text: 'Sending file', stream: process.stdout });
   spinner.start();
 
   try {
     const instanceId = (await gateway.getInstance()).id;
-    const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/data.property_upload_import.zip`;
+    const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/data.public_property_upload_import.zip`;
     logger.Debug(propertyUploadsDirectory);
-    const { uploadUrl } = await presignUrl(propertyUploadsDirectory, directory);
-    await uploadFile(directory, uploadUrl);
+    const { uploadUrl } = await presignUrl(propertyUploadsDirectory, filepath);
+    await uploadFile(filepath, uploadUrl);
 
     spinner.stopAndPersist().succeed('Upload done.');
   } catch (error) {

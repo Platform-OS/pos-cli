@@ -15,6 +15,7 @@ program
   .name('pos-cli gui serve')
   .arguments('[environment]', 'name of environment. Example: staging')
   .option('-p, --port <port>', 'use PORT', '3333')
+  .option('-b, --host <host>', 'use HOST', 'localhost')
   .option('-o, --open', 'when ready, open default browser with graphiql')
   .option('-s, --sync', 'Sync files')
   .action(async (environment, params) => {
@@ -24,6 +25,7 @@ program
       MARKETPLACE_EMAIL: authData.email,
       MARKETPLACE_TOKEN: authData.token,
       MARKETPLACE_URL: authData.url,
+      HOST: params.host,
       PORT: params.port,
       CONCURRENCY: process.env.CONCURRENCY || DEFAULT_CONCURRENCY
     });
@@ -34,7 +36,7 @@ program
       if (params.open) {
         try {
           const open = (await import('open')).default;
-          await open(`http://localhost:${params.port}`);
+          await open(`http://${params.host}:${params.port}`);
         } catch (error) {
           if (error instanceof AggregateError) {
             logger.Error(`Failed to open browser (${error.errors.length} attempts): ${error.message}`);
