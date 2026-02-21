@@ -16,8 +16,6 @@
     "pretest:unit": "npm install --prefix test/fixtures/yeoman --silent",
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
-    "lint": "eslint . --max-warnings 0",
-    "lint:fix": "eslint . --fix",
     "postinstall": "node ./scripts/check-node-version.js"
   },
   "files": [
@@ -39,19 +37,22 @@
     "pOS"
   ],
   "dependencies": {
-    "archiver": "^7.0.1",
+    "@platformos/platformos-check-node": "^0.0.7",
+    "@platformos/platformos-common": "^0.0.7",
+    "@platformos/platformos-language-server-node": "^0.0.7",
+    "yazl": "^3.3.1",
     "async": "^3.2.6",
-    "body-parser": "^2.0.2",
+    "body-parser": "^2.2.2",
     "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
-    "commander": "^12.1.0",
+    "commander": "^14.0.3",
     "degit": "^2.8.4",
     "email-validator": "^2.0.4",
-    "execa": "^9.5.2",
+    "execa": "^9.6.1",
     "express": "^5.2.1",
-    "fast-glob": "^3.2.11",
+    "fast-glob": "^3.3.3",
     "ignore": "^7.0.5",
-    "inquirer": "^13.2.0",
+    "inquirer": "^13.2.5",
     "livereload": "^0.10.3",
     "lodash.clonedeep": "^4.5.0",
     "lodash.compact": "^3.0.1",
@@ -65,20 +66,24 @@
     "node-notifier": "^10.0.1",
     "normalize-path": "^3.0.0",
     "open": "^11.0.0",
-    "ora": "^9.0.0",
+    "ora": "^9.3.0",
     "prompts": "^2.4.2",
-    "semver": "^7.7.3",
+    "semver": "^7.7.4",
     "shelljs": "^0.10.0",
     "text-table": "^0.2.0",
     "unzipper": "^0.12.3",
     "update-notifier": "^7.3.1",
-    "yeoman-environment": "^5.1.2",
+    "yaml": "^2.8.2",
+    "yeoman-environment": "^5.1.3",
     "yeoman-generator": "^7.5.1"
   },
   "preferGlobal": true,
   "bin": {
     "pos-cli": "bin/pos-cli.js",
     "pos-cli-audit": "bin/pos-cli-audit.js",
+    "pos-cli-check": "bin/pos-cli-check.js",
+    "pos-cli-check-init": "bin/pos-cli-check-init.js",
+    "pos-cli-check-run": "bin/pos-cli-check-run.js",
     "pos-cli-deploy": "bin/pos-cli-deploy.js",
     "pos-cli-env": "bin/pos-cli-env.js",
     "pos-cli-env-add": "bin/pos-cli-env-add.js",
@@ -89,6 +94,7 @@
     "pos-cli-logs": "bin/pos-cli-logs.js",
     "pos-cli-logsv2": "bin/pos-cli-logsv2.js",
     "pos-cli-logsv2-search": "bin/pos-cli-logsv2-search.js",
+    "pos-cli-lsp": "bin/pos-cli-lsp.js",
     "pos-cli-migrations": "bin/pos-cli-migrations.js",
     "pos-cli-modules": "bin/pos-cli-modules.js",
     "pos-cli-sync": "bin/pos-cli-sync.js",
@@ -105,16 +111,11 @@
   },
   "homepage": "https://github.com/Platform-OS/pos-cli/issues#readme",
   "devDependencies": {
-    "@eslint/js": "^9.17.0",
-    "@vitest/coverage-v8": "^4.0.17",
-    "dotenv": "^16.6.1",
-    "eslint": "^9.17.0",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-n": "^17.15.1",
-    "eslint-plugin-promise": "^7.2.1",
-    "nock": "^14.0.4",
+    "dotenv": "^17.3.1",
+    "globals": "^17.3.0",
+    "nock": "^14.0.11",
     "supertest": "^7.2.2",
-    "vitest": "^4.0.0"
+    "vitest": "^4.0.18"
   },
   "bundleDependencies": [
     "commander",
@@ -123,5 +124,9 @@
   ],
   "optionalDependencies": {
     "fsevents": "^2.3.3"
+  },
+  "overrides": {
+    "minimatch": ">=10.2.2",
+    "multimatch": ">=8.0.0"
   }
 }

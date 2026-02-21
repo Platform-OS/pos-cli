@@ -1,6 +1,5 @@
 import { vi, describe, test, expect, afterEach, beforeEach } from 'vitest';
 import fs from 'fs';
-import { settingsFromDotPos } from '#lib/settings.js';
 import { storeEnvironment } from '#lib/environments.js';
 
 vi.mock('open', () => ({

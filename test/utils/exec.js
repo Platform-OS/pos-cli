@@ -1,13 +1,23 @@
 import { exec } from 'child_process';
 
-const execCommand = (cmd, opts, callback) =>
-  new Promise((resolve, _reject) => {
+const execCommand = (cmd, opts, callback) => {
+  let stepError = null;
+
+  return new Promise((resolve, reject) => {
     const child = exec(cmd, opts, (err, stdout, stderr) => {
-      let code = err ? err.code : 0;
-      return resolve({ stdout, stderr, code, child });
+      if (stepError) return reject(stepError);
+      resolve({ stdout, stderr, code: err ? err.code : 0, child });
     });
-    if (callback) callback(child);
-    return child;
+
+    if (callback) {
+      Promise.resolve(callback(child)).catch(err => {
+        stepError = err;
+        child.stdout?.destroy();
+        child.stderr?.destroy();
+        child.kill();
+      });
+    }
   });
+};
 
 export default execCommand;

@@ -11,7 +11,6 @@ import { program } from 'commander';
 import { createEnv } from 'yeoman-environment';
 const yeomanEnv = createEnv();
 import { execaSync } from 'execa';
-import reject from 'lodash.reject';
 import table from 'text-table';
 import logger from '../lib/logger.js';
 import { confirm } from '@inquirer/prompts';
@@ -142,7 +141,7 @@ const confirmInstallation = async (packageRoot, pkg, autoConfirm) => {
       default: true
     });
     return answer;
-  } catch (e) {
+  } catch {
     // User cancelled with Ctrl+C
     return false;
   }
@@ -222,7 +221,7 @@ const registerGenerator = async (generatorPath, autoConfirm = false) => {
     if (e.message.includes('Cannot find module')) {
       throw new Error(
         `Generator registration failed due to missing module: ${e.message}\n` +
-        `This usually means the generator has an undeclared dependency.\n` +
+        'This usually means the generator has an undeclared dependency.\n' +
         `Try running 'npm install' manually in: ${path.dirname(generatorPath)}`
       );
     }
