@@ -10,26 +10,40 @@ const cwd = name => path.join(process.cwd(), 'test', 'fixtures', name);
 const run = async (fixtureName, options) => await exec(`${cliPath} modules update ${options}`, { cwd: cwd(fixtureName), env: process.env });
 
 describe('Successful update', () => {
-  test('update core module', async () => {
+  test('updates core module and downloads it', async () => {
     requireRealCredentials();
     const pathToLockFile = `${cwd('deploy/modules_update')}/app/pos-modules.lock.json`;
+    const posModulesPath = `${cwd('deploy/modules_update')}/app/pos-modules.json`;
+    const originalModulesContent = fs.readFileSync(posModulesPath, 'utf8');
+    const originalLockContent = fs.readFileSync(pathToLockFile, 'utf8');
+    const pathToDirectory = `${cwd('deploy/modules_update')}/modules`;
 
-    const { stdout } = await run('deploy/modules_update', 'core');
-    expect(stdout).toMatch('Updating module');
-    const fileContent = fs.readFileSync(pathToLockFile, { encoding: 'utf8' });
-    const lockFile = JSON.parse(fileContent);
-    expect(lockFile['modules']['core']).not.toEqual('1.0.0');
-  });
+    try {
+      const { stdout } = await run('deploy/modules_update', 'core');
+      expect(stdout).toMatch('Updating module');
+
+      const fileContent = fs.readFileSync(pathToLockFile, { encoding: 'utf8' });
+      const lockFile = JSON.parse(fileContent);
+      expect(lockFile['modules']['core']).not.toEqual('1.0.0');
+
+      expect(stdout).toContain('Downloading core@');
+      expect(fs.existsSync(path.join(pathToDirectory, 'core', 'template-values.json'))).toBeTruthy();
+    } finally {
+      await fs.promises.rm(pathToDirectory, { recursive: true, force: true });
+      fs.writeFileSync(posModulesPath, originalModulesContent);
+      fs.writeFileSync(pathToLockFile, originalLockContent);
+    }
+  }, 30000);
 });
 
-describe('Failed download', () => {
+describe('Failed update', () => {
   test('Module not found - non-existing module', async () => {
     const savedCreds = applyCredentials(noCredentials);
     const savedPortalHost = process.env.PARTNER_PORTAL_HOST;
     delete process.env.PARTNER_PORTAL_HOST;
     try {
-      const { stderr } = await run('deploy/modules_update', 'moduleNotFound');
-      expect(stderr).toMatch("Can't find module moduleNotFound");
+      const { stdout } = await run('deploy/modules_update', 'moduleNotFound');
+      expect(stdout).toMatch("Can't find module moduleNotFound");
     } finally {
       applyCredentials(savedCreds);
       if (savedPortalHost) {

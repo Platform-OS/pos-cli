@@ -4,6 +4,7 @@ import { program } from 'commander';
 import logger from '../lib/logger.js';
 import { posConfigDirectory, posModulesFilePath, posModulesLockFilePath, readLocalModules, writePosModules, writePosModulesLock } from '../lib/modules/configFiles.js';
 import { findModuleVersion, resolveDependencies } from '../lib/modules/dependencies.js';
+import { downloadAllModules } from '../lib/modules/downloadModule.js';
 import Portal from '../lib/portal.js';
 import path from 'path';
 import { createDirectory } from '../lib/utils/create-directory.js';
@@ -31,7 +32,7 @@ program
 
     try {
       await createDirectory(path.join(process.cwd(), posConfigDirectory));
-      
+
       const spinner = ora({ text: 'Modules install', stream: process.stdout });
       spinner.start();
 
@@ -44,16 +45,19 @@ program
           spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]} to ${posModulesFilePath}`);
         }
 
-        if(!localModules) {
+        if(Object.keys(localModules).length === 0) {
           spinner.stop();
         } else {
           spinner.start('Resolving module dependencies');
           const modulesLocked = await resolveDependencies(localModules, Portal.moduleVersions);
           writePosModulesLock(modulesLocked);
           spinner.succeed(`Modules lock file updated: ${posModulesLockFilePath}`);
+
+          spinner.start('Downloading modules');
+          await downloadAllModules(modulesLocked);
+          spinner.succeed('Modules downloaded successfully');
         }
       } catch(e) {
-        // throw e;
         logger.Debug(e);
         spinner.stopAndPersist();
         spinner.fail(e.message);
