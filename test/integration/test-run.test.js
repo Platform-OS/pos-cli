@@ -663,7 +663,7 @@ describe('pos-cli test-run command', () => {
       const { code, stderr } = await exec(`node "${cliPath}" test run staging`, { env: badEnv, timeout: CLI_TIMEOUT });
 
       expect(code).toBe(1);
-      expect(stderr).toMatch(/Request to server failed|fetch failed|TypeError/);
+      expect(stderr).toMatch(/Could not connect|Request to( the)? server failed/);
     });
 
     test('handles invalid URL format', async () => {

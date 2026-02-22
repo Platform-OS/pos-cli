@@ -262,6 +262,70 @@ describe('ServerError', () => {
       );
     });
 
+    test('handles ECONNREFUSED error', async () => {
+      const request = {
+        cause: {
+          code: 'ECONNREFUSED'
+        },
+        options: { uri: 'http://example.com/api/app_builder/marketplace_releases' }
+      };
+
+      await ServerError.requestHandler(request);
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        'Could not connect to http://example.com/api/app_builder/marketplace_releases. Make sure the server is running.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+    });
+
+    test('handles ECONNRESET error', async () => {
+      const request = {
+        cause: {
+          code: 'ECONNRESET'
+        },
+        options: { uri: 'https://example.com/api' }
+      };
+
+      await ServerError.requestHandler(request);
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        'Could not connect to https://example.com/api. Make sure the server is running.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+    });
+
+    test('handles ETIMEDOUT error', async () => {
+      const request = {
+        cause: {
+          code: 'ETIMEDOUT'
+        },
+        options: { uri: 'https://example.com/api' }
+      };
+
+      await ServerError.requestHandler(request);
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        'Connection to https://example.com/api timed out. The server may be overloaded or unreachable.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+    });
+
+    test('handles ECONNABORTED error', async () => {
+      const request = {
+        cause: {
+          code: 'ECONNABORTED'
+        },
+        options: { uri: 'https://example.com/api' }
+      };
+
+      await ServerError.requestHandler(request);
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        'Connection to https://example.com/api timed out. The server may be overloaded or unreachable.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+    });
+
     test('handles unknown request error', () => {
       const request = {
         cause: {
@@ -405,6 +469,43 @@ describe('ServerError', () => {
       expect(logger.Debug).toHaveBeenCalled();
       expect(logger.Error).toHaveBeenCalledWith(
         'Network is down',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+    });
+
+    test('connectionRefused logs helpful message with URL', async () => {
+      const reason = {
+        options: { uri: 'http://example.com/api/app_builder/marketplace_releases' }
+      };
+
+      await ServerError.connectionRefused(reason);
+
+      expect(logger.Debug).toHaveBeenCalled();
+      expect(logger.Error).toHaveBeenCalledWith(
+        'Could not connect to http://example.com/api/app_builder/marketplace_releases. Make sure the server is running.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+    });
+
+    test('connectionRefused logs helpful message without URL', async () => {
+      await ServerError.connectionRefused({});
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        'Could not connect. Make sure the server is running.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+    });
+
+    test('connectionTimedOut logs helpful message with URL', async () => {
+      const reason = {
+        options: { uri: 'https://example.com/api' }
+      };
+
+      await ServerError.connectionTimedOut(reason);
+
+      expect(logger.Debug).toHaveBeenCalled();
+      expect(logger.Error).toHaveBeenCalledWith(
+        'Connection to https://example.com/api timed out. The server may be overloaded or unreachable.',
         expect.objectContaining({ hideTimestamp: true })
       );
     });
