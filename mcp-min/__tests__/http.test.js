@@ -62,12 +62,12 @@ test('POST /call returns 404 for unknown tool', async () => {
   expect(res.status).toBe(404);
 });
 
-test('POST /call envs-list returns environments', async () => {
+test('POST /call envs-list returns ok with data.environments', async () => {
   const res = await httpRequest({ method: 'POST', path: '/call', body: { tool: 'envs-list', params: {} } });
   expect(res.status).toBe(200);
   const parsed = JSON.parse(res.body);
-  expect(parsed.result).toBeDefined();
-  expect(Array.isArray(parsed.result.environments)).toBe(true);
+  expect(parsed.result.ok).toBe(true);
+  expect(Array.isArray(parsed.result.data.environments)).toBe(true);
 });
 
 // JSON-RPC initialize path

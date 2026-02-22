@@ -1,35 +1,6 @@
 // platformos.liquid.exec tool - execute Liquid on remote instance via Gateway.liquid
-import files from '../../lib/files.js';
-import { fetchSettings } from '../../lib/settings.js';
+import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
-
-const settings = { fetchSettings };
-
-function maskToken(token) {
-  if (!token) return token;
-  return token.slice(0, 3) + '...' + token.slice(-3);
-}
-
-async function resolveAuth(params) {
-  if (params?.url && params?.email && params?.token) {
-    return { url: params.url, email: params.email, token: params.token, source: 'params' };
-  }
-  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
-  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
-    return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
-  }
-  if (params?.env) {
-    const found = await settings.fetchSettings(params.env);
-    if (found) return { ...found, source: `.pos(${params.env})` };
-  }
-  const conf = files.getConfig();
-  const firstEnv = conf && Object.keys(conf)[0];
-  if (firstEnv) {
-    const found = conf[firstEnv];
-    if (found) return { ...found, source: `.pos(${firstEnv})` };
-  }
-  throw new Error('AUTH_MISSING: Provide url,email,token or configure .pos / MPKIT_* env vars');
-}
 
 const execLiquidTool = {
   description: 'Render a Liquid template on a platformOS instance server-side via /api/app_builder/liquid_exec. Returns the rendered output. Useful for testing Liquid code, running one-off queries via {% graphql %}, or inspecting instance state. Auth resolved from: explicit params > MPKIT_* env vars > .pos config.',
@@ -49,7 +20,7 @@ const execLiquidTool = {
   },
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    const auth = await resolveAuth(params);
+    const auth = await resolveAuth(params, ctx);
     const baseUrl = params?.endpoint ? params.endpoint : auth.url;
 
     const GatewayCtor = ctx.Gateway || Gateway;
@@ -72,7 +43,7 @@ const execLiquidTool = {
       if (respError || looksLikeError) {
         const message = String(resp?.error || resp?.errors || resp?.result || 'Liquid execution failed');
         return {
-          success: false,
+          ok: false,
           error: { code: 'LIQUID_EXEC_ERROR', message, details: resp },
           meta: {
             startedAt,
@@ -83,7 +54,7 @@ const execLiquidTool = {
       }
 
       return {
-        success: true,
+        ok: true,
         result: resp,
         meta: {
           startedAt,
@@ -93,7 +64,7 @@ const execLiquidTool = {
       };
     } catch (e) {
       return {
-        success: false,
+        ok: false,
         error: { code: 'LIQUID_EXEC_ERROR', message: String(e) }
       };
     }

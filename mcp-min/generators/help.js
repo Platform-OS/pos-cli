@@ -17,7 +17,7 @@ const helpTool = {
       const info = showHelp(path.isAbsolute(generatorPath) ? generatorPath : path.join(process.cwd(), generatorPath), ctx.yeomanEnv);
       return info;
     } catch (e) {
-      return { success: false, error: { code: 'GENERATOR_HELP_ERROR', message: String(e?.message || e) } };
+      return { ok: false, error: { code: 'GENERATOR_HELP_ERROR', message: String(e?.message || e) } };
     }
   }
 };

@@ -27,21 +27,21 @@ describe('platformos.graphql.exec', () => {
   test('success returns data', async () => {
     class LocalGateway { async graph(body) { return { data: { ok: true } }; } }
     const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', query: 'query { ok }' }, { Gateway: LocalGateway });
-    expect(res.success).toBe(true);
+    expect(res.ok).toBe(true);
     expect(res.result.data.ok).toBe(true);
   });
 
   test('returns error object when Gateway throws', async () => {
     class LocalGateway { async graph() { throw new Error('GQL'); } }
     const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', query: 'throw' }, { Gateway: LocalGateway });
-    expect(res.success).toBe(false);
+    expect(res.ok).toBe(false);
     expect(res.error.code).toBe('GRAPHQL_EXEC_ERROR');
   });
 
   test('returns error object when GraphQL response contains errors', async () => {
     class LocalGateway { async graph() { return { errors: [{ message: 'Bad input' }], data: null }; } }
     const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', query: 'gql_error' }, { Gateway: LocalGateway });
-    expect(res.success).toBe(false);
+    expect(res.ok).toBe(false);
     expect(res.error.code).toBe('GRAPHQL_EXEC_ERROR');
   });
 });

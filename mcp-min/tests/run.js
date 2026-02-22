@@ -1,9 +1,6 @@
 // platformos.tests.run - execute tests via /_tests/run?formatter=text
 import log from '../log.js';
-import files from '../../lib/files.js';
-import { fetchSettings } from '../../lib/settings.js';
-
-const settings = { fetchSettings };
+import { resolveAuth, maskToken } from '../auth.js';
 
 // Helper to make HTTP requests (replaces request-promise)
 async function makeRequest(options) {
@@ -11,32 +8,6 @@ async function makeRequest(options) {
   const response = await fetch(uri, { method, headers });
   const body = await response.text();
   return { statusCode: response.status, body };
-}
-
-function maskToken(token) {
-  if (!token) return token;
-  return token.slice(0, 3) + '...' + token.slice(-3);
-}
-
-async function resolveAuth(params) {
-  if (params?.url && params?.email && params?.token) {
-    return { url: params.url, email: params.email, token: params.token, source: 'params' };
-  }
-  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
-  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
-    return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
-  }
-  if (params?.env) {
-    const found = await settings.fetchSettings(params.env);
-    if (found) return { ...found, source: `.pos(${params.env})` };
-  }
-  const conf = files.getConfig();
-  const firstEnv = conf && Object.keys(conf)[0];
-  if (firstEnv) {
-    const found = conf[firstEnv];
-    if (found) return { ...found, source: `.pos(${firstEnv})` };
-  }
-  throw new Error('AUTH_MISSING: Provide url,email,token or configure .pos / MPKIT_* env vars');
 }
 
 /**
@@ -293,7 +264,7 @@ const testsRunTool = {
     log.debug('tool:unit-tests-run invoked', { env: params?.env, path: params?.path });
 
     try {
-      const auth = await resolveAuth(params);
+      const auth = await resolveAuth(params, ctx);
 
       // Build the URL with query parameters
       let testUrl = `${auth.url}/_tests/run?formatter=text`;

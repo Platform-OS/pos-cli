@@ -26,7 +26,7 @@ const runTool = {
         if (helpInfo && helpInfo.args && Array.isArray(helpInfo.args)) {
           const requiredNames = helpInfo.args.filter(a => a.required).map(a => a.name);
           if (requiredNames.length > 0 && (!Array.isArray(args) || args.length < requiredNames.length)) {
-            return { success: false, error: { code: 'MISSING_REQUIRED_ARGUMENTS', message: `Missing required args: ${requiredNames.join(', ')}` }, required: requiredNames };
+            return { ok: false, error: { code: 'MISSING_REQUIRED_ARGUMENTS', message: `Missing required args: ${requiredNames.join(', ')}` }, required: requiredNames };
           }
         }
       } catch (e) {
@@ -35,7 +35,7 @@ const runTool = {
     }
 
     const result = await runGenerator(resolvedPath, args, options, ctx.yeomanEnv);
-    return { success: true, result };
+    return { ok: true, result };
   }
 };
 

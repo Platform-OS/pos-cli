@@ -45,7 +45,7 @@ describe('sync.singleFile handler dry-run', () => {
     process.chdir(tmpDir);
     try {
       const res = await singleFileTool.handler({ filePath: tmpPath, dryRun: true, url: 'https://example.com', email: 'a@b.c', token: 'tok' }, { transport: 'test' });
-      expect(res.success).toBe(true);
+      expect(res.ok).toBe(true);
       expect(res.file.normalizedPath).toMatch(/app\/assets\/dummy.txt$/);
     } finally {
       process.chdir(cwdOrig);
@@ -89,7 +89,7 @@ describe('sync.singleFile with env parameter', () => {
       dryRun: true
     }, { transport: 'test' });
 
-    expect(res.success).toBe(true);
+    expect(res.ok).toBe(true);
     expect(res.auth.source).toBe('.pos(staging)');
     expect(res.auth.url).toBe('https://test.staging.com');
   });

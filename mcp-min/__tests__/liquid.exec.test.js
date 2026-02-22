@@ -27,21 +27,21 @@ describe('platformos.liquid.exec', () => {
   test('success path returns result', async () => {
     class LocalGateway { async liquid(body) { return { output: 'Hello ' + (body.locals?.name || 'World') }; } }
     const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', template: 'Hi {{name}}', locals: { name: 'Bob' } }, { Gateway: LocalGateway });
-    expect(res.success).toBe(true);
+    expect(res.ok).toBe(true);
     expect(res.result.output).toMatch(/Hello/);
   });
 
   test('logical liquid error returns error object', async () => {
     class LocalGateway { async liquid(_body) { return { result: 'Liquid error', error: "Liquid error: Couldn't find \"questions/search.graphql\"." }; } }
     const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', template: 'logical_error' }, { Gateway: LocalGateway });
-    expect(res.success).toBe(false);
+    expect(res.ok).toBe(false);
     expect(String(res.error.message)).toMatch(/Couldn't find/);
   });
 
   test('Gateway error returns error object', async () => {
     class LocalGateway { async liquid() { throw new Error('boom'); } }
     const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', template: 'throw' }, { Gateway: LocalGateway });
-    expect(res.success).toBe(false);
+    expect(res.ok).toBe(false);
     expect(res.error.code).toBe('LIQUID_EXEC_ERROR');
   });
 });

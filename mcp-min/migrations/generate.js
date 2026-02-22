@@ -1,33 +1,9 @@
 // platformos.migrations.generate - create a new migration via Gateway and optionally write the file locally
 import fs from 'fs';
 import path from 'path';
-import files from '../../lib/files.js';
-import { fetchSettings } from '../../lib/settings.js';
+import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import dir from '../../lib/directories.js';
-
-const settings = { fetchSettings };
-
-async function resolveAuth(params) {
-  if (params?.url && params?.email && params?.token) {
-    return { url: params.url, email: params.email, token: params.token, source: 'params' };
-  }
-  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
-  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
-    return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
-  }
-  if (params?.env) {
-    const found = await settings.fetchSettings(params.env);
-    if (found) return { ...found, source: `.pos(${params.env})` };
-  }
-  const conf = files.getConfig();
-  const firstEnv = conf && Object.keys(conf)[0];
-  if (firstEnv) {
-    const found = conf[firstEnv];
-    if (found) return { ...found, source: `.pos(${firstEnv})` };
-  }
-  throw new Error('AUTH_MISSING: Provide url,email,token or configure .pos / MPKIT_* env vars');
-}
 
 function ensureMigrationsDir() {
   const appDirectory = fs.existsSync(dir.APP) ? dir.APP : dir.LEGACY_APP;
@@ -53,7 +29,7 @@ const generateMigrationTool = {
   },
   handler: async (params = {}, ctx = {}) => {
     try {
-      const auth = await resolveAuth(params);
+      const auth = await resolveAuth(params, ctx);
       const baseUrl = params?.endpoint ? params.endpoint : auth.url;
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });

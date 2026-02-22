@@ -75,12 +75,21 @@ const tools = {
   // list-envs tool based on pos-cli-env list
   'envs-list': {
     description: 'List configured environments from .pos (name and url)',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    },
     handler: async (_params, ctx) => {
-      log.debug('tool:list-envs invoked', { transport: ctx.transport });
+      const startedAt = new Date().toISOString();
+      log.debug('tool:list-envs invoked', { transport: ctx?.transport });
       const settingsMap = Object(files.getConfig());
       const names = Object.keys(settingsMap);
       const environments = names.map((name) => ({ name, url: settingsMap[name]?.url }));
-      return { environments };
+      return {
+        ok: true,
+        data: { environments },
+        meta: { startedAt, finishedAt: new Date().toISOString() }
+      };
     }
   },
 

@@ -1,31 +1,7 @@
 // platformos.logs.stream - streaming logs via SSE with polling
 import log from '../log.js';
-import files from '../../lib/files.js';
-import { fetchSettings } from '../../lib/settings.js';
+import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
-
-const settings = { fetchSettings };
-
-async function resolveAuth(params) {
-  if (params?.url && params?.email && params?.token) {
-    return { url: params.url, email: params.email, token: params.token, source: 'params' };
-  }
-  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
-  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
-    return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
-  }
-  if (params?.env) {
-    const found = await settings.fetchSettings(params.env);
-    if (found) return { ...found, source: `.pos(${params.env})` };
-  }
-  const conf = files.getConfig();
-  const firstEnv = conf && Object.keys(conf)[0];
-  if (firstEnv) {
-    const found = conf[firstEnv];
-    if (found) return { ...found, source: `.pos(${firstEnv})` };
-  }
-  throw new Error('AUTH_MISSING: Provide url,email,token or configure .pos / MPKIT_* env vars');
-}
 
 function matchesFilter(row, filter) {
   if (!filter) return true;
@@ -50,8 +26,8 @@ const streamTool = {
       maxDuration: { type: 'integer', description: 'Optional max duration ms' }
     }
   },
-  streamHandler: async (params, { writer, Gateway: GatewayOverride } = {}) => {
-    const auth = await resolveAuth(params);
+  streamHandler: async (params, { writer, Gateway: GatewayOverride, ...ctx } = {}) => {
+    const auth = await resolveAuth(params, ctx);
     const baseUrl = params?.endpoint ? params.endpoint : auth.url;
     const GatewayCtor = GatewayOverride || Gateway;
     const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });

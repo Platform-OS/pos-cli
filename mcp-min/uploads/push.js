@@ -3,19 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import normalize from 'normalize-path';
 
-import files from '../../lib/files.js';
-import { fetchSettings } from '../../lib/settings.js';
 import Gateway from '../../lib/proxy.js';
 import { presignUrl } from '../../lib/presignUrl.js';
 import { uploadFile } from '../../lib/s3UploadFile.js';
-
-const settings = { fetchSettings };
-
-async function resolveAuth(env, settingsModule = settings) {
-  const found = await settingsModule.fetchSettings(env);
-  if (found) return { ...found, source: `.pos(${env})` };
-  throw new Error(`Environment "${env}" not found in .pos config`);
-}
+import { resolveAuth, runWithAuth } from '../auth.js';
 
 const uploadsPushTool = {
   description: 'Upload a ZIP file containing property uploads to platformOS instance. The ZIP should contain files referenced by upload-type properties.',
@@ -32,11 +23,7 @@ const uploadsPushTool = {
     const startedAt = new Date().toISOString();
 
     try {
-      const auth = await resolveAuth(params.env, ctx.settings || settings);
-
-      // Set env vars required by presignUrl
-      process.env.MARKETPLACE_TOKEN = auth.token;
-      process.env.MARKETPLACE_URL = auth.url;
+      const auth = await resolveAuth(params, ctx);
 
       // Resolve file path
       const filePath = path.resolve(params.filePath);
@@ -60,7 +47,8 @@ const uploadsPushTool = {
       // Get presigned URL and upload (allow injection for testing)
       const presignUrlFn = ctx.presignUrl || presignUrl;
       const uploadFileFn = ctx.uploadFile || uploadFile;
-      const { uploadUrl, accessUrl } = await presignUrlFn(s3Path, filePath);
+
+      const { uploadUrl, accessUrl } = await runWithAuth(auth, () => presignUrlFn(s3Path, filePath));
       await uploadFileFn(filePath, uploadUrl);
 
       return {

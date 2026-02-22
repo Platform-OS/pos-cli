@@ -50,7 +50,7 @@ describe('generators tools', () => {
 
   test('run triggers yeoman env run', async () => {
     const res = await runTool.handler({ generatorPath: 'modules/core/generators/command', args: ['users/create'], options: { force: true } }, { yeomanEnv: env });
-    expect(res.success).toBe(true);
+    expect(res.ok).toBe(true);
     expect(env.run).toHaveBeenCalled();
   });
 });

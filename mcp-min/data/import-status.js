@@ -1,15 +1,7 @@
 // platformos.data.import.status - check the status of a data import job
 import log from '../log.js';
-import { fetchSettings } from '../../lib/settings.js';
+import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
-
-const settings = { fetchSettings };
-
-async function resolveAuth(env, settingsModule = settings) {
-  const found = await settingsModule.fetchSettings(env);
-  if (found) return { ...found, source: `.pos(${env})` };
-  throw new Error(`Environment "${env}" not found in .pos config`);
-}
 
 const dataImportStatusTool = {
   description: 'Check the status of a data import job. Poll until status is "done" or "failed".',
@@ -31,7 +23,7 @@ const dataImportStatusTool = {
         return { ok: false, error: { code: 'VALIDATION_ERROR', message: 'jobId is required' } };
       }
 
-      const auth = await resolveAuth(params.env, ctx.settings || settings);
+      const auth = await resolveAuth(params, ctx);
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 

@@ -1,41 +1,12 @@
 // platformos.tests.run-async-result - check result of an async test run via /_tests/results/:id
 import log from '../log.js';
-import files from '../../lib/files.js';
-import { fetchSettings } from '../../lib/settings.js';
-
-const settings = { fetchSettings };
+import { resolveAuth, maskToken } from '../auth.js';
 
 async function makeRequest(options) {
   const { uri, method = 'GET', headers = {} } = options;
   const response = await fetch(uri, { method, headers });
   const body = await response.text();
   return { statusCode: response.status, body };
-}
-
-function maskToken(token) {
-  if (!token) return token;
-  return token.slice(0, 3) + '...' + token.slice(-3);
-}
-
-async function resolveAuth(params) {
-  if (params?.url && params?.email && params?.token) {
-    return { url: params.url, email: params.email, token: params.token, source: 'params' };
-  }
-  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
-  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
-    return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
-  }
-  if (params?.env) {
-    const found = await settings.fetchSettings(params.env);
-    if (found) return { ...found, source: `.pos(${params.env})` };
-  }
-  const conf = files.getConfig();
-  const firstEnv = conf && Object.keys(conf)[0];
-  if (firstEnv) {
-    const found = conf[firstEnv];
-    if (found) return { ...found, source: `.pos(${firstEnv})` };
-  }
-  throw new Error('AUTH_MISSING: Provide url,email,token or configure .pos / MPKIT_* env vars');
 }
 
 function normalizeResult(result) {
@@ -75,7 +46,7 @@ const testsRunAsyncResultTool = {
     log.debug('tool:tests-run-async-result invoked', { id: params?.id, env: params?.env });
 
     try {
-      const auth = await resolveAuth(params);
+      const auth = await resolveAuth(params, ctx);
       const requestFn = ctx.request || makeRequest;
       const authHeaders = {
         'Authorization': `Token ${auth.token}`,

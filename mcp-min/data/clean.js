@@ -1,38 +1,9 @@
 // platformos.data.clean - start data clean operation (removes data from instance)
 import log from '../log.js';
-import files from '../../lib/files.js';
-import { fetchSettings } from '../../lib/settings.js';
+import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 
-const settings = { fetchSettings };
-
 const CONFIRMATION_TEXT = 'CLEAN DATA';
-
-function maskToken(token) {
-  if (!token) return token;
-  return token.slice(0, 3) + '...' + token.slice(-3);
-}
-
-async function resolveAuth(params) {
-  if (params?.url && params?.email && params?.token) {
-    return { url: params.url, email: params.email, token: params.token, source: 'params' };
-  }
-  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
-  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
-    return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
-  }
-  if (params?.env) {
-    const found = await settings.fetchSettings(params.env);
-    if (found) return { ...found, source: `.pos(${params.env})` };
-  }
-  const conf = files.getConfig();
-  const firstEnv = conf && Object.keys(conf)[0];
-  if (firstEnv) {
-    const found = conf[firstEnv];
-    if (found) return { ...found, source: `.pos(${firstEnv})` };
-  }
-  throw new Error('AUTH_MISSING: Provide url,email,token or configure .pos / MPKIT_* env vars');
-}
 
 const dataCleanTool = {
   description: 'Start data clean operation to remove data from a platformOS instance. DESTRUCTIVE - requires confirmation. Returns job ID for status polling.',
@@ -74,7 +45,7 @@ const dataCleanTool = {
         };
       }
 
-      const auth = await resolveAuth(params);
+      const auth = await resolveAuth(params, ctx);
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 

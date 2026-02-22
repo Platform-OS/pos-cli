@@ -7,19 +7,11 @@ import os from 'os';
 import { jsonToZipBuffer } from './json-to-csv.js';
 import { validateRecords, validateJsonStructure } from './validate.js';
 import log from '../log.js';
-import { fetchSettings } from '../../lib/settings.js';
+import { resolveAuth, runWithAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import isValidJSON from '../../lib/data/isValidJSON.js';
 import { presignUrl } from '../../lib/presignUrl.js';
 import { uploadFile } from '../../lib/s3UploadFile.js';
-
-const settings = { fetchSettings };
-
-async function resolveAuth(env, settingsModule = settings) {
-  const found = await settingsModule.fetchSettings(env);
-  if (found) return { ...found, source: `.pos(${env})` };
-  throw new Error(`Environment "${env}" not found in .pos config`);
-}
 
 async function uploadZipBuffer(buffer, gateway, presignUrlFn, uploadFileFn) {
   // Write buffer to temp file for upload
@@ -62,15 +54,11 @@ const dataImportTool = {
     log.debug('tool:data-import invoked', { env: params.env });
 
     try {
-      const auth = await resolveAuth(params.env, ctx.settings || settings);
+      const auth = await resolveAuth(params, ctx);
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-      // Set env vars needed by presignUrl
-      process.env.MARKETPLACE_TOKEN = auth.token;
-      process.env.MARKETPLACE_URL = auth.url;
-
-      const presignUrlFn = ctx.presignUrl || presignUrl;
+      const presignUrlFn = ctx.presignUrl || ((...args) => runWithAuth(auth, () => presignUrl(...args)));
       const uploadFileFn = ctx.uploadFile || uploadFile;
 
       const {

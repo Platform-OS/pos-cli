@@ -1,14 +1,6 @@
 // platformos.constants.list tool - list all constants
-import { fetchSettings } from '../../lib/settings.js';
+import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
-
-const settings = { fetchSettings };
-
-async function resolveAuth(env, settingsModule = settings) {
-  const found = await settingsModule.fetchSettings(env);
-  if (found) return { ...found, source: `.pos(${env})` };
-  throw new Error(`Environment "${env}" not found in .pos config`);
-}
 
 const QUERY = `query getConstants {
   constants(per_page: 99) {
@@ -30,7 +22,7 @@ const constantsListTool = {
     const startedAt = new Date().toISOString();
 
     try {
-      const auth = await resolveAuth(params.env, ctx.settings || settings);
+      const auth = await resolveAuth(params, ctx);
 
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });

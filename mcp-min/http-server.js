@@ -5,7 +5,12 @@ import { sseHandler, writeSSE } from './sse.js';
 import { DEBUG } from './config.js';
 import log from './log.js';
 
-let currentSSE = null; // minimal session: last SSE connection
+// SSE sessions keyed by Mcp-Session-Id. Supports multiple concurrent clients.
+const sseSessions = new Map();
+
+function generateSessionId() {
+  return `mcpmin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 export default async function startHttp({ port = 5910 } = {}) {
   const app = express();
@@ -36,10 +41,13 @@ export default async function startHttp({ port = 5910 } = {}) {
     const wantsSSE = /text\/event-stream/i.test(acceptHeader) || (typeof req.accepts === 'function' && !!req.accepts(['text/event-stream']));
     if (wantsSSE) {
       // SSE handshake on base URL for clients that only know base url + transport=sse
+      const sessionId = req.headers['mcp-session-id'] || generateSessionId();
+      res.set('Mcp-Session-Id', sessionId); // must be set before writeHead in sseHandler
       sseHandler(req, res);
-      currentSSE = res;
+      sseSessions.set(sessionId, res);
       req.on('close', () => {
-        if (currentSSE === res) currentSSE = null;
+        sseSessions.delete(sessionId);
+        log.debug('SSE session closed', { sessionId });
       });
       // minimal required event (plain text)
       const endpointPath = '/call-stream';
@@ -102,27 +110,32 @@ export default async function startHttp({ port = 5910 } = {}) {
       const method = body.method;
       const params = body.params || {};
 
+      // Resolve SSE session for this request (if a prior SSE channel was registered)
+      const reqSessionId = req.headers['mcp-session-id'];
+      const sseRes = reqSessionId ? sseSessions.get(reqSessionId) : null;
+
       const respond = (payload) => {
         const responsePayload = { jsonrpc: '2.0', id, ...payload };
+        const protocolVersion = responsePayload.result?.protocolVersion || '2025-06-18';
+        const sessionId = reqSessionId || 'mcpmin-1';
+
         // If this is a notification (no id), acknowledge with 202
         if (id == null) {
-          try { res.set('Mcp-Protocol-Version', responsePayload.result?.protocolVersion || '2025-06-18'); } catch {}
-          try { res.set('Mcp-Session-Id', 'mcpmin-1'); } catch {}
+          try { res.set('Mcp-Protocol-Version', protocolVersion); } catch {}
+          try { res.set('Mcp-Session-Id', sessionId); } catch {}
           log.debug('JSON-RPC notify -> 202 Accepted');
           res.status(202).end();
           return true;
         }
-        // For requests with id: emit on SSE (if present) and also return JSON
-        if (currentSSE) {
-          log.debug('JSON-RPC respond on SSE channel', { method, id });
-          writeSSE(currentSSE, { event: 'message', data: JSON.stringify(responsePayload) });
+        // For requests with id: emit on associated SSE channel (if present) and return JSON
+        if (sseRes) {
+          log.debug('JSON-RPC respond on SSE channel', { method, id, sessionId });
+          writeSSE(sseRes, { event: 'message', data: JSON.stringify(responsePayload) });
         }
-        try { res.set('Mcp-Protocol-Version', responsePayload.result?.protocolVersion || '2025-06-18'); } catch {}
-        try { res.set('Mcp-Session-Id', 'mcpmin-1'); } catch {}
-        // Always return 200 for JSON-RPC responses; include errors in payload per protocol expectations
-        const status = 200;
-        log.debug(`JSON-RPC respond ${status} JSON`, { method, id, response: responsePayload });
-        res.status(status).json(responsePayload);
+        try { res.set('Mcp-Protocol-Version', protocolVersion); } catch {}
+        try { res.set('Mcp-Session-Id', sessionId); } catch {}
+        log.debug(`JSON-RPC respond 200 JSON`, { method, id, response: responsePayload });
+        res.status(200).json(responsePayload);
         return true;
       };
 
@@ -137,8 +150,6 @@ export default async function startHttp({ port = 5910 } = {}) {
           },
           serverInfo: { name: 'mcp-min', version: '0.1.0' }
         };
-        try { res.set('Mcp-Protocol-Version', result.protocolVersion); } catch {}
-        try { res.set('Mcp-Session-Id', 'mcpmin-1'); } catch {}
         respond({ result });
         return;
       }
@@ -249,11 +260,7 @@ export default async function startHttp({ port = 5910 } = {}) {
 
   router.post('/call-stream', callStreamHandler);
 
-  // Mount only at root
   app.use('/', router);
-
-  // Ensure POST /call-stream is available at root
-  app.post('/call-stream', callStreamHandler);
 
   return new Promise((resolve) => {
     const server = app.listen(port, () => {

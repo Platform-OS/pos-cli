@@ -4,7 +4,7 @@ import path from 'path';
 
 // Reuse pos-cli internals (ESM)
 import files from '../../lib/files.js';
-import { fetchSettings, loadSettingsFileForModule } from '../../lib/settings.js';
+import { loadSettingsFileForModule } from '../../lib/settings.js';
 import shouldBeSynced from '../../lib/shouldBeSynced.js';
 import Gateway from '../../lib/proxy.js';
 import { presignDirectory } from '../../lib/presignUrl.js';
@@ -13,42 +13,13 @@ import { manifestGenerateForAssets } from '../../lib/assets/manifest.js';
 import { fillInTemplateValues } from '../../lib/templates.js';
 import dir from '../../lib/directories.js';
 import log from '../log.js';
+import { resolveAuth, maskToken, runWithAuth } from '../auth.js';
 
 // Alias for backwards compatibility
-const settings = { fetchSettings };
 const templates = { fillInTemplateValues };
-
-// Helpers (kept local to this module)
-function maskToken(token) {
-  if (!token) return token;
-  return token.slice(0, 3) + '...' + token.slice(-3);
-}
 
 function toPosix(p) {
   return p.replace(/\\/g, '/');
-}
-
-async function resolveAuth(params) {
-  // precedence: explicit params -> env (MPKIT_*) -> .pos
-  if (params?.url && params?.email && params?.token) {
-    return { url: params.url, email: params.email, token: params.token, source: 'params' };
-  }
-  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
-  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
-    return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
-  }
-  if (params?.env) {
-    const found = await settings.fetchSettings(params.env);
-    if (found) return { ...found, source: `.pos(${params.env})` };
-  }
-  // fallback: first env from .pos if present
-  const conf = files.getConfig();
-  const firstEnv = Object.keys(conf || {})[0];
-  if (firstEnv) {
-    const found = conf[firstEnv];
-    if (found) return { ...found, source: `.pos(${firstEnv})` };
-  }
-  throw new Error('AUTH_MISSING: Provide url,email,token or configure .pos / MPKIT_* env vars');
 }
 
 function normalizeLocalPath(filePathParam) {
@@ -79,7 +50,7 @@ async function uploadAsset({ gateway, relPath, log }) {
   const fileSubdir = relPath.startsWith('app/assets')
     ? dirname.replace('app/assets', '')
     : '/' + dirname.replace('/public/assets', '');
-  const key = data.fields.key.replace('assets/\${filename}', `assets${fileSubdir}/\${filename}`);
+  const key = data.fields.key.replace('assets/${filename}', `assets${fileSubdir}/${filename}`);
   data.fields.key = key;
 
   log?.(`[sync-file] Uploading asset to S3: ${relPath}`);
@@ -131,7 +102,7 @@ const singleFileTool = {
       token: { type: 'string', description: 'API token for instance authentication. Required with url and email.' },
       op: { type: 'string', enum: ['upload', 'delete'], description: 'Operation: "upload" to push file, "delete" to remove from instance. Auto-detected from file existence if omitted.' },
       dryRun: { type: 'boolean', description: 'Validate file path, auth, and sync rules without actually uploading. Default: false.' },
-      confirmDelete: { type: 'boolean', description: 'Safety flag — must be true to execute delete operations. Default: false.' }
+      confirmDelete: { type: 'boolean', description: 'Safety flag -- must be true to execute delete operations. Default: false.' }
     },
     required: ['filePath']
   },
@@ -154,7 +125,7 @@ handler: async (params, ctx) => {
     if (!inAllowedDir) {
       logFn(`[sync-file] File outside allowed directories: ${relPath}`);
       return {
-        success: false,
+        ok: false,
         operation: 'noop',
         error: { code: 'FILE_OUTSIDE_ALLOWED_DIRECTORIES', message: `File must be inside ${allowedPrefixes.join(', ')}` },
         file: { localPath: filePath, normalizedPath: relPath }
@@ -166,7 +137,7 @@ handler: async (params, ctx) => {
     logFn(`[sync-file] Sync check for ${relPath}: shouldSync=${should}, ignoreList rules=${ignoreList.length}`);
     if (!should && opParam !== 'delete') {
       return {
-        success: false,
+        ok: false,
         operation: 'noop',
         error: { code: 'IGNORED_BY_RULES', message: 'File is ignored by .posignore or rules' },
         file: { localPath: filePath, normalizedPath: relPath }
@@ -177,18 +148,13 @@ handler: async (params, ctx) => {
     const op = opParam || (exists ? 'upload' : 'delete');
     logFn(`[sync-file] Operation determined: ${op} (file exists: ${exists})`);
 
-    // Resolve auth and prepare Gateway
-    const auth = await resolveAuth(params);
+    // Resolve auth
+    const auth = await resolveAuth(params, ctx);
     logFn(`[sync-file] Auth resolved from: ${auth.source}, URL: ${auth.url}`);
-    // set env vars expected by pos-cli internals (presignDirectory)
-    process.env.MARKETPLACE_EMAIL = auth.email;
-    process.env.MARKETPLACE_TOKEN = auth.token;
-    process.env.MARKETPLACE_URL = auth.url;
-    process.env.SYNC_SINGLE = 'true';
 
     if (dryRun) {
       return {
-        success: true,
+        ok: true,
         operation: op,
         file: {
           localPath: filePath,
@@ -205,59 +171,63 @@ handler: async (params, ctx) => {
     const gateway = new Gateway({ url: auth.url, token: auth.token, email: auth.email });
 
     try {
-      if (op === 'delete') {
-        logFn(`[sync-file] Starting delete operation for: ${relPath}`);
-        if (!confirmDelete) {
+      return await runWithAuth(auth, async () => {
+        process.env.SYNC_SINGLE = 'true';
+
+        if (op === 'delete') {
+          logFn(`[sync-file] Starting delete operation for: ${relPath}`);
+          if (!confirmDelete) {
+            return {
+              ok: false,
+              operation: 'delete',
+              error: { code: 'DELETE_PROTECTED', message: 'confirmDelete=true is required to delete' },
+              file: { localPath: filePath, normalizedPath: relPath }
+            };
+          }
+          const result = await deleteRemote({ gateway, relPath });
+          logFn(`[sync-file] Delete completed for: ${relPath}`);
           return {
-            success: false,
+            ok: true,
             operation: 'delete',
-            error: { code: 'DELETE_PROTECTED', message: 'confirmDelete=true is required to delete' },
+            file: { localPath: filePath, normalizedPath: computeRemotePath(relPath) },
+            server: { responseCode: 200, method: 'gateway.delete', gatewayResponse: result.response || null },
+            timings: { startedAt, finishedAt: new Date().toISOString() }
+          };
+        }
+
+        if (!exists) {
+          return {
+            ok: false,
+            operation: 'upload',
+            error: { code: 'FILE_NOT_FOUND', message: `Local file not found: ${filePath}` },
             file: { localPath: filePath, normalizedPath: relPath }
           };
         }
-        const result = await deleteRemote({ gateway, relPath });
-        logFn(`[sync-file] Delete completed for: ${relPath}`);
-        return {
-          success: true,
-          operation: 'delete',
-          file: { localPath: filePath, normalizedPath: computeRemotePath(relPath) },
-          server: { responseCode: 200, method: 'gateway.delete', gatewayResponse: result.response || null },
-          timings: { startedAt, finishedAt: new Date().toISOString() }
-        };
-      }
 
-      if (!exists) {
-        return {
-          success: false,
-          operation: 'upload',
-          error: { code: 'FILE_NOT_FOUND', message: `Local file not found: ${filePath}` },
-          file: { localPath: filePath, normalizedPath: relPath }
-        };
-      }
-
-      if (isAssetsPath(relPath)) {
-        logFn(`[sync-file] Uploading asset: ${relPath}`);
-        await uploadAsset({ gateway, relPath, log: logFn });
-        logFn(`[sync-file] Asset upload completed: ${relPath}`);
-        return {
-          success: true,
-          operation: 'update',
-          file: { localPath: filePath, normalizedPath: relPath, isAsset: true, size: fs.statSync(absPath).size },
-          // server: { responseCode: 200, method: 'asset.directUpload+manifest' },
-          timings: { startedAt, finishedAt: new Date().toISOString() }
-        };
-      } else {
-        logFn(`[sync-file] Uploading non-asset: ${relPath}`);
-        const res = await uploadNonAsset({ gateway, relPath, log: logFn });
-        logFn(`[sync-file] Non-asset upload completed: ${relPath}, response status: ${res.response?.status || 'unknown'}`);
-        return {
-          success: true,
-          operation: 'update',
-          file: { localPath: filePath, normalizedPath: computeRemotePath(relPath), isAsset: false, size: fs.statSync(absPath).size },
-          // server: { responseCode: 200, method: 'gateway.sync', gatewayResponse: res.response || null },
-          timings: { startedAt, finishedAt: new Date().toISOString() }
-        };
-      }
+        if (isAssetsPath(relPath)) {
+          logFn(`[sync-file] Uploading asset: ${relPath}`);
+          await uploadAsset({ gateway, relPath, log: logFn });
+          logFn(`[sync-file] Asset upload completed: ${relPath}`);
+          return {
+            ok: true,
+            operation: 'update',
+            file: { localPath: filePath, normalizedPath: relPath, isAsset: true, size: fs.statSync(absPath).size },
+            // server: { responseCode: 200, method: 'asset.directUpload+manifest' },
+            timings: { startedAt, finishedAt: new Date().toISOString() }
+          };
+        } else {
+          logFn(`[sync-file] Uploading non-asset: ${relPath}`);
+          const res = await uploadNonAsset({ gateway, relPath, log: logFn });
+          logFn(`[sync-file] Non-asset upload completed: ${relPath}, response status: ${res.response?.status || 'unknown'}`);
+          return {
+            ok: true,
+            operation: 'update',
+            file: { localPath: filePath, normalizedPath: computeRemotePath(relPath), isAsset: false, size: fs.statSync(absPath).size },
+            // server: { responseCode: 200, method: 'gateway.sync', gatewayResponse: res.response || null },
+            timings: { startedAt, finishedAt: new Date().toISOString() }
+          };
+        }
+      });
     } catch (e) {
       // Extract response body details (422 validation errors, etc.)
       const body = e?.response?.body;
