@@ -18,7 +18,10 @@ describe('Data clean', () => {
 
 describe('Data clean real', () => {
   test('shows message when wrong confirmation passed inline', async () => {
-    const {code, stderr, stdout} = await exec(`echo "CLEAN DATA" | ${cliPath} data clean`, { env });
+    const {code, stderr, stdout} = await exec(`${cliPath} data clean`, { env }, (child) => {
+      child.stdin.write('CLEAN DATA\n');
+      child.stdin.end();
+    });
     expect(stderr).toMatch('WARNING!!! You are going to REMOVE your data from instance: http://google.com')
     expect(stderr).toMatch('There is no coming back.')
     expect(stderr).toMatch('data_clean')

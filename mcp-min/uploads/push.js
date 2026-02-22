@@ -1,6 +1,7 @@
 // platformos.uploads.push tool - upload property uploads ZIP to S3
 import fs from 'fs';
 import path from 'path';
+import normalize from 'normalize-path';
 
 import files from '../../lib/files.js';
 import { fetchSettings } from '../../lib/settings.js';
@@ -43,7 +44,7 @@ const uploadsPushTool = {
       if (!fs.existsSync(filePath)) {
         return {
           ok: false,
-          error: { code: 'FILE_NOT_FOUND', message: `File not found: ${filePath}` }
+          error: { code: 'FILE_NOT_FOUND', message: `File not found: ${normalize(filePath)}` }
         };
       }
 
