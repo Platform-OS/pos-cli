@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "6.0.0-beta.0",
+  "version": "6.0.0-beta.7",
   "description": "Manage your platformOS application",
   "type": "module",
   "imports": {
@@ -16,6 +16,7 @@
     "pretest:unit": "npm install --prefix test/fixtures/yeoman --silent",
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
+    "test:mcp-min": "vitest run mcp-min/__tests__",
     "postinstall": "node ./scripts/check-node-version.js"
   },
   "files": [
@@ -25,7 +26,8 @@
     "gui/graphql/public",
     "gui/admin/dist",
     "gui/next/build",
-    "scripts"
+    "scripts",
+    "mcp-min"
   ],
   "main": "./bin/pos-cli.js",
   "engines": {
@@ -88,6 +90,7 @@
     "pos-cli-env": "bin/pos-cli-env.js",
     "pos-cli-env-add": "bin/pos-cli-env-add.js",
     "pos-cli-env-list": "bin/pos-cli-env-list.js",
+    "pos-cli-fetch-logs": "bin/pos-cli-fetch-logs.js",
     "pos-cli-gui": "bin/pos-cli-gui.js",
     "pos-cli-gui-serve": "bin/pos-cli-gui-serve.js",
     "pos-cli-init": "bin/pos-cli-init.js",
@@ -95,6 +98,8 @@
     "pos-cli-logsv2": "bin/pos-cli-logsv2.js",
     "pos-cli-logsv2-search": "bin/pos-cli-logsv2-search.js",
     "pos-cli-lsp": "bin/pos-cli-lsp.js",
+    "pos-cli-mcp": "bin/pos-cli-mcp.js",
+    "pos-cli-mcp-config": "bin/pos-cli-mcp-config.js",
     "pos-cli-migrations": "bin/pos-cli-migrations.js",
     "pos-cli-modules": "bin/pos-cli-modules.js",
     "pos-cli-sync": "bin/pos-cli-sync.js",
@@ -111,6 +116,7 @@
   },
   "homepage": "https://github.com/Platform-OS/pos-cli/issues#readme",
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.17",
     "dotenv": "^17.3.1",
     "globals": "^17.3.0",
     "nock": "^14.0.11",

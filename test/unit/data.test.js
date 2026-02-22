@@ -3,9 +3,9 @@ import cliPath from '#test/utils/cliPath';
 
 const env = Object.assign(process.env, {
   CI: true,
-  MPKIT_URL: 'http://example.com',
+  MPKIT_URL: 'http://google.com',
   MPKIT_TOKEN: '1234',
-  MPKIT_EMAIL: 'foo@example.com'
+  MPKIT_EMAIL: 'foo@google.com'
 });
 
 describe('Data clean', () => {
@@ -13,6 +13,19 @@ describe('Data clean', () => {
     const {code, stderr} = await exec(`echo "wrong confirm" | ${cliPath} data clean`, { env });
     expect(stderr).toMatch('Wrong confirmation. Closed without cleaning instance data.');
     expect(code).toEqual(1);
+  });
+});
+
+describe('Data clean real', () => {
+  test('shows message when wrong confirmation passed inline', async () => {
+    const {code, stderr, stdout} = await exec(`${cliPath} data clean`, { env }, (child) => {
+      child.stdin.write('CLEAN DATA\n');
+      child.stdin.end();
+    });
+    expect(stderr).toMatch('WARNING!!! You are going to REMOVE your data from instance: http://google.com')
+    expect(stderr).toMatch('There is no coming back.')
+    expect(stderr).toMatch('data_clean')
+    expect(stderr).toMatch(env.MPKIT_URL)
   });
 });
 

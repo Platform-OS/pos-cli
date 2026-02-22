@@ -38,4 +38,5 @@ program
   .command('sync <environment>', 'update environment on file change').alias('s')
   .command('test', 'run tests on instance')
   .command('uploads', 'manage uploads files')
+  .command('fetch-logs', 'fetch logs')
   .parse(process.argv);

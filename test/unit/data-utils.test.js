@@ -212,7 +212,7 @@ describe('waitForStatus', () => {
 
     await expect(promise).rejects.toEqual(error);
     expect(logger.Debug).toHaveBeenCalledWith(
-      '[ERR] waitForStatus did not receive `status` in response object',
+      '[waitForStatus] Poll error',
       error
     );
   });
