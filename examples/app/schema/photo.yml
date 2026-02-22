@@ -1,0 +1,52 @@
+name: photo
+properties:
+  - name: title
+    type: string
+  - name: subtitle
+    type: string
+  - name: description
+    type: text
+  - name: category
+    type: string
+  - name: tags
+    type: array
+  - name: original_filename
+    type: string
+  - name: file_size
+    type: integer
+  - name: imported_at
+    type: datetime
+  - name: image
+    type: upload
+    options:
+      content_length:
+        lte: 2048
+      versions:
+        - name: thumbnail
+          output:
+            format: webp
+            quality: 80
+          resize:
+            width: 300
+            height: 300
+            fit: cover
+        - name: medium
+          output:
+            format: webp
+            quality: 85
+          resize:
+            width: 800
+            height: 800
+            fit: contain
+        - name: large
+          output:
+            format: webp
+            quality: 90
+          resize:
+            width: 1600
+            height: 1600
+            fit: contain
+        - name: full
+          output:
+            format: webp
+            quality: 95

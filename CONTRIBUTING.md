@@ -1,25 +1,68 @@
-# Contributing to platformOS Check
+# Contributing Guide
 
-## Standards
+## Development Workflow
 
-* PR should explain what the feature does, and why the change exists.
-* PR should include any carrier specific documentation explaining how it works.
-* Code _must_ be tested.
-* Be consistent. Write clean code.
-* Code should be generic and reusable.
-
-## How to contribute
-
-1. Fork it (https://github.com/Platform-OS/pos-cli).
-2. Go into the forked repository (`cd po-cli`) and link the repo: `npm unlink .; npm uninstall -g @platformOS/pos-cli; npm link; npm install`
-2. Create your feature branch (`git checkout -b my-new-feature`).
-3. Commit your changes (`git commit -am 'Add some feature'`).
-4. Push to the branch (`git push origin my-new-feature`).
-5. Create a new Pull Request.
-
-## Running Tests
-
+```bash
+git clone <repo>
+cd mcp
+npm ci
+npm run dev
 ```
+
+## Adding a New Tool
+
+1. **Create `src/tools/new.tools.ts`**:
+```typescript
+export const myTool: Tool = {
+  name: 'platformos.my.tool',
+  description: 'Does X',
+  inputSchema: z.object({ foo: z.string() }),
+  handler: async (input) => ({ result: input.foo.toUpperCase() })
+};
+export const myTools = [myTool];
+```
+
+2. **Register in `src/tools/index.ts`**:
+```typescript
+export const allTools = [
+  ...environmentTools,
+  ...myTools,
+  // ...
+];
+```
+
+3. **Add tests** `src/__tests__/my.tools.test.ts`
+4. **Update** [TOOLS.md](TOOLS.md)
+
+## Pre-commit Hooks
+
+```bash
+npm run lint
 npm run test
+npm run build
 ```
 
+## Release Process
+
+1. `npm version patch/minor/major`
+2. `npm publish`
+3. Update [CHANGELOG.md](CHANGELOG.md)
+
+## Code Standards
+
+- **TypeScript strict**
+- **Zod for all schemas**
+- **90%+ test coverage**
+- **No `any` types**
+- **JSDoc for complex functions**
+
+## Testing Layers
+
+| Type | Command | Purpose |
+|------|---------|---------|
+| Unit | `npm test` | Tool handlers, wrappers |
+| Integration | `npm test` | Express endpoints |
+| E2E | Manual | nock + real flows |
+
+---
+**Questions? Open an issue!**","path":"CONTRIBUTING.md
