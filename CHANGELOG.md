@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 6.0.0-beta.8
+
 * Breaking: `pos-cli modules download` command has been removed. Use `pos-cli modules install` instead. The `--force-dependencies` flag is not carried over; install/update always downloads all dependencies.
 * Improvement: `pos-cli modules install` now always downloads module files and all dependencies after updating the lock file, ensuring source code is always in sync with the manifest.
 * Improvement: `pos-cli modules update` now always downloads updated module files and all dependencies after updating the lock file.
