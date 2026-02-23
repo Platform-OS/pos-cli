@@ -405,9 +405,9 @@ After running the command, you can see the new module directory has been created
 
 #### Installation
 
-Install modules published in the modules marketplace by adding them to `app/pos-modules.json`. Use the following commands to install and then deploy the module:
+Install modules published in the modules marketplace. The `install` command adds the module to `app/pos-modules.json`, resolves all dependencies, updates `app/pos-modules.lock.json`, and downloads all module files into the `modules/` directory:
 
-    pos-cli modules install <env> [module name]
+    pos-cli modules install [module name]
     pos-cli deploy <env>
 
 #### Remove
@@ -438,12 +438,6 @@ Fetch the codebase of a module that is deployed on your instance:
 
 This will download and unpack module files into the `modules/<module_name>` directory.
 
-#### Downloading module version codebase
-
-Download the public codebase of a released module:
-
-    pos-cli modules download <module_name>
-    
 ##### Module Templates
 
 Templates automate and simplify the configuration process in module management. For example, upon installing a module, it is possible to specify URIs under which pages will be available after the module has been installed. This functionality is supported in both sync and deploy modes.

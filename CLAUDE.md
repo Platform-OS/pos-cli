@@ -527,6 +527,44 @@ path.relative(path.normalize(path.resolve(basePath)), path.normalize(absolutePat
 - **`lib/overwrites.js`** - Relative path generation
 - **`lib/assets/manifest.js`** - Asset path normalization
 
+## Network Error Handling (Node.js 22+ fetch / undici)
+
+When `fetch()` fails in Node.js 22+, errors are wrapped in a chain up to 3 levels deep. `apiRequest.js` adds one more wrapper, so in `ServerError.requestHandler` the full chain is:
+
+```
+RequestError (pos-cli, apiRequest.js)
+  └─ cause: TypeError: 'fetch failed'  (undici)
+       └─ cause: NodeAggregateError | Error  (Node.js net.js)
+```
+
+**Why `NodeAggregateError`?** Node.js 22 enables Happy Eyeballs by default: when `localhost` resolves to multiple addresses (e.g. `::1` and `127.0.0.1`), all are tried concurrently and failures are collected in a `NodeAggregateError`. Crucially, `NodeAggregateError` **always copies `.code` from `errors[0].code`**, so `err.code === 'ECONNREFUSED'` works on both paths.
+
+**The correct pattern — walk the cause chain recursively:**
+
+```javascript
+// lib/ServerError.js
+const getNetworkErrorCode = (err, depth = 0) => {
+  if (!err || depth > 5) return null;
+  if (err.code) return err.code;
+  return getNetworkErrorCode(err.cause, depth + 1);
+};
+
+// In requestHandler:
+const causeCode = getNetworkErrorCode(reason);  // finds code at whatever depth it sits
+```
+
+**Why not hardcode `reason.cause?.cause?.code`?** The depth can vary between Node.js versions and platforms. Recursive traversal is robust to that.
+
+**Error codes are cross-platform strings** — `'ECONNREFUSED'`, `'ENOTFOUND'`, `'ETIMEDOUT'` are identical on Linux, macOS, and Windows. Only the numeric `errno` value differs (e.g. `-111` on Linux vs `-4078` on Windows for ECONNREFUSED). Always match on `.code`, never on `errno`.
+
+**Test assertions** for connection-error tests should match what the handler actually outputs:
+```javascript
+expect(stderr).toMatch(/Could not connect|Request to( the)? server failed/);
+//                       ^ correct handling   ^ safe fallback for unknown errors
+```
+
+**Key file**: `lib/ServerError.js` — `getNetworkErrorCode` helper + `requestHandler`
+
 ## Node.js Version
 
 - **Minimum**: Node.js 22
