@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import prompts from 'prompts';
 import Gateway from '../lib/proxy.js';
 import waitForStatus from '../lib/data/waitForStatus.js';

@@ -1,4 +1,4 @@
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import logger from '../lib/logger.js';
 import Portal from '../lib/portal.js';
 import { readPassword } from '../lib/utils/password.js';

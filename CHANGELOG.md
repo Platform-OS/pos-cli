@@ -2,11 +2,21 @@
 
 ## Unreleased
 
+* Temporarily disabled: `pos-cli deploy --dry-run` is currently unavailable while the feature is being propagated to all servers. It will be re-enabled once the rollout is complete.
+
 ## 6.0.0-beta.8
 
 * Breaking: `pos-cli modules download` command has been removed. Use `pos-cli modules install` instead. The `--force-dependencies` flag is not carried over; install/update always downloads all dependencies.
 * Improvement: `pos-cli modules install` now always downloads module files and all dependencies after updating the lock file, ensuring source code is always in sync with the manifest.
 * Improvement: `pos-cli modules update` now always downloads updated module files and all dependencies after updating the lock file.
+* Feature: `pos-cli mcp` — MCP (Model Context Protocol) server exposing 30+ platformOS tools over stdio and HTTP/SSE transports. Enables AI clients (Claude, Cursor, etc.) to interact with platformOS instances directly.
+* Feature: `pos-cli mcp-config` — display and inspect the MCP server tool configuration (which tools are enabled/disabled). Supports `--json` for raw output. Configurable via `MCP_TOOLS_CONFIG` env var.
+* Feature: `pos-cli check init [path]` — generate a `.platformos-check.yml` configuration file for the Liquid code quality checker.
+* Feature: `pos-cli check run [path]` — run the platformos-check Node.js linter on Liquid/JSON files. Supports `-a` (auto-fix), `-f json` (JSON output), `-s` (silent). No Ruby required.
+* Feature: `pos-cli lsp` — start the platformOS Language Server Protocol server for Liquid, GraphQL, and JSON files. Provides autocompletion, diagnostics, hover docs, and go-to-definition in LSP-compatible editors.
+* Feature: `pos-cli fetch-logs [environment]` — fetch recent logs as NDJSON (newline-delimited JSON), designed for machine consumption and used internally by the MCP server. Supports `--last-log-id` for incremental polling.
+* Chore: replaced `archiver` with `yazl` for zip archive creation.
+* Chore: upgraded `commander` to v14.
 
 ## 6.0.0-beta0
 

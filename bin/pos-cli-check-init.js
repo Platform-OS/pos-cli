@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import { initConfig } from '../lib/check.js';
 
 program

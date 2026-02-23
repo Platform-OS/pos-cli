@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import notifier from 'node-notifier';
 
 import { fetchSettings } from '../lib/settings.js';

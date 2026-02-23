@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import { fetchSettings } from '../lib/settings.js';
 import { run } from '../lib/test-runner/index.js';
 

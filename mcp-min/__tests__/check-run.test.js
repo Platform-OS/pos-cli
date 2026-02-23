@@ -3,16 +3,31 @@ import { pathToFileURL } from 'url';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
-import { describe, test, expect, beforeAll } from 'vitest';
+import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 
 const checkRunModPath = pathToFileURL(path.resolve(process.cwd(), 'mcp-min', 'check', 'run.js')).href;
 
 describe('platformos.check-run', () => {
   let checkRunTool;
+  let testAppPath;
 
   beforeAll(async () => {
     const mod = await import(checkRunModPath);
     checkRunTool = mod.default;
+
+    // Create a minimal temp directory so themeCheckRun completes quickly.
+    // Using '.' (the whole repo) can exceed the 10 s timeout when the
+    // @platformos/platformos-check-node package is installed.
+    testAppPath = fs.mkdtempSync(path.join(os.tmpdir(), 'check-run-test-'));
+    const pagesDir = path.join(testAppPath, 'app', 'views', 'pages');
+    fs.mkdirSync(pagesDir, { recursive: true });
+    fs.writeFileSync(path.join(pagesDir, 'index.liquid'), '{% liquid\n  echo "hello"\n%}', 'utf8');
+  });
+
+  afterAll(() => {
+    if (testAppPath) {
+      fs.rmSync(testAppPath, { recursive: true, force: true });
+    }
   });
 
   test('has correct description', () => {
@@ -51,7 +66,7 @@ describe('platformos.check-run', () => {
   });
 
   test('includes timing metadata on success or dependency error', async () => {
-    const result = await checkRunTool.handler({ appPath: '.' });
+    const result = await checkRunTool.handler({ appPath: testAppPath });
 
     if (result.ok) {
       // theme-check-node is installed
@@ -72,7 +87,7 @@ describe('platformos.check-run', () => {
   });
 
   test('returns structured file data when dependency is available', async () => {
-    const result = await checkRunTool.handler({ appPath: '.' });
+    const result = await checkRunTool.handler({ appPath: testAppPath });
 
     if (!result.ok && result.error.code === 'MISSING_DEPENDENCY') {
       // Skip — dependency not installed
