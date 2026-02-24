@@ -75,7 +75,7 @@ describe('pos-cli gui serve command', () => {
   let port = 0;
 
   beforeAll(async () => {
-    const portArg = Math.floor(Math.random() * 10000) + 40000;
+    const portArg = Math.floor(Math.random() * 10000) + 15000;
     port = portArg;
   });
 

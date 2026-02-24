@@ -1,6 +1,8 @@
 // platformos.check-run - run platformos-check Node.js linter (no Ruby required)
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import normalize from 'normalize-path';
 
 const Severity = {
   ERROR: 0,
@@ -17,7 +19,13 @@ const severityToLabel = (severity) => {
   }
 };
 
-const uriToPath = (uri) => uri.replace('file://', '');
+const uriToPath = (uri) => {
+  try {
+    return fileURLToPath(uri);
+  } catch {
+    return uri.replace('file://', '');
+  }
+};
 
 const countBySeverity = (offenses) => {
   return offenses.reduce((counts, offense) => {
@@ -117,7 +125,7 @@ const checkRunTool = {
       const grouped = {};
       for (const offense of offenses) {
         const absolutePath = uriToPath(offense.uri);
-        const filePath = path.relative(checkPath, absolutePath);
+        const filePath = normalize(path.relative(checkPath, absolutePath));
         if (!grouped[filePath]) {
           grouped[filePath] = [];
         }
