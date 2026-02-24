@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { SwaggerProxy } from '../lib/swagger-client.js';
 
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import { start as watch, setupGracefulShutdown } from '../lib/watch.js';
 
 import { fetchSettings } from '../lib/settings.js';

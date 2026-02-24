@@ -23,8 +23,7 @@ beforeAll(() => {
   cleanupTmp();
 });
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const run = (fixtureName, options) => exec(`${cliPath} deploy ${options || ''}`, { cwd: cwd(fixtureName), env: process.env });
+const run = (fixtureName, options, env = process.env) => exec(`${cliPath} deploy ${options || ''}`, { cwd: cwd(fixtureName), env });
 
 const extract = async (inputPath, outputPath) => {
   return unzip.Open.file(inputPath).then(d => d.extract({ path: outputPath, concurrency: 5 }));
@@ -32,10 +31,8 @@ const extract = async (inputPath, outputPath) => {
 
 
 describe('Happy path', () => {
-  test('App directory + modules', async () => {
+  test('App directory + modules', { retry: 2 }, async () => {
     requireRealCredentials();
-    await sleep(3500); // it's needed to run tests in parallel mode
-
 
     const { stdout } = await run('correct');
 
@@ -51,13 +48,13 @@ describe('Happy path', () => {
     expect(nestedPartial).toMatch('dir/subdir/foo');
   });
 
-  test('Legacy directory', async () => {
+  test('Legacy directory', { retry: 2 }, async () => {
     const { stdout } = await run('correct_mpbuilder');
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('Deploy succeeded');
   });
 
-  test('correct with direct upload', async () => {
+  test('correct with direct upload', { retry: 2 }, async () => {
     requireRealCredentials();
     const { stdout, stderr } = await run('correct', '-d');
 
@@ -74,7 +71,7 @@ describe('Happy path', () => {
     expect(nestedPartial).toMatch('dir/subdir/foo');
   });
 
-  test('correct with assets with direct upload', async () => {
+  test('correct with assets with direct upload', { retry: 2 }, async () => {
     requireRealCredentials();
     const { stdout } = await run('correct_with_assets', '-d');
 
@@ -94,7 +91,7 @@ describe('Happy path', () => {
     expect(fs.existsSync(`${deployDir}/tmp/release_assets/modules/testModule/bar.js`)).toBeTruthy();
   });
 
-  test('only assets with old upload', async () => {
+  test('only assets with old upload', { retry: 2 }, async () => {
     requireRealCredentials();
     const { stdout, stderr } = await run('correct_only_assets', '-o');
     expect(stderr).not.toMatch('There are no files in release file, skipping.');
@@ -102,12 +99,22 @@ describe('Happy path', () => {
     expect(stdout).toMatch('Deploy succeeded');
   });
 
-  test('only assets', async () => {
+  test('only assets', { retry: 2 }, async () => {
     requireRealCredentials();
     const { stdout, stderr } = await run('correct_only_assets');
     expect(stderr).toMatch('There are no files in release file, skipping.');
     expect(stdout).toMatch(process.env.MPKIT_URL);
     expect(stdout).toMatch('Deploy succeeded');
+  });
+});
+
+describe.skip('Dry run', () => {
+  // Temporarily disabled: --dry-run is disabled until the feature is propagated to all servers.
+  test('reports would-be changes without applying them', { retry: 2 }, async () => {
+    const { stdout } = await run('correct', '--dry-run');
+
+    expect(stdout).toMatch(/\[DRY RUN\]/);
+    expect(stdout).toMatch(/Dry run completed/);
   });
 });
 

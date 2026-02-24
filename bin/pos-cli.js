@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import updateNotifier from 'update-notifier';
 import pkg from '../package.json' with { type: 'json' };
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 
 import { run as auditRun } from '../lib/audit.js';
 import archive from '../lib/archive.js';

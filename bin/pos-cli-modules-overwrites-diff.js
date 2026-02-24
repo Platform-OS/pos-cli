@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import logger from '../lib/logger.js';
 import { execSync } from 'child_process';
 import overwrites from '../lib/overwrites.js';

@@ -327,6 +327,120 @@ describe('Deploy - Unit Tests', () => {
   });
 });
 
+describe.skip('Dry Run', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    nock.cleanAll();
+    process.env.MARKETPLACE_URL = TEST_URL;
+    process.env.MARKETPLACE_TOKEN = TEST_TOKEN;
+    process.env.MARKETPLACE_EMAIL = TEST_EMAIL;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    nock.cleanAll();
+    delete process.env.MARKETPLACE_URL;
+    delete process.env.MARKETPLACE_TOKEN;
+    delete process.env.MARKETPLACE_EMAIL;
+  });
+
+  test('push() sends marketplace_builder[dry_run]=true when DRY_RUN is true', async () => {
+    // Spy on fs.createReadStream to avoid async file-open errors (stream is never consumed
+    // when gateway.push is mocked, but Node.js opens the file asynchronously in _construct)
+    const fsModule = await import('fs');
+    vi.spyOn(fsModule.default, 'createReadStream').mockReturnValue({ path: './tmp/release.zip' });
+
+    const Gateway = (await import('#lib/proxy.js')).default;
+    const pushSpy = vi.spyOn(Gateway.prototype, 'push')
+      .mockResolvedValue({ id: 12345, status: 'pending' });
+    vi.spyOn(Gateway.prototype, 'getStatus')
+      .mockResolvedValue({ status: 'success', report: null });
+
+    const { push } = await import('#lib/push.js');
+    await push({
+      MARKETPLACE_URL: TEST_URL,
+      MARKETPLACE_TOKEN: TEST_TOKEN,
+      MARKETPLACE_EMAIL: TEST_EMAIL,
+      DRY_RUN: 'true'
+    });
+
+    const formDataArg = pushSpy.mock.calls[0][0];
+    expect(formDataArg['marketplace_builder[dry_run]']).toBe('true');
+  });
+
+  test('push() omits marketplace_builder[dry_run] when DRY_RUN is false', async () => {
+    const fsModule = await import('fs');
+    vi.spyOn(fsModule.default, 'createReadStream').mockReturnValue({ path: './tmp/release.zip' });
+
+    const Gateway = (await import('#lib/proxy.js')).default;
+    const pushSpy = vi.spyOn(Gateway.prototype, 'push')
+      .mockResolvedValue({ id: 12345, status: 'pending' });
+    vi.spyOn(Gateway.prototype, 'getStatus')
+      .mockResolvedValue({ status: 'success', report: null });
+
+    const { push } = await import('#lib/push.js');
+    await push({
+      MARKETPLACE_URL: TEST_URL,
+      MARKETPLACE_TOKEN: TEST_TOKEN,
+      MARKETPLACE_EMAIL: TEST_EMAIL,
+      DRY_RUN: 'false'
+    });
+
+    const formDataArg = pushSpy.mock.calls[0][0];
+    expect(formDataArg['marketplace_builder[dry_run]']).toBeUndefined();
+  });
+
+  test('dryRunStrategy never uploads assets', async () => {
+    const archiveModule = await import('#lib/archive.js');
+    vi.spyOn(archiveModule, 'makeArchive').mockResolvedValue(5);
+
+    const pushModule = await import('#lib/push.js');
+    vi.spyOn(pushModule, 'push').mockResolvedValue('0:05');
+
+    const assetsModule = await import('#lib/assets.js');
+    const deployAssetsSpy = vi.spyOn(assetsModule, 'deployAssets').mockResolvedValue();
+
+    const strategy = (await import('#lib/deploy/dryRunStrategy.js')).default;
+    await strategy({
+      env: {
+        MARKETPLACE_URL: TEST_URL,
+        MARKETPLACE_TOKEN: TEST_TOKEN,
+        MARKETPLACE_EMAIL: TEST_EMAIL,
+        DRY_RUN: 'true',
+        PARTIAL_DEPLOY: 'false'
+      },
+      authData: { url: TEST_URL, token: TEST_TOKEN, email: TEST_EMAIL },
+      params: {}
+    });
+
+    expect(deployAssetsSpy).not.toHaveBeenCalled();
+  });
+
+  test('push() sends both dry_run and partial_deploy when both flags are set', async () => {
+    const fsModule = await import('fs');
+    vi.spyOn(fsModule.default, 'createReadStream').mockReturnValue({ path: './tmp/release.zip' });
+
+    const Gateway = (await import('#lib/proxy.js')).default;
+    const pushSpy = vi.spyOn(Gateway.prototype, 'push')
+      .mockResolvedValue({ id: 12345, status: 'pending' });
+    vi.spyOn(Gateway.prototype, 'getStatus')
+      .mockResolvedValue({ status: 'success', report: null });
+
+    const { push } = await import('#lib/push.js');
+    await push({
+      MARKETPLACE_URL: TEST_URL,
+      MARKETPLACE_TOKEN: TEST_TOKEN,
+      MARKETPLACE_EMAIL: TEST_EMAIL,
+      DRY_RUN: 'true',
+      PARTIAL_DEPLOY: 'true'
+    });
+
+    const formData = pushSpy.mock.calls[0][0];
+    expect(formData['marketplace_builder[dry_run]']).toBe('true');
+    expect(formData['marketplace_builder[partial_deploy]']).toBe('true');
+  });
+});
+
 describe('Deploy Error Scenarios (Mocked)', () => {
   beforeEach(() => {
     vi.clearAllMocks();

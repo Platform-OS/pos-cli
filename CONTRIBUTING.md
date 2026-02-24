@@ -34,6 +34,33 @@ export const allTools = [
 3. **Add tests** `src/__tests__/my.tools.test.ts`
 4. **Update** [TOOLS.md](TOOLS.md)
 
+## Developing with Local platformos-tools
+
+When working on `@platformos/*` packages (linter, LSP, parser, etc.) you can link a local
+[platformos-tools](https://github.com/Platform-OS/platformos-tools) checkout into pos-cli
+so that changes are picked up immediately without publishing to npm.
+
+### Link
+
+```bash
+# Build platformos-tools first
+cd /path/to/platformos-tools
+yarn build
+
+# Link all @platformos packages into pos-cli
+npm run link:tools -- /path/to/platformos-tools
+```
+
+### Unlink
+
+```bash
+# Restore the npm-published versions
+npm run unlink:tools
+```
+
+After linking, both `pos-cli check` and `pos-cli lsp` will use your local package code.
+Remember to rebuild platformos-tools (`yarn build`) after making changes there.
+
 ## Pre-commit Hooks
 
 ```bash

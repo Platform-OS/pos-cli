@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import glob from 'fast-glob';
 import table from 'text-table';
 

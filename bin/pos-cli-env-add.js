@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import ServerError from '../lib/ServerError.js';
 import logger from '../lib/logger.js';
 import addEnv from '../lib/envs/add.js';

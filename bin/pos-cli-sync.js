@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { program } from 'commander';
+import { program } from '../lib/program.js';
 import { start as watchStart, setupGracefulShutdown, sendFile } from '../lib/watch.js';
 
 import { fetchSettings } from '../lib/settings.js';

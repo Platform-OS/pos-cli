@@ -17,7 +17,9 @@
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
     "test:mcp-min": "vitest run mcp-min/__tests__",
-    "postinstall": "node ./scripts/check-node-version.js"
+    "postinstall": "node ./scripts/check-node-version.js",
+    "link:tools": "node ./scripts/link-platformos-tools.js",
+    "unlink:tools": "node ./scripts/link-platformos-tools.js --unlink"
   },
   "files": [
     "lib",

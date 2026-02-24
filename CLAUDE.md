@@ -46,13 +46,20 @@ npm install
 
 ```
 pos-cli/
-├── bin/              # CLI command entry points (54 executables)
+├── bin/              # CLI command entry points (60+ executables)
 │   ├── pos-cli.js               # Main entry point
 │   ├── pos-cli-deploy.js        # Deploy command
 │   ├── pos-cli-sync.js          # Sync command
 │   ├── pos-cli-env-add.js       # Environment management
 │   ├── pos-cli-modules-*.js     # Module commands
-│   └── pos-cli-gui-serve.js     # GUI server
+│   ├── pos-cli-gui-serve.js     # GUI server
+│   ├── pos-cli-check.js         # Liquid code quality check
+│   ├── pos-cli-check-init.js    # Generate .platformos-check.yml
+│   ├── pos-cli-check-run.js     # Run platformos-check linter
+│   ├── pos-cli-lsp.js           # Language Server Protocol server
+│   ├── pos-cli-mcp.js           # MCP server entry point
+│   ├── pos-cli-mcp-config.js    # Display MCP tool configuration
+│   └── pos-cli-fetch-logs.js    # Fetch logs as NDJSON (for scripting/MCP)
 ├── lib/              # Core business logic
 │   ├── proxy.js                 # Gateway class - main API client
 │   ├── ServerError.js           # Centralized error handling
@@ -62,6 +69,7 @@ pos-cli/
 │   ├── watch.js                 # File watching for sync mode
 │   ├── archive.js               # Deployment archive creation
 │   ├── push.js                  # Archive upload
+│   ├── check.js                 # Liquid/JSON linter (platformos-check)
 │   ├── templates.js             # Mustache template processing
 │   ├── modules.js               # Module lifecycle management
 │   ├── deploy/                  # Deployment strategies
@@ -70,6 +78,13 @@ pos-cli/
 │   ├── assets/                  # Asset deployment
 │   ├── logsv2/                  # OpenObserve logs integration
 │   └── validators/              # Input validation
+├── mcp-min/          # MCP server implementation
+│   ├── index.js                 # Starts stdio + HTTP/SSE transports
+│   ├── stdio-server.js          # MCP over stdio (for editor integrations)
+│   ├── http-server.js           # HTTP/SSE transport (port 5910)
+│   ├── tools.js                 # Tool registry
+│   ├── tools.config.json        # Enable/disable tools, customize descriptions
+│   └── <tool-name>/             # One directory per tool group (deploy/, data/, etc.)
 ├── gui/              # Web UI applications
 │   ├── admin/                   # Admin panel (Svelte, pre-built)
 │   ├── graphql/                 # GraphiQL IDE (React, pre-built)
@@ -131,20 +146,23 @@ class Gateway {
 All commands that interact with platformOS instances use this Gateway class.
 
 #### 2. Strategy Pattern - Deployment
-**Files**: `lib/deploy/strategy.js`, `lib/deploy/directAssetsUploadStrategy.js`, `lib/deploy/defaultStrategy.js`
+**Files**: `lib/deploy/strategy.js`, `lib/deploy/directAssetsUploadStrategy.js`, `lib/deploy/defaultStrategy.js`, `lib/deploy/dryRunStrategy.js`
 
-Two deployment strategies:
+Three deployment strategies:
 - **directAssetsUpload** (modern, default): Separates code and assets. Assets upload directly to S3, then manifest sent to API
 - **default** (legacy): Everything in one archive
+- **dryRun**: Uploads release archive (no assets) with `dry_run=true` flag; server validates and reports files that would be upserted/deleted without applying any changes
 
 Strategy selection:
 ```javascript
 import defaultStrategy from './defaultStrategy.js';
 import directAssetsUploadStrategy from './directAssetsUploadStrategy.js';
+import dryRunStrategy from './dryRunStrategy.js';
 
 const strategies = {
   default: defaultStrategy,
   directAssetsUpload: directAssetsUploadStrategy,
+  dryRun: dryRunStrategy,
 };
 
 const run = ({ strategy, opts }) => strategies[strategy](opts);
@@ -152,7 +170,25 @@ const run = ({ strategy, opts }) => strategies[strategy](opts);
 export { run };
 ```
 
-#### 3. File Watching Pattern - Sync Mode
+#### 3. MCP Server Pattern
+**Directory**: `mcp-min/`
+
+The MCP (Model Context Protocol) server exposes platformOS operations as tools for AI clients. It runs two transports simultaneously:
+- **stdio** (`stdio-server.js`): Standard MCP transport for editor/AI integrations
+- **HTTP/SSE** (`http-server.js`): REST + Server-Sent Events on port 5910 (env: `MCP_MIN_PORT`)
+
+Tools are registered in `tools.js` and can be enabled/disabled via `tools.config.json` (or `MCP_TOOLS_CONFIG` env var). Each tool group lives in its own directory (`deploy/`, `data/`, `logs/`, etc.) and calls the Gateway directly (no CLI subprocess spawning).
+
+```javascript
+// mcp-min/index.js
+startStdio();                          // stdio transport
+await startHttp({ port: PORT });       // HTTP/SSE transport
+```
+
+Tools include: envs-list, env-add, deploy-start/status/wait, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, tests-run/run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, portal tools (instance-create, partners-list, partner-get, endpoints-list).
+
+#### 4. File Watching Pattern - Sync Mode
+
 **File**: `lib/watch.js`
 
 Sync mode watches files and pushes changes in real-time:
@@ -176,7 +212,7 @@ Key features:
 - Optional LiveReload integration
 - Debouncing to prevent excessive uploads
 
-#### 4. Template Processing Pattern
+#### 5. Template Processing Pattern
 **File**: `lib/templates.js`
 
 Modules support ERB/EJS-style templates (`<%= var =%>`) for configuration:
@@ -192,7 +228,7 @@ const fillInTemplateValues = (filePath, templateData) => {
 
 Values sourced from `modules/*/template-values.json`. Processed during sync and deploy.
 
-#### 5. Authentication Flow
+#### 6. Authentication Flow
 **Files**: `lib/environments.js`, `lib/envs/add.js`
 
 Two authentication methods:
@@ -201,7 +237,7 @@ Two authentication methods:
 
 Tokens stored in `.pos` configuration file (JSON format).
 
-#### 6. Error Handling
+#### 7. Error Handling
 **File**: `lib/ServerError.js`
 
 Centralized error handling with specific handlers for different HTTP status codes (401, 404, 500, 502, 504, etc.). Each handler provides user-friendly messages and controls process exit behavior.
@@ -275,11 +311,12 @@ Key variables that affect behavior:
 #### Module System
 Complete lifecycle:
 - **Init**: Create from template (github.com/Platform-OS/pos-module-template)
-- **Install**: Add to app/pos-modules.json, then deploy
+- **Install**: Add to app/pos-modules.json, resolve dependencies, update lock file, and automatically download all module files to `modules/`
 - **Publish**: Version and push to marketplace (requires Partner Portal account)
-- **Download**: Fetch specific version from marketplace
 - **Pull**: Get deployed version from instance
-- **Update**: Update installed versions
+- **Update**: Update version in pos-modules.json, resolve dependencies, update lock file, and automatically download updated module files to `modules/`
+
+Note: `pos-cli modules download` has been removed. `install` and `update` always download all module files and dependencies automatically.
 
 Module dependencies specified in `template-values.json`:
 ```json
@@ -299,10 +336,10 @@ Express server (`lib/server.js`) serves three pre-built web apps:
 Can run with sync: `pos-cli gui serve staging --sync --open`
 
 ### Key Dependencies
-- **commander** v12 - CLI framework
+- **commander** v14 - CLI framework
 - **chokidar** - File watching with native fsevents on macOS
 - **express** - GUI server
-- **archiver** - Zip creation
+- **yazl** - Zip creation
 - **request/request-promise** - HTTP client
 - **mustache** - Template rendering (ERB/EJS-style)
 - **fast-glob** - File pattern matching

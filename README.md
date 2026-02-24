@@ -74,12 +74,22 @@ This command syncs only the specified file and exits immediately, making it usef
 To deploy all changes to a specified environment, use the following command:
 
     pos-cli deploy [environment]
-    
+
 Example: `pos-cli deploy staging`
 
 It is recommended to first deploy changes to a staging environment, thoroughly test them there, and only then proceed with deploying to production. The deploy command packages all your files into a zip file and sends it to the API for background processing. Each zip file is stored, enabling rollback if any issues arise.
 
 To skip the audit during deployment, set the environmental variable `CI` to `true`.
+
+#### Dry Run
+
+To validate your release on the server without applying any changes, use the `--dry-run` flag:
+
+    pos-cli deploy [environment] --dry-run
+
+Example: `pos-cli deploy staging --dry-run`
+
+This uploads the release archive and runs server-side validation but does not apply any changes. The server reports which files would be upserted and which would be deleted, making it useful for previewing the impact of a deployment before committing to it. Assets are never uploaded during a dry run.
 
 ### Code Audit
 
@@ -710,6 +720,74 @@ This command runs all tests and streams the results in real-time, showing indivi
 Example:
 
     pos-cli test run staging my_test
+
+### MCP Server (AI Integration)
+
+pos-cli includes a built-in [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that exposes platformOS operations as tools for AI clients such as Claude, Cursor, and other MCP-compatible assistants. This lets AI agents deploy code, run GraphQL queries, manage data, execute migrations, and more — all directly against your platformOS instances.
+
+#### Starting the MCP Server
+
+    pos-cli mcp
+
+This starts both a **stdio transport** (for editor/AI integrations) and an **HTTP/SSE server** on port 5910 (configurable with `MCP_MIN_PORT`).
+
+#### Configuring Claude Code
+
+Add the following to your Claude Code settings (`.claude/settings.json`) to use pos-cli as an MCP server:
+
+```json
+{
+  "mcpServers": {
+    "platformos": {
+      "command": "pos-cli-mcp"
+    }
+  }
+}
+```
+
+#### Available Tools
+
+The MCP server exposes 30+ tools across these categories:
+
+- **Environments**: `envs-list`, `env-add`
+- **Deploy**: `deploy-start`, `deploy-status`, `deploy-wait`
+- **Sync**: `sync-file`
+- **Logs**: `logs-fetch`
+- **GraphQL**: `graphql-exec`
+- **Liquid**: `liquid-exec`
+- **Data**: `data-import`, `data-import-status`, `data-export`, `data-export-status`, `data-clean`, `data-clean-status`, `data-validate`
+- **Migrations**: `migrations-list`, `migrations-generate`, `migrations-run`
+- **Tests**: `unit-tests-run`, `tests-run-async`, `tests-run-async-result`
+- **Constants**: `constants-list`, `constants-set`, `constants-unset`
+- **Generators**: `generators-list`, `generators-help`, `generators-run`
+- **Code quality**: `check-run`
+- **Uploads**: `uploads-push`
+- **Partner Portal**: `instance-create`, `partners-list`, `partner-get`, `endpoints-list`
+
+#### Viewing Tool Configuration
+
+To see which tools are enabled or disabled:
+
+    pos-cli mcp-config
+
+Use `--json` for raw JSON output. You can override the configuration by setting the `MCP_TOOLS_CONFIG` environment variable to point to a custom `tools.config.json` file.
+
+### Fetching Logs (Machine-Readable)
+
+For scripting and CI pipelines that need logs in a structured format, use `fetch-logs`:
+
+    pos-cli fetch-logs [environment]
+
+This outputs logs as newline-delimited JSON (NDJSON), one log entry per line:
+
+```json
+{"id":"1001","message":"Hello","type":"debug","created_at":"2026-01-01T12:00:00Z"}
+{"id":"1002","message":"World","type":"info","created_at":"2026-01-01T12:00:01Z"}
+```
+
+Each entry contains an `id` field. Pass the highest `id` from a previous run to `--last-log-id` to fetch only newer logs on the next poll:
+
+    pos-cli fetch-logs staging --last-log-id 1002
 
 ## Development
 
