@@ -76,9 +76,9 @@ const checkRunTool = {
     }
 
     // Dynamically import @platformos/platformos-check-node
-    let themeCheck;
+    let platformosCheck;
     try {
-      themeCheck = await import('@platformos/platformos-check-node');
+      platformosCheck = await import('@platformos/platformos-check-node');
     } catch {
       return {
         ok: false,
@@ -98,18 +98,18 @@ const checkRunTool = {
       const configPath = fs.existsSync(configFile) ? configFile : undefined;
 
       // Run checks
-      const result = await themeCheck.themeCheckRun(checkPath, configPath);
+      const result = await platformosCheck.appCheckRun(checkPath, configPath);
       let offenses = result.offenses;
-      const filesChecked = result.theme ? result.theme.length : 0;
+      const filesChecked = result.app ? result.app.length : 0;
 
       // Auto-fix if requested
       let autoFixed = false;
       if (autoFix && offenses.length > 0) {
-        await themeCheck.autofix(result.theme, offenses);
+        await platformosCheck.autofix(result.app, offenses);
         autoFixed = true;
 
         // Re-run check after autofix
-        const recheck = await themeCheck.themeCheckRun(checkPath, configPath);
+        const recheck = await platformosCheck.appCheckRun(checkPath, configPath);
         offenses = recheck.offenses;
       }
 

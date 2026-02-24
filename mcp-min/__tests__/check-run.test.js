@@ -15,7 +15,7 @@ describe('platformos.check-run', () => {
     const mod = await import(checkRunModPath);
     checkRunTool = mod.default;
 
-    // Create a minimal temp directory so themeCheckRun completes quickly.
+    // Create a minimal temp directory so appCheckRun completes quickly.
     // Using '.' (the whole repo) can exceed the 10 s timeout when the
     // @platformos/platformos-check-node package is installed.
     testAppPath = fs.mkdtempSync(path.join(os.tmpdir(), 'check-run-test-'));

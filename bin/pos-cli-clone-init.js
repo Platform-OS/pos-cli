@@ -14,7 +14,7 @@ program
   .arguments('[targetEnv]', 'target environment. Example: staging2')
   .action(async (sourceEnv, targetEnv, _params) => {
 
-    const spinner = ora({ text: 'InstanceClone initilized', stream: process.stdout, interval: 500 });
+    const spinner = ora({ text: 'InstanceClone initialized', stream: process.stdout, interval: 500 });
 
     try {
       const sourceAuthData = await fetchSettings(sourceEnv, program);
