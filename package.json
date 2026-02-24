@@ -136,6 +136,7 @@
   },
   "overrides": {
     "minimatch": ">=10.2.2",
-    "multimatch": ">=8.0.0"
+    "multimatch": ">=8.0.0",
+    "picomatch": ">=2.3.1"
   }
 }
