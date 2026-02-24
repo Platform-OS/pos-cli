@@ -41,9 +41,9 @@
     "pOS"
   ],
   "dependencies": {
-    "@platformos/platformos-check-node": "^0.0.7",
-    "@platformos/platformos-common": "^0.0.7",
-    "@platformos/platformos-language-server-node": "^0.0.7",
+    "@platformos/platformos-check-node": "^0.0.8",
+    "@platformos/platformos-common": "^0.0.8",
+    "@platformos/platformos-language-server-node": "^0.0.8",
     "is-stream": "^4.0.1",
     "yazl": "^3.3.1",
     "async": "^3.2.6",

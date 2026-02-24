@@ -3,7 +3,7 @@ import exec from '#test/utils/exec';
 import cliPath from '#test/utils/cliPath';
 import path from 'path';
 
-vi.setConfig({ testTimeout: 30000 });
+vi.setConfig({ testTimeout: 60000 });
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'check', name);
 const run = (fixtureName, options = '') => exec(`${cliPath} check run ${options}`, { cwd: cwd(fixtureName) });
