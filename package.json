@@ -41,9 +41,9 @@
     "pOS"
   ],
   "dependencies": {
-    "@platformos/platformos-check-node": "^0.0.8",
-    "@platformos/platformos-common": "^0.0.8",
-    "@platformos/platformos-language-server-node": "^0.0.8",
+    "@platformos/platformos-check-node": "^0.0.11",
+    "@platformos/platformos-common": "^0.0.10",
+    "@platformos/platformos-language-server-node": "^0.0.11",
     "is-stream": "^4.0.1",
     "yazl": "^3.3.1",
     "async": "^3.2.6",
@@ -57,7 +57,7 @@
     "express": "^5.2.1",
     "fast-glob": "^3.3.3",
     "ignore": "^7.0.5",
-    "inquirer": "^13.2.5",
+    "inquirer": "^13.3.0",
     "livereload": "^0.10.3",
     "lodash.clonedeep": "^4.5.0",
     "lodash.compact": "^3.0.1",
@@ -119,7 +119,7 @@
   },
   "homepage": "https://github.com/Platform-OS/pos-cli/issues#readme",
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.17",
+    "@vitest/coverage-v8": "^4.0.18",
     "dotenv": "^17.3.1",
     "globals": "^17.3.0",
     "nock": "^14.0.11",
@@ -133,10 +133,5 @@
   ],
   "optionalDependencies": {
     "fsevents": "^2.3.3"
-  },
-  "overrides": {
-    "minimatch": ">=10.2.2",
-    "multimatch": ">=8.0.0",
-    "picomatch": ">=2.3.1"
   }
 }
