@@ -13,6 +13,7 @@ import notifier from 'node-notifier';
 import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
 import Gateway from '../lib/proxy.js';
+import ServerError from '../lib/ServerError.js';
 
 class LogStream extends EventEmitter {
   constructor(authData, interval, filter) {
@@ -57,6 +58,12 @@ class LogStream extends EventEmitter {
             storage.add(row);
             this.emit('message', row);
           }
+        }
+      })
+      .catch(async (e) => {
+        if (ServerError.isNetworkError(e)) {
+          await ServerError.handler(e);
+          process.exit(1);
         }
       });
   }
