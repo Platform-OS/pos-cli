@@ -39,7 +39,7 @@ vi.mock('chokidar', () => ({
 }));
 vi.mock('livereload', () => ({ default: { createServer: vi.fn() } }));
 vi.mock('async', () => ({ default: { queue: vi.fn() } }));
-vi.mock('#lib/proxy.js', () => ({ default: class {} }));
+vi.mock('#lib/proxy.js', () => ({ default: vi.fn() }));
 vi.mock('#lib/files.js', () => ({ default: { getIgnoreList: vi.fn().mockReturnValue([]) } }));
 vi.mock('#lib/directories.js', () => ({
   default: { APP: 'app', LEGACY_APP: 'marketplace_builder', toWatch: vi.fn().mockReturnValue([]) }
@@ -57,7 +57,8 @@ vi.mock('#lib/templates.js', () => ({ fillInTemplateValues: vi.fn().mockReturnVa
 import fs from 'fs';
 import logger from '#lib/logger.js';
 import ServerError from '#lib/ServerError.js';
-import { pushFile, deleteFile } from '#lib/watch.js';
+import Gateway from '#lib/proxy.js';
+import { pushFile, deleteFile, start } from '#lib/watch.js';
 
 // --- test helpers ---------------------------------------------------------
 
@@ -122,7 +123,7 @@ describe('pushFile', () => {
     expect(ServerError.handler).not.toHaveBeenCalled();
   });
 
-  test('delegates non-422 errors to ServerError.handler', async () => {
+  test('delegates non-422 StatusCodeErrors to ServerError.handler', async () => {
     const err = Object.assign(new Error('Internal Server Error'), {
       name: 'StatusCodeError',
       statusCode: 500
@@ -133,6 +134,32 @@ describe('pushFile', () => {
 
     expect(ServerError.handler).toHaveBeenCalledWith(err);
     expect(logger.Error).not.toHaveBeenCalled();
+  });
+
+  test('logs without exiting on network error (RequestError) so sync stays alive', async () => {
+    const err = Object.assign(new Error('ECONNREFUSED'), { name: 'RequestError' });
+    gateway.sync.mockRejectedValue(err);
+
+    await expect(pushFile(gateway, 'app/views/pages/index.liquid')).rejects.toThrow();
+
+    expect(logger.Error).toHaveBeenCalledWith(
+      '[Sync] Failed to sync: views/pages/index.liquid',
+      { exit: false, notify: false }
+    );
+    expect(ServerError.handler).not.toHaveBeenCalled();
+  });
+
+  test('logs without exiting on timeout (RequestError) so sync stays alive', async () => {
+    const err = Object.assign(new Error('ETIMEDOUT'), { name: 'RequestError' });
+    gateway.sync.mockRejectedValue(err);
+
+    await expect(pushFile(gateway, 'app/views/pages/index.liquid')).rejects.toThrow();
+
+    expect(logger.Error).toHaveBeenCalledWith(
+      '[Sync] Failed to sync: views/pages/index.liquid',
+      { exit: false, notify: false }
+    );
+    expect(ServerError.handler).not.toHaveBeenCalled();
   });
 });
 
@@ -203,7 +230,7 @@ describe('deleteFile', () => {
     );
   });
 
-  test('delegates non-422 errors to ServerError.handler', async () => {
+  test('delegates non-422 StatusCodeErrors to ServerError.handler', async () => {
     const err = Object.assign(new Error('Internal Server Error'), {
       name: 'StatusCodeError',
       statusCode: 500
@@ -215,5 +242,85 @@ describe('deleteFile', () => {
 
     expect(ServerError.handler).toHaveBeenCalledWith(err);
     expect(logger.Error).not.toHaveBeenCalled();
+  });
+
+  test('logs without exiting on network error (RequestError) so sync stays alive', async () => {
+    const err = Object.assign(new Error('ECONNREFUSED'), { name: 'RequestError' });
+    gateway.delete.mockRejectedValue(err);
+
+    await expect(deleteFile(gateway, 'app/views/partials/foo.liquid')).rejects.toThrow();
+
+    expect(logger.Error).toHaveBeenCalledWith(
+      '[Sync] Failed to delete: views/partials/foo.liquid',
+      { exit: false, notify: false }
+    );
+    expect(ServerError.handler).not.toHaveBeenCalled();
+  });
+});
+
+// --- start() tests --------------------------------------------------------
+
+describe('start', () => {
+  const env = {
+    MARKETPLACE_EMAIL: 'test@example.com',
+    MARKETPLACE_TOKEN: 'test-token',
+    MARKETPLACE_URL: 'https://test.example.com',
+    CONCURRENCY: 1
+  };
+
+  let mockGatewayInstance;
+  let exitSpy;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGatewayInstance = {
+      ping: vi.fn().mockResolvedValue([]),
+      getInstance: vi.fn().mockResolvedValue({ id: 'inst-1' })
+    };
+    vi.mocked(Gateway).mockImplementation(function() { return mockGatewayInstance; });
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('process.exit called'); });
+    ServerError.isNetworkError.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    exitSpy.mockRestore();
+  });
+
+  test('returns watcher on successful ping', async () => {
+    const result = await start(env, false, false);
+    expect(result).toHaveProperty('watcher');
+    expect(mockGatewayInstance.ping).toHaveBeenCalled();
+  });
+
+  test('calls ServerError.handler and exits on network error during ping', async () => {
+    const networkErr = Object.assign(new Error('Connection refused'), { name: 'RequestError' });
+    mockGatewayInstance.ping.mockRejectedValue(networkErr);
+    ServerError.isNetworkError.mockReturnValue(true);
+
+    await expect(start(env, false, false)).rejects.toThrow('process.exit called');
+
+    expect(ServerError.handler).toHaveBeenCalledWith(networkErr);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  test('re-throws non-network errors from ping', async () => {
+    const genericErr = new Error('Something unexpected');
+    mockGatewayInstance.ping.mockRejectedValue(genericErr);
+    ServerError.isNetworkError.mockReturnValue(false);
+
+    await expect(start(env, false, false)).rejects.toThrow('Something unexpected');
+    expect(exitSpy).not.toHaveBeenCalled();
+    expect(ServerError.handler).not.toHaveBeenCalled();
+  });
+
+  test('calls ServerError.handler and exits on network error during fetchDirectUploadData', async () => {
+    const networkErr = Object.assign(new Error('ECONNREFUSED'), { name: 'RequestError' });
+    mockGatewayInstance.getInstance.mockRejectedValue(networkErr);
+    ServerError.isNetworkError.mockReturnValue(true);
+
+    await expect(start(env, true, false)).rejects.toThrow('process.exit called');
+
+    expect(ServerError.handler).toHaveBeenCalledWith(networkErr);
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });
