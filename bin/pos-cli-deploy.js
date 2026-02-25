@@ -13,11 +13,12 @@ program
   .option('-o --old-assets-upload', 'use old assets upload strategy')
   .option('-p --partial-deploy', 'Partial deployment, does not remove data from directories missing from the build')
   .option('--dry-run', 'Validate the release on the server without applying any changes')
+  .option('-v, --verbose', 'Show full file paths in deploy report (default: summary only)')
   .action(async (environment, params) => {
     if (params.force) logger.Warn('-f flag is deprecated and does not do anything.');
 
     if (params.dryRun && !process.env.DEV) {
-      logger.Warn('--dry-run is temporarily disabled. This feature will be enabled soon.');
+      await logger.Warn('--dry-run is temporarily disabled. This feature will be enabled soon.');
       process.exit(0);
     }
 
@@ -39,7 +40,8 @@ program
       CI: process.env.CI === 'true',
       // TODO: Get rid off global system env, make it normal argument to function.
       PARTIAL_DEPLOY: !!params.partialDeploy,
-      DIRECT_ASSETS_UPLOAD: !params.oldAssetsUpload
+      DIRECT_ASSETS_UPLOAD: !params.oldAssetsUpload,
+      VERBOSE: !!params.verbose
     });
 
     deployStrategy.run({ strategy, opts: { env, authData, params } });
