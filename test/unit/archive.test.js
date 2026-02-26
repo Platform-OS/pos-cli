@@ -172,6 +172,21 @@ describe('Archive utilities', () => {
       const entries = await listZipEntries(zipPath);
       expect(entries.some(e => e.includes('/assets/'))).toBe(false);
     });
+
+    test('only includes module files under public/ or private/, not sibling directories', async () => {
+      // fixture has testModule/generators/crud.js and testModule/react-app/node_modules/.../page.png
+      // alongside testModule/public/ — neither should appear in the archive
+      process.chdir(path.join(fixturesPath, 'correct'));
+      const { makeArchive } = await import('#lib/archive.js');
+      const zipPath = path.join(tmpDir, 'release.zip');
+
+      await makeArchive({ TARGET: zipPath }, { withoutAssets: false });
+
+      const entries = await listZipEntries(zipPath);
+      expect(entries.some(e => e.includes('generators'))).toBe(false);
+      expect(entries.some(e => e.includes('node_modules'))).toBe(false);
+      expect(entries.some(e => e.includes('hello-test-module.liquid'))).toBe(true);
+    });
   });
 
   describe('packAssets', () => {
