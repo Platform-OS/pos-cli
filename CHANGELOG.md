@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Feature: `pos-cli check update-docs` — download the latest platformOS Liquid documentation used by the linter, keeping checks like `UndefinedObject` and `UndefinedFilter` up to date.
 * Temporarily disabled: `pos-cli deploy --dry-run` is currently unavailable while the feature is being propagated to all servers. It will be re-enabled once the rollout is complete.
 
 ## 6.0.0-beta.8

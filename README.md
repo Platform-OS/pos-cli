@@ -231,6 +231,14 @@ The configuration file controls:
 - File patterns to ignore
 - Check-specific settings
 
+#### Update Docs
+
+To download the latest platformOS Liquid documentation used by the linter:
+
+    pos-cli check update-docs
+
+The linter automatically checks whether its cached documentation is stale and updates it when needed. However, if you want to be sure you have the latest platformOS filters, tags, objects, and schema, you can use this command to force a download.
+
 ### Language Server Protocol (LSP)
 
 pos-cli includes a Language Server Protocol (LSP) server for platformOS Liquid, enabling rich editor support such as autocompletion, diagnostics, hover documentation, and go-to-definition in any LSP-compatible editor.
