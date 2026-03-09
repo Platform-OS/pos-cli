@@ -317,10 +317,13 @@ describe('Deploy - Unit Tests', () => {
           MARKETPLACE_EMAIL: TEST_EMAIL
         };
 
-        const duration = await push(env);
+        const result = await push(env);
 
-        expect(typeof duration).toBe('string');
-        expect(duration).toMatch(/\d+:\d{2}/); // e.g., "0:00" (MM:SS format)
+        expect(typeof result).toBe('object');
+        expect(typeof result.duration).toBe('string');
+        expect(result.duration).toMatch(/\d+:\d{2}/); // e.g., "0:00" (MM:SS format)
+        expect(result.releaseId).toBeDefined();
+        expect(result.gateway).toBeDefined();
       } finally {
         process.chdir(originalCwd);
       }
@@ -391,15 +394,31 @@ describe.skip('Dry Run', () => {
     expect(formDataArg['marketplace_builder[dry_run]']).toBeUndefined();
   });
 
-  test('dryRunStrategy never uploads assets', async () => {
+  test('dryRunStrategy never uploads assets to S3 but sends manifest', async () => {
     const archiveModule = await import('#lib/archive.js');
     vi.spyOn(archiveModule, 'makeArchive').mockResolvedValue(5);
 
+    const mockGateway = {
+      getStatus: vi.fn().mockResolvedValue({ asset_report: { upserted: 2, deleted: 0, skipped: 0 } }),
+      sendManifest: vi.fn().mockResolvedValue({})
+    };
+
     const pushModule = await import('#lib/push.js');
-    vi.spyOn(pushModule, 'push').mockResolvedValue('0:05');
+    vi.spyOn(pushModule, 'push').mockResolvedValue({
+      duration: '0:05', releaseId: 12345, gateway: mockGateway, report: {}
+    });
 
     const assetsModule = await import('#lib/assets.js');
     const deployAssetsSpy = vi.spyOn(assetsModule, 'deployAssets').mockResolvedValue();
+
+    const filesModule = await import('#lib/files.js');
+    vi.spyOn(filesModule.default, 'getAssets').mockResolvedValue(['app/assets/app.css', 'app/assets/app.js']);
+
+    const manifestModule = await import('#lib/assets/manifest.js');
+    const manifestSpy = vi.spyOn(manifestModule, 'manifestGenerate').mockResolvedValue({
+      'app.css': { physical_file_path: 'assets/app.css', updated_at: 123 },
+      'app.js': { physical_file_path: 'assets/app.js', updated_at: 456 }
+    });
 
     const strategy = (await import('#lib/deploy/dryRunStrategy.js')).default;
     await strategy({
@@ -414,7 +433,97 @@ describe.skip('Dry Run', () => {
       params: {}
     });
 
+    // Should NOT upload assets to S3
     expect(deployAssetsSpy).not.toHaveBeenCalled();
+
+    // Should generate and send manifest for dry-run validation
+    expect(manifestSpy).toHaveBeenCalled();
+    expect(mockGateway.sendManifest).toHaveBeenCalledWith(
+      expect.objectContaining({ 'app.css': expect.any(Object) }),
+      12345
+    );
+  });
+
+  test('dryRunStrategy skips manifest when no assets exist', async () => {
+    const archiveModule = await import('#lib/archive.js');
+    vi.spyOn(archiveModule, 'makeArchive').mockResolvedValue(5);
+
+    const pushModule = await import('#lib/push.js');
+    vi.spyOn(pushModule, 'push').mockResolvedValue({
+      duration: '0:05', releaseId: 12345, gateway: { getStatus: vi.fn() }, report: {}
+    });
+
+    const filesModule = await import('#lib/files.js');
+    vi.spyOn(filesModule.default, 'getAssets').mockResolvedValue([]);
+
+    const manifestModule = await import('#lib/assets/manifest.js');
+    const manifestSpy = vi.spyOn(manifestModule, 'manifestGenerate').mockResolvedValue({});
+
+    const strategy = (await import('#lib/deploy/dryRunStrategy.js')).default;
+    await strategy({
+      env: {
+        MARKETPLACE_URL: TEST_URL,
+        MARKETPLACE_TOKEN: TEST_TOKEN,
+        MARKETPLACE_EMAIL: TEST_EMAIL,
+        DRY_RUN: 'true',
+        PARTIAL_DEPLOY: 'false'
+      },
+      authData: { url: TEST_URL, token: TEST_TOKEN, email: TEST_EMAIL },
+      params: {}
+    });
+
+    // Should NOT generate manifest when there are no assets
+    expect(manifestSpy).not.toHaveBeenCalled();
+  });
+
+  test('dryRunStrategy merges asset report into deploy report', async () => {
+    const archiveModule = await import('#lib/archive.js');
+    vi.spyOn(archiveModule, 'makeArchive').mockResolvedValue(5);
+
+    const deployReport = {
+      Page: { upserted: ['pages/index.liquid'], deleted: [], skipped: [] }
+    };
+    const mockGateway = {
+      getStatus: vi.fn().mockResolvedValue({ asset_report: { upserted: 1, deleted: 0, skipped: 0 } }),
+      sendManifest: vi.fn().mockResolvedValue({})
+    };
+    const pushModule = await import('#lib/push.js');
+    vi.spyOn(pushModule, 'push').mockResolvedValue({
+      duration: '0:05', releaseId: 12345,
+      gateway: mockGateway,
+      report: deployReport
+    });
+    const printSpy = vi.spyOn(pushModule, 'printDeployReport');
+
+    const filesModule = await import('#lib/files.js');
+    vi.spyOn(filesModule.default, 'getAssets').mockResolvedValue(['app/assets/app.css']);
+
+    const manifestModule = await import('#lib/assets/manifest.js');
+    vi.spyOn(manifestModule, 'manifestGenerate').mockResolvedValue({
+      'app.css': { physical_file_path: 'assets/app.css', updated_at: 123 }
+    });
+
+    const strategy = (await import('#lib/deploy/dryRunStrategy.js')).default;
+    await strategy({
+      env: {
+        MARKETPLACE_URL: TEST_URL,
+        MARKETPLACE_TOKEN: TEST_TOKEN,
+        MARKETPLACE_EMAIL: TEST_EMAIL,
+        DRY_RUN: 'true',
+        PARTIAL_DEPLOY: 'false'
+      },
+      authData: { url: TEST_URL, token: TEST_TOKEN, email: TEST_EMAIL },
+      params: {}
+    });
+
+    // printDeployReport should receive merged report with both Page and Asset
+    expect(printSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        Page: expect.any(Object),
+        Asset: { upserted: 1, deleted: 0, skipped: 0 }
+      }),
+      expect.any(Object)
+    );
   });
 
   test('push() sends both dry_run and partial_deploy when both flags are set', async () => {
