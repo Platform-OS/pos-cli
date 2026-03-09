@@ -44,7 +44,7 @@ program
       const gateway = new Gateway(await fetchSettings(environment));
       const confirmed = await confirmCleanup(params.autoConfirm, params.includeSchema, gateway.url);
       if (confirmed) {
-        spinner.start('Cleaning instance');
+        spinner.start(`Cleaning instance: ${gateway.url}`);
 
         const response = await gateway.dataClean(confirmationText, params.includeSchema);
         logger.Debug(`Cleanup request id: ${response}`);
