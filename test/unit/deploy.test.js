@@ -442,6 +442,110 @@ describe.skip('Dry Run', () => {
   });
 });
 
+describe('printDeployReport', () => {
+  let printDeployReport;
+  let logger;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    ({ printDeployReport } = await import('#lib/push.js'));
+    logger = (await import('#lib/logger.js')).default;
+  });
+
+  test('does nothing when report is null', () => {
+    printDeployReport(null);
+    expect(logger.Success).not.toHaveBeenCalled();
+  });
+
+  test('displays upserted, deleted, and skipped counts', () => {
+    printDeployReport({
+      views: {
+        upserted: ['app/views/pages/index.liquid'],
+        deleted: ['app/views/pages/old.liquid'],
+        skipped: ['app/views/pages/unchanged.liquid']
+      }
+    });
+
+    expect(logger.Success).toHaveBeenCalledTimes(1);
+    const output = logger.Success.mock.calls[0][0];
+    expect(output).toContain('Deploy report:');
+    expect(output).toContain('1 upserted');
+    expect(output).toContain('1 deleted');
+    expect(output).toContain('1 skipped');
+    expect(output).toContain('views');
+  });
+
+  test('displays skipped files in verbose mode', () => {
+    printDeployReport({
+      views: {
+        upserted: [],
+        deleted: [],
+        skipped: ['app/views/pages/unchanged.liquid']
+      }
+    }, { verbose: true });
+
+    expect(logger.Success).toHaveBeenCalledTimes(1);
+    const output = logger.Success.mock.calls[0][0];
+    expect(output).toContain('~ app/views/pages/unchanged.liquid');
+  });
+
+  test('shows category when only skipped files exist', () => {
+    printDeployReport({
+      graphql: {
+        upserted: [],
+        deleted: [],
+        skipped: ['app/graphql/query.graphql', 'app/graphql/mutation.graphql']
+      }
+    });
+
+    expect(logger.Success).toHaveBeenCalledTimes(1);
+    const output = logger.Success.mock.calls[0][0];
+    expect(output).toContain('graphql');
+    expect(output).toContain('0 upserted');
+    expect(output).toContain('0 deleted');
+    expect(output).toContain('2 skipped');
+  });
+
+  test('skips category when all counts are zero', () => {
+    printDeployReport({
+      views: { upserted: [], deleted: [], skipped: [] },
+      graphql: { upserted: ['app/graphql/q.graphql'], deleted: [], skipped: [] }
+    });
+
+    expect(logger.Success).toHaveBeenCalledTimes(1);
+    const output = logger.Success.mock.calls[0][0];
+    expect(output).not.toContain('views');
+    expect(output).toContain('graphql');
+  });
+
+  test('handles numeric counts for skipped', () => {
+    printDeployReport({
+      schema: { upserted: 3, deleted: 0, skipped: 5 }
+    });
+
+    expect(logger.Success).toHaveBeenCalledTimes(1);
+    const output = logger.Success.mock.calls[0][0];
+    expect(output).toContain('3 upserted');
+    expect(output).toContain('0 deleted');
+    expect(output).toContain('5 skipped');
+  });
+
+  test('verbose mode shows all file types with correct prefixes', () => {
+    printDeployReport({
+      views: {
+        upserted: ['app/views/pages/new.liquid'],
+        deleted: ['app/views/pages/removed.liquid'],
+        skipped: ['app/views/pages/same.liquid']
+      }
+    }, { verbose: true });
+
+    const output = logger.Success.mock.calls[0][0];
+    expect(output).toContain('+ app/views/pages/new.liquid');
+    expect(output).toContain('- app/views/pages/removed.liquid');
+    expect(output).toContain('~ app/views/pages/same.liquid');
+  });
+});
+
 describe('Deploy Error Scenarios (Mocked)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
