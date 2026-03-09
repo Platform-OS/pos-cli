@@ -12,7 +12,6 @@
    - No kebab-case in option names (e.g., `skip-install` → `skipInstall`)
    - `composeWith()` is now async (use `await`)
    - The `install()` action has been removed; use `addDependencies()` instead
-   - See [yeoman-generator v5 to v7 migration guide](https://yeoman.github.io/generator/v5-to-v7-migration/)
 * **Express v5 route syntax**: Routes using wildcards have changed from `/*` to `/*splat` format. This is handled automatically, but if you have custom Express middleware in your project, you may need to update route patterns.
 
 ### New Features
