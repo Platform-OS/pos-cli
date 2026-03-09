@@ -1,74 +1,56 @@
 # Changelog
 
-## Unreleased
+## 6.0.0
 
-* Feature: `pos-cli check update-docs` — download the latest platformOS Liquid documentation used by the linter, keeping checks like `UndefinedObject` and `UndefinedFilter` up to date.
-* Temporarily disabled: `pos-cli deploy --dry-run` is currently unavailable while the feature is being propagated to all servers. It will be re-enabled once the rollout is complete.
+### Breaking Changes
 
-## 6.0.0-beta.8
-
-* Breaking: `pos-cli modules download` command has been removed. Use `pos-cli modules install` instead. The `--force-dependencies` flag is not carried over; install/update always downloads all dependencies.
-* Improvement: `pos-cli modules install` now always downloads module files and all dependencies after updating the lock file, ensuring source code is always in sync with the manifest.
-* Improvement: `pos-cli modules update` now always downloads updated module files and all dependencies after updating the lock file.
-* Feature: `pos-cli mcp` — MCP (Model Context Protocol) server exposing 30+ platformOS tools over stdio and HTTP/SSE transports. Enables AI clients (Claude, Cursor, etc.) to interact with platformOS instances directly.
-* Feature: `pos-cli mcp-config` — display and inspect the MCP server tool configuration (which tools are enabled/disabled). Supports `--json` for raw output. Configurable via `MCP_TOOLS_CONFIG` env var.
-* Feature: `pos-cli check init [path]` — generate a `.platformos-check.yml` configuration file for the Liquid code quality checker.
-* Feature: `pos-cli check run [path]` — run the platformos-check Node.js linter on Liquid/JSON files. Supports `-a` (auto-fix), `-f json` (JSON output), `-s` (silent). No Ruby required.
-* Feature: `pos-cli lsp` — start the platformOS Language Server Protocol server for Liquid, GraphQL, and JSON files. Provides autocompletion, diagnostics, hover docs, and go-to-definition in LSP-compatible editors.
-* Feature: `pos-cli fetch-logs [environment]` — fetch recent logs as NDJSON (newline-delimited JSON), designed for machine consumption and used internally by the MCP server. Supports `--last-log-id` for incremental polling.
-* Chore: replaced `archiver` with `yazl` for zip archive creation.
-* Chore: upgraded `commander` to v14.
-
-## 6.0.0-beta0
-
-* Feature: `pos-cli exec liquid` command to execute Liquid code directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
-* Feature: `pos-cli exec graphql` command to execute GraphQL queries directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
-* Feature: `pos-cli test run` command to run tests using the tests module
-* Feature: `pos-cli sync -f <file-path>` option to sync a single file and exit (useful for CI/CD workflows)
-* Improvement: Enhanced error handling for `pos-cli env add` with clearer messages when instance is not registered in Partner Portal
-* Improvement: Better error messages for sync validation errors (422 responses) with detailed error descriptions
-* Improvement: Added graceful shutdown handling for sync mode to properly cleanup watchers and LiveReload servers
-* Improvement: Improved browser opening error handling with better error messages for failed attempts
-* Improvement: Enhanced refresh token error handling during authentication flows
-* Improvement: Added test coverage measurement capability
-* Improvement: Updated ESLint configuration and fixed linting errors across the codebase
-
-### Major Modernization and Dependency Upgrades
-
-We've completed a comprehensive modernization of the CLI including:
-
-**Node.js Version Requirement**: Now requires Node.js 22 or higher (up from Node.js 18)
-
-**Technical Improvements**:
-
-- **CommonJS to ESM Migration**: Entire codebase migrated from CommonJS (`require`/`module.exports`) to ES Modules (`import`/`export`)
-  - Better tree-shaking and bundle optimization
-  - Native ESM support throughout the codebase
-  - Improved compatibility with modern Node.js ecosystem
-
-- **Test Framework Migration**: Migrated from Jest to Vitest
-  - Better ESM support and faster test execution
-  - Improved watch mode and test coverage reporting
-  - Maintains all existing test functionality with enhanced performance
-
-- **Deprecation Warnings Removed**: All deprecation warnings across dependencies have been resolved for a cleaner development experience
-
-- **Code Quality Improvements**: Updated ESLint configuration, fixed linting issues, and improved error handling patterns throughout
-
-**Breaking Changes** that may require action from users:
-
-1. **Yeoman generators**: If you have custom generators using `yeoman-generator`, they need to be rewritten for the v7.x update:
+* **Node.js 22+ required** (up from Node.js 18)
+* **`pos-cli modules download` removed** — use `pos-cli modules install` instead. The `--force-dependencies` flag is not carried over; install/update always downloads all dependencies.
+* **CommonJS to ESM migration** — entire codebase migrated from `require`/`module.exports` to `import`/`export`
+* **Test framework migration** — migrated from Jest to Vitest
+* **Yeoman generators**: If you have custom generators using `yeoman-generator`, they need to be rewritten for the v7.x update:
    - No kebab-case in option names (e.g., `skip-install` → `skipInstall`)
    - `composeWith()` is now async (use `await`)
    - The `install()` action has been removed; use `addDependencies()` instead
    - See [yeoman-generator v5 to v7 migration guide](https://yeoman.github.io/generator/v5-to-v7-migration/)
+* **Express v5 route syntax**: Routes using wildcards have changed from `/*` to `/*splat` format. This is handled automatically, but if you have custom Express middleware in your project, you may need to update route patterns.
 
-2. **Express v5 route syntax**: Routes using wildcards have changed from `/*` to `/*splat` format. This is handled automatically, but if you have custom Express middleware in your project, you may need to update route patterns.
+### New Features
 
-**Package Upgrades**: All major dependencies have been updated to their latest stable versions including:
-- chalk v5.6, chokidar v5.0, express v5.2, ora v9.0, open v11.0
-- inquirer v13.2, mime v4.1, multer v2.0, yeoman-environment v5.1, yeoman-generator v7.5
-- And many other dependency updates for security and stability
+* `pos-cli mcp` — MCP (Model Context Protocol) server exposing 30+ platformOS tools over stdio and HTTP/SSE transports. Enables AI clients (Claude, Cursor, etc.) to interact with platformOS instances directly.
+* `pos-cli mcp-config` — display and inspect the MCP server tool configuration (which tools are enabled/disabled). Supports `--json` for raw output. Configurable via `MCP_TOOLS_CONFIG` env var.
+* `pos-cli lsp` — start the platformOS Language Server Protocol server for Liquid, GraphQL, and JSON files. Provides autocompletion, diagnostics, hover docs, and go-to-definition in LSP-compatible editors.
+* `pos-cli check init [path]` — generate a `.platformos-check.yml` configuration file for the Liquid code quality checker.
+* `pos-cli check run [path]` — run the platformos-check Node.js linter on Liquid/JSON files. Supports `-a` (auto-fix), `-f json` (JSON output), `-s` (silent). No Ruby required.
+* `pos-cli check update-docs` — download the latest platformOS Liquid documentation used by the linter, keeping checks like `UndefinedObject` and `UndefinedFilter` up to date.
+* `pos-cli fetch-logs [environment]` — fetch recent logs as NDJSON (newline-delimited JSON), designed for machine consumption and used internally by the MCP server. Supports `--last-log-id` for incremental polling.
+* `pos-cli exec liquid` — execute Liquid code directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
+* `pos-cli exec graphql` — execute GraphQL queries directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
+* `pos-cli test run` — run tests using the tests module
+* `pos-cli sync -f <file-path>` — sync a single file and exit (useful for CI/CD workflows)
+
+### Improvements
+
+* `pos-cli modules install` now always downloads module files and all dependencies after updating the lock file, ensuring source code is always in sync with the manifest.
+* `pos-cli modules update` now always downloads updated module files and all dependencies after updating the lock file.
+* Enhanced error handling for `pos-cli env add` with clearer messages when instance is not registered in Partner Portal
+* Better error messages for sync validation errors (422 responses) with detailed error descriptions
+* Added graceful shutdown handling for sync mode to properly cleanup watchers and LiveReload servers
+* Improved browser opening error handling with better error messages for failed attempts
+* Enhanced refresh token error handling during authentication flows
+* Added test coverage measurement capability
+
+### Chore
+
+* Replaced `archiver` with `yazl` for zip archive creation
+* Upgraded `commander` to v14
+* Updated ESLint configuration and fixed linting errors across the codebase
+* All deprecation warnings across dependencies resolved
+* All major dependencies updated to latest stable versions: chalk v5.6, chokidar v5.0, express v5.2, ora v9.0, open v11.0, inquirer v13.2, mime v4.1, multer v2.0, yeoman-environment v5.1, yeoman-generator v7.5, and many more
+
+### Temporarily Disabled
+
+* `pos-cli deploy --dry-run` is currently unavailable while the feature is being propagated to all servers. It will be re-enabled once the rollout is complete.
 
 ## 5.5.0
 
