@@ -98,6 +98,47 @@ describe('pos-cli check run', () => {
       expect(json.files[0].offenses[0].severity).toEqual('warning');
     });
 
+    test('Filter by check name with --check', async () => {
+      const { stdout, code } = await run('with-issues', '--check UndefinedObject');
+
+      expect(code).toEqual(1);
+      expect(stdout).toMatch('3 offenses found in 1 file');
+      expect(stdout).toMatch('UndefinedObject');
+    });
+
+    test('Errors on unknown check name', async () => {
+      const { stderr, code } = await run('with-issues', '--check NonExistentCheck');
+
+      expect(code).toEqual(1);
+      expect(stderr).toMatch('Unknown check: NonExistentCheck');
+      expect(stderr).toMatch('Available checks:');
+    });
+
+    test('Filter by check name with -c shorthand', async () => {
+      const { stdout, code } = await run('with-issues', '-c UndefinedObject');
+
+      expect(code).toEqual(1);
+      expect(stdout).toMatch('3 offenses found in 1 file');
+      expect(stdout).toMatch('UndefinedObject');
+    });
+
+    test('JSON output with --check filter', async () => {
+      const { stdout, code } = await run('with-issues', '-f json --check UndefinedObject');
+
+      expect(code).toEqual(1);
+
+      const json = JSON.parse(stdout);
+      expect(json.offenseCount).toEqual(3);
+      expect(json.files[0].offenses.every(o => o.check === 'UndefinedObject')).toBe(true);
+    });
+
+    test('JSON output errors on unknown check name', async () => {
+      const { stderr, code } = await run('with-issues', '-f json --check NonExistentCheck');
+
+      expect(code).toEqual(1);
+      expect(stderr).toMatch('Unknown check: NonExistentCheck');
+    });
+
     test('Specific path argument', async () => {
       const cwdPath = cwd('with-issues');
       const specificPath = path.join(cwdPath, 'app/views/pages');
@@ -199,6 +240,8 @@ describe('pos-cli check run', () => {
       expect(stdout).toMatch('Usage: pos-cli check run');
       expect(stdout).toMatch('-a');
       expect(stdout).toMatch('enable automatic fixing');
+      expect(stdout).toMatch('-c, --check <name>');
+      expect(stdout).toMatch('only show offenses from the named check');
       expect(stdout).toMatch('-f <format>');
       expect(stdout).toMatch('output format');
       expect(stdout).toMatch('-s, --silent');
