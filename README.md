@@ -137,6 +137,7 @@ The output includes:
 #### Options
 
 - `-a` - Enable automatic fixing of issues where possible
+- `-c, --check <name>` - Only show offenses from the named check (repeatable, e.g. `-c UndefinedObject -c UnusedAssign`)
 - `-f <format>` - Output format: `text` (default) or `json`
 - `-s, --silent` - Only show errors, no success messages
 
@@ -161,6 +162,14 @@ JSON output for CI/CD:
 Silent mode (no success message):
 
     pos-cli check run -s
+
+Filter by specific check:
+
+    pos-cli check run --check UndefinedObject
+
+Filter by multiple checks:
+
+    pos-cli check run -c UndefinedObject -c UnusedAssign
 
 Combined options:
 
