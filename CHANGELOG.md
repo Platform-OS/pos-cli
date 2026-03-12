@@ -20,7 +20,7 @@
 * `pos-cli mcp-config` — display and inspect the MCP server tool configuration (which tools are enabled/disabled). Supports `--json` for raw output. Configurable via `MCP_TOOLS_CONFIG` env var.
 * `pos-cli lsp` — start the platformOS Language Server Protocol server for Liquid, GraphQL, and JSON files. Provides autocompletion, diagnostics, hover docs, and go-to-definition in LSP-compatible editors.
 * `pos-cli check init [path]` — generate a `.platformos-check.yml` configuration file for the Liquid code quality checker.
-* `pos-cli check run [path]` — run the platformos-check Node.js linter on Liquid/JSON files. Supports `-a` (auto-fix), `-f json` (JSON output), `-s` (silent). No Ruby required.
+* `pos-cli check run [path]` — run the platformos-check Node.js linter on Liquid/JSON files. Supports `-a` (auto-fix), `-c, --check <name>` (filter by check name, repeatable), `-f json` (JSON output), `-s` (silent). No Ruby required.
 * `pos-cli check update-docs` — download the latest platformOS Liquid documentation used by the linter, keeping checks like `UndefinedObject` and `UndefinedFilter` up to date.
 * `pos-cli fetch-logs [environment]` — fetch recent logs as NDJSON (newline-delimited JSON), designed for machine consumption and used internally by the MCP server. Supports `--last-log-id` for incremental polling.
 * `pos-cli exec liquid` — execute Liquid code directly on an instance (supports `-f` flag to load from file, requires confirmation on production)
