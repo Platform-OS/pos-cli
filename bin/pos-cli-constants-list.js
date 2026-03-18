@@ -2,7 +2,7 @@
 
 import { program } from '../lib/program.js';
 import Gateway from '../lib/proxy.js';
-import queries from '../lib/graph/queries.js';
+import { getConstants } from '../lib/graph/queries.js';
 import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
 
@@ -26,7 +26,7 @@ program
     const gateway = new Gateway(authData);
 
     gateway
-      .graph({query: queries.getConstants()})
+      .graph({query: getConstants()})
       .then(success)
       .catch(console.log);
   });

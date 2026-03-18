@@ -2,10 +2,10 @@
 import { program } from '../lib/program.js';
 
 import { run as auditRun } from '../lib/audit.js';
-import archive from '../lib/archive.js';
+import { makeArchive } from '../lib/archive.js';
 
 const createArchive = async (env) => {
-  const numberOfFiles = await archive.makeArchive(env, { withoutAssets: false });
+  const numberOfFiles = await makeArchive(env, { withoutAssets: false });
   if (numberOfFiles == 0) throw 'Archive failed to create.';
 };
 
