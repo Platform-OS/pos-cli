@@ -21,6 +21,12 @@ const execCommand = (cmd, opts = {}) => {
       return resolve({ stdout, stderr, code });
     });
 
+    // Close stdin immediately so generators that prompt for missing required
+    // arguments receive EOF instead of hanging waiting for user input.
+    if (child.stdin) {
+      child.stdin.end();
+    }
+
     if (opts.timeout) {
       setTimeout(() => {
         child.kill();
