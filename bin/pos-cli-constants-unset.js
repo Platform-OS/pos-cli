@@ -3,7 +3,7 @@
 import { program } from '../lib/program.js';
 import Gateway from '../lib/proxy.js';
 import { existence as validateExistence } from '../lib/validators/index.js';
-import queries from '../lib/graph/queries.js';
+import { unsetConstant } from '../lib/graph/queries.js';
 import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
 
@@ -37,7 +37,7 @@ program
     const gateway = new Gateway(authData);
 
     gateway
-      .graph({query: queries.unsetConstant(params.name)})
+      .graph({query: unsetConstant(params.name)})
       .then(success)
       .catch(error);
   });
