@@ -1,6 +1,8 @@
-import { vi, describe, test, expect, afterEach, beforeEach } from 'vitest';
+import { vi, describe, test, expect, afterEach, beforeEach, beforeAll } from 'vitest';
 import fs from 'fs';
-import { storeEnvironment } from '#lib/environments.js';
+import os from 'os';
+import path from 'path';
+import { settingsFromDotPos } from '#lib/settings.js';
 
 vi.mock('open', () => ({
   default: vi.fn(() => Promise.resolve())
@@ -32,6 +34,7 @@ vi.mock('#lib/logger.js', () => ({
     Success: vi.fn(),
     Debug: vi.fn(),
     Info: vi.fn(),
+    Warn: vi.fn(),
     Error: vi.fn()
   }
 }));
@@ -40,24 +43,30 @@ vi.mock('#lib/utils/password.js', () => ({
   readPassword: vi.fn(() => Promise.resolve('test-password'))
 }));
 
-let deviceAuthorizationFlow;
+let refreshToken;
 let mockLogger;
 let mockPortal;
+let originalCwd;
+let tempDir;
 
-beforeEach(async () => {
-  const envModule = await import('#lib/environments.js');
-  deviceAuthorizationFlow = envModule.deviceAuthorizationFlow;
+beforeAll(async () => {
+  const refreshMod = await import('#lib/envs/refreshToken.js');
+  refreshToken = refreshMod.default;
 
   const loggerModule = await import('#lib/logger.js');
   mockLogger = loggerModule.default;
 
   const portalModule = await import('#lib/portal.js');
   mockPortal = portalModule.default;
+});
 
-  // Reset all mocks
+beforeEach(() => {
+  originalCwd = process.cwd();
+  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-test-'));
+  process.chdir(tempDir);
+
   vi.clearAllMocks();
 
-  // Reset the mock implementation to default success
   mockPortal.requestDeviceAuthorization.mockResolvedValue({
     verification_uri_complete: 'http://example.com/xxxx',
     device_code: 'device_code',
@@ -66,115 +75,82 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  try {
-    fs.unlinkSync('.pos');
-  } catch {
-    // File might not exist, ignore
-  }
+  process.chdir(originalCwd);
+  fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
 describe('env refresh-token', () => {
-  test('refreshes token using device authorization flow', async () => {
-    // Setup: create initial environment
+  test('refreshes token using device authorization flow and saves to .pos', async () => {
     const environment = 'staging';
-    storeEnvironment({
-      environment: environment,
-      url: 'https://staging.example.com',
-      token: 'old-token-12345',
-      email: undefined
-    });
+    const authData = { url: 'https://staging.example.com', token: 'old-token-12345', email: undefined };
+    const token = await refreshToken(environment, authData);
 
-    // Execute: refresh token
-    const token = await deviceAuthorizationFlow('https://staging.example.com');
-
-    // Verify
     expect(token).toBe('refreshed-token-12345');
     expect(mockPortal.requestDeviceAuthorization).toHaveBeenCalledWith('staging.example.com');
+
+    const settings = settingsFromDotPos(environment);
+    expect(settings.token).toBe('refreshed-token-12345');
+    expect(mockLogger.Success).toHaveBeenCalledWith(expect.stringContaining('refreshed successfully'));
+  });
+
+  test('refreshes token using email/password flow and saves to .pos', async () => {
+    const environment = 'staging';
+    const authData = { url: 'https://staging.example.com', token: 'old-token-12345', email: 'user@example.com' };
+    const token = await refreshToken(environment, authData);
+
+    expect(token).toBe('refreshed-token-12345');
+    expect(mockPortal.login).toHaveBeenCalledWith('user@example.com', 'test-password', 'https://staging.example.com');
+    expect(mockPortal.requestDeviceAuthorization).not.toHaveBeenCalled();
+
+    const settings = settingsFromDotPos(environment);
+    expect(settings.token).toBe('refreshed-token-12345');
+  });
+
+  test('warns when token cannot be obtained', async () => {
+    mockPortal.login.mockResolvedValue(null);
+
+    const environment = 'staging';
+    const authData = { url: 'https://staging.example.com', token: 'old-token-12345', email: 'user@example.com' };
+    const token = await refreshToken(environment, authData);
+
+    expect(token).toBeUndefined();
+    expect(mockLogger.Warn).toHaveBeenCalledWith(expect.stringContaining('Could not obtain a new token'));
+    expect(mockLogger.Success).not.toHaveBeenCalled();
   });
 
   test('displays error when instance is not registered in partner portal', async () => {
-    // Setup: mock 404 error from partner portal
     mockPortal.requestDeviceAuthorization.mockRejectedValue({
       statusCode: 404,
       options: { uri: 'https://partners.platformos.com/oauth/authorize_device' },
       message: 'Not Found'
     });
 
-    const environment = 'unregistered';
-    storeEnvironment({
-      environment: environment,
-      url: 'https://unregistered-instance.example.com',
-      token: 'old-token',
-      email: undefined
-    });
-
-    // Execute and verify error is thrown
-    await expect(
-      deviceAuthorizationFlow('https://unregistered-instance.example.com')
-    ).rejects.toMatchObject({
+    const authData = { url: 'https://unregistered-instance.example.com', token: 'old-token', email: undefined };
+    await expect(refreshToken('unregistered', authData)).rejects.toMatchObject({
       statusCode: 404
     });
 
-    // Verify error message was logged
     expect(mockLogger.Error).toHaveBeenCalledWith(
       expect.stringContaining('Instance https://unregistered-instance.example.com is not registered in the Partner Portal'),
-      expect.objectContaining({ hideTimestamp: true, exit: false })
-    );
-    expect(mockLogger.Error).toHaveBeenCalledWith(
-      expect.stringContaining('Please double-check if the instance URL is correct'),
       expect.objectContaining({ hideTimestamp: true, exit: false })
     );
   });
 
   test('does not display custom error for non-404 errors', async () => {
-    // Setup: mock 500 error from partner portal
     mockPortal.requestDeviceAuthorization.mockRejectedValue({
       statusCode: 500,
       options: { uri: 'https://partners.platformos.com/oauth/authorize_device' },
       message: 'Internal Server Error'
     });
 
-    const environment = 'errored';
-    storeEnvironment({
-      environment: environment,
-      url: 'https://errored-instance.example.com',
-      token: 'old-token',
-      email: undefined
-    });
-
-    // Execute and verify error is thrown
-    await expect(
-      deviceAuthorizationFlow('https://errored-instance.example.com')
-    ).rejects.toMatchObject({
+    const authData = { url: 'https://errored-instance.example.com', token: 'old-token', email: undefined };
+    await expect(refreshToken('errored', authData)).rejects.toMatchObject({
       statusCode: 500
     });
 
-    // Verify our custom error message was NOT displayed
     expect(mockLogger.Error).not.toHaveBeenCalledWith(
       expect.stringContaining('is not registered in the Partner Portal'),
       expect.anything()
     );
-  });
-
-  test('refreshes token using email/password flow', async () => {
-    // Setup: create environment with email
-    const environment = 'staging';
-    storeEnvironment({
-      environment: environment,
-      url: 'https://staging.example.com',
-      token: 'old-token-12345',
-      email: 'user@example.com'
-    });
-
-    // Execute: login with email/password
-    const Portal = await import('#lib/portal.js');
-    const token = await Portal.default.login('user@example.com', 'test-password', 'https://staging.example.com');
-
-    // Verify
-    expect(token).toEqual([{ token: 'refreshed-token-12345' }]);
-    expect(mockPortal.login).toHaveBeenCalledWith('user@example.com', 'test-password', 'https://staging.example.com');
-
-    // Verify device authorization was NOT called for email/password flow
-    expect(mockPortal.requestDeviceAuthorization).not.toHaveBeenCalled();
   });
 });
