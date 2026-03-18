@@ -201,7 +201,7 @@ describe('ServerError', () => {
       expect(logger.Error).toHaveBeenCalledWith('NotFound: https://example.com/api/nonexistent');
     });
 
-    test('handles 401 unauthorized', () => {
+    test('handles 401 unauthorized with refresh-token hint', () => {
       const request = {
         statusCode: 401,
         options: { uri: 'https://example.com/api/deploy' }
@@ -210,7 +210,11 @@ describe('ServerError', () => {
       ServerError.responseHandler(request);
 
       expect(logger.Error).toHaveBeenCalledWith(
-        'You are unauthorized to do this operation. Check if your Token/URL or email/password are correct.',
+        expect.stringContaining('You are unauthorized to do this operation.'),
+        expect.objectContaining({ hideTimestamp: true })
+      );
+      expect(logger.Error).toHaveBeenCalledWith(
+        expect.stringContaining('pos-cli env refresh-token'),
         expect.objectContaining({ hideTimestamp: true })
       );
     });
