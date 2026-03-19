@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+* `pos-cli check run -c, --check <name>` — filter linter output to a specific check by name (repeatable flag; validates names and lists available checks on mismatch)
+
+### Improvements
+
+* `pos-cli deploy` now displays warnings returned by the server alongside deploy results
+* `pos-cli deploy --dry-run` now supports assets: generates an asset manifest and reports which assets would be added/removed without uploading them
+* `pos-cli deploy` reports asset changes (added/removed) in the deploy summary
+
+### Fixes
+
+* Fixed `pos-cli env refresh` — refactored token refresh into `lib/envs/refreshToken.js` with correct error handling
+* Fixed `pos-cli constants` commands (`list`, `set`, `unset`) broken by ESM named-export migration
+* Fixed `pos-cli archive` broken by ESM named-export migration
+
 ## 6.0.0
 
 ### Breaking Changes
@@ -49,7 +67,7 @@
 
 ### Temporarily Disabled
 
-* `pos-cli deploy --dry-run` is currently unavailable while the feature is being propagated to all servers. It will be re-enabled once the rollout is complete.
+* `pos-cli deploy --dry-run` asset report is not yet active while the feature is being propagated to all servers. The dry-run command is available and reports code changes; asset reporting will be enabled once the rollout is complete.
 
 ## 5.5.0
 
