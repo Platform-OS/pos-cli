@@ -1,17 +1,10 @@
+import os from 'os';
+import path from 'path';
+import fs from 'fs';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+import singleFileModule, { computeRemotePath, normalizeLocalPath, toPosix } from '../sync/single-file.js';
 
-const os = require('os');
-const path = require('path');
-const fs = require('fs');
-const { pathToFileURL } = require('url');
-let singleFile;
-let singleFileTool;
-let computeRemotePath, normalizeLocalPath, toPosix;
-beforeAll(async () => {
-  const mod = await import(pathToFileURL(path.resolve(process.cwd(), 'mcp-min', 'sync', 'single-file.js')).href);
-  singleFile = mod;
-  singleFileTool = mod.default;
-  ({ computeRemotePath, normalizeLocalPath, toPosix } = mod);
-});
+const singleFileTool = singleFileModule;
 
 // Basic unit tests for helper functions and dry-run behavior
 

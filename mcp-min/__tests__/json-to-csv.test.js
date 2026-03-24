@@ -1,10 +1,7 @@
 import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { jsonToZipBuffer } from '../data/json-to-csv.js';
-import { createRequire } from 'module';
+import unzipper from 'unzipper';
 import { Readable } from 'stream';
-
-const require = createRequire(import.meta.url);
-const unzipper = require('unzipper');
 
 async function extractZipEntries(buffer) {
   const entries = {};

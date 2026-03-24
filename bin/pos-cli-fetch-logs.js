@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const Gateway = require('../lib/proxy');
-const fetchSettings = require('../lib/settings').fetchSettings;
-const logger = require('../lib/logger');
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import { fetchSettings } from '../lib/settings.js';
 
 program
   .name('pos-cli fetch-logs')
@@ -13,7 +12,7 @@ program
   .option('-q, --quiet', 'suppress non-log output')
   .action(async (environment, options) => {
     try {
-      const authData = fetchSettings(environment);
+      const authData = await fetchSettings(environment);
       if (!authData) {
         console.error('No auth data available. Set environment or MPKIT_* env vars.');
         process.exit(2);
