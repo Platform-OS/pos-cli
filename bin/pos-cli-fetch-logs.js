@@ -12,7 +12,7 @@ program
   .option('-q, --quiet', 'suppress non-log output')
   .action(async (environment, options) => {
     try {
-      const authData = fetchSettings(environment);
+      const authData = await fetchSettings(environment);
       if (!authData) {
         console.error('No auth data available. Set environment or MPKIT_* env vars.');
         process.exit(2);
