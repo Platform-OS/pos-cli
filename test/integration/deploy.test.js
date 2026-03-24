@@ -141,7 +141,7 @@ describe('Server errors', () => {
   test('Error in model', async () => {
     const { stderr } = await run('incorrect_model');
     expect(stderr).toMatch(
-      'Validation failed: Attribute type `foo` is not allowed. Valid attribute types: string, integer, float, decimal, datetime, time, date, binary, boolean, array, address, file, photo, text, geojson, upload'
+      'Attribute type `foo` is not allowed. Valid attribute types: string, integer, float, decimal, datetime, time, date, binary, boolean, array, address, file, photo, text, geojson, upload'
     );
   });
 
