@@ -1,10 +1,8 @@
 // Schema loading utility for platformOS data validation
 // Loads schema files from app/schema/ or app/model_schemas/
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Simple YAML parser for platformOS schema format

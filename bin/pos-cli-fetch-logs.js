@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const Gateway = require('../lib/proxy');
-const fetchSettings = require('../lib/settings').fetchSettings;
-const logger = require('../lib/logger');
+import { program } from 'commander';
+import Gateway from '../lib/proxy.js';
+import { fetchSettings } from '../lib/settings.js';
 
 program
   .name('pos-cli fetch-logs')

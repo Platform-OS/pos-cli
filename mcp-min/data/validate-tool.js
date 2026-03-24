@@ -1,11 +1,8 @@
 // platformos.data.validate - Validate JSON data against platformOS schemas
-import { createRequire } from 'module';
+import fs from 'fs';
+import path from 'path';
 import { validateRecords, validateJsonStructure } from './validate.js';
 import log from '../log.js';
-
-const require = createRequire(import.meta.url);
-const fs = require('fs');
-const path = require('path');
 
 const dataValidateTool = {
   description: 'Validate JSON data against platformOS schemas before import. Checks required fields (id, type, properties, created_at, updated_at), verifies types match schema files in app/schema/, and validates property names and types.',
