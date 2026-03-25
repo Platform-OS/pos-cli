@@ -1,5 +1,6 @@
 {
+  "repository_url": "https://partners.platformos.com",
   "modules": {
-    "tests": "0.0.3"
+    "tests": "0.0.2"
   }
 }

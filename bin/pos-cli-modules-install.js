@@ -2,28 +2,12 @@
 
 import { program } from '../lib/program.js';
 import logger from '../lib/logger.js';
-import { posConfigDirectory, posModulesFilePath, posModulesLockFilePath, readLocalModules, writePosModules, writePosModulesLock } from '../lib/modules/configFiles.js';
-import { findModuleVersion, resolveDependencies } from '../lib/modules/dependencies.js';
-import { downloadAllModules } from '../lib/modules/downloadModule.js';
+import { posConfigDirectory, posModulesFilePath, readLocalModules, readRepositoryUrl, writePosModules } from '../lib/modules/configFiles.js';
+import { addNewModule, resolveAndDownload } from '../lib/modules/installModule.js';
 import Portal from '../lib/portal.js';
 import path from 'path';
 import { createDirectory } from '../lib/utils/create-directory.js';
 import ora from 'ora';
-
-const addNewModule = async (moduleName, moduleVersion, localModules, getVersions) => {
-  const newModule = await findModuleVersion(moduleName, moduleVersion, getVersions);
-  let modules;
-  if(newModule){
-    if (moduleVersion || !localModules[moduleName]) {
-      modules = {...localModules, ...newModule};
-    } else {
-      modules = {...localModules };
-    }
-    return modules;
-  } else {
-    throw new Error(`Can't find module ${moduleName} with version ${moduleVersion}`);
-  }
-};
 
 program
   .name('pos-cli modules install')
@@ -37,29 +21,26 @@ program
       spinner.start();
 
       try {
+        const repositoryUrl = readRepositoryUrl();
+        const getVersions = (names) => Portal.moduleVersions(names, repositoryUrl);
         let localModules = readLocalModules();
         if(moduleNameWithVersion){
           const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
-          localModules = await addNewModule(moduleName, moduleVersion, localModules, Portal.moduleVersions);
-          writePosModules(localModules);
-          spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]} to ${posModulesFilePath}`);
+          const updated = await addNewModule(moduleName, moduleVersion, localModules, getVersions, repositoryUrl);
+          if (updated) {
+            localModules = updated;
+            writePosModules(localModules, repositoryUrl);
+            spinner.succeed(`Added module: ${moduleName}@${localModules[moduleName]} to ${posModulesFilePath}`);
+          }
         }
 
         if(Object.keys(localModules).length === 0) {
           spinner.stop();
         } else {
-          spinner.start('Resolving module dependencies');
-          const modulesLocked = await resolveDependencies(localModules, Portal.moduleVersions);
-          writePosModulesLock(modulesLocked);
-          spinner.succeed(`Modules lock file updated: ${posModulesLockFilePath}`);
-
-          spinner.start('Downloading modules');
-          await downloadAllModules(modulesLocked);
-          spinner.succeed('Modules downloaded successfully');
+          await resolveAndDownload(spinner, localModules, repositoryUrl, getVersions);
         }
       } catch(e) {
         logger.Debug(e);
-        spinner.stopAndPersist();
         spinner.fail(e.message);
       }
     } catch {
