@@ -20,14 +20,13 @@ const noCredentials = {
 
 // Apply credentials to process.env
 const applyCredentials = (creds) => {
-  if (creds) {
-    process.env.MPKIT_URL = creds.MPKIT_URL;
-    process.env.MPKIT_TOKEN = creds.MPKIT_TOKEN;
-    process.env.MPKIT_EMAIL = creds.MPKIT_EMAIL;
-  } else {
-    delete process.env.MPKIT_URL;
-    delete process.env.MPKIT_TOKEN;
-    delete process.env.MPKIT_EMAIL;
+  const keys = ['MPKIT_URL', 'MPKIT_TOKEN', 'MPKIT_EMAIL'];
+  for (const key of keys) {
+    if (creds && creds[key] !== undefined) {
+      process.env[key] = creds[key];
+    } else {
+      delete process.env[key];
+    }
   }
 };
 
