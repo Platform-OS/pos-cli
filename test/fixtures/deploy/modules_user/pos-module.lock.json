@@ -1,0 +1,8 @@
+{
+  "repository_url": "https://partners.platformos.com",
+  "dependencies": {
+    "user": "3.0.8",
+    "core": "1.5.5"
+  },
+  "devDependencies": {}
+}

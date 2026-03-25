@@ -1,0 +1,7 @@
+{
+  "repository_url": "https://partners.platformos.com",
+  "dependencies": {
+    "tests": "0.0.3"
+  },
+  "devDependencies": {}
+}

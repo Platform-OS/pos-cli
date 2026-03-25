@@ -17,25 +17,25 @@ describe('Server errors', () => {
   test('Empty directory', async () => {
     requireRealCredentials();
     const { stderr } = await run('empty', '--email pos-cli-ci@platformos.com');
-    expect(stderr).toMatch("File doesn't exist: template-values.json");
+    expect(stderr).toMatch('pos-module.json not found.');
   });
 
-  test('Multiple modules with template-values.json', async () => {
+  test('Multiple modules without pos-module.json', async () => {
     requireRealCredentials();
     const { stderr } = await run('multiple_modules', '--email pos-cli-ci@platformos.com');
-    expect(stderr).toMatch('There is more than one modules/*/template-values.json, please use --name parameter or create template-values.json in the root of the project.');
+    expect(stderr).toMatch('pos-module.json not found.');
   });
 
-  test('Multiple modules with template-values.json and invalid name', async () => {
+  test('Multiple modules without pos-module.json and invalid name', async () => {
     requireRealCredentials();
     const { stderr } = await run('multiple_modules', '--email pos-cli-ci@platformos.com --name missing');
-    expect(stderr).toMatch("File doesn't exist: modules/missing/template-values.json");
+    expect(stderr).toMatch('pos-module.json not found.');
   });
 
-  test('Error in root template-values.json', async () => {
+  test('Module directory does not match machine_name', async () => {
     requireRealCredentials();
-    const { stderr } = await run('template_values_in_root_first', '--email pos-cli-ci@platformos.com --name foo');
-    expect(stderr).toMatch('There is no directory modules/bar');
+    const { stderr } = await run('template_values_in_root_first', '--email pos-cli-ci@platformos.com');
+    expect(stderr).toMatch('Directory modules/bar/ not found.');
   });
 
   test.skip('now we include template-values.json in release', async () => {

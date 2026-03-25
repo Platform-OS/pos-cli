@@ -25,7 +25,8 @@ vi.mock('#lib/files.js', () => ({
 
 // Mock modules
 vi.mock('#lib/modules.js', () => ({
-  moduleConfigFileName: 'template-values.json'
+  moduleConfigFileName: 'template-values.json',
+  moduleManifestFileName: 'pos-module.json'
 }));
 
 // Mock fs

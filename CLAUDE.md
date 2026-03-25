@@ -226,7 +226,7 @@ const fillInTemplateValues = (filePath, templateData) => {
 };
 ```
 
-Values sourced from `modules/*/template-values.json`. Processed during sync and deploy.
+Values sourced from `modules/*/template-values.json` (custom params) and `modules/*/pos-module.json` (identity scalars: `machine_name`, `version`, `name`). The two files are merged — `pos-module.json` is the base and `template-values.json` overlays on top. Processed during sync and deploy; never touched by the modules CLI.
 
 #### 6. Authentication Flow
 **Files**: `lib/environments.js`, `lib/envs/add.js`
@@ -247,26 +247,32 @@ Centralized error handling with specific handlers for different HTTP status code
 #### Configuration Files
 - `.pos` - Environment credentials (URL, token, email) as JSON
 - `.posignore` - Files to exclude from sync/deploy (gitignore syntax)
-- `app/pos-modules.json` - Installed modules list
-- `modules/*/template-values.json` - Module configuration and dependencies
+- `pos-module.json` - Universal platformOS project manifest (analogous to `package.json`). Its presence in a consuming app is normal — it lists `dependencies`. Publishable modules additionally have `machine_name`, `version`, and `name`. It is the **sole source** for all `modules` CLI commands (`install`, `update`, `push`, `version`, `migrate`).
+- `pos-module.lock.json` - Resolved dependency versions (separate prod/dev sections) plus a `registries` map recording which registry each module was resolved from; makes the lock self-contained for `--frozen` mode
+- `modules/*/template-values.json` - Optional: custom template substitution values **only** (e.g. `prefix`, `namespace`). Never contains metadata (`machine_name`, `version`, etc.) — those belong in `pos-module.json`. Read during sync/deploy; never read by the modules CLI.
+
+Legacy (still read as a fallback, but never written):
+- `app/pos-modules.json` - Old module list location; migrate with `pos-cli modules migrate`
 
 #### platformOS Directory Structure
 pos-cli expects projects to follow this structure:
 ```
 project/
+├── pos-module.json               # Module manifest (replaces app/pos-modules.json)
+├── pos-module.lock.json          # Resolved dependency lock file
 ├── app/ (or marketplace_builder/)  # Main application
 │   ├── assets/                     # Static assets
 │   ├── views/                      # Liquid templates
 │   ├── graphql/                    # GraphQL queries/mutations
 │   ├── schema/                     # Data models
 │   ├── authorization_policies/     # Access control
-│   ├── migrations/                 # Database migrations
-│   └── pos-modules.json            # Module dependencies
+│   └── migrations/                 # Database migrations
 ├── modules/                        # Installed/local modules
 │   └── <module-name>/
 │       ├── public/                 # Public module files
 │       ├── private/                # Private module files
-│       └── template-values.json    # Module config
+│       ├── pos-module.json         # Module identity (installed by pos-cli modules install)
+│       └── template-values.json    # Optional: custom template substitution values (no metadata)
 ├── .pos                            # Environment configuration
 └── .posignore                      # Ignore patterns
 ```
@@ -307,25 +313,61 @@ Key variables that affect behavior:
 - `DEBUG` - Enables debug logging
 - `NO_COLOR` - Disables colored output
 - `CONCURRENCY` - Override sync concurrency (default: 3)
+- `PARTNER_PORTAL_HOST` - Override the module registry URL used by `modules install` and `modules update` (default: `https://partners.platformos.com`)
 
 #### Module System
 Complete lifecycle:
 - **Init**: Create from template (github.com/Platform-OS/pos-module-template)
-- **Install**: Add to app/pos-modules.json, resolve dependencies, update lock file, and automatically download all module files to `modules/`
+- **Install**: Add to `pos-module.json`, resolve the full dependency tree, write `pos-module.lock.json`, and download all changed/missing modules to `modules/`
+- **Install --frozen**: CI-safe install — uses the existing lock file as-is, never calls the registry for resolution, fails fast if the lock file is missing or stale
 - **Publish**: Version and push to marketplace (requires Partner Portal account)
 - **Pull**: Get deployed version from instance
-- **Update**: Update version in pos-modules.json, resolve dependencies, update lock file, and automatically download updated module files to `modules/`
+- **Update**: Update a module entry in `pos-module.json`, re-resolve the full tree, update the lock file, and download changed modules
+- **Migrate**: `pos-cli modules migrate` runs two independent phases:
+  - **Phase A**: converts legacy `app/pos-modules.json` → `pos-module.json` (deps migration)
+  - **Phase B**: moves metadata fields (`machine_name`, `version`, `name`, `repository_url`) from any `template-values.json` → `pos-module.json`, stripping them from the source file. Use `--name <machine_name>` to target a specific `modules/<name>/template-values.json` when multiple exist.
 
 Note: `pos-cli modules download` has been removed. `install` and `update` always download all module files and dependencies automatically.
 
-Module dependencies specified in `template-values.json`:
+Module manifest `pos-module.json` (unified format for both apps and publishable modules):
 ```json
 {
-  "machine_name": "my-module",
-  "version": "1.0.0",
-  "dependencies": ["core", "admin"]
+  "name": "User",
+  "machine_name": "user",
+  "version": "5.1.2",
+  "repository_url": "https://partners.platformos.com",
+  "dependencies": {
+    "core": "^1.5.0"
+  },
+  "devDependencies": {
+    "tests": "1.0.1"
+  },
+  "registries": {
+    "private-module": "https://portal.private-stack.online"
+  }
 }
 ```
+
+`repository_url` is **publishing metadata only** — it tells `pos-cli modules push` where to publish the module. It has **no effect** on dependency resolution. The registry used for `install`/`update` is determined by `PARTNER_PORTAL_HOST` (env var) or the hardcoded fallback `https://partners.platformos.com`.
+
+The optional `registries` map provides **per-module registry URL overrides** for private or custom registries. After each `install` or `update`, every resolved module gets an explicit entry stamped into the lock file's `registries` map, making `pos-module.lock.json` self-contained for `--frozen` mode. Old lock files without per-module entries fall back to the hardcoded default.
+
+The `--dev` flag controls which section a named module is added to:
+```
+pos-cli modules install core           # adds core to dependencies
+pos-cli modules install tests --dev    # adds tests to devDependencies
+pos-cli modules install --dev          # installs dependencies + devDependencies
+pos-cli modules install --frozen       # CI: use lock file as-is, no resolution
+pos-cli modules install --frozen --dev # CI: same, including devDependencies
+pos-cli modules update core            # bumps core to latest stable
+pos-cli modules update core@2.0.0     # pins core to exact version
+pos-cli modules update --dev           # re-resolves both sections
+```
+
+**Update semantics for exact pins**: `pos-cli modules update` (no name) does not bump exact-pinned
+entries — it only re-resolves range constraints to the best available version within the range.
+To bump an exact pin, name it explicitly: `pos-cli modules update core`.
+This matches npm's behaviour where `npm update` does not modify exact pins.
 
 #### GUI Server
 Express server (`lib/server.js`) serves three pre-built web apps:
