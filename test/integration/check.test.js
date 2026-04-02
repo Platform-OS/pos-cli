@@ -47,7 +47,7 @@ describe('pos-cli check run', () => {
       expect(stdout).toMatch('4 offenses found in 2 files');
       expect(stdout).toMatch('4 warnings');
       expect(stdout).toMatch('app/views/pages/about.liquid');
-      expect(stdout).toMatch('app/views/partials/header.liquid');
+      expect(stdout).toMatch('app/views/pages/contact.liquid');
       expect(stdout).toMatch('Unknown object \'page_title\' used');
       expect(stdout).toMatch('Unknown object \'unknown_object\' used');
       expect(stdout).toMatch('Unknown object \'site\' used');
