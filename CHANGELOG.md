@@ -4,6 +4,7 @@
 
 ### New Features
 
+* `pos-cli deploy --dry-run` is now enabled for all users. Validates the release on the server and reports which files would be upserted or deleted without applying any changes.
 * `pos-cli check run -c, --check <name>` — filter linter output to a specific check by name (repeatable flag; validates names and lists available checks on mismatch)
 
 ### Improvements

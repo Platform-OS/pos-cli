@@ -17,11 +17,6 @@ program
   .action(async (environment, params) => {
     if (params.force) logger.Warn('-f flag is deprecated and does not do anything.');
 
-    if (params.dryRun && !process.env.DEV) {
-      await logger.Warn('--dry-run is temporarily disabled. This feature will be enabled soon.');
-      process.exit(0);
-    }
-
     let strategy;
     if (params.dryRun) {
       strategy = 'dryRun';
