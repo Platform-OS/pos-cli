@@ -108,8 +108,7 @@ describe('Happy path', () => {
   });
 });
 
-describe.skip('Dry run', () => {
-  // Temporarily disabled: --dry-run is disabled until the feature is propagated to all servers.
+describe('Dry run', () => {
   test('reports would-be changes without applying them', { retry: 2 }, async () => {
     const { stdout } = await run('correct', '--dry-run');
 
