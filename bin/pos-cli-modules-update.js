@@ -1,65 +1,17 @@
 #!/usr/bin/env node
 
 import { program } from '../lib/program.js';
-import logger from '../lib/logger.js';
-import { posConfigDirectory, posModulesLockFilePath, readLocalModules, writePosModules, writePosModulesLock } from '../lib/modules/configFiles.js';
-import { findModuleVersion, resolveDependencies } from '../lib/modules/dependencies.js';
-import { downloadAllModules } from '../lib/modules/downloadModule.js';
-import Portal from '../lib/portal.js';
-import path from 'path';
-import { createDirectory } from '../lib/utils/create-directory.js';
-import ora from 'ora';
-
-const updateModule = async (moduleName, moduleVersion, localModules, getVersions) => {
-  const newModule = await findModuleVersion(moduleName, moduleVersion, getVersions);
-  if(newModule){
-    const modules = {...localModules, ...newModule};
-    return modules;
-  } else {
-    throw new Error(`Can't find module ${moduleName} with version ${moduleVersion}`);
-  }
-};
-
+import { withSpinner } from '../lib/spinner.js';
+import { updateModules } from '../lib/modules/update.js';
 
 program
   .name('pos-cli modules update')
-  .arguments('<module-name>', 'name of the module. Example: core. You can also pass version number: core@1.0.0')
-  .action(async (moduleNameWithVersion) => {
-    try {
-      await createDirectory(path.join(process.cwd(), posConfigDirectory));
-
-      const spinner = ora({ text: 'Updating module', stream: process.stdout });
-      spinner.start();
-
-      try{
-        let localModules = readLocalModules();
-        if(moduleNameWithVersion){
-          const [moduleName, moduleVersion] = moduleNameWithVersion.split('@');
-          localModules = await updateModule(moduleName, moduleVersion, localModules, Portal.moduleVersions);
-          writePosModules(localModules);
-          spinner.succeed(`Updated module: ${moduleName}@${localModules[moduleName]}`);
-        }
-
-        if(Object.keys(localModules).length === 0) {
-          spinner.stop();
-        } else {
-          spinner.start('Resolving module dependencies');
-          const modulesLocked = await resolveDependencies(localModules, Portal.moduleVersions);
-          writePosModulesLock(modulesLocked);
-          spinner.succeed(`Modules lock file generated: ${posModulesLockFilePath}`);
-
-          spinner.start('Downloading modules');
-          await downloadAllModules(modulesLocked);
-          spinner.succeed('Modules downloaded successfully');
-        }
-      } catch(e) {
-        logger.Debug(e);
-        spinner.stopAndPersist();
-        spinner.fail(e.message);
-      }
-    } catch {
-      logger.Error(`Aborting - ${posConfigDirectory} directory has not been created.`);
-    }
+  .arguments('[module-name]', 'name of the module. Example: core. You can also pass version number: core@1.0.0. Omit to update all modules.')
+  .option('--dev', 'update devDependencies (or treat named module as a devDependency)')
+  .action(async (moduleNameWithVersion, params) => {
+    await withSpinner('Updating module', async (spinner) => {
+      await updateModules(spinner, moduleNameWithVersion, { dev: params.dev });
+    });
   });
 
 program.parse(process.argv);

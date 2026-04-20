@@ -432,9 +432,63 @@ After running the command, you can see the new module directory has been created
 
 #### Installation
 
-Install modules published in the modules marketplace. The `install` command adds the module to `app/pos-modules.json`, resolves all dependencies, updates `app/pos-modules.lock.json`, and downloads all module files into the `modules/` directory:
+Install modules published in the modules marketplace. The `install` command adds the module to `pos-module.json`, resolves all transitive dependencies, writes `pos-module.lock.json`, and downloads all module files into the `modules/` directory.
 
-    pos-cli modules install [module name]
+**Two files, two purposes:**
+
+- `pos-module.json` — your declared intent. Edit this file to express which modules you want and at what version constraints. Commit it to source control.
+- `pos-module.lock.json` — auto-generated. Records the exact resolved version of every module and its transitive dependencies, plus the registry URL each module was resolved from. Commit this too so teammates and CI get identical installs.
+
+**Installing a module**
+
+    # Install latest stable — stores a caret range (e.g. ^2.0.0) in pos-module.json
+    pos-cli modules install core
+
+    # Install with a caret range — allows any compatible 2.x release
+    pos-cli modules install core@^2.0.0
+
+    # Install with a tilde range — allows patch-level updates only (2.1.x)
+    pos-cli modules install core@~2.1.0
+
+    # Install an exact version — no automatic updates
+    pos-cli modules install core@2.1.5
+
+    # Re-resolve and download everything declared in pos-module.json (e.g. after cloning)
+    pos-cli modules install
+
+**Version range syntax**
+
+| Syntax | Example | What gets installed |
+|--------|---------|---------------------|
+| No version | `install core` | Latest stable; stores `^MAJOR.0.0` |
+| Caret `^` | `^2.0.0` | Highest `2.x.x` release (`>=2.0.0 <3.0.0`) |
+| Tilde `~` | `~2.1.0` | Highest `2.1.x` patch release (`>=2.1.0 <2.2.0`) |
+| Exact | `2.1.5` | Exactly `2.1.5`, never updated automatically |
+| Greater-or-equal | `>=2.0.0` | Highest stable `2.0.0` or above |
+| Range | `>=2.0.0 <3.0.0` | Highest stable within the bounds |
+
+**Updating modules**
+
+    # Re-resolve all modules — range entries re-resolve to latest within their range; exact pins are unchanged
+    pos-cli modules update
+
+    # Update a single module to its latest stable (or latest within its stored range)
+    pos-cli modules update core
+
+    # Change a module's constraint to a new range
+    pos-cli modules update core@^3.0.0
+
+    # Pin a module to a specific version
+    pos-cli modules update core@3.1.0
+
+**Key difference between `install` and `update`:**
+
+- `install core` when `core` is already in `pos-module.json` → **no-op** on the constraint; dependencies are still re-resolved and any missing files downloaded.
+- `update core` when `core` has an exact pin → always fetches the latest stable release and updates the pin.
+- `update core` when `core` has a range (e.g. `^2.0.0`) → re-resolves to the latest within that range; the range itself is unchanged in `pos-module.json`.
+
+After installing or updating, deploy to apply the changes to your instance:
+
     pos-cli deploy <env>
 
 #### Remove

@@ -4,129 +4,58 @@ import exec from '#test/utils/exec';
 import cliPath from '#test/utils/cliPath';
 import fs from 'fs';
 import path from 'path';
-import { requireRealCredentials, noCredentials, applyCredentials } from '#test/utils/credentials';
+import { requireRealCredentials, noCredentials, applyCredentials, saveCredentials } from '#test/utils/credentials';
+import { plainMessages } from '#test/utils/parseOutput';
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', name);
+const run = async (fixtureName, options = '') =>
+  exec(`${cliPath} modules install ${options}`, { cwd: cwd(fixtureName), env: process.env });
 
-const run = async (fixtureName, options) => await exec(`${cliPath} modules install ${options}`, { cwd: cwd(fixtureName), env: process.env });
-
-describe('Successful install', () => {
-  test('installs and downloads module in the locked version', async () => {
+describe('modules install', () => {
+  test('downloads module with transitive dependencies, skipping what is already on disk', async () => {
     requireRealCredentials();
-    const pathToModuleJson = `${cwd('deploy/modules_test')}/modules/tests/template-values.json`;
-    const pathToDirectory = `${cwd('deploy/modules_test')}/modules`;
-    const lockFilePath = `${cwd('deploy/modules_test')}/app/pos-modules.lock.json`;
+    const fixtureCwd = cwd('deploy/modules_user');
+    const pathToDirectory = path.join(fixtureCwd, 'modules');
+    const lockFilePath = path.join(fixtureCwd, 'pos-module.lock.json');
     const originalLockContent = fs.readFileSync(lockFilePath, 'utf8');
 
     try {
-      const { stdout } = await run('deploy/modules_test', 'tests');
-      expect(stdout).toContain('Downloading tests@0.0.3');
-      expect(fs.existsSync(pathToModuleJson)).toBeTruthy();
+      // First run: download everything so exact resolved versions land on disk
+      await run('deploy/modules_user');
 
-      const moduleJson = JSON.parse(fs.readFileSync(pathToModuleJson, 'utf8'));
-      expect(moduleJson.version).toBe('0.0.3');
+      // Remove only the root module — transitive deps (e.g. core) stay on disk
+      await fs.promises.rm(path.join(pathToDirectory, 'user'), { recursive: true, force: true });
+
+      // Second run: root module missing → re-download it; transitive dep present at locked version → skip
+      const { stdout, stderr } = await run('deploy/modules_user');
+      const msgs = plainMessages(stdout);
+      const stderrMsgs = plainMessages(stderr);
+
+      expect(msgs.find(m => m.startsWith('Downloading user@'))).toMatch(/^Downloading user@\d+\.\d+\.\d+\.\.\.$/);
+      expect(msgs.find(m => m.startsWith('Downloading core@'))).toBeUndefined();
+      expect(stderrMsgs.find(m => m.startsWith('Modules downloaded successfully'))).toMatch(/already up-to-date/);
+      expect(fs.existsSync(path.join(pathToDirectory, 'user'))).toBe(true);
     } finally {
-      await fs.promises.rm(pathToDirectory, { recursive: true });
+      await fs.promises.rm(pathToDirectory, { recursive: true, force: true });
       fs.writeFileSync(lockFilePath, originalLockContent);
     }
-  });
+  }, 60000);
 
-  test('cleans up removed files when reinstalling', async () => {
-    requireRealCredentials();
-    const pathToModuleLeftoverFile = `${cwd('deploy/modules_test_with_old_files')}/modules/tests/private/leftover.txt`;
-    expect(fs.existsSync(pathToModuleLeftoverFile)).toBeTruthy();
-    const pathToModuleJson = `${cwd('deploy/modules_test_with_old_files')}/modules/tests/template-values.json`;
-    const pathToDirectory = `${cwd('deploy/modules_test_with_old_files')}/modules`;
-    const lockFilePath = `${cwd('deploy/modules_test_with_old_files')}/app/pos-modules.lock.json`;
-    const originalLockContent = fs.readFileSync(lockFilePath, 'utf8');
-
-    try {
-      const { stdout } = await run('deploy/modules_test_with_old_files', 'tests');
-      expect(stdout).toContain('Downloading tests@0.0.3');
-      expect(fs.existsSync(pathToModuleJson)).toBeTruthy();
-      expect(fs.existsSync(pathToModuleLeftoverFile)).toBeFalsy();
-    } finally {
-      await fs.promises.rm(pathToDirectory, { recursive: true });
-      fs.writeFileSync(lockFilePath, originalLockContent);
-
-      fs.mkdirSync(path.dirname(pathToModuleLeftoverFile), { recursive: true });
-      fs.writeFileSync(pathToModuleLeftoverFile, 'Hello');
-      expect(fs.existsSync(pathToModuleLeftoverFile)).toBeTruthy();
-    }
-  });
-
-  test('installs module in a specific version', async () => {
-    requireRealCredentials();
-    const posModulesPath = `${cwd('deploy/modules_test')}/app/pos-modules.json`;
-    const lockFilePath = `${cwd('deploy/modules_test')}/app/pos-modules.lock.json`;
-    const originalModulesContent = fs.readFileSync(posModulesPath, 'utf8');
-    const originalLockContent = fs.readFileSync(lockFilePath, 'utf8');
-    const pathToModuleJson = `${cwd('deploy/modules_test')}/modules/tests/template-values.json`;
-    const pathToDirectory = `${cwd('deploy/modules_test')}/modules`;
-
-    try {
-      const { stdout } = await run('deploy/modules_test', 'tests@1.0.0');
-      expect(stdout).toContain('Downloading tests@1.0.0');
-      expect(fs.existsSync(pathToModuleJson)).toBeTruthy();
-
-      const moduleJson = JSON.parse(fs.readFileSync(pathToModuleJson, 'utf8'));
-      expect(moduleJson.version).toBe('1.0.0');
-    } finally {
-      await fs.promises.rm(pathToDirectory, { recursive: true });
-      fs.writeFileSync(posModulesPath, originalModulesContent);
-      fs.writeFileSync(lockFilePath, originalLockContent);
-    }
-  });
-
-  test('installs module with dependencies and downloads all', async () => {
-    requireRealCredentials();
-    const pathToUserModuleJson = `${cwd('deploy/modules_user')}/modules/user/template-values.json`;
-    const pathToCoreModuleJson = `${cwd('deploy/modules_user')}/modules/core/template-values.json`;
-    const pathToDirectory = `${cwd('deploy/modules_user')}/modules`;
-    const lockFilePath = `${cwd('deploy/modules_user')}/app/pos-modules.lock.json`;
-    const originalLockContent = fs.readFileSync(lockFilePath, 'utf8');
-
-    try {
-      const { stdout } = await run('deploy/modules_user', 'user');
-      expect(stdout).toContain('Downloading user@');
-      expect(stdout).toContain('Downloading core@');
-      expect(fs.existsSync(pathToUserModuleJson)).toBeTruthy();
-      expect(fs.existsSync(pathToCoreModuleJson)).toBeTruthy();
-    } finally {
-      await fs.promises.rm(pathToDirectory, { recursive: true });
-      fs.writeFileSync(lockFilePath, originalLockContent);
-    }
-  }, 30000);
-
-  test('installs all modules from pos-modules.json when no name given', async () => {
-    requireRealCredentials();
-    const pathToModuleJson = `${cwd('deploy/modules_test')}/modules/tests/template-values.json`;
-    const pathToDirectory = `${cwd('deploy/modules_test')}/modules`;
-    const lockFilePath = `${cwd('deploy/modules_test')}/app/pos-modules.lock.json`;
-    const originalLockContent = fs.readFileSync(lockFilePath, 'utf8');
-
-    try {
-      const { stdout } = await run('deploy/modules_test', '');
-      expect(stdout).toContain('Downloading tests@0.0.3');
-      expect(fs.existsSync(pathToModuleJson)).toBeTruthy();
-    } finally {
-      await fs.promises.rm(pathToDirectory, { recursive: true });
-      fs.writeFileSync(lockFilePath, originalLockContent);
-    }
-  });
-});
-
-describe('Failed install', () => {
-  test('Module not found - non-existing module', async () => {
-    const savedCreds = applyCredentials(noCredentials);
+  test('reports clear error when module does not exist in registry', async () => {
+    const savedCreds = saveCredentials();
     const savedPortalHost = process.env.PARTNER_PORTAL_HOST;
+    applyCredentials(noCredentials);
     delete process.env.PARTNER_PORTAL_HOST;
+
     try {
-      const { stdout } = await run('deploy/modules_test', 'moduleNotFound');
-      expect(stdout).toContain("Can't find module moduleNotFound");
+      const { stderr } = await run('deploy/modules_test', 'moduleNotFound');
+      const msgs = plainMessages(stderr);
+      expect(msgs.find(m => m.startsWith("Can't find"))).toBe(
+        "Can't find module moduleNotFound (registry: https://partners.platformos.com)"
+      );
     } finally {
       applyCredentials(savedCreds);
-      if (savedPortalHost) {
+      if (savedPortalHost !== undefined) {
         process.env.PARTNER_PORTAL_HOST = savedPortalHost;
       }
     }

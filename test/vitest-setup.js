@@ -8,3 +8,9 @@
 // 3. Clearing credentials here would break integration tests
 
 // If a unit test accidentally has credentials set (e.g., from environment), it should handle that in the test itself
+
+// Silence logger output across all unit tests. Tests that want to assert on
+// logger calls can import the mock and use vi.mocked(logger).Warn etc.
+vi.mock('#lib/logger.js', () => ({
+  default: { Debug: vi.fn(), Error: vi.fn(), Info: vi.fn(), Warn: vi.fn(), Success: vi.fn() }
+}));

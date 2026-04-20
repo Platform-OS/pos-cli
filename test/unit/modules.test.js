@@ -4,7 +4,9 @@
  */
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import nock from 'nock';
+import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 // Mock logger to prevent console output during tests
 vi.mock('#lib/logger.js', () => ({
@@ -249,24 +251,140 @@ describe('Portal API - Unit Tests', () => {
   });
 });
 
-describe('Module Configuration - Unit Tests', () => {
-  const fixturesPath = path.join(process.cwd(), 'test', 'fixtures', 'modules');
+describe('moduleConfig()', () => {
+  let tmpDir;
+  let originalCwd;
 
-  describe('moduleConfigFilePath()', () => {
-    test('finds template-values.json in module directory', async () => {
-      const originalCwd = process.cwd();
+  beforeEach(() => {
+    vi.resetModules();
+    originalCwd = process.cwd();
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-moduleconfig-'));
+    process.chdir(tmpDir);
+  });
 
-      try {
-        process.chdir(path.join(fixturesPath, 'good'));
+  afterEach(() => {
+    process.chdir(originalCwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    vi.resetModules();
+  });
 
-        const { moduleConfigFilePath } = await import('#lib/modules.js');
-        const result = await moduleConfigFilePath('testmodule');
+  test('throws with migration hint when pos-module.json is absent', async () => {
+    const { moduleConfig } = await import('#lib/modules.js');
+    expect(() => moduleConfig()).toThrow(/pos-module\.json not found/);
+    expect(() => moduleConfig()).toThrow(/pos-cli modules migrate/);
+  });
 
-        expect(result).toContain('template-values.json');
-      } finally {
-        process.chdir(originalCwd);
+  test('reads machine_name and version from pos-module.json', async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, 'pos-module.json'),
+      JSON.stringify({ machine_name: 'user', version: '5.1.2' }, null, 2)
+    );
+    const { moduleConfig } = await import('#lib/modules.js');
+    const config = moduleConfig();
+    expect(config.machine_name).toBe('user');
+    expect(config.version).toBe('5.1.2');
+  });
+
+  test('reads full config including dependencies from pos-module.json', async () => {
+    const manifest = { machine_name: 'user', version: '5.1.2', dependencies: { core: '^1.0.0' } };
+    fs.writeFileSync(path.join(tmpDir, 'pos-module.json'), JSON.stringify(manifest, null, 2));
+    const { moduleConfig } = await import('#lib/modules.js');
+    const config = moduleConfig();
+    expect(config).toEqual(manifest);
+  });
+});
+
+describe('publishVersion() — pre-flight validation', () => {
+  let tmpDir;
+  let originalCwd;
+
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    originalCwd = process.cwd();
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-push-'));
+    process.chdir(tmpDir);
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    vi.resetModules();
+  });
+
+  const writeManifest = (content) =>
+    fs.writeFileSync(path.join(tmpDir, 'pos-module.json'), JSON.stringify(content, null, 2));
+
+  // publishVersion catches errors and calls logger.Error + process.exit(1).
+  // We verify validation by checking that logger.Error receives the right message.
+  const runPublish = async () => {
+    vi.mock('#lib/logger.js', () => ({
+      default: {
+        Debug: vi.fn(),
+        Warn: vi.fn(),
+        Error: vi.fn(),
+        Info: vi.fn(),
+        Success: vi.fn()
       }
-    });
+    }));
+    vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('process.exit called'); });
+    const { publishVersion } = await import('#lib/modules.js');
+    const logger = (await import('#lib/logger.js')).default;
+    try {
+      await publishVersion({ email: 'test@example.com' });
+    } catch (_) { /* process.exit throws in test */ }
+    return logger;
+  };
+
+  test('errors with clear message when pos-module.json is absent', async () => {
+    const logger = await runPublish();
+    expect(logger.Error).toHaveBeenCalledWith(
+      expect.stringContaining('pos-module.json not found')
+    );
+  });
+
+  test('errors with clear message when machine_name is absent', async () => {
+    writeManifest({ version: '1.0.0' });
+    const logger = await runPublish();
+    expect(logger.Error).toHaveBeenCalledWith(
+      expect.stringContaining("'machine_name' is required")
+    );
+  });
+
+  test('errors with clear message when version is absent', async () => {
+    writeManifest({ machine_name: 'user' });
+    const logger = await runPublish();
+    expect(logger.Error).toHaveBeenCalledWith(
+      expect.stringContaining("'version' is required")
+    );
+  });
+
+  test('errors with clear message when version is not valid semver', async () => {
+    writeManifest({ machine_name: 'user', version: 'not-a-version' });
+    const logger = await runPublish();
+    expect(logger.Error).toHaveBeenCalledWith(
+      expect.stringContaining("is not a valid semver string")
+    );
+  });
+
+  test('errors with directory hint when modules/ exists but modules/${machine_name}/ does not', async () => {
+    writeManifest({ machine_name: 'user', version: '1.0.0' });
+    fs.mkdirSync(path.join(tmpDir, 'modules'), { recursive: true }); // modules/ exists but no modules/user/
+    const logger = await runPublish();
+    expect(logger.Error).toHaveBeenCalledWith(
+      expect.stringContaining('modules/user/ not found')
+    );
+  });
+
+  test('does not error about directory when modules/ does not exist (single-dir workflow)', async () => {
+    writeManifest({ machine_name: 'user', version: '1.0.0' });
+    // No modules/ directory at all — publishVersion should reach archive creation (not fail on dir check)
+    // It will fail later (no files / archive issues), but not on the directory validation.
+    const logger = await runPublish();
+    const dirErrorCalled = logger.Error.mock.calls.some(
+      ([msg]) => typeof msg === 'string' && msg.includes('not found') && msg.includes('modules/user/')
+    );
+    expect(dirErrorCalled).toBe(false);
   });
 });
 
@@ -381,7 +499,7 @@ describe('Module Dependencies - Unit Tests', () => {
         versions: {
           '1.0.0': {},
           '2.0.0': {},
-          '3.0.0-beta': {} // Should be skipped
+          '3.0.0-beta': {} // Should be skipped in favour of stable
         }
       }
     ]);
@@ -389,5 +507,23 @@ describe('Module Dependencies - Unit Tests', () => {
     const result = await findModuleVersion('testModule', null, mockGetVersions);
 
     expect(result).toEqual({ testModule: '2.0.0' });
+  });
+
+  test('findModuleVersion falls back to latest pre-release when no stable version exists', async () => {
+    const { findModuleVersion } = await import('#lib/modules/dependencies.js');
+
+    const mockGetVersions = vi.fn().mockResolvedValue([
+      {
+        module: 'testModule',
+        versions: {
+          '1.0.0-alpha': {},
+          '1.0.0-beta': {}
+        }
+      }
+    ]);
+
+    const result = await findModuleVersion('testModule', null, mockGetVersions);
+
+    expect(result).toEqual({ testModule: '1.0.0-beta' });
   });
 });

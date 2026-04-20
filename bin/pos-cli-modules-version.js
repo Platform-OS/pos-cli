@@ -1,52 +1,7 @@
 #!/usr/bin/env node
 
 import { program } from '../lib/program.js';
-import semver from 'semver';
-
-import files from '../lib/files.js';
-import logger from '../lib/logger.js';
-import report from '../lib/logger/report.js';
-import { moduleConfig, moduleConfigFilePath } from '../lib/modules.js';
-
-const readVersionFromPackage = (options) => {
-  let packageJSONPath = 'package.json';
-  if (typeof options.package === 'string') {
-    packageJSONPath = `${options.package}`;
-  }
-  return files.readJSON(packageJSONPath, { throwDoesNotExistError: true }).version;
-};
-
-const storeNewVersion = async (config, version) => {
-  config.version = version;
-  const filePath = await moduleConfigFilePath();
-  files.writeJSON(filePath, config);
-};
-
-const validateVersions = (config, version, moduleName) => {
-  // Validate versions.
-  if (!semver.valid(config.version)) {
-    report('[ERR] The current version is not valid');
-    logger.Error(`The "${moduleName}" module's version ("${config.version}") is not valid`);
-    return;
-  }
-  if (!semver.valid(version)) {
-    report('[ERR] The given version is not valid');
-    logger.Error(`The "${moduleName}" module's new version ("${version}") is not valid`);
-    return;
-  }
-
-  return true;
-};
-
-async function crateNewVersion(version, options) {
-  let config = await moduleConfig();
-  const moduleName = config['machine_name'];
-
-  if (options.package) version = readVersionFromPackage(options);
-  if (!validateVersions(config, version, moduleName)) return;
-
-  await storeNewVersion(config, version);
-}
+import { createNewVersion } from '../lib/modules/version.js';
 
 program
   .name('pos-cli modules version')
@@ -55,7 +10,7 @@ program
   .option('--path <path>', 'module root directory, default is current directory')
   .action(async (version, options) => {
     if (options.path) process.chdir(options.path);
-    await crateNewVersion(version, options);
+    await createNewVersion(version, options);
   });
 
 program.parse(process.argv);
