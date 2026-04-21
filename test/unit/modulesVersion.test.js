@@ -20,14 +20,20 @@ const getTmpDir = withTmpDir('pos-cli-version-test-');
 const writeManifest = (content) =>
   fs.writeFileSync(path.join(getTmpDir(), 'pos-module.json'), JSON.stringify(content, null, 2));
 
-const writeTemplateValues = (content) =>
-  fs.writeFileSync(path.join(getTmpDir(), 'template-values.json'), JSON.stringify(content, null, 2));
+const writeTemplateValues = (moduleName, content) => {
+  const dir = path.join(getTmpDir(), 'modules', moduleName);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'template-values.json'), JSON.stringify(content, null, 2));
+};
 
 const readManifest = () =>
   JSON.parse(fs.readFileSync(path.join(getTmpDir(), 'pos-module.json'), 'utf8'));
 
-const readTemplateValues = () =>
-  JSON.parse(fs.readFileSync(path.join(getTmpDir(), 'template-values.json'), 'utf8'));
+const readTemplateValues = (moduleName) =>
+  JSON.parse(fs.readFileSync(path.join(getTmpDir(), 'modules', moduleName, 'template-values.json'), 'utf8'));
+
+const templateValuesPath = (moduleName) =>
+  path.join(getTmpDir(), 'modules', moduleName, 'template-values.json');
 
 const runVersion = (args = '') =>
   spawnSync('node', [CLI_PATH, 'modules', 'version', '--no-git', ...args.split(' ').filter(Boolean)], {
@@ -119,15 +125,22 @@ describe('pos-cli modules version — semver bump types', () => {
 });
 
 describe('pos-cli modules version — template-values.json sync', () => {
-  test('updates version in template-values.json when it has a version field', () => {
-    writeManifest({ machine_name: 'user', version: '1.0.0' });
-    writeTemplateValues({ machine_name: 'user', version: '1.0.0', prefix: 'my_prefix' });
-    const result = runVersion('minor');
+  test('updates version in modules/<machine_name>/template-values.json when it has a version field', () => {
+    writeManifest({ machine_name: 'user', version: '5.2.7' });
+    writeTemplateValues('user', {
+      name: 'User',
+      machine_name: 'user',
+      type: 'module',
+      version: '5.2.7',
+      dependencies: { core: '^2.1.8' }
+    });
+    const result = runVersion('patch');
     expect(result.status).toBe(0);
-    expect(readManifest().version).toBe('1.1.0');
-    const tv = readTemplateValues();
-    expect(tv.version).toBe('1.1.0');
-    expect(tv.prefix).toBe('my_prefix');
+    expect(readManifest().version).toBe('5.2.8');
+    const tv = readTemplateValues('user');
+    expect(tv.version).toBe('5.2.8');
+    expect(tv.name).toBe('User');
+    expect(tv.dependencies).toEqual({ core: '^2.1.8' });
   });
 
   test('does not create template-values.json when it does not exist', () => {
@@ -135,25 +148,24 @@ describe('pos-cli modules version — template-values.json sync', () => {
     const result = runVersion('patch');
     expect(result.status).toBe(0);
     expect(readManifest().version).toBe('1.0.1');
-    expect(fs.existsSync(path.join(getTmpDir(), 'template-values.json'))).toBe(false);
+    expect(fs.existsSync(templateValuesPath('user'))).toBe(false);
   });
 
   test('does not modify template-values.json when it has no version field', () => {
     writeManifest({ machine_name: 'user', version: '1.0.0' });
-    writeTemplateValues({ prefix: 'my_prefix' });
+    writeTemplateValues('user', { prefix: 'my_prefix' });
     const result = runVersion('major');
     expect(result.status).toBe(0);
     expect(readManifest().version).toBe('2.0.0');
-    const tv = readTemplateValues();
-    expect(tv).toEqual({ prefix: 'my_prefix' });
+    expect(readTemplateValues('user')).toEqual({ prefix: 'my_prefix' });
   });
 
   test('updates template-values.json with explicit semver version too', () => {
     writeManifest({ machine_name: 'user', version: '1.0.0' });
-    writeTemplateValues({ version: '1.0.0' });
+    writeTemplateValues('user', { version: '1.0.0' });
     const result = runVersion('5.0.0');
     expect(result.status).toBe(0);
     expect(readManifest().version).toBe('5.0.0');
-    expect(readTemplateValues().version).toBe('5.0.0');
+    expect(readTemplateValues('user').version).toBe('5.0.0');
   });
 });
