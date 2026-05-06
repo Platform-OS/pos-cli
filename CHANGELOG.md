@@ -5,6 +5,58 @@
 ### New Features
 
 * `pos-cli deploy --dry-run` is now enabled for all users. Validates the release on the server and reports which files would be upserted or deleted without applying any changes.
+* **Unified `pos-module.json` manifest** — single project manifest (analogous to `package.json`) holding both module identity (`machine_name`, `version`, `name`, `repository_url`) and `dependencies`/`devDependencies`. Replaces `app/pos-modules.json` and metadata fields previously kept inside `template-values.json`. Legacy `app/pos-modules.json` is still read as a fallback.
+* **`pos-module.lock.json` is now self-contained** — every resolved module is stamped with the registry URL it came from in a `registries` map, so `--frozen` installs no longer rely on the ambient default registry. Old lock files without per-module entries fall back to the hardcoded default.
+* **Per-module registry overrides** — declare a `registries` map in `pos-module.json` to resolve specific modules from a private or custom registry.
+* `pos-cli modules install --frozen` — CI-safe install. Uses the lock file as-is, performs no registry resolution, and fails fast if the lock file is missing or stale.
+* `pos-cli modules install --dev` / `pos-cli modules update --dev` — manage `devDependencies` independently from `dependencies`. `install <name> --dev` adds the module to `devDependencies`; without a name, `--dev` includes both sections in the resolution.
+* `pos-cli modules show <module-name>` — display all available versions of a module from the registry.
+* `pos-cli modules uninstall <module-name>` — remove a module from `pos-module.json`, re-resolve the dependency tree, and clean up the `modules/` directory. Use `--dev` to remove from `devDependencies`.
+* `pos-cli modules build` — package the current module into a release archive without uploading.
+* `pos-cli modules migrate` — upgrade an existing project to the new manifest format. Runs two independent, idempotent phases:
+  - **Phase A**: converts `app/pos-modules.json` → `pos-module.json` (`modules` key → `dependencies`)
+  - **Phase B**: lifts `machine_name`, `version`, `name`, `repository_url` from `modules/<name>/template-values.json` into `pos-module.json` and strips them from the source file. Use `--name <machine_name>` when multiple `template-values.json` files are present.
+
+### Improvements
+
+* `pos-cli modules version` now accepts a semver **bump type** (`major`, `minor`, `patch`) in addition to an explicit version, and defaults to `patch` when no argument is given.
+* `pos-cli modules version` synchronizes the version into `modules/<name>/template-values.json` (when the file exists and already has a `version` field).
+* `pos-cli modules version` automatically creates a git commit and tag for the new version. Use `--no-git` to skip; the command refuses to run on a dirty working tree.
+
+## 6.0.6
+
+### Chore
+
+* Rebuilt GUI assets
+* Stabilized CLI integration test for `pos-cli check`
+* Updated `package.json` / `package-lock.json` (dependency refresh)
+
+## 6.0.4
+
+### Fixes
+
+* Fixed missing `await` in `pos-cli fetch-logs` causing the command to exit before logs were returned
+
+### Chore
+
+* Finished CommonJS → ESM conversion for remaining files (test helpers, MCP validators, fetch-logs bin)
+* Removed leftover `lib/initilizeEsmModules.js` shim
+
+## 6.0.2 / 6.0.3
+
+### Fixes
+
+* Fixed 404 errors from `pos-cli gui serve` SPA fallback by serving `index.html` via Express 5's updated `res.sendFile` API
+* Updated server error message format for unknown form properties (now prefixed with the file path)
+
+### Chore
+
+* Rebuilt GUI assets
+
+## 6.0.1
+
+### New Features
+
 * `pos-cli check run -c, --check <name>` — filter linter output to a specific check by name (repeatable flag; validates names and lists available checks on mismatch)
 
 ### Improvements

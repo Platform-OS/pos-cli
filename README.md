@@ -456,6 +456,15 @@ Install modules published in the modules marketplace. The `install` command adds
     # Re-resolve and download everything declared in pos-module.json (e.g. after cloning)
     pos-cli modules install
 
+    # Add a module to devDependencies instead of dependencies
+    pos-cli modules install tests --dev
+
+    # CI mode — use pos-module.lock.json as-is, no registry resolution. Fails fast if the lock file is missing or stale.
+    pos-cli modules install --frozen
+
+    # CI mode including devDependencies
+    pos-cli modules install --frozen --dev
+
 **Version range syntax**
 
 | Syntax | Example | What gets installed |
@@ -481,6 +490,9 @@ Install modules published in the modules marketplace. The `install` command adds
     # Pin a module to a specific version
     pos-cli modules update core@3.1.0
 
+    # Re-resolve devDependencies along with dependencies
+    pos-cli modules update --dev
+
 **Key difference between `install` and `update`:**
 
 - `install core` when `core` is already in `pos-module.json` → **no-op** on the constraint; dependencies are still re-resolved and any missing files downloaded.
@@ -491,11 +503,58 @@ After installing or updating, deploy to apply the changes to your instance:
 
     pos-cli deploy <env>
 
-#### Remove
+#### Show available versions
 
-To remove a module from your application:
+Display all versions of a module published in the registry:
+
+    pos-cli modules show <module-name>
+
+#### Uninstall
+
+Remove a module from your local project. This removes the entry from `pos-module.json`, re-resolves the dependency tree, updates `pos-module.lock.json`, and removes the module's files from `modules/`:
+
+    pos-cli modules uninstall <module-name>
+
+    # Remove from devDependencies
+    pos-cli modules uninstall <module-name> --dev
+
+To remove a module from a deployed instance (different from local uninstall):
 
     pos-cli modules remove [environment] <module name>
+
+#### Migrate to the new manifest format
+
+If your project still uses the legacy `app/pos-modules.json` (or has metadata fields like `machine_name`/`version` inside `template-values.json`), migrate to the unified `pos-module.json`:
+
+    pos-cli modules migrate
+
+The migration runs two independent, idempotent phases:
+
+- **Phase A** — converts `app/pos-modules.json` → `pos-module.json` (`modules` key → `dependencies`).
+- **Phase B** — lifts `machine_name`, `version`, `name`, `repository_url` from `modules/<name>/template-values.json` into `pos-module.json` and strips them from the source file (deleting the file if it becomes empty).
+
+When multiple `modules/<name>/template-values.json` files exist, target a specific module:
+
+    pos-cli modules migrate --name <machine_name>
+
+#### Per-module registry overrides
+
+By default, `install` and `update` resolve modules from the public registry (overridable via `PARTNER_PORTAL_HOST`). To resolve specific modules from a private or custom registry, declare a `registries` map in `pos-module.json`:
+
+```json
+{
+  "name": "My App",
+  "dependencies": {
+    "core": "^1.5.0",
+    "private-module": "^1.0.0"
+  },
+  "registries": {
+    "private-module": "https://portal.private-stack.online"
+  }
+}
+```
+
+After each `install`/`update`, every resolved module gets its registry URL stamped into `pos-module.lock.json`, making the lock file self-contained for `--frozen` mode.
 
 #### Publishing
 
@@ -508,8 +567,19 @@ To publish a module to our module repository,
 
 3. After preparing your module, release the new version and then publish it:
 
-    pos-cli modules version x.x.x
+    # Bump using a semver type (major | minor | patch). Defaults to `patch` when no argument is given.
+    pos-cli modules version patch
+
+    # …or set an explicit version
+    pos-cli modules version 1.2.3
+
     pos-cli modules push --email <your_email>
+
+`pos-cli modules version` updates `pos-module.json`, syncs the version into `modules/<name>/template-values.json` (when present), and creates a git commit and tag. The command refuses to run on a dirty working tree; use `--no-git` to skip the commit and tag.
+
+To package the module into a release archive without uploading (e.g. for inspection or manual publishing):
+
+    pos-cli modules build
 
 #### Pulling module codebase
 
