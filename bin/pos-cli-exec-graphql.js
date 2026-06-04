@@ -17,14 +17,14 @@ program
 
     if (options.file) {
       if (!fs.existsSync(options.file)) {
-        logger.Error(`File not found: ${options.file}`);
+        await logger.Error(`File not found: ${options.file}`);
         process.exit(1);
       }
       query = fs.readFileSync(options.file, 'utf8');
     }
 
     if (!query) {
-      logger.Error("error: missing required argument 'graphql'");
+      await logger.Error("error: missing required argument 'graphql'");
       process.exit(1);
     }
 
@@ -43,7 +43,7 @@ program
       const response = await gateway.graph({ query });
 
       if (response.errors) {
-        logger.Error(`GraphQL execution error: ${JSON.stringify(response.errors, null, 2)}`);
+        await logger.Error(`GraphQL execution error: ${JSON.stringify(response.errors, null, 2)}`);
         process.exit(1);
       }
 
@@ -51,7 +51,7 @@ program
         logger.Print(JSON.stringify(response, null, 2));
       }
     } catch (error) {
-      logger.Error(`Failed to execute graphql: ${error.message}`);
+      await logger.Error(`Failed to execute graphql: ${error.message}`);
       process.exit(1);
     }
   });

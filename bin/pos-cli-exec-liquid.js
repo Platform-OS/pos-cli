@@ -17,14 +17,14 @@ program
 
     if (options.file) {
       if (!fs.existsSync(options.file)) {
-        logger.Error(`File not found: ${options.file}`);
+        await logger.Error(`File not found: ${options.file}`);
         process.exit(1);
       }
       liquidCode = fs.readFileSync(options.file, 'utf8');
     }
 
     if (!liquidCode) {
-      logger.Error("error: missing required argument 'code'");
+      await logger.Error("error: missing required argument 'code'");
       process.exit(1);
     }
 
@@ -43,7 +43,7 @@ program
       const response = await gateway.liquid({ content: liquidCode });
 
       if (response.error) {
-        logger.Error(`Liquid execution error: ${response.error}`);
+        await logger.Error(`Liquid execution error: ${response.error}`);
         process.exit(1);
       }
 
@@ -51,7 +51,7 @@ program
         logger.Print(response.result);
       }
     } catch (error) {
-      logger.Error(`Failed to execute liquid: ${error.message}`);
+      await logger.Error(`Failed to execute liquid: ${error.message}`);
       process.exit(1);
     }
   });
