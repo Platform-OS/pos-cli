@@ -34,9 +34,21 @@ vi.mock('#lib/ServerError.js', () => ({
 }));
 
 // Stub modules used only inside start() / sendAsset(), not pushFile/deleteFile.
-vi.mock('chokidar', () => ({
-  default: { watch: vi.fn().mockReturnValue({ on: vi.fn().mockReturnThis() }) }
-}));
+// chokidar.watch() returns a real EventEmitter so the .on('error', ...) wiring in
+// start() is genuinely exercised — emitting 'error' on a real emitter with no
+// listener would throw (this is exactly how EMFILE crashed pos-cli before the fix).
+vi.mock('chokidar', async () => {
+  const { EventEmitter } = await import('node:events');
+  return {
+    default: {
+      watch: vi.fn(() => {
+        const watcher = new EventEmitter();
+        watcher.close = vi.fn().mockResolvedValue(undefined);
+        return watcher;
+      })
+    }
+  };
+});
 vi.mock('livereload', () => ({ default: { createServer: vi.fn() } }));
 vi.mock('async', () => ({ default: { queue: vi.fn() } }));
 vi.mock('#lib/proxy.js', () => ({ default: vi.fn() }));
@@ -58,7 +70,7 @@ import fs from 'fs';
 import logger from '#lib/logger.js';
 import ServerError from '#lib/ServerError.js';
 import Gateway from '#lib/proxy.js';
-import { pushFile, deleteFile, start } from '#lib/watch.js';
+import { pushFile, deleteFile, start, watchIgnored, handleWatcherError } from '#lib/watch.js';
 
 // --- test helpers ---------------------------------------------------------
 
@@ -322,5 +334,93 @@ describe('start', () => {
 
     expect(ServerError.handler).toHaveBeenCalledWith(networkErr);
     expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  // Regression test for the EMFILE crash. chokidar v4+ dropped fsevents, so on
+  // macOS each watched directory consumes a file descriptor; large projects hit
+  // the OS limit and chokidar emits an 'error' event. Before the fix, start()
+  // registered no 'error' listener, so Node threw on the unhandled event and
+  // crashed pos-cli with a raw stack trace.
+  test('registers an error handler so an EMFILE watcher error does not crash the process', async () => {
+    const { watcher } = await start(env, false, false);
+
+    const emfile = Object.assign(new Error('EMFILE: too many open files, watch'), {
+      errno: -24,
+      syscall: 'watch',
+      code: 'EMFILE',
+      filename: null
+    });
+
+    // On a real EventEmitter, emitting 'error' with no listener throws synchronously.
+    // The fix wires .on('error', ...), so this must NOT throw and must report listeners.
+    let hadListeners;
+    expect(() => {
+      hadListeners = watcher.emit('error', emfile);
+    }).not.toThrow();
+    expect(hadListeners).toBe(true);
+
+    // Let the async handler run.
+    await Promise.resolve();
+
+    expect(logger.Error).toHaveBeenCalledWith(
+      expect.stringContaining('OS file-watch limit was reached (EMFILE)'),
+      { exit: false, notify: false }
+    );
+    // Must not exit the process — sync should stay alive.
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+});
+
+// --- watchIgnored tests ---------------------------------------------------
+
+describe('watchIgnored', () => {
+  test('ignores .DS_Store files anywhere in the tree', () => {
+    expect(watchIgnored('app/.DS_Store')).toBe(true);
+    expect(watchIgnored('modules/foo/public/.DS_Store')).toBe(true);
+  });
+
+  test('ignores node_modules and .git directories (huge, never synced — main EMFILE driver)', () => {
+    expect(watchIgnored('modules/foo/node_modules/dep/index.js')).toBe(true);
+    expect(watchIgnored('app/.git/config')).toBe(true);
+    expect(watchIgnored('node_modules')).toBe(true);
+  });
+
+  test('handles Windows-style backslash separators', () => {
+    expect(watchIgnored('modules\\foo\\node_modules\\dep\\index.js')).toBe(true);
+    expect(watchIgnored('app\\.DS_Store')).toBe(true);
+  });
+
+  test('does not ignore real source files', () => {
+    expect(watchIgnored('app/views/pages/index.liquid')).toBe(false);
+    expect(watchIgnored('modules/foo/public/views/partials/header.liquid')).toBe(false);
+    // A file whose name merely contains "node_modules" is not in such a directory.
+    expect(watchIgnored('app/views/node_modules_guide.liquid')).toBe(false);
+  });
+});
+
+// --- handleWatcherError tests ---------------------------------------------
+
+describe('handleWatcherError', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test.each(['EMFILE', 'ENFILE', 'ENOSPC'])(
+    'logs an actionable, non-exiting message for resource-exhaustion error %s',
+    async code => {
+      await handleWatcherError(Object.assign(new Error('boom'), { code }));
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        expect.stringContaining(`OS file-watch limit was reached (${code})`),
+        { exit: false, notify: false }
+      );
+    }
+  );
+
+  test('logs a generic non-exiting message for other watcher errors', async () => {
+    await handleWatcherError(Object.assign(new Error('weird failure'), { code: 'EOTHER' }));
+
+    expect(logger.Error).toHaveBeenCalledWith(
+      '[Sync] File watcher error: weird failure',
+      { exit: false, notify: false }
+    );
   });
 });
