@@ -14,6 +14,7 @@ import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
 import Gateway from '../lib/proxy.js';
 import ServerError from '../lib/ServerError.js';
+import { formatDiagnostic } from '../lib/diagnostics.js';
 
 class LogStream extends EventEmitter {
   constructor(authData, interval, filter) {
@@ -110,17 +111,25 @@ program
       } else {
         logger.Info(text, options);
         if (!program.quiet && data) {
-          let parts = [];
-          if (data.url) {
-            const requestUrl = new URL(`https://${data.url}`);
-            let line = `path: ${requestUrl.pathname}`;
-            if (requestUrl.search) line += `${requestUrl.search}`;
-            parts.push(line);
+          // A structured Liquid diagnostic (errors, TASK-18.2) renders as a
+          // compiler-style block; the legacy {% log %} context hash keeps its
+          // existing one-line url/page/partial/email rendering.
+          const diagnostic = formatDiagnostic(data);
+          if (diagnostic) {
+            logger.Info(diagnostic, options);
+          } else {
+            let parts = [];
+            if (data.url) {
+              const requestUrl = new URL(`https://${data.url}`);
+              let line = `path: ${requestUrl.pathname}`;
+              if (requestUrl.search) line += `${requestUrl.search}`;
+              parts.push(line);
+            }
+            if (data.page) parts.push(`page: ${data.page}`);
+            if (data.partial) parts.push(`partial: ${data.partial}`);
+            if (data.user && data.user.email) parts.push(`email: ${data.user.email}`);
+            if (parts.length > 0) logger.Info(parts.join(' '), options);
           }
-          if (data.page) parts.push(`page: ${data.page}`);
-          if (data.partial) parts.push(`partial: ${data.partial}`);
-          if (data.user && data.user.email) parts.push(`email: ${data.user.email}`);
-          if (parts.length > 0) logger.Info(parts.join(' '), options);
         }
       }
     });

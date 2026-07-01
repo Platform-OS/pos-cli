@@ -9,11 +9,9 @@ import { browser } from '$app/environment';
 import { state } from '$lib/state.js';
 import { logs } from '$lib/api/logs';
 
-import { tryParseJSON } from '$lib/tryParseJSON.js';
-import JSONTree from '$lib/ui/JSONTree.svelte';
-
 import Icon from '$lib/ui/Icon.svelte';
 import Aside from '$lib/ui/Aside.svelte';
+import Diagnostic from '$lib/ui/Diagnostic.svelte';
 
 
 // properties
@@ -26,8 +24,6 @@ let filter = '';
 let pinned = [];
 // if the pinned pannel should be visible (bool)
 let pinnedPanel;
-// max number of characters to show and parse in a message (int)
-let maxMessageLength = 262144;
 // interval for checking for new logs (interval)
 let newLogsInterval;
 
@@ -237,48 +233,18 @@ table {
     white-space: nowrap;
   }
 
-  .logType {
-    min-width: 20ch;
-    max-width: 40ch;
-    word-break: break-all;
-  }
-
-    .date,
-    .logType {
+    .date {
       font-family: monospace;
       font-size: 1rem;
     }
 
-    .error time,
-    .error .logType {
+    .error time {
       color: var(--color-danger);
     }
 
   .logs .message {
     word-break: break-all;
   }
-
-    .longStringInfo button {
-      cursor: pointer;
-
-      font-size: .9em;
-      color: var(--color-text-secondary);
-    }
-
-  .pre {
-    white-space: pre-wrap;
-  }
-
-  .logs .info {
-    margin-block-start: 1rem;
-
-    font-size: .9em;
-    color: var(--color-text-secondary);
-  }
-
-    .logs .info a:hover {
-      color: var(--color-interaction-hover);
-    }
 
   .actions {
     width: 1px;
@@ -351,19 +317,6 @@ footer {
     color: var(--color-danger);
   }
 
-.pins .url {
-  margin-block-start: -.5em;
-  margin-block-end: .6rem;
-
-  word-wrap: break-word;
-  font-size: .9em;
-  color: var(--color-text-secondary);
-}
-
-.pins .message {
-  word-wrap: break-word;
-}
-
 </style>
 
 
@@ -401,7 +354,6 @@ footer {
     {#if $state.logs.logs}
       <table>
         {#each $state.logs.logs as log}
-          {@const message = log.message.length < 262144 && tryParseJSON(log.message)}
           <tr
             class:hidden={filter && isFiltered(log) || log.hidden}
             class:error={log.error_type.match(/error/i)}
@@ -414,38 +366,8 @@ footer {
                 {(new Date(log.created_at)).toLocaleTimeString(undefined, {})}
               </time>
             </td>
-            <td class="logType">
-              {log.error_type}
-            </td>
             <td class="message">
-              {#if message}
-                <JSONTree value={message} showFullLines={true} />
-              {:else}
-                <div class="pre">
-                  {#if log.showFull}
-                    {log.message}
-                  {:else}
-                    {log.message.substr(0, maxMessageLength)}
-
-                    {#if log.message.length > maxMessageLength}
-                      <div class="longStringInfo">
-                        <button type="button" on:click={() => log.showFull = true}>
-                          {log.message.length - maxMessageLength} more characters
-                        </button>
-                      </div>
-                    {/if}
-                  {/if}
-                </div>
-              {/if}
-
-              {#if log.data?.url}
-                <ul class="info">
-                  <li>Page: {log.data.url}</li>
-                  {#if log.data.user}
-                    <li>User ID: <a href="/users/{log.data.user.id}">{log.data.user.id}</a></li>
-                  {/if}
-                </ul>
-              {/if}
+              <Diagnostic {log} />
             </td>
             <td class="actions">
               <div>
@@ -487,7 +409,6 @@ footer {
         {#if pinned}
           <ul>
             {#each pinned as log}
-              {@const message = log.message.length < 262144 && tryParseJSON(log.message)}
               <li>
                 <div class="info">
                   <time class="date" datetime={log.created_at}>
@@ -499,30 +420,7 @@ footer {
                     <Icon icon="trash" size="18" />
                   </button>
                 </div>
-                {#if log.data?.url}
-                  <div class="url">
-                    {log.data.url}
-                  </div>
-                {/if}
-                <div class="message">
-                  {#if message}
-                    <JSONTree value={message} showFullLines={true} />
-                  {:else}
-                    <div class="pre">
-                      {#if log.showFull}
-                        {log.message}
-                      {:else}
-                        {log.message.substr(0, maxMessageLength)}
-
-                        {#if log.message.length > maxMessageLength}
-                          <button type="button" on:click={() => log.showFull = true}>
-                            {log.message.length - maxMessageLength} more characters
-                          </button>
-                        {/if}
-                      {/if}
-                    </div>
-                  {/if}
-                </div>
+                <Diagnostic {log} />
               </li>
             {/each}
           </ul>
