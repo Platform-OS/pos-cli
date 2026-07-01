@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 6.1.0 (2026-07-01)
 
 ### New Features
 
@@ -17,12 +17,19 @@
 * `pos-cli modules migrate` — upgrade an existing project to the new manifest format. Runs two independent, idempotent phases:
   - **Phase A**: converts `app/pos-modules.json` → `pos-module.json` (`modules` key → `dependencies`)
   - **Phase B**: lifts `machine_name`, `version`, `name`, `repository_url` from `modules/<name>/template-values.json` into `pos-module.json` and strips them from the source file. Use `--name <machine_name>` when multiple `template-values.json` files are present.
+* `pos-cli exec graphql` and `pos-cli exec liquid` accept a `-p, --params` flag to pass GraphQL variables / Liquid context as a JSON object; combinable with `-f` to supply variables for a query read from a file.
 
 ### Improvements
 
 * `pos-cli modules version` now accepts a semver **bump type** (`major`, `minor`, `patch`) in addition to an explicit version, and defaults to `patch` when no argument is given.
 * `pos-cli modules version` synchronizes the version into `modules/<name>/template-values.json` (when the file exists and already has a `version` field).
 * `pos-cli modules version` automatically creates a git commit and tag for the new version. Use `--no-git` to skip; the command refuses to run on a dirty working tree.
+* `pos-cli logs` renders structured Liquid diagnostics as compiler-style blocks; the legacy `{% log %}` context (url/page/partial/email) keeps its one-line rendering.
+
+### Fixes
+
+* Sync no longer crashes when the OS file-watch limit is reached (`EMFILE`/`ENFILE`/`ENOSPC`) — the error is now reported with recovery guidance instead of aborting. `node_modules` and `.git` are pruned from the watch set, and `.DS_Store` exclusion is restored for chokidar v4+.
+* Fixed a race condition in error handling for `pos-cli exec graphql` / `pos-cli exec liquid`.
 
 ## 6.0.6
 
