@@ -838,6 +838,14 @@ You can also execute GraphQL from a file using the `-f` flag:
 
     pos-cli exec graphql staging -f path/to/query.graphql
 
+Pass GraphQL variables as a JSON object with the `-p, --params` flag:
+
+    pos-cli exec graphql staging 'query q($id: ID) { record(id: $id) { id } }' --params '{"id":"42"}'
+
+The `--params` flag can be combined with `-f` to supply variables for a query read from a file:
+
+    pos-cli exec graphql staging -f path/to/query.graphql --params '{"id":"42"}'
+
 **Note:** When executing on production environments (environment name contains "prod" or "production"), you will be prompted for confirmation before execution.
 
 ### Running Tests

@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 
-import fs from 'fs';
 import { program } from '../lib/program.js';
-import Gateway from '../lib/proxy.js';
-import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
-import { isProductionEnvironment, confirmProductionExecution } from '../lib/productionEnvironment.js';
+import { execLiquid } from '../lib/exec/liquid.js';
 
 program
   .name('pos-cli exec liquid')
@@ -13,34 +10,18 @@ program
   .argument('[code]', 'liquid code to execute as string')
   .option('-f, --file <path>', 'path to liquid file to execute')
   .action(async (environment, code, options) => {
-    let liquidCode = code;
+    try {
+      const { response, cancelled } = await execLiquid({
+        environment,
+        code,
+        file: options.file,
+        program,
+      });
 
-    if (options.file) {
-      if (!fs.existsSync(options.file)) {
-        await logger.Error(`File not found: ${options.file}`);
-        process.exit(1);
-      }
-      liquidCode = fs.readFileSync(options.file, 'utf8');
-    }
-
-    if (!liquidCode) {
-      await logger.Error("error: missing required argument 'code'");
-      process.exit(1);
-    }
-
-    const authData = await fetchSettings(environment, program);
-    const gateway = new Gateway(authData);
-
-    if (isProductionEnvironment(environment)) {
-      const confirmed = await confirmProductionExecution(environment);
-      if (!confirmed) {
+      if (cancelled) {
         logger.Info('Execution cancelled.');
         process.exit(0);
       }
-    }
-
-    try {
-      const response = await gateway.liquid({ content: liquidCode });
 
       if (response.error) {
         await logger.Error(`Liquid execution error: ${response.error}`);
