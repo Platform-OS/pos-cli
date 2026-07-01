@@ -6,7 +6,14 @@ vi.mock('#lib/portal.js', () => ({
   default: { moduleVersions: vi.fn() }
 }));
 
+// Stubbed to assert show re-surfaces the module's post-install message;
+// the real impl reads modules/<name>/ from disk and is tested separately.
+vi.mock('#lib/modules/postInstall.js', () => ({
+  printPostInstallMessages: vi.fn().mockReturnValue([])
+}));
+
 import Portal from '#lib/portal.js';
+import { printPostInstallMessages } from '#lib/modules/postInstall.js';
 
 const spinner = makeSpinner();
 
@@ -161,5 +168,39 @@ describe('showModuleVersions — registry errors', () => {
     await expect(showModuleVersions(spinner, 'core')).rejects.toThrow(
       /Connection timed out/
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Post-install message re-display (cf. `brew info`)
+// ---------------------------------------------------------------------------
+
+describe('showModuleVersions — post-install message', () => {
+  test('re-surfaces the module post-install message after listing versions', async () => {
+    Portal.moduleVersions.mockResolvedValue([
+      { module: 'core', versions: { '2.0.0': {} } }
+    ]);
+
+    await showModuleVersions(spinner, 'core');
+
+    expect(printPostInstallMessages).toHaveBeenCalledTimes(1);
+    expect(printPostInstallMessages.mock.calls[0][0]).toEqual(['core']);
+  });
+
+  test('does not attempt to re-surface a message when the module has no versions', async () => {
+    Portal.moduleVersions.mockResolvedValue([
+      { module: 'empty-mod', versions: {} }
+    ]);
+
+    await showModuleVersions(spinner, 'empty-mod');
+
+    expect(printPostInstallMessages).not.toHaveBeenCalled();
+  });
+
+  test('does not attempt to re-surface a message when the module is not found', async () => {
+    Portal.moduleVersions.mockResolvedValue([]);
+
+    await expect(showModuleVersions(spinner, 'ghost')).rejects.toThrow();
+    expect(printPostInstallMessages).not.toHaveBeenCalled();
   });
 });

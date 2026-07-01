@@ -7,6 +7,7 @@ import { parseModuleArg } from '#lib/modules/parseModuleArg.js';
 import { makeGetVersions } from '#lib/modules/registry.js';
 import { frozenInstall } from '#lib/modules/orchestrator.js';
 import { downloadAllModules, modulesToDownload, modulesNotOnDisk } from '#lib/modules/downloadModule.js';
+import { printPostInstallMessages } from '#lib/modules/postInstall.js';
 import { mod, makeRegistry } from '#test/utils/moduleRegistry.js';
 import { withTmpDir } from '#test/utils/withTmpDir.js';
 import { makeSpinner } from '#test/utils/spinnerMock.js';
@@ -16,6 +17,12 @@ vi.mock('#lib/modules/downloadModule.js', () => ({
   downloadAllModules: vi.fn().mockResolvedValue(undefined),
   modulesToDownload: vi.fn().mockReturnValue({}),
   modulesNotOnDisk: vi.fn().mockReturnValue({})
+}));
+
+// Stubbed so we can assert which module names installModules forwards for
+// post-install notification, without touching the real filesystem-reading impl.
+vi.mock('#lib/modules/postInstall.js', () => ({
+  printPostInstallMessages: vi.fn().mockReturnValue([])
 }));
 
 // Mocked so that installModules tests that trigger the resolve path do not
@@ -532,5 +539,68 @@ describe('installModules — routing', () => {
 
     expect(spinner.start).toHaveBeenCalledWith('Resolving module dependencies');
     expect(spinner.succeed).not.toHaveBeenCalledWith('Using frozen lock file');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// installModules — post-install notification wiring
+//
+// installModules builds the notify list as [explicitName, ...downloaded] and
+// hands it to printPostInstallMessages (which de-dupes / filters internally —
+// covered in modulesPostInstall.test.js). These tests pin the wiring: which
+// names reach that call, and that --frozen suppresses it entirely.
+// ---------------------------------------------------------------------------
+
+describe('installModules — post-install notification', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('named install notifies the explicit module even when nothing is downloaded', async () => {
+    writeManifestForRouting({ dependencies: { core: '^2.0.0' } });
+    writeLock({ dependencies: { core: '2.0.0' }, devDependencies: {} });
+    modulesToDownload.mockReturnValue({}); // already on disk → no downloads
+    Portal.moduleVersions.mockResolvedValue([
+      { module: 'core', versions: { '2.0.0': { dependencies: {} } } }
+    ]);
+
+    await installModules(spinner, 'core', {});
+
+    expect(printPostInstallMessages).toHaveBeenCalledTimes(1);
+    expect(printPostInstallMessages.mock.calls[0][0]).toEqual(['core']);
+  });
+
+  test('notifies the explicit module plus every freshly downloaded module', async () => {
+    writeManifestForRouting({ dependencies: { core: '^2.0.0' } });
+    // core pulls in transitive dep 'helper'; both are fetched this run.
+    modulesToDownload.mockReturnValue({ core: '2.0.0', helper: '1.0.0' });
+    Portal.moduleVersions.mockResolvedValue([
+      { module: 'core', versions: { '2.0.0': { dependencies: { helper: '^1.0.0' } } } },
+      { module: 'helper', versions: { '1.0.0': { dependencies: {} } } }
+    ]);
+
+    await installModules(spinner, 'core', {});
+
+    // explicit name first, then downloaded keys; de-duplication is downstream.
+    expect(printPostInstallMessages.mock.calls[0][0]).toEqual(['core', 'core', 'helper']);
+  });
+
+  test('no-arg install notifies only the downloaded modules (no explicit name)', async () => {
+    writeManifestForRouting({ dependencies: { core: '^2.0.0' } });
+    modulesToDownload.mockReturnValue({ core: '2.0.0' });
+    Portal.moduleVersions.mockResolvedValue([
+      { module: 'core', versions: { '2.0.0': { dependencies: {} } } }
+    ]);
+
+    await installModules(spinner, undefined, {});
+
+    expect(printPostInstallMessages.mock.calls[0][0]).toEqual(['core']);
+  });
+
+  test('--frozen install prints no post-install messages (CI mode)', async () => {
+    writeManifestForRouting({ dependencies: { core: '^2.0.0' } });
+    writeLock({ dependencies: { core: '2.0.0' }, devDependencies: {} });
+
+    await installModules(spinner, undefined, { frozen: true });
+
+    expect(printPostInstallMessages).not.toHaveBeenCalled();
   });
 });

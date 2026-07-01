@@ -18,6 +18,7 @@ import { mod, makeRegistry } from '#test/utils/moduleRegistry.js';
 import { withTmpDir } from '#test/utils/withTmpDir.js';
 import { makeSpinner } from '#test/utils/spinnerMock.js';
 import { makeFileHelpers } from '#test/utils/fileHelpers.js';
+import { modulesToDownload, modulesNotOnDisk } from '#lib/modules/downloadModule.js';
 
 vi.mock('#lib/modules/downloadModule.js', () => ({
   downloadAllModules: vi.fn().mockResolvedValue(undefined),
@@ -306,5 +307,47 @@ describe('frozenInstall — constraint validation', () => {
     await expect(
       frozenInstall(spinner, { core: '^2.0.0' }, {})
     ).rejects.toThrow(/Run pos-cli modules install/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// `downloaded` field — names of modules actually fetched this run.
+// This is what install.js feeds to printPostInstallMessages, so the contents
+// (not just the presence of the key) matter.
+// ---------------------------------------------------------------------------
+
+describe('downloaded field', () => {
+  const { writeLock: writeDownloadedLock } = makeFileHelpers(getTmpDir);
+  beforeEach(() => vi.clearAllMocks());
+
+  test('resolve path reports the keys of modulesToDownload', async () => {
+    // No lock → resolve path. modulesToDownload decides what is actually fetched.
+    modulesToDownload.mockReturnValue({ core: '2.0.0', user: '5.0.0' });
+    const getVersions = makeRegistry(
+      mod('core', { '2.0.0': {} }),
+      mod('user', { '5.0.0': {} })
+    );
+
+    const result = await smartInstall(spinner, { core: '^2.0.0', user: '^5.0.0' }, {}, REGISTRY, getVersions);
+
+    expect(result.downloaded).toEqual(['core', 'user']);
+  });
+
+  test('resolve path reports [] when nothing needs downloading (all up to date)', async () => {
+    modulesToDownload.mockReturnValue({}); // everything already on disk at the right version
+    const getVersions = makeRegistry(mod('core', { '2.0.0': {} }));
+
+    const result = await smartInstall(spinner, { core: '^2.0.0' }, {}, REGISTRY, getVersions);
+
+    expect(result.downloaded).toEqual([]);
+  });
+
+  test('frozen path reports the keys of modulesNotOnDisk', async () => {
+    writeDownloadedLock({ dependencies: { core: '2.0.0' }, devDependencies: {} });
+    modulesNotOnDisk.mockReturnValueOnce({ core: '2.0.0' });
+
+    const result = await frozenInstall(spinner, { core: '^2.0.0' }, {});
+
+    expect(result.downloaded).toEqual(['core']);
   });
 });

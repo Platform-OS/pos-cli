@@ -10,7 +10,8 @@
 * **Per-module registry overrides** — declare a `registries` map in `pos-module.json` to resolve specific modules from a private or custom registry.
 * `pos-cli modules install --frozen` — CI-safe install. Uses the lock file as-is, performs no registry resolution, and fails fast if the lock file is missing or stale.
 * `pos-cli modules install --dev` / `pos-cli modules update --dev` — manage `devDependencies` independently from `dependencies`. `install <name> --dev` adds the module to `devDependencies`; without a name, `--dev` includes both sections in the resolution.
-* `pos-cli modules show <module-name>` — display all available versions of a module from the registry.
+* `pos-cli modules show <module-name>` — display all available versions of a module from the registry, and re-display the module's post-install message when it is installed locally.
+* **Module post-install messages** — modules can ship declarative setup instructions (a `postInstall.message` field in `pos-module.json`, or a `POST_INSTALL.md` file) that pos-cli prints after the module is downloaded, analogous to RubyGems' `post_install_message` / Homebrew's caveats. The text is **never executed** (no npm-style `postinstall` hook) and is sanitised before printing. Shown for modules downloaded during a run plus the explicitly named module; `--frozen` (CI) installs print nothing. See `bin/modules.md` for the authoring format.
 * `pos-cli modules uninstall <module-name>` — remove a module from `pos-module.json`, re-resolve the dependency tree, and clean up the `modules/` directory. Use `--dev` to remove from `devDependencies`.
 * `pos-cli modules build` — package the current module into a release archive without uploading.
 * `pos-cli modules migrate` — upgrade an existing project to the new manifest format. Runs two independent, idempotent phases:
