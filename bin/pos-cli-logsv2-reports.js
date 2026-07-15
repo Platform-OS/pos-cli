@@ -29,7 +29,7 @@ program
       const response = await client.searchSQLByQuery(report);
 
       if (!program.json)
-        search.printReport(response, report);
+        await search.printReport(response, report);
       else
         console.log(JSON.stringify(response));
 

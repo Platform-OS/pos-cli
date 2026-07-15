@@ -16,10 +16,10 @@ const confirmCleanup = async (autoConfirm, includeSchema, url) => {
   try {
     let schemaText = includeSchema ? 'and database schemas ' : '';
 
-    logger.Warn('');
-    logger.Warn(`WARNING!!! You are going to REMOVE your data ${schemaText}from instance: ${url}`);
-    logger.Warn('There is no coming back.');
-    logger.Warn('');
+    await logger.Warn('');
+    await logger.Warn(`WARNING!!! You are going to REMOVE your data ${schemaText}from instance: ${url}`);
+    await logger.Warn('There is no coming back.');
+    await logger.Warn('');
 
     const message = `If you still want to continue please type: '${confirmationText}' `;
     const response = await prompts({ type: 'text', name: 'confirmation', message: message });

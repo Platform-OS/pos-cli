@@ -113,7 +113,7 @@ const confirmInstallation = async (packageRoot, pkg, autoConfirm) => {
 
   const packageJsonPath = path.join(packageRoot, 'package.json');
 
-  const lines = ['\nGenerator dependencies need to be installed:'];
+  const lines = ['Generator dependencies need to be installed:'];
   lines.push(`  Package: ${pkg.name || 'unnamed'}`);
   lines.push(`  Location: ${packageJsonPath}`);
 
@@ -133,7 +133,7 @@ const confirmInstallation = async (packageRoot, pkg, autoConfirm) => {
 
   lines.push('');
 
-  console.log(lines.join('\n'));
+  await logger.Info(lines.join('\n'));
 
   try {
     const answer = await confirm({
