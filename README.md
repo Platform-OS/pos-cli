@@ -874,6 +874,25 @@ Example:
 
 pos-cli includes a built-in [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that exposes platformOS operations as tools for AI clients such as Claude, Cursor, and other MCP-compatible assistants. This lets AI agents deploy code, run GraphQL queries, manage data, execute migrations, and more — all directly against your platformOS instances.
 
+#### Quick setup: pos-cli ai init
+
+The fastest way to connect your AI tool is the one-step wizard:
+
+    pos-cli ai init
+
+It asks which AI tool you use and registers both platformOS MCP servers — `platformos` (the pos-cli tools listed below) and `platformos-supervisor` (Liquid/GraphQL/YAML code validation via `validate_code`) — in that tool's project-scoped configuration:
+
+| Tool        | Configuration file  | Key          |
+| ----------- | ------------------- | ------------ |
+| Claude Code | `.mcp.json`         | `mcpServers` |
+| Cursor      | `.cursor/mcp.json`  | `mcpServers` |
+| VS Code     | `.vscode/mcp.json`  | `servers`    |
+| Other       | prints the JSON snippet for manual setup | — |
+
+Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. To skip the prompt (e.g. in scripts), pass the tool directly:
+
+    pos-cli ai init --tool claude
+
 #### Starting the MCP Server
 
     pos-cli mcp
@@ -882,17 +901,30 @@ This starts both a **stdio transport** (for editor/AI integrations) and an **HTT
 
 #### Configuring Claude Code
 
-Add the following to your Claude Code settings (`.claude/settings.json`) to use pos-cli as an MCP server:
+Run `pos-cli ai init --tool claude` to generate this automatically, or add the following to a `.mcp.json` file at your project root:
 
 ```json
 {
   "mcpServers": {
     "platformos": {
       "command": "pos-cli-mcp"
+    },
+    "platformos-supervisor": {
+      "command": "pos-cli-supervisor"
     }
   }
 }
 ```
+
+Both commands are installed globally with pos-cli (`npm install -g @platformos/pos-cli`).
+
+#### Supervisor MCP server (pos-cli-supervisor)
+
+    pos-cli-supervisor [--project <dir>]
+
+Starts the [platformOS MCP supervisor](https://github.com/Platform-OS/platformos-tools/tree/master/packages/platformos-mcp-supervisor) — a stdio-only MCP server exposing a single `validate_code` tool that lets AI agents validate platformOS Liquid, GraphQL, and YAML files *before* writing them. It returns structured errors, warnings, proposed fixes, and a `must_fix_before_write` gate.
+
+The project directory is resolved from `--project`, then the `POS_SUPERVISOR_PROJECT_DIR` environment variable, then the current working directory (which is what MCP clients use when launched via `pos-cli ai init`). All logging goes to stderr — stdout is reserved for the MCP protocol.
 
 #### Available Tools
 

@@ -41,9 +41,11 @@
     "pOS"
   ],
   "dependencies": {
+    "@inquirer/prompts": "^8.3.0",
     "@platformos/platformos-check-node": "^0.0.19",
     "@platformos/platformos-common": "^0.0.17",
     "@platformos/platformos-language-server-node": "^0.0.19",
+    "@platformos/platformos-mcp-supervisor": "^0.0.1",
     "is-stream": "^4.0.1",
     "yazl": "^3.3.1",
     "async": "^3.2.6",
@@ -85,6 +87,8 @@
   "preferGlobal": true,
   "bin": {
     "pos-cli": "bin/pos-cli.js",
+    "pos-cli-ai": "bin/pos-cli-ai.js",
+    "pos-cli-ai-init": "bin/pos-cli-ai-init.js",
     "pos-cli-audit": "bin/pos-cli-audit.js",
     "pos-cli-check": "bin/pos-cli-check.js",
     "pos-cli-check-init": "bin/pos-cli-check-init.js",
@@ -105,6 +109,7 @@
     "pos-cli-mcp-config": "bin/pos-cli-mcp-config.js",
     "pos-cli-migrations": "bin/pos-cli-migrations.js",
     "pos-cli-modules": "bin/pos-cli-modules.js",
+    "pos-cli-supervisor": "bin/pos-cli-supervisor.js",
     "pos-cli-sync": "bin/pos-cli-sync.js",
     "pos-cli-test": "bin/pos-cli-test.js",
     "pos-cli-test-run": "bin/pos-cli-test-run.js"
