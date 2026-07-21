@@ -41,11 +41,11 @@
     "pOS"
   ],
   "dependencies": {
-    "@platformos/platformos-check-node": "^0.0.19",
-    "@platformos/platformos-common": "^0.0.17",
-    "@platformos/platformos-language-server-node": "^0.0.19",
-    "is-stream": "^4.0.1",
-    "yazl": "^3.3.1",
+    "@inquirer/prompts": "^8.3.0",
+    "@platformos/platformos-check-node": "^0.0.20",
+    "@platformos/platformos-common": "^0.0.18",
+    "@platformos/platformos-language-server-node": "^0.0.20",
+    "@platformos/platformos-mcp-supervisor": "^0.0.2",
     "async": "^3.2.6",
     "body-parser": "^2.2.2",
     "chalk": "^5.6.2",
@@ -58,6 +58,7 @@
     "fast-glob": "^3.3.3",
     "ignore": "^7.0.5",
     "inquirer": "^13.3.0",
+    "is-stream": "^4.0.1",
     "livereload": "^0.10.3",
     "lodash.clonedeep": "^4.5.0",
     "lodash.compact": "^3.0.1",
@@ -79,12 +80,15 @@
     "unzipper": "^0.12.3",
     "update-notifier": "^7.3.1",
     "yaml": "^2.8.2",
+    "yazl": "^3.3.1",
     "yeoman-environment": "^5.1.3",
     "yeoman-generator": "^7.5.1"
   },
   "preferGlobal": true,
   "bin": {
     "pos-cli": "bin/pos-cli.js",
+    "pos-cli-ai": "bin/pos-cli-ai.js",
+    "pos-cli-ai-init": "bin/pos-cli-ai-init.js",
     "pos-cli-audit": "bin/pos-cli-audit.js",
     "pos-cli-check": "bin/pos-cli-check.js",
     "pos-cli-check-init": "bin/pos-cli-check-init.js",
@@ -105,6 +109,7 @@
     "pos-cli-mcp-config": "bin/pos-cli-mcp-config.js",
     "pos-cli-migrations": "bin/pos-cli-migrations.js",
     "pos-cli-modules": "bin/pos-cli-modules.js",
+    "pos-cli-supervisor": "bin/pos-cli-supervisor.js",
     "pos-cli-sync": "bin/pos-cli-sync.js",
     "pos-cli-test": "bin/pos-cli-test.js",
     "pos-cli-test-run": "bin/pos-cli-test-run.js"

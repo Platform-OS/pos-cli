@@ -17,6 +17,7 @@ program.showHelpAfterError();
 program
   .name('pos-cli')
   .version(version, '-v, --version')
+  .command('ai', 'configure AI tools (register platformOS MCP servers)')
   .command('archive', 'create an archive only (no deployment)')
   .command('audit', 'check your code for deprecations, recommendations, errors')
   .command('check', 'check Liquid code quality with platformos-check linter')

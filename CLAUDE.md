@@ -59,6 +59,9 @@ pos-cli/
 │   ├── pos-cli-lsp.js           # Language Server Protocol server
 │   ├── pos-cli-mcp.js           # MCP server entry point
 │   ├── pos-cli-mcp-config.js    # Display MCP tool configuration
+│   ├── pos-cli-ai.js            # AI tools command group
+│   ├── pos-cli-ai-init.js       # Wizard: register MCP servers in AI tool config
+│   ├── pos-cli-supervisor.js    # platformos-mcp-supervisor wrapper (validate_code MCP server)
 │   └── pos-cli-fetch-logs.js    # Fetch logs as NDJSON (for scripting/MCP)
 ├── lib/              # Core business logic
 │   ├── proxy.js                 # Gateway class - main API client
@@ -70,6 +73,7 @@ pos-cli/
 │   ├── archive.js               # Deployment archive creation
 │   ├── push.js                  # Archive upload
 │   ├── check.js                 # Liquid/JSON linter (platformos-check)
+│   ├── ai.js                    # AI tool MCP config wizard (pos-cli ai init)
 │   ├── templates.js             # Mustache template processing
 │   ├── modules.js               # Module lifecycle management
 │   ├── deploy/                  # Deployment strategies
