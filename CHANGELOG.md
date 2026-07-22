@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.2.0 (2026-07-21)
+
+### New Features
+
+* `pos-cli ai init` — one-step wizard that registers pos-cli's MCP servers (`platformos` and `platformos-supervisor`) in your AI tool's project configuration. Supports Claude Code (`.mcp.json`), Cursor (`.cursor/mcp.json`), and VS Code (`.vscode/mcp.json`); prints a manual JSON snippet for other tools. Existing configuration files are merged, never overwritten, and re-running is a no-op. Pass `--tool <name>` to skip the interactive prompt.
+* `pos-cli-supervisor` — new MCP server binary exposing `validate_code` for Liquid/GraphQL/YAML validation, wrapping `@platformos/platformos-mcp-supervisor`.
+
+### Fixes
+
+* Logger output (`Warn`/`Info`/`Print`) is now properly awaited in `pos-cli data clean`, `pos-cli generate list`/`run`, `pos-cli logsv2 reports`, and the production-environment confirmation prompt, preventing messages from printing out of order.
+
 ## 6.1.0 (2026-07-01)
 
 ### New Features
