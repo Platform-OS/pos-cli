@@ -173,6 +173,35 @@ describe('Archive utilities', () => {
       expect(entries.some(e => e.includes('/assets/'))).toBe(false);
     });
 
+    test('includes the project\'s root pos-module.lock.json at the archive root', async () => {
+      process.chdir(path.join(fixturesPath, 'modules_root_lock'));
+      const { makeArchive } = await import('#lib/archive.js');
+      const zipPath = path.join(tmpDir, 'release.zip');
+
+      await makeArchive({ TARGET: zipPath }, { withoutAssets: true });
+
+      const entries = await listZipEntries(zipPath);
+      expect(entries).toContain('pos-module.lock.json');
+
+      const content = JSON.parse(await readZipEntry(zipPath, 'pos-module.lock.json'));
+      expect(content.dependencies).toEqual({ core: '2.1.9' });
+    });
+
+    test('falls back to merging nested modules/<name>/pos-module.lock.json files when there is no root lock', async () => {
+      process.chdir(path.join(fixturesPath, 'modules_nested_lock'));
+      const { makeArchive } = await import('#lib/archive.js');
+      const zipPath = path.join(tmpDir, 'release.zip');
+
+      await makeArchive({ TARGET: zipPath }, { withoutAssets: true });
+
+      const entries = await listZipEntries(zipPath);
+      expect(entries).toContain('pos-module.lock.json');
+      expect(entries.some(e => e === 'modules/mod1/pos-module.lock.json')).toBe(false);
+
+      const content = JSON.parse(await readZipEntry(zipPath, 'pos-module.lock.json'));
+      expect(content.dependencies).toEqual({ core: '2.1.9', user: '5.2.11' });
+    });
+
     test('only includes module files under public/ or private/, not sibling directories', async () => {
       // fixture has testModule/generators/crud.js and testModule/react-app/node_modules/.../page.png
       // alongside testModule/public/ — neither should appear in the archive

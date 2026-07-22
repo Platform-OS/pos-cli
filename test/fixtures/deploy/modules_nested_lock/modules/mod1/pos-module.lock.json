@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "core": "2.1.9",
+    "user": "5.2.11"
+  },
+  "devDependencies": {},
+  "registries": {
+    "core": "https://partners.platformos.com",
+    "user": "https://partners.platformos.com"
+  }
+}
