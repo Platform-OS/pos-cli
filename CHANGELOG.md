@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.2.2 (2026-07-22)
+
+### New Features
+
+* `pos-cli modules push` now includes `pos-module.lock.json` in the release archive (alongside `pos-module.json`, `template-values.json`, and `README.md`) when the module has one.
+* `pos-cli deploy` now embeds a resolved `pos-module.lock.json` at the root of the deploy archive — using the project's own lock file when present, or merging any `modules/<name>/pos-module.lock.json` files found on disk otherwise (e.g. a module dropped into a bare `modules/` directory with no root manifest) — so the instance can see the full module dependency tree.
+
 ## 6.2.1 (2026-07-22)
 
 ### Fixes
