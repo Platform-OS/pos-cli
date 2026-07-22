@@ -1,7 +1,13 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { modulesToDownload, downloadModule, downloadAllModules } from '#lib/modules/downloadModule.js';
+import {
+  modulesToDownload,
+  modulesNotOnDisk,
+  readInstalledVersion,
+  downloadModule,
+  downloadAllModules,
+} from '#lib/modules/downloadModule.js';
 import { withTmpDir } from '#test/utils/withTmpDir.js';
 
 vi.mock('#lib/portal.js', () => ({
@@ -16,8 +22,94 @@ vi.mock('#lib/unzip.js', () => ({
   unzip: vi.fn()
 }));
 
-// modulesToDownload checks process.cwd()/modules/<name> for directory existence.
-// Tests use a temporary directory to control what's "on disk" without side effects.
+// Simulates a previously-downloaded module by writing its manifest with a
+// `version` field, mirroring what unzip actually leaves on disk. Defaults to
+// pos-module.json (the current convention); pass file: 'template-values.json'
+// to simulate a legacy-format module (version only in template-values.json,
+// no pos-module.json at all — how many currently-published registry modules,
+// e.g. real "core" releases, are actually laid out on disk today).
+const writeInstalledManifest = (name, version, { file = 'pos-module.json', extra = {} } = {}) => {
+  const dir = path.join(process.cwd(), 'modules', name);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, file), JSON.stringify({ machine_name: name, version, ...extra }, null, 2));
+};
+
+const installModuleOnDisk = (name, version, extra) => writeInstalledManifest(name, version, { extra });
+const installLegacyModuleOnDisk = (name, version, extra) =>
+  writeInstalledManifest(name, version, { file: 'template-values.json', extra });
+
+// readInstalledVersion reads modules/<name>/pos-module.json's `version` field,
+// falling back to modules/<name>/template-values.json for legacy modules.
+describe('readInstalledVersion', () => {
+  withTmpDir();
+
+  test('returns null when the module directory does not exist', () => {
+    expect(readInstalledVersion('core')).toBeNull();
+  });
+
+  test('returns null when the directory exists but neither manifest file is present', () => {
+    fs.mkdirSync(path.join(process.cwd(), 'modules', 'core'), { recursive: true });
+    expect(readInstalledVersion('core')).toBeNull();
+  });
+
+  test('returns null when pos-module.json exists but is not valid JSON, and no fallback exists', () => {
+    fs.mkdirSync(path.join(process.cwd(), 'modules', 'core'), { recursive: true });
+    fs.writeFileSync(path.join(process.cwd(), 'modules', 'core', 'pos-module.json'), '{ not json');
+    expect(readInstalledVersion('core')).toBeNull();
+  });
+
+  test('returns null when pos-module.json has no version field and no fallback exists', () => {
+    installModuleOnDisk('core', undefined);
+    // installModuleOnDisk writes version: undefined, which JSON.stringify drops entirely
+    expect(readInstalledVersion('core')).toBeNull();
+  });
+
+  test('returns the version recorded in pos-module.json', () => {
+    installModuleOnDisk('core', '2.0.6');
+    expect(readInstalledVersion('core')).toBe('2.0.6');
+  });
+
+  // Regression test: real published modules on the registry (e.g. core@1.5.5)
+  // predate the pos-module.json convention and only ship template-values.json.
+  test('falls back to template-values.json when pos-module.json does not exist', () => {
+    installLegacyModuleOnDisk('core', '1.5.5');
+    expect(readInstalledVersion('core')).toBe('1.5.5');
+  });
+
+  test('falls back to template-values.json when pos-module.json has no version field', () => {
+    const dir = path.join(process.cwd(), 'modules', 'core');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'pos-module.json'), JSON.stringify({ machine_name: 'core' }));
+    fs.writeFileSync(path.join(dir, 'template-values.json'), JSON.stringify({ version: '1.5.5' }));
+    expect(readInstalledVersion('core')).toBe('1.5.5');
+  });
+
+  test('prefers pos-module.json version over template-values.json when both are present', () => {
+    installModuleOnDisk('core', '2.0.6');
+    fs.writeFileSync(
+      path.join(process.cwd(), 'modules', 'core', 'template-values.json'),
+      JSON.stringify({ version: '1.5.5' })
+    );
+    expect(readInstalledVersion('core')).toBe('2.0.6');
+  });
+
+  test('returns null when template-values.json exists but is not valid JSON', () => {
+    const dir = path.join(process.cwd(), 'modules', 'core');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'template-values.json'), '{ not json');
+    expect(readInstalledVersion('core')).toBeNull();
+  });
+
+  test('returns null when template-values.json exists but has no version field', () => {
+    const dir = path.join(process.cwd(), 'modules', 'core');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'template-values.json'), JSON.stringify({ machine_name: 'core' }));
+    expect(readInstalledVersion('core')).toBeNull();
+  });
+});
+
+// modulesToDownload checks the installed version of each module on disk against
+// the newly resolved version, not just directory existence.
 describe('modulesToDownload', () => {
   withTmpDir();
 
@@ -31,6 +123,7 @@ describe('modulesToDownload', () => {
   });
 
   test('includes a module when its version changed', () => {
+    installModuleOnDisk('core', '2.0.6');
     const result = modulesToDownload({ core: '2.0.7' }, { core: '2.0.6' });
     expect(result).toEqual({ core: '2.0.7' });
   });
@@ -41,41 +134,111 @@ describe('modulesToDownload', () => {
     expect(result).toEqual({ core: '2.0.6' });
   });
 
-  test('skips a module when version matches and directory exists on disk', () => {
-    fs.mkdirSync(path.join(process.cwd(), 'modules', 'core'), { recursive: true });
+  test('skips a module when version matches and the installed module is at that version', () => {
+    installModuleOnDisk('core', '2.0.6');
 
     const result = modulesToDownload({ core: '2.0.6' }, { core: '2.0.6' });
     expect(result).toEqual({});
   });
 
-  test('handles a mix: skips up-to-date, includes changed or missing', () => {
-    // core: up-to-date and on disk → skip
-    // user: version bumped → download
-    // tests: version matches but directory missing → download
-    fs.mkdirSync(path.join(process.cwd(), 'modules', 'core'), { recursive: true });
+  // Regression test for the bug where `pos-cli modules install` silently did nothing
+  // even though a module's lock version had moved on: the module directory existed
+  // (from an older install) but its content was still at the old version.
+  test('includes a module when the lock version is unchanged but the on-disk module is stale', () => {
+    installModuleOnDisk('chat', '1.3.4');
 
-    const locked   = { core: '2.0.6', user: '5.1.3', tests: '1.2.0' };
-    const previous = { core: '2.0.6', user: '5.1.2', tests: '1.2.0' };
+    const result = modulesToDownload({ chat: '2.0.2' }, { chat: '2.0.2' });
+    expect(result).toEqual({ chat: '2.0.2' });
+  });
+
+  test('handles a mix: skips up-to-date, includes changed, missing, or stale', () => {
+    // core: up-to-date and installed at the right version → skip
+    // user: version bumped → download
+    // tests: lock version matches but directory missing → download
+    // chat: lock version matches but installed version is stale → download
+    installModuleOnDisk('core', '2.0.6');
+    installModuleOnDisk('chat', '1.3.4');
+
+    const locked   = { core: '2.0.6', user: '5.1.3', tests: '1.2.0', chat: '2.0.2' };
+    const previous = { core: '2.0.6', user: '5.1.2', tests: '1.2.0', chat: '2.0.2' };
 
     const result = modulesToDownload(locked, previous);
-    expect(result).toEqual({ user: '5.1.3', tests: '1.2.0' });
+    expect(result).toEqual({ user: '5.1.3', tests: '1.2.0', chat: '2.0.2' });
   });
 
   test('includes all modules when previous lock is empty (first install)', () => {
-    fs.mkdirSync(path.join(process.cwd(), 'modules', 'core'), { recursive: true });
+    installModuleOnDisk('core', '2.0.6');
 
-    // Even though core directory exists, no previous lock → treat as fresh install
+    // Even though core is installed at the target version, no previous lock → treat as fresh install
     const result = modulesToDownload({ core: '2.0.6', user: '5.1.2' }, {});
     expect(result).toEqual({ core: '2.0.6', user: '5.1.2' });
   });
 
-  test('skips all modules when every version matches and every directory exists', () => {
-    fs.mkdirSync(path.join(process.cwd(), 'modules', 'core'), { recursive: true });
-    fs.mkdirSync(path.join(process.cwd(), 'modules', 'user'), { recursive: true });
+  test('skips all modules when every version matches and every module is installed correctly', () => {
+    installModuleOnDisk('core', '2.0.6');
+    installModuleOnDisk('user', '5.1.2');
 
     const modules = { core: '2.0.6', user: '5.1.2' };
     const result = modulesToDownload(modules, modules);
     expect(result).toEqual({});
+  });
+
+  // Regression test: a transitive dependency already on disk in the legacy
+  // template-values.json-only format (as real published modules like core are
+  // laid out today) must be recognized as installed and skipped, not re-downloaded.
+  test('skips a legacy-format module (version only in template-values.json) at the target version', () => {
+    installLegacyModuleOnDisk('core', '1.5.5');
+
+    const result = modulesToDownload({ core: '1.5.5' }, { core: '1.5.5' });
+    expect(result).toEqual({});
+  });
+});
+
+// modulesNotOnDisk checks the installed version of each module against the target
+// version — used by frozenInstall (--frozen CI, and smartInstall's fast path) where
+// there is no previous lock to diff against, only the current disk state.
+describe('modulesNotOnDisk', () => {
+  withTmpDir();
+
+  test('returns empty object when the module set is empty', () => {
+    expect(modulesNotOnDisk({})).toEqual({});
+  });
+
+  test('includes a module missing from disk entirely', () => {
+    const result = modulesNotOnDisk({ core: '2.0.6' });
+    expect(result).toEqual({ core: '2.0.6' });
+  });
+
+  test('skips a module installed at the target version', () => {
+    installModuleOnDisk('core', '2.0.6');
+    expect(modulesNotOnDisk({ core: '2.0.6' })).toEqual({});
+  });
+
+  // Regression test for the reported bug: modules/chat existed on disk at 1.3.4
+  // while pos-module.lock.json recorded 2.0.2 — `pos-cli modules install` must
+  // still redownload it instead of treating "directory exists" as "up to date".
+  test('includes a module whose installed version does not match the target version', () => {
+    installModuleOnDisk('chat', '1.3.4');
+
+    const result = modulesNotOnDisk({ chat: '2.0.2' });
+    expect(result).toEqual({ chat: '2.0.2' });
+  });
+
+  test('handles a mix of up-to-date, stale, and missing modules', () => {
+    installModuleOnDisk('core', '2.0.6');
+    installModuleOnDisk('chat', '1.3.4');
+
+    const result = modulesNotOnDisk({ core: '2.0.6', chat: '2.0.2', user: '5.1.2' });
+    expect(result).toEqual({ chat: '2.0.2', user: '5.1.2' });
+  });
+
+  // Regression test mirroring the real integration scenario: a transitive dep
+  // (core) already installed in the legacy template-values.json-only format
+  // must be recognized as up-to-date under --frozen / smartInstall's fast path.
+  test('skips a legacy-format module (version only in template-values.json) at the target version', () => {
+    installLegacyModuleOnDisk('core', '1.5.5');
+
+    expect(modulesNotOnDisk({ core: '1.5.5' })).toEqual({});
   });
 });
 

@@ -8,12 +8,12 @@
     "#test/*": "./test/*"
   },
   "scripts": {
-    "pretest": "npm install --prefix test/fixtures/yeoman --silent",
+    "pretest": "npm install --prefix test/fixtures/yeoman --silent && npm install --prefix test/fixtures/yeoman/custom --silent",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:coverage:watch": "vitest --coverage",
-    "pretest:unit": "npm install --prefix test/fixtures/yeoman --silent",
+    "pretest:unit": "npm install --prefix test/fixtures/yeoman --silent && npm install --prefix test/fixtures/yeoman/custom --silent",
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
     "test:mcp-min": "vitest run mcp-min/__tests__",
