@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.2.1 (2026-07-22)
+
+### Fixes
+
+* `pos-cli modules install`/`update` (and `--frozen`) now redownload a module whose on-disk content is stale, instead of only checking whether its directory exists. The installed version is read from `modules/<name>/pos-module.json`, falling back to `modules/<name>/template-values.json` for modules published before the `pos-module.json` convention existed.
+
 ## 6.2.0 (2026-07-21)
 
 ### New Features
