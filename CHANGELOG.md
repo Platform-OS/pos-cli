@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+* `pos-cli dns` — new command group for migrating an instance's custom domains and DNS records between Partner Portal deployments (e.g. from `partners.platformos.com` to a private-stack portal). `dns export` snapshots all domains/records to a versioned JSON backup; `dns migrate <sourceEnv> <targetEnv>` copies them portal-to-portal (dry-run support, destructive-change guard, always writes a backup first, source portal is read-only) and prints per-domain cutover instructions (registrar nameservers for `domain-full`, SSL validation records + CNAME/A targets for `domain-external`); `dns import --file` applies a saved export; `dns compare` verifies parity between the two sides and exits non-zero on real differences while filtering expected cross-stack noise. Bulk cohort support via `--instances-file`/`--mapping-file`.
+
 ## 6.2.3 (2026-07-23)
 
 ### Fixes
