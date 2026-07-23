@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.2.3 (2026-07-23)
+
+### Fixes
+
+* `pos-cli deploy` now also includes each module's own `modules/<name>/pos-module.json` manifest in the deploy archive (still excluding the rest of a module's authoring content — generators/, package.json, template-values.json, README, etc.). This lets the instance tell "module has no files in this deploy" apart from "module's files are present but stale versus the lock file" and warn accordingly, instead of silently deploying outdated module content when `pos-cli modules install` wasn't rerun after pulling a bumped lock file.
+
+### Security
+
+* Bumped `yeoman-environment` from `^5.1.3` to `^6.1.0`, fixing a high-severity arbitrary package installation vulnerability ([GHSA-vv9j-gjw2-j8wp](https://github.com/advisories/GHSA-vv9j-gjw2-j8wp)).
+* Replaced the unmaintained `node-notifier` (last published 2022, still on vulnerable `uuid@^8.3.2`) with `toasted-notifier`, an actively maintained fork with the same `.notify()` API, fixing a moderate-severity buffer bounds check issue in `uuid` ([GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq)).
+
 ## 6.2.2 (2026-07-22)
 
 ### New Features

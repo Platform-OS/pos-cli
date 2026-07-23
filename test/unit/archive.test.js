@@ -202,9 +202,10 @@ describe('Archive utilities', () => {
       expect(content.dependencies).toEqual({ core: '2.1.9', user: '5.2.11' });
     });
 
-    test('only includes module files under public/ or private/, not sibling directories', async () => {
+    test('only includes module files under public/, private/, or its own pos-module.json, not sibling directories', async () => {
       // fixture has testModule/generators/crud.js and testModule/react-app/node_modules/.../page.png
-      // alongside testModule/public/ — neither should appear in the archive
+      // alongside testModule/public/ and testModule/pos-module.json — only the latter two should
+      // appear in the archive
       process.chdir(path.join(fixturesPath, 'correct'));
       const { makeArchive } = await import('#lib/archive.js');
       const zipPath = path.join(tmpDir, 'release.zip');
@@ -215,6 +216,30 @@ describe('Archive utilities', () => {
       expect(entries.some(e => e.includes('generators'))).toBe(false);
       expect(entries.some(e => e.includes('node_modules'))).toBe(false);
       expect(entries.some(e => e.includes('hello-test-module.liquid'))).toBe(true);
+    });
+
+    test('includes a module\'s own pos-module.json manifest, untemplated, at modules/<name>/pos-module.json', async () => {
+      process.chdir(path.join(fixturesPath, 'correct'));
+      const { makeArchive } = await import('#lib/archive.js');
+      const zipPath = path.join(tmpDir, 'release.zip');
+
+      await makeArchive({ TARGET: zipPath }, { withoutAssets: false });
+
+      const entries = await listZipEntries(zipPath);
+      expect(entries).toContain('modules/testModule/pos-module.json');
+
+      const content = JSON.parse(await readZipEntry(zipPath, 'modules/testModule/pos-module.json'));
+      expect(content).toEqual({ name: 'TestModule', machine_name: 'testModule', version: '1.0.0' });
+    });
+
+    test('does not fail when a module has no pos-module.json', async () => {
+      process.chdir(path.join(fixturesPath, 'modules_root_lock'));
+      const { makeArchive } = await import('#lib/archive.js');
+      const zipPath = path.join(tmpDir, 'release.zip');
+
+      const count = await makeArchive({ TARGET: zipPath }, { withoutAssets: true });
+
+      expect(count).toBeGreaterThan(0);
     });
   });
 

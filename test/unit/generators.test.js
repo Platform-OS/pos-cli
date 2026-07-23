@@ -645,7 +645,7 @@ describe('pos-cli generate command', () => {
       // Verify dependencies were installed
       const installed = await fileExists(nodeModulesPath);
       expect(installed).toBe(true);
-    });
+    }, 20000);
   });
 
   describe('error handling and validation', () => {
