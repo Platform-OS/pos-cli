@@ -11,20 +11,7 @@ import { applyPlans } from '../lib/dns/apply.js';
 import { renderPlans, renderSummary, renderResults } from '../lib/dns/plan.js';
 import { renderCutovers } from '../lib/dns/cutover.js';
 import { confirmApply } from '../lib/dns/guard.js';
-
-const collect = (value, previous) => previous.concat([value]);
-
-const filterByDomains = (plans, domains) => {
-  if (!domains.length) return plans;
-  const wanted = new Set(domains.map(domain => domain.toLowerCase()));
-  return plans.filter(plan => wanted.has((plan.domainName || '').toLowerCase()));
-};
-
-const exitCodeFor = (results) => {
-  if (results.some(result => ['error', 'invalid', 'apply-failed'].includes(result.status))) return 1;
-  if (results.some(result => result.status === 'blocked-destructive')) return 3;
-  return 0;
-};
+import { collect, filterByDomains, exitCodeFor } from '../lib/dns/cliHelpers.js';
 
 program.showHelpAfterError();
 program
@@ -81,7 +68,7 @@ program
         process.exit(2);
       }
 
-      if (!(await confirmApply({ yes: !!params.yes, target: context.portalUrl }))) {
+      if (!(await confirmApply({ yes: !!params.yes, json: !!params.json, target: context.portalUrl }))) {
         await logger.Info('Aborted — nothing was applied.', { hideTimestamp: true });
         process.exit(0);
       }

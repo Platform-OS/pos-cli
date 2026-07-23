@@ -110,6 +110,15 @@ describe('applyPlans', () => {
     expect(nock.pendingMocks()).toEqual([]);
   });
 
+  test('a response without the locked field still settles (TASK-1.15 tolerance)', async () => {
+    nock(PORTAL).post('/api/domains').reply(200, { data: { status: 'initializing' } });
+    nock(PORTAL).get('/api/domains/a.test').query(true)
+      .reply(200, { status: 'ready' });
+
+    const { results } = await applyPlans({ client, plans: [plan('a.test')], ...fastOpts });
+    expect(results[0]).toMatchObject({ status: 'applied', finalStatus: 'ready', stillProcessing: false });
+  });
+
   test('wait: false skips polling', async () => {
     nock(PORTAL).post('/api/domains').reply(200, { data: { status: 'initializing' } });
 

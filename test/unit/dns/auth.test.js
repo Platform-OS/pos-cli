@@ -80,6 +80,21 @@ describe('resolvePortalContext', () => {
     expect(context.client.token).toEqual('flag-token');
   });
 
+  test('ambient PARTNER_PORTAL_HOST is ignored — dns commands never resolve portals from a process-global (TASK-1.14)', async () => {
+    process.env.PARTNER_PORTAL_HOST = 'https://ambient.portal.test';
+    mockSettings.mockReturnValue({ url: INSTANCE_URL, token: 't' });
+    nock('https://partners.platformos.com').get('/api/instances').reply(200, { data: [] });
+
+    const context = await resolvePortalContext('staging', { instanceUuid: UUID, label: 'source', readOnly: true });
+    expect(context.portalUrl).toEqual('https://partners.platformos.com');
+  });
+
+  test('a scheme-less portal url produces an actionable error (TASK-1.14)', async () => {
+    mockSettings.mockReturnValue({ url: INSTANCE_URL, token: 't', partner_portal_url: 'portal.example.com' });
+    await expect(resolvePortalContext('staging', { instanceUuid: UUID, label: 'source', readOnly: true }))
+      .rejects.toThrow(/include the scheme.*https:\/\/portal\.example\.com/s);
+  });
+
   test('errors when the environment is missing from .pos', async () => {
     mockSettings.mockReturnValue(undefined);
     await expect(resolvePortalContext('nope', { label: 'source' }))

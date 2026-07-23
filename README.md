@@ -734,7 +734,13 @@ Verify DNS parity between the two sides — exits non-zero when a domain differs
     pos-cli dns compare [sourceEnv] [targetEnv] --ignore-status    # before cutover
     pos-cli dns compare --source-file before.json --target-file after.json   # offline
 
+If the migration dropped records with `--drop-value`, pass the same patterns to `compare` so those records are excluded from the parity check instead of reporting as missing forever.
+
 The intended sequence is: `migrate` → complete the cutover steps → refresh validation from the target portal → `compare` comes back clean.
+
+#### Exit codes
+
+`import` and `migrate` (single and bulk modes alike): `0` success, `1` apply errors, `2` transform errors, `3` only destructive-blocked domains remain. `compare`: `0` parity, `1` any CRITICAL or missing domain. Dry-runs exit `0` (or `2` when the plan contains transform errors).
 
 ### Data
 

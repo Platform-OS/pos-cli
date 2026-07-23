@@ -44,6 +44,14 @@ describe('confirmApply', () => {
       .rejects.toThrow('--yes');
   });
 
+  test('--json without --yes refuses even interactively — never a blind confirmation (TASK-1.12)', async () => {
+    await expect(confirmApply({ json: true, interactive: true, target: 'x' }))
+      .rejects.toThrow(/--json.*--yes/s);
+    expect(mockPrompts).not.toHaveBeenCalled();
+
+    await expect(confirmApply({ json: true, yes: true, interactive: true, target: 'x' })).resolves.toBe(true);
+  });
+
   test('interactive prompt result decides', async () => {
     mockPrompts.mockResolvedValueOnce({ confirmed: true });
     await expect(confirmApply({ interactive: true, target: 'https://portal.test' })).resolves.toBe(true);

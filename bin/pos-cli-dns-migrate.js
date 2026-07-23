@@ -15,33 +15,11 @@ import { renderPlans, renderSummary, renderResults } from '../lib/dns/plan.js';
 import { renderCutovers } from '../lib/dns/cutover.js';
 import { parseInstancesFile, parseMappingFile, matchByDomain } from '../lib/dns/mapping.js';
 import { confirmApply } from '../lib/dns/guard.js';
-
-const collect = (value, previous) => previous.concat([value]);
-
-const timestamp = () => new Date().toISOString().replace(/[:.]/g, '-');
-
-const backupPathFor = (backup, instanceUuid) => {
-  // commander sets backup === true when neither --backup <path> nor --no-backup is passed
-  if (!backup || backup === true) return `dns-export-${instanceUuid}-${timestamp()}.json`;
-  if (fs.existsSync(backup) && fs.statSync(backup).isDirectory()) return path.join(backup, `${instanceUuid}.json`);
-  return backup;
-};
-
-const filterByDomains = (plans, domains) => {
-  if (!domains.length) return plans;
-  const wanted = new Set(domains.map(domain => domain.toLowerCase()));
-  return plans.filter(plan => wanted.has((plan.domainName || '').toLowerCase()));
-};
-
-const exitCodeFor = (results) => {
-  if (results.some(result => ['error', 'invalid', 'apply-failed'].includes(result.status))) return 1;
-  if (results.some(result => result.status === 'blocked-destructive')) return 3;
-  return 0;
-};
+import { collect, filterByDomains, backupPathFor, exitCodeFor, exitCodeForOutcomes } from '../lib/dns/cliHelpers.js';
 
 // Export -> backup -> transform -> confirm -> (apply -> cutover) for one source/target
 // instance pair. `confirm` is called after the plan is displayed; returning false aborts.
-const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, params, spinner, label, confirm }) => {
+const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, params, spinner, label, confirm, bulk = false }) => {
   spinner.start(`${label}: exporting from ${source.portalUrl}`);
   const { envelope } = await exportInstance({
     client: source.client,
@@ -52,7 +30,7 @@ const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, 
   spinner.stop();
 
   if (params.backup !== false) {
-    const outPath = backupPathFor(params.backup, sourceUuid);
+    const outPath = backupPathFor(params.backup, sourceUuid, { bulk });
     fs.mkdirSync(path.dirname(path.resolve(outPath)), { recursive: true });
     fs.writeFileSync(outPath, JSON.stringify(envelope, null, 2));
     await logger.Info(`${label}: source export backed up to ${outPath}`, { hideTimestamp: true });
@@ -185,10 +163,10 @@ program
           params,
           spinner,
           label: source.instanceUuid,
-          confirm: () => confirmApply({ yes: !!params.yes, target: target.portalUrl })
+          confirm: () => confirmApply({ yes: !!params.yes, json: !!params.json, target: target.portalUrl })
         });
         if (params.json) console.log(JSON.stringify({ plans: outcome.plans, results: outcome.results, target_domains: outcome.targetStatuses }, null, 2));
-        process.exit(outcome.hasErrors ? 2 : exitCodeFor(outcome.results));
+        process.exit(exitCodeForOutcomes([outcome]));
       }
 
       // Bulk cohort mode
@@ -212,7 +190,7 @@ program
 
       // Bulk applies to many instances — confirm once for the whole cohort upfront
       // (per-pair plans still print as the loop progresses; preview with --dry-run first).
-      if (!params.dryRun && !(await confirmApply({ yes: !!params.yes, target: `${pairs.length} instance(s) on ${target.portalUrl}` }))) {
+      if (!params.dryRun && !(await confirmApply({ yes: !!params.yes, json: !!params.json, target: `${pairs.length} instance(s) on ${target.portalUrl}` }))) {
         await logger.Info('Aborted — nothing was applied.', { hideTimestamp: true });
         process.exit(0);
       }
@@ -233,7 +211,8 @@ program
             sourceEnv,
             params,
             spinner,
-            label: pair.label
+            label: pair.label,
+            bulk: true
           }));
         } catch (error) {
           spinner.stop();
@@ -242,15 +221,14 @@ program
         }
       }
 
-      const allResults = outcomes.flatMap(outcome => outcome.results);
       if (params.json) {
         console.log(JSON.stringify({ outcomes: outcomes.map(({ label, plans, results }) => ({ label, plans, results })) }, null, 2));
       } else {
         const header = ['  instance', 'domains', 'applied', 'blocked', 'errors'];
         await logger.Info(`\n${table([header, ...outcomes.map(bulkSummaryRow)])}`, { hideTimestamp: true });
       }
-      const anyTransformErrors = outcomes.some(outcome => outcome.hasErrors);
-      process.exit(anyTransformErrors ? 1 : exitCodeFor(allResults));
+      // Same condition -> same exit code as single-pair mode (TASK-1.13)
+      process.exit(exitCodeForOutcomes(outcomes));
     } catch (error) {
       spinner.stop();
       logger.Error(error.message || error);

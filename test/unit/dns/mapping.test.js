@@ -99,6 +99,14 @@ describe('matchByDomain', () => {
       .rejects.toThrow('matched multiple target instances');
   });
 
+  test('a failed target lookup is reported as a lookup failure, not as "no match" (TASK-1.14)', async () => {
+    sourceDomains([domainEntry('a.com')]);
+    nock(TARGET).get('/api/instances/search').query(true).reply(503, { errors: ['upstream down'] });
+
+    await expect(matchByDomain({ sourceClient, targetClient, sourceUuid: 's-1' }))
+      .rejects.toThrow(/instance lookup for a\.com .* failed/);
+  });
+
   test('errors when nothing matches or no customer domains exist', async () => {
     sourceDomains([domainEntry('a.com')]);
     nock(TARGET).get('/api/instances/search').query(true).reply(200, { data: [] });

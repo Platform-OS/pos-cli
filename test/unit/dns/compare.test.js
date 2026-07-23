@@ -89,6 +89,20 @@ describe('compareInstance (cross-stack default)', () => {
     ))['example.com']).toEqual('OK');
   });
 
+  test('--drop-value patterns exclude intentionally dropped records from the comparison (TASK-1.11)', () => {
+    const source = [makeDomain('example.com', {
+      records: [record(), record({ name: 'london', type: 'CNAME', records: ['lb.eu-west-2.elb.amazonaws.com'] })]
+    })];
+    const target = [makeDomain('example.com', { records: [record()] })];
+
+    // Without the pattern the dropped record reports as missing on target
+    expect(levelsByDomain(compareInstance(source, target))['example.com']).toEqual('CRITICAL');
+
+    // With the same pattern the migration used, compare comes back clean
+    const outcome = compareInstance(source, target, { dropValuePatterns: [/elb\.amazonaws\.com/i] });
+    expect(levelsByDomain(outcome)['example.com']).toEqual('OK');
+  });
+
   test('live details noise (TXT quoting, hostname case, value order) is not drift', () => {
     const source = [makeDomain('example.com', {
       details: {

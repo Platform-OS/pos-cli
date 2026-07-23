@@ -68,7 +68,7 @@ program
           fs.mkdirSync(path.dirname(path.resolve(outPath)), { recursive: true });
           fs.writeFileSync(outPath, JSON.stringify(envelope, null, 2));
 
-          spinner.stopAndPersist().succeed(
+          spinner.succeed(
             `Exported ${envelope.domains.length} domain entr${envelope.domains.length === 1 ? 'y' : 'ies'} ` +
             `(${names.join(', ') || 'none provisioned'}) from ${context.portalUrl} to ${outPath}`
           );

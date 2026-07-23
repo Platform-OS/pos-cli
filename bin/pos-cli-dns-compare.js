@@ -10,8 +10,7 @@ import { fetchDomains } from '../lib/dns/export.js';
 import { validateEnvelope } from '../lib/dns/exportSchema.js';
 import { compareInstance } from '../lib/dns/compare.js';
 import { parseMappingFile } from '../lib/dns/mapping.js';
-
-const collect = (value, previous) => previous.concat([value]);
+import { collect } from '../lib/dns/cliHelpers.js';
 
 const LEVEL_COLORS = {
   OK: chalk.green,
@@ -49,6 +48,7 @@ program
   .option('--target-file <path>', 'compare against an export file instead of the live target portal')
   .option('--mapping-file <path>', 'bulk: CSV source_uuid,target_uuid[,label] or JSON array of pairs')
   .option('--domain <name>', 'only compare this domain (repeatable)', collect, [])
+  .option('--drop-value <regex>', 'ignore records whose value matches this pattern — use the same patterns the migration dropped (repeatable)', collect, [])
   .option('--raw', 'exact same-stack semantics: no transform, include data_center/nameserver/DCV-value differences')
   .option('--ignore-status', 'downgrade status mismatches to advisory (useful before cutover)')
   .option('--source-portal-url <url>').option('--source-token <token>').option('--source-email <email>').option('--source-instance-uuid <uuid>')
@@ -77,7 +77,8 @@ program
             ]);
             const outcome = compareInstance(sourceSide.domains, targetSide.domains, {
               transform: !params.raw,
-              ignoreStatus: !!params.ignoreStatus
+              ignoreStatus: !!params.ignoreStatus,
+              dropValuePatterns: params.dropValue.map(pattern => new RegExp(pattern, 'i'))
             });
             perInstance.push({ label: pair.label, ...outcome });
             for (const key of Object.keys(grand)) grand[key] += outcome.totals[key];
@@ -123,7 +124,8 @@ program
 
       let { results, totals } = compareInstance(source.domains, target.domains, {
         transform: !params.raw,
-        ignoreStatus: !!params.ignoreStatus
+        ignoreStatus: !!params.ignoreStatus,
+        dropValuePatterns: params.dropValue.map(pattern => new RegExp(pattern, 'i'))
       });
 
       if (params.domain.length) {

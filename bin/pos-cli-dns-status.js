@@ -6,8 +6,7 @@ import { resolvePortalContext } from '../lib/dns/auth.js';
 import { fetchDomains } from '../lib/dns/export.js';
 import { renderCutovers } from '../lib/dns/cutover.js';
 import { domainName } from '../lib/dns/exportSchema.js';
-
-const collect = (value, previous) => previous.concat([value]);
+import { collect } from '../lib/dns/cliHelpers.js';
 
 program.showHelpAfterError();
 program
