@@ -4,7 +4,7 @@ title: dns export command + versioned export schema
 status: Done
 assignee: []
 created_date: '2026-07-23 09:13'
-updated_date: '2026-07-23 09:21'
+updated_date: '2026-07-23 18:27'
 labels:
   - dns
 dependencies:
@@ -22,5 +22,5 @@ lib/dns/exportSchema.js: envelope schema 'pos-cli/dns-export/v1' {schema, export
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 export against a live portal produces valid envelope; details.state stripped; unknown-major rejected on read
+- [x] #1 export against a live portal produces valid envelope; details.state stripped; unknown-major rejected on read
 <!-- AC:END -->

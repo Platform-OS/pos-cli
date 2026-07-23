@@ -4,7 +4,7 @@ title: 'DnsPortalClient: per-portal API client with typed errors'
 status: Done
 assignee: []
 created_date: '2026-07-23 09:12'
-updated_date: '2026-07-23 09:17'
+updated_date: '2026-07-23 18:27'
 labels:
   - dns
 dependencies: []
@@ -21,5 +21,5 @@ lib/dns/portalClient.js wrapping lib/apiRequest.js with explicit {baseUrl, token
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 nock tests: Bearer header, version=2 query, 401->PortalAuthError, 422 destructive->DestructiveChangeError, readOnly POST throws
+- [x] #1 nock tests: Bearer header, version=2 query, 401->PortalAuthError, 422 destructive->DestructiveChangeError, readOnly POST throws
 <!-- AC:END -->

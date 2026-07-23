@@ -4,7 +4,7 @@ title: 'normalize.js + transform.js: pure record transform (TDD)'
 status: Done
 assignee: []
 created_date: '2026-07-23 09:13'
-updated_date: '2026-07-23 09:25'
+updated_date: '2026-07-23 18:27'
 labels:
   - dns
 dependencies:
@@ -22,5 +22,11 @@ TESTS FIRST. lib/dns/normalize.js (TXT unquote + 255-byte chunk join, MX host ca
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 failing tests written first over sanitized fixtures; www-redirect drop only when derived true; old-infra kept+warned; multi-value CNAME errors; transform idempotent
+- [x] #1 failing tests written first over sanitized fixtures; www-redirect drop only when derived true; old-infra kept+warned; multi-value CNAME errors; transform idempotent
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+TDD red run (module-not-found) before implementation; all AC cases in transform.test.js/normalize.test.js incl. idempotency test added during AC review 2026-07-23.
+<!-- SECTION:NOTES:END -->

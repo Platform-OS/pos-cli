@@ -4,7 +4,7 @@ title: 'auth.js: resolvePortalContext for source/target sides'
 status: Done
 assignee: []
 created_date: '2026-07-23 09:13'
-updated_date: '2026-07-23 09:19'
+updated_date: '2026-07-23 18:27'
 labels:
   - dns
 dependencies:
@@ -22,5 +22,11 @@ lib/dns/auth.js resolvePortalContext(envName, {portalUrl, token, email, instance
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 tests: .pos path, flag overrides, ambiguous-uuid error, prompt fallback on 401
+- [x] #1 tests: .pos path, flag overrides, ambiguous-uuid error, prompt fallback on 401
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+All covered in test/unit/dns/auth.test.js incl. the 401 -> email/password prompt fallback (test added during AC review 2026-07-23).
+<!-- SECTION:NOTES:END -->

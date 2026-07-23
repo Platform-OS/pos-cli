@@ -4,7 +4,7 @@ title: 'bulk mode: mapping.js + --instances-file/--mapping-file wiring'
 status: Done
 assignee: []
 created_date: '2026-07-23 09:13'
-updated_date: '2026-07-23 09:37'
+updated_date: '2026-07-23 18:27'
 labels:
   - dns
 dependencies:
@@ -22,5 +22,11 @@ lib/dns/mapping.js: CSV source_uuid,target_uuid[,label] or JSON array; --match-b
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 cohort run produces per-instance backups + summary; exit codes distinguish errors vs destructive-blocked
+- [x] #1 cohort run produces per-instance backups + summary; exit codes distinguish errors vs destructive-blocked
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Live cohort validation 2026-07-23: migrate aws ps --mapping-file cohort.csv --backup cohort-backups --yes -> per-instance backup <source-uuid>.json written, summary table (loremup 1/1/0/0), exit 0. Error/blocked exit-code differentiation covered by apply.test.js statuses + exitCodeFor.
+<!-- SECTION:NOTES:END -->

@@ -4,7 +4,7 @@ title: 'dns import command + apply engine (dry-run, destructive guard, polling)'
 status: Done
 assignee: []
 created_date: '2026-07-23 09:13'
-updated_date: '2026-07-23 09:28'
+updated_date: '2026-07-23 18:27'
 labels:
   - dns
 dependencies:
@@ -22,5 +22,5 @@ lib/dns/plan.js (KEEP/DROP/ERROR dry-run table, chalk+text-table). lib/dns/apply
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 dry-run POSTs nothing, exit 2 on transform errors; destructive 422 blocked without auto-retry; idempotent re-run
+- [x] #1 dry-run POSTs nothing, exit 2 on transform errors; destructive 422 blocked without auto-retry; idempotent re-run
 <!-- AC:END -->

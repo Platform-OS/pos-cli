@@ -149,6 +149,34 @@ describe('resolvePortalContext', () => {
       .resolves.toMatchObject({ portalUrl: 'https://partners.platformos.com' });
   });
 
+  test('expired token falls back to an email/password prompt on 401 (interactive)', async () => {
+    mockSettings.mockReturnValue({
+      url: INSTANCE_URL,
+      token: 'expired-token',
+      email: 'stored@example.com',
+      partner_portal_url: PORTAL
+    });
+    mockReadPassword.mockResolvedValue('pw');
+    const isTTY = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+
+    try {
+      nock(PORTAL, { reqheaders: { authorization: 'Bearer expired-token' } })
+        .get('/api/instances').reply(401, { errors: ['Not authorized'] });
+      nock(PORTAL).post('/api/authenticate', { email: 'stored@example.com', password: 'pw' })
+        .reply(200, { auth_token: 'fresh-jwt' });
+      nock(PORTAL, { reqheaders: { authorization: 'Bearer fresh-jwt' } })
+        .get('/api/instances').reply(200, { data: [] });
+
+      const context = await resolvePortalContext('staging', { instanceUuid: UUID, label: 'source' });
+      expect(context.client.token).toEqual('fresh-jwt');
+      expect(mockReadPassword).toHaveBeenCalled();
+    } finally {
+      if (isTTY) Object.defineProperty(process.stdin, 'isTTY', isTTY);
+      else delete process.stdin.isTTY;
+    }
+  });
+
   test('readOnly is passed through to the client', async () => {
     mockSettings.mockReturnValue({ url: INSTANCE_URL, token: 't', partner_portal_url: PORTAL });
     stubInstances();

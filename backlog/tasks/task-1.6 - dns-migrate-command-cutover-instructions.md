@@ -4,7 +4,7 @@ title: dns migrate command + cutover instructions
 status: Done
 assignee: []
 created_date: '2026-07-23 09:13'
-updated_date: '2026-07-23 09:30'
+updated_date: '2026-07-23 18:27'
 labels:
   - dns
 dependencies:
@@ -22,5 +22,5 @@ lib/dns/cutover.js cutoverInstructions(targetDomain): domain-full -> registrar N
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 migrate on test instance prints correct cutover block per setup_type; backup written before first POST
+- [x] #1 migrate on test instance prints correct cutover block per setup_type; backup written before first POST
 <!-- AC:END -->

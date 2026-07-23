@@ -4,7 +4,7 @@ title: 'dns compare command: port compare-golden.rb classification'
 status: Done
 assignee: []
 created_date: '2026-07-23 09:13'
-updated_date: '2026-07-23 09:34'
+updated_date: '2026-07-23 18:27'
 labels:
   - dns
 dependencies:
@@ -22,5 +22,5 @@ lib/dns/compare.js compareInstance(src,tgt,{transform:true,ignoreStatus}) -> {re
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 fixture pair per classification branch incl. MX case-fold => OK and TXT chunk-join => OK; exit-code contract
+- [x] #1 fixture pair per classification branch incl. MX case-fold => OK and TXT chunk-join => OK; exit-code contract
 <!-- AC:END -->

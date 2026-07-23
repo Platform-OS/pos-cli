@@ -162,6 +162,20 @@ describe('transformDomain', () => {
     expect('proxied' in result.payload.extra_dns_records[1]).toBe(false);
   });
 
+  test('transform is idempotent: already-normalized records pass through unchanged', () => {
+    const records = [
+      record({ type: 'MX', records: ['0 mail.example-shop.com'] }),
+      record({ name: 'autodiscover', type: 'CNAME', records: ['autodiscover.outlook.com'] }),
+      record({ type: 'TXT', records: ['v=spf1 -all'] })
+    ];
+    const first = transformDomain(withRecords(records), { targetInstanceUuid: TARGET_UUID });
+    const second = transformDomain(withRecords(first.payload.extra_dns_records), { targetInstanceUuid: TARGET_UUID });
+
+    expect(second.payload.extra_dns_records).toEqual(first.payload.extra_dns_records);
+    expect(second.errors).toEqual([]);
+    expect(second.dropped).toEqual([]);
+  });
+
   test('unprovisioned source domain (empty status) is skipped, not an error', () => {
     const result = transformDomain(sourceDomain({ status: '' }), { targetInstanceUuid: TARGET_UUID });
     expect(result.skipped).toBe(true);
