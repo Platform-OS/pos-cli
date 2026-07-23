@@ -156,7 +156,7 @@ const installDependencies = (packageRoot) => {
   logger.Info('Installing generator dependencies...', { hideTimestamp: false });
 
   try {
-    spawnCommand('npm', ['install'], { cwd: packageRoot });
+    spawnCommand('npm', ['install', '--prefer-offline', '--no-audit', '--no-fund'], { cwd: packageRoot });
     logger.Success('Dependencies installed successfully', { hideTimestamp: false });
   } catch (e) {
     throw new Error(`Failed to install dependencies: ${e.message}`);
