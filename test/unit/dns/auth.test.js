@@ -138,6 +138,17 @@ describe('resolvePortalContext', () => {
     expect(context.client.token).toEqual('session-jwt');
   });
 
+  test('a write context to partners.platformos.com is refused (swap guard); readOnly source is fine', async () => {
+    mockSettings.mockReturnValue({ url: INSTANCE_URL, token: 't', partner_portal_url: 'https://partners.platformos.com' });
+
+    await expect(resolvePortalContext('aws', { instanceUuid: UUID, label: 'target' }))
+      .rejects.toThrow('never a target');
+
+    nock('https://partners.platformos.com').get('/api/instances').reply(200, { data: [] });
+    await expect(resolvePortalContext('aws', { instanceUuid: UUID, label: 'source', readOnly: true }))
+      .resolves.toMatchObject({ portalUrl: 'https://partners.platformos.com' });
+  });
+
   test('readOnly is passed through to the client', async () => {
     mockSettings.mockReturnValue({ url: INSTANCE_URL, token: 't', partner_portal_url: PORTAL });
     stubInstances();

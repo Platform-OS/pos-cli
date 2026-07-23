@@ -10,6 +10,7 @@ import { transformEnvelope } from '../lib/dns/transform.js';
 import { applyPlans } from '../lib/dns/apply.js';
 import { renderPlans, renderSummary, renderResults } from '../lib/dns/plan.js';
 import { renderCutovers } from '../lib/dns/cutover.js';
+import { confirmApply } from '../lib/dns/guard.js';
 
 const collect = (value, previous) => previous.concat([value]);
 
@@ -37,7 +38,9 @@ program
   .option('--domain <name>', 'only import this domain (repeatable)', collect, [])
   .option('--drop-value <regex>', 'drop records whose value matches this pattern (repeatable)', collect, [])
   .option('--dry-run', 'print the transform plan without writing anything')
+  .option('-y, --yes', 'apply without the interactive confirmation (required in scripts/CI)')
   .option('--confirm-destructive', 'allow updates that delete many managed records on the target')
+  .option('--unsafe-allow-protected-target', 'allow writing to a protected portal (partners.platformos.com is read-only by default)')
   .option('--no-wait', 'do not poll provisioning status after applying')
   .option('--json', 'machine-readable output')
   .action(async (environment, params) => {
@@ -53,7 +56,8 @@ program
           token: params.token,
           email: params.email,
           instanceUuid: params.instanceUuid,
-          label: 'target'
+          label: 'target',
+          allowProtectedTarget: !!params.unsafeAllowProtectedTarget
         });
 
       const { plans } = transformEnvelope(envelope, {
@@ -75,6 +79,11 @@ program
       if (hasErrors) {
         await logger.Error('Fix the transform errors above (or exclude those domains with --domain) before importing.', { exit: false });
         process.exit(2);
+      }
+
+      if (!(await confirmApply({ yes: !!params.yes, target: context.portalUrl }))) {
+        await logger.Info('Aborted — nothing was applied.', { hideTimestamp: true });
+        process.exit(0);
       }
 
       const { results } = await applyPlans({

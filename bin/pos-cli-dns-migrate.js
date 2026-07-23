@@ -14,6 +14,7 @@ import { applyPlans } from '../lib/dns/apply.js';
 import { renderPlans, renderSummary, renderResults } from '../lib/dns/plan.js';
 import { renderCutovers } from '../lib/dns/cutover.js';
 import { parseInstancesFile, parseMappingFile, matchByDomain } from '../lib/dns/mapping.js';
+import { confirmApply } from '../lib/dns/guard.js';
 
 const collect = (value, previous) => previous.concat([value]);
 
@@ -38,8 +39,9 @@ const exitCodeFor = (results) => {
   return 0;
 };
 
-// Export -> backup -> transform -> (apply -> cutover) for one source/target instance pair.
-const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, params, spinner, label }) => {
+// Export -> backup -> transform -> confirm -> (apply -> cutover) for one source/target
+// instance pair. `confirm` is called after the plan is displayed; returning false aborts.
+const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, params, spinner, label, confirm }) => {
   spinner.start(`${label}: exporting from ${source.portalUrl}`);
   const { envelope } = await exportInstance({
     client: source.client,
@@ -72,6 +74,11 @@ const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, 
       await logger.Error(`${label}: fix the transform errors above (or exclude those domains with --domain) before migrating.`, { exit: false });
     }
     return { label, plans: selected, results: [], dryRun: true, hasErrors, targetStatuses: [] };
+  }
+
+  if (confirm && !(await confirm())) {
+    await logger.Info(`${label}: aborted — nothing was applied.`, { hideTimestamp: true });
+    return { label, plans: selected, results: [], aborted: true, hasErrors: false, targetStatuses: [] };
   }
 
   spinner.start(`${label}: applying to ${target.portalUrl}`);
@@ -126,7 +133,9 @@ program
   .option('--domain <name>', 'only migrate this domain (repeatable)', collect, [])
   .option('--drop-value <regex>', 'drop records whose value matches this pattern (repeatable)', collect, [])
   .option('--dry-run', 'export + plan only, write nothing to the target')
+  .option('-y, --yes', 'apply without the interactive confirmation (required in scripts/CI)')
   .option('--confirm-destructive', 'allow updates that delete many managed records on the target')
+  .option('--unsafe-allow-protected-target', 'allow writing to a protected portal (partners.platformos.com is read-only by default)')
   .option('--backup <path>', 'where to write the source export backup (file, or directory in bulk mode)')
   .option('--no-backup', 'skip writing the backup file')
   .option('--no-wait', 'do not poll provisioning status after applying')
@@ -159,7 +168,8 @@ program
         email: params.targetEmail,
         instanceUuid: params.targetInstanceUuid,
         label: 'target',
-        skipInstanceLookup: bulk
+        skipInstanceLookup: bulk,
+        allowProtectedTarget: !!params.unsafeAllowProtectedTarget
       });
 
       if (!bulk) {
@@ -174,7 +184,8 @@ program
           sourceEnv,
           params,
           spinner,
-          label: source.instanceUuid
+          label: source.instanceUuid,
+          confirm: () => confirmApply({ yes: !!params.yes, target: target.portalUrl })
         });
         if (params.json) console.log(JSON.stringify({ plans: outcome.plans, results: outcome.results, target_domains: outcome.targetStatuses }, null, 2));
         process.exit(outcome.hasErrors ? 2 : exitCodeFor(outcome.results));
@@ -198,6 +209,13 @@ program
           }
           return resolved;
         })();
+
+      // Bulk applies to many instances — confirm once for the whole cohort upfront
+      // (per-pair plans still print as the loop progresses; preview with --dry-run first).
+      if (!params.dryRun && !(await confirmApply({ yes: !!params.yes, target: `${pairs.length} instance(s) on ${target.portalUrl}` }))) {
+        await logger.Info('Aborted — nothing was applied.', { hideTimestamp: true });
+        process.exit(0);
+      }
 
       const outcomes = [];
       for (const pair of pairs) {

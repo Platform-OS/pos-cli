@@ -706,9 +706,18 @@ Export from the source portal, transform, apply to the target portal, and print 
     pos-cli dns migrate [sourceEnv] [targetEnv] --dry-run    # review the plan first
     pos-cli dns migrate [sourceEnv] [targetEnv]
 
+After the plan is displayed you are asked to confirm before anything is applied — pass `--yes` to skip the prompt (required in scripts/CI). `partners.platformos.com` is protected as read-only: it can only ever be a migration *source*, so an accidental argument swap (`migrate target source`) fails immediately instead of writing to the legacy production portal.
+
 Domains end up in `ownership_verification_pending` until you complete the printed cutover steps (repoint nameservers at your registrar for `domain-full`, or add the verification records and repoint your CNAME/A for `domain-external`). That state is expected before cutover, not an error.
 
 Useful options: `--domain <name>` (repeatable) migrates selected domains only; `--confirm-destructive` is required when an update would delete many records already managed on the target; `--mapping-file pairs.csv` (`source_uuid,target_uuid[,label]`) or `--instances-file uuids.txt --match-by-domain` migrate a whole cohort of instances.
+
+#### Status
+
+Show each provisioned domain's status and any pending cutover steps (in case they were missed after a migrate):
+
+    pos-cli dns status [environment]
+    pos-cli dns status [environment] --domain example.com
 
 #### Import
 
