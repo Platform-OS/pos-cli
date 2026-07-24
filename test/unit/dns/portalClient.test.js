@@ -14,7 +14,8 @@ import {
   PortalAuthError,
   PortalAccessError,
   DestructiveChangeError,
-  ReadOnlyPortalError
+  ReadOnlyPortalError,
+  PortalRequestError
 } from '#lib/dns/portalClient.js';
 
 const PORTAL = 'https://portal.test';
@@ -106,15 +107,61 @@ describe('DnsPortalClient', () => {
     expect(error.domainName).toEqual('example.com');
   });
 
-  test('non-destructive 422 validation errors pass through untyped', async () => {
+  test('non-destructive 422 maps to PortalRequestError with flattened validation messages', async () => {
     nock(PORTAL)
       .post('/api/domains')
       .reply(422, { errors: { base: {}, dns_records: [{ type: ['is not included in the list'] }] } });
 
     const client = new DnsPortalClient({ baseUrl: PORTAL, token: 't' });
     const error = await client.upsertDomain({ name: 'example.com', instance_uuid: UUID }).catch(e => e);
-    expect(error.name).toEqual('StatusCodeError');
+    expect(error).toBeInstanceOf(PortalRequestError);
     expect(error.statusCode).toEqual(422);
+    expect(error.message).toContain('POST /api/domains responded with status 422');
+    expect(error.message).toContain('dns_records[0].type: is not included in the list');
+  });
+
+  test('500 with an errors array surfaces the server messages (SetDomains validation)', async () => {
+    const serverMessage = 'Name has to be unique, but "communityfoods.co.uk" is in use by other instance.';
+    nock(PORTAL)
+      .post('/api/domains')
+      .reply(500, { errors: [serverMessage] });
+
+    const client = new DnsPortalClient({ baseUrl: PORTAL, token: 't' });
+    const error = await client.upsertDomain({ name: 'communityfoods.co.uk', instance_uuid: UUID }).catch(e => e);
+    expect(error).toBeInstanceOf(PortalRequestError);
+    expect(error.statusCode).toEqual(500);
+    expect(error.domainName).toEqual('communityfoods.co.uk');
+    expect(error.message).toContain('POST /api/domains responded with status 500');
+    expect(error.message).toContain(serverMessage);
+    // Known message gets an actionable hint appended.
+    expect(error.message).toContain('already attached to a different instance');
+  });
+
+  test('500 with a string errors value surfaces it (destroy/show error shape)', async () => {
+    nock(PORTAL)
+      .get('/api/domains/missing.com')
+      .query(true)
+      .reply(404, { errors: 'Domain not found' });
+
+    const client = new DnsPortalClient({ baseUrl: PORTAL, token: 't' });
+    const error = await client.getDomain('missing.com', UUID).catch(e => e);
+    expect(error).toBeInstanceOf(PortalRequestError);
+    expect(error.message).toContain('GET /api/domains/missing.com responded with status 404: Domain not found');
+    // The query string is noise — the path in the message must not include it.
+    expect(error.message).not.toContain('instance_uuid=');
+  });
+
+  test('500 with an HTML body reports that no details were returned', async () => {
+    nock(PORTAL)
+      .post('/api/domains')
+      .reply(500, '<html><body>Internal Server Error</body></html>', { 'Content-Type': 'text/html' });
+
+    const client = new DnsPortalClient({ baseUrl: PORTAL, token: 't' });
+    const error = await client.upsertDomain({ name: 'example.com', instance_uuid: UUID }).catch(e => e);
+    expect(error).toBeInstanceOf(PortalRequestError);
+    expect(error.message).toContain('responded with status 500');
+    expect(error.message).toContain('no error details');
+    expect(error.message).not.toContain('<html>');
   });
 
   test('readOnly client refuses POST methods without any network call', async () => {
