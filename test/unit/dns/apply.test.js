@@ -10,7 +10,7 @@ vi.mock('#lib/logger.js', () => ({
 }));
 
 import { DnsPortalClient } from '#lib/dns/portalClient.js';
-import { applyPlans } from '#lib/dns/apply.js';
+import { applyPlans, collectAppliedTargetStatuses } from '#lib/dns/apply.js';
 
 const PORTAL = 'https://portal.target.test';
 const UUID = 'target-uuid';
@@ -166,5 +166,43 @@ describe('applyPlans', () => {
     expect(results[0].status).toEqual('applied');
     expect(results[0].finalStatus).toEqual('initializing');
     expect(results[0].stillProcessing).toBe(true);
+  });
+});
+
+describe('collectAppliedTargetStatuses (TASK-1.23: shared by dns migrate and dns import)', () => {
+  let client;
+
+  beforeEach(() => {
+    nock.disableNetConnect();
+    client = new DnsPortalClient({ baseUrl: PORTAL, token: 't' });
+  });
+
+  afterEach(() => {
+    nock.cleanAll();
+    nock.enableNetConnect();
+  });
+
+  test('reuses domainStatus already captured by applyPlans, without a re-fetch', async () => {
+    const results = [{ domainName: 'a.test', status: 'applied', domainStatus: { status: 'ready' } }];
+    const statuses = await collectAppliedTargetStatuses(client, UUID, results);
+    expect(statuses).toEqual([{ status: 'ready' }]);
+    expect(nock.pendingMocks()).toEqual([]);
+  });
+
+  test('re-fetches when domainStatus is missing (e.g. --no-wait) and skips non-applied results', async () => {
+    nock(PORTAL).get('/api/domains/a.test').query(true).reply(200, { status: 'ready' });
+    const results = [
+      { domainName: 'a.test', status: 'applied' },
+      { domainName: 'b.test', status: 'error' }
+    ];
+
+    const statuses = await collectAppliedTargetStatuses(client, UUID, results);
+    expect(statuses).toEqual([{ status: 'ready' }]);
+  });
+
+  test('a failed re-fetch resolves to null instead of throwing', async () => {
+    nock(PORTAL).get('/api/domains/a.test').query(true).reply(500, { errors: ['boom'] });
+    const statuses = await collectAppliedTargetStatuses(client, UUID, [{ domainName: 'a.test', status: 'applied' }]);
+    expect(statuses).toEqual([null]);
   });
 });

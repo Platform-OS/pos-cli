@@ -4,7 +4,7 @@
  */
 import { describe, test, expect } from 'vitest';
 
-import { SCHEMA, buildEnvelope, stripBulkyDetails, validateEnvelope, domainName } from '#lib/dns/exportSchema.js';
+import { SCHEMA, buildEnvelope, stripBulkyDetails, validateEnvelope, domainName, isStrippedDetail } from '#lib/dns/exportSchema.js';
 
 const domain = (overrides = {}) => ({
   status: 'ready',
@@ -70,6 +70,13 @@ describe('exportSchema', () => {
     expect(() => validateEnvelope({ foo: 'bar' })).toThrow('Not a dns export file');
     expect(() => validateEnvelope({ ...valid, instance: {} })).toThrow('instance.uuid');
     expect(() => validateEnvelope({ ...valid, domains: undefined })).toThrow('domains array');
+  });
+
+  test('isStrippedDetail recognizes only the stripped-marker shape (TASK-1.16)', () => {
+    expect(isStrippedDetail('[stripped: oversized exceeded 102400 bytes]')).toBe(true);
+    expect(isStrippedDetail([])).toBe(false);
+    expect(isStrippedDetail(null)).toBe(false);
+    expect(isStrippedDetail('a normal string')).toBe(false);
   });
 
   test('domainName prefers v2 attribute and falls back to config._domains', () => {

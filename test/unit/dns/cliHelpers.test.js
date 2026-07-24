@@ -7,7 +7,17 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { backupPathFor, filterByDomains, exitCodeFor, exitCodeForOutcomes, hostnameOf } from '#lib/dns/cliHelpers.js';
+import {
+  backupPathFor,
+  resolveBulkBackupDir,
+  summarizeBulkOutcome,
+  filterByDomains,
+  filterOutcomeByDomain,
+  exitCodeFor,
+  exitCodeForOutcomes,
+  describeApplyTarget,
+  hostnameOf
+} from '#lib/dns/cliHelpers.js';
 
 const UUID = 'aaaa-bbbb';
 
@@ -35,12 +45,77 @@ describe('backupPathFor', () => {
   });
 });
 
+describe('resolveBulkBackupDir (TASK-1.18): resolved once, shared by every pair in the cohort', () => {
+  test('no --backup / --backup with no value: resolves once, so every pair shares the same directory', () => {
+    const dir = resolveBulkBackupDir(undefined);
+    expect(dir).toMatch(/^dns-backups-/);
+
+    // Passing the ALREADY-RESOLVED dir to backupPathFor (as the bin file now does per pair)
+    // must land every pair in the same directory, unlike calling backupPathFor directly per
+    // pair with a falsy backup (which mints a fresh timestamp each time).
+    const first = backupPathFor(dir, 'uuid-1', { bulk: true });
+    const second = backupPathFor(dir, 'uuid-2', { bulk: true });
+    expect(path.dirname(first)).toEqual(path.dirname(second));
+    expect(path.dirname(first)).toEqual(dir);
+  });
+
+  test('--no-backup (false) is passed through unchanged', () => {
+    expect(resolveBulkBackupDir(false)).toBe(false);
+  });
+
+  test('an explicit --backup <dir> is passed through unchanged', () => {
+    expect(resolveBulkBackupDir('my-cohort-backups')).toEqual('my-cohort-backups');
+  });
+});
+
+describe('summarizeBulkOutcome (TASK-1.19): apply-failed counts as a failure', () => {
+  const outcome = (statuses, hasErrors = false) => ({
+    plans: statuses.map(() => ({ skipped: false })),
+    results: statuses.map(status => ({ domainName: 'x', status })),
+    hasErrors
+  });
+
+  test('apply-failed is counted in errors, not silently dropped', () => {
+    expect(summarizeBulkOutcome(outcome(['applied', 'apply-failed']))).toEqual({
+      domains: 2, applied: 1, blocked: 0, errors: 1
+    });
+  });
+
+  test('applied/blocked/errors/hasErrors are counted independently', () => {
+    expect(summarizeBulkOutcome(outcome(['applied', 'blocked-destructive', 'error', 'invalid']))).toEqual({
+      domains: 4, applied: 1, blocked: 1, errors: 2
+    });
+    expect(summarizeBulkOutcome(outcome([], true))).toEqual({ domains: 0, applied: 0, blocked: 0, errors: 1 });
+  });
+});
+
 describe('filterByDomains', () => {
   const plans = [{ domainName: 'A.com' }, { domainName: 'b.com' }];
 
   test('case-insensitive filter; empty filter keeps all', () => {
     expect(filterByDomains(plans, ['a.com'])).toEqual([{ domainName: 'A.com' }]);
     expect(filterByDomains(plans, [])).toEqual(plans);
+  });
+});
+
+describe('filterOutcomeByDomain (TASK-1.17)', () => {
+  const outcome = {
+    results: [
+      { domainName: 'A.com', level: 'OK' },
+      { domainName: 'b.com', level: 'CRITICAL' }
+    ],
+    totals: { ok: 1, advisory: 0, critical: 1, missingBefore: 0, missingAfter: 0 }
+  };
+
+  test('empty filter returns the outcome unchanged', () => {
+    expect(filterOutcomeByDomain(outcome, [])).toBe(outcome);
+    expect(filterOutcomeByDomain(outcome, undefined)).toBe(outcome);
+  });
+
+  test('filters results case-insensitively and recomputes totals', () => {
+    const filtered = filterOutcomeByDomain(outcome, ['a.com']);
+    expect(filtered.results).toEqual([{ domainName: 'A.com', level: 'OK' }]);
+    expect(filtered.totals).toEqual({ ok: 1, advisory: 0, critical: 0, missingBefore: 0, missingAfter: 0 });
   });
 });
 
@@ -66,6 +141,24 @@ describe('exit-code contract (TASK-1.13): 0 ok, 1 apply/errors, 2 transform erro
     expect(exitCodeForOutcomes([outcome(['error']), outcome([], true)])).toEqual(1);
     // blocked-only -> 3
     expect(exitCodeForOutcomes([outcome(['blocked-destructive']), outcome(['applied'])])).toEqual(3);
+  });
+});
+
+describe('describeApplyTarget: the confirm-prompt target must identify the instance, not just the portal', () => {
+  test('prefers the actual instance/site URL over the shared portal URL', () => {
+    expect(describeApplyTarget({
+      instanceUrl: 'https://dev.example.com',
+      instanceUuid: 'uuid-1',
+      portalUrl: 'https://portal.ps-01-platformos.com'
+    })).toEqual('https://dev.example.com (https://portal.ps-01-platformos.com)');
+  });
+
+  test('falls back to the instance uuid when no instance url is known (e.g. explicit --instance-uuid with no registered environment)', () => {
+    expect(describeApplyTarget({
+      instanceUrl: undefined,
+      instanceUuid: 'uuid-1',
+      portalUrl: 'https://portal.ps-01-platformos.com'
+    })).toEqual('instance uuid-1 (https://portal.ps-01-platformos.com)');
   });
 });
 

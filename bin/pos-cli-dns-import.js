@@ -7,11 +7,11 @@ import logger from '../lib/logger.js';
 import { resolvePortalContext } from '../lib/dns/auth.js';
 import { validateEnvelope } from '../lib/dns/exportSchema.js';
 import { transformEnvelope } from '../lib/dns/transform.js';
-import { applyPlans } from '../lib/dns/apply.js';
+import { applyPlans, collectAppliedTargetStatuses } from '../lib/dns/apply.js';
 import { renderPlans, renderSummary, renderResults } from '../lib/dns/plan.js';
 import { renderCutovers } from '../lib/dns/cutover.js';
 import { confirmApply } from '../lib/dns/guard.js';
-import { collect, filterByDomains, exitCodeFor } from '../lib/dns/cliHelpers.js';
+import { collect, filterByDomains, exitCodeFor, describeApplyTarget, reportError } from '../lib/dns/cliHelpers.js';
 
 program.showHelpAfterError();
 program
@@ -68,7 +68,7 @@ program
         process.exit(2);
       }
 
-      if (!(await confirmApply({ yes: !!params.yes, json: !!params.json, target: context.portalUrl }))) {
+      if (!(await confirmApply({ yes: !!params.yes, json: !!params.json, target: describeApplyTarget(context) }))) {
         await logger.Info('Aborted — nothing was applied.', { hideTimestamp: true });
         process.exit(0);
       }
@@ -80,16 +80,7 @@ program
         wait: params.wait
       });
 
-      // Fresh target statuses drive the cutover instructions (NS to set at the
-      // registrar / verification records to create); polling already captured
-      // them unless --no-wait was used.
-      const targetStatuses = [];
-      for (const result of results.filter(entry => entry.status === 'applied')) {
-        targetStatuses.push(
-          result.domainStatus ||
-          await context.client.getDomain(result.domainName, context.instanceUuid).catch(() => null)
-        );
-      }
+      const targetStatuses = await collectAppliedTargetStatuses(context.client, context.instanceUuid, results);
 
       if (params.json) {
         console.log(JSON.stringify({ results, target_domains: targetStatuses }, null, 2));
@@ -104,7 +95,7 @@ program
 
       process.exit(exitCodeFor(results));
     } catch (error) {
-      logger.Error(error.message || error);
+      await reportError(error);
     }
   });
 

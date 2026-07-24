@@ -9,17 +9,7 @@ import logger from '../lib/logger.js';
 import { resolvePortalContext } from '../lib/dns/auth.js';
 import { exportInstance } from '../lib/dns/export.js';
 import { parseInstancesFile } from '../lib/dns/mapping.js';
-
-const defaultFilename = (instanceUuid) =>
-  `dns-export-${instanceUuid}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-
-const resolveOutPath = (out, instanceUuid) => {
-  if (!out) return defaultFilename(instanceUuid);
-  if (fs.existsSync(out) && fs.statSync(out).isDirectory()) {
-    return path.join(out, `${instanceUuid}.json`);
-  }
-  return out;
-};
+import { backupPathFor, timestamp, reportError } from '../lib/dns/cliHelpers.js';
 
 program.showHelpAfterError();
 program
@@ -48,7 +38,7 @@ program
       });
 
       const uuids = bulk ? parseInstancesFile(params.instancesFile) : [context.instanceUuid];
-      const outDir = bulk ? (params.out || `dns-export-${new Date().toISOString().replace(/[:.]/g, '-')}`) : null;
+      const outDir = bulk ? (params.out || `dns-export-${timestamp()}`) : null;
       if (outDir) fs.mkdirSync(outDir, { recursive: true });
 
       let failures = 0;
@@ -64,7 +54,7 @@ program
             raw: !!params.raw
           });
 
-          const outPath = bulk ? path.join(outDir, `${uuid}.json`) : resolveOutPath(params.out, uuid);
+          const outPath = bulk ? path.join(outDir, `${uuid}.json`) : backupPathFor(params.out, uuid);
           fs.mkdirSync(path.dirname(path.resolve(outPath)), { recursive: true });
           fs.writeFileSync(outPath, JSON.stringify(envelope, null, 2));
 
@@ -85,7 +75,7 @@ program
       }
     } catch (error) {
       spinner.stop();
-      logger.Error(error.message || error);
+      await reportError(error);
     }
   });
 

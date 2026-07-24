@@ -10,7 +10,7 @@ import { fetchDomains } from '../lib/dns/export.js';
 import { validateEnvelope } from '../lib/dns/exportSchema.js';
 import { compareInstance } from '../lib/dns/compare.js';
 import { parseMappingFile } from '../lib/dns/mapping.js';
-import { collect } from '../lib/dns/cliHelpers.js';
+import { collect, filterOutcomeByDomain, reportError } from '../lib/dns/cliHelpers.js';
 
 const LEVEL_COLORS = {
   OK: chalk.green,
@@ -75,11 +75,11 @@ program
               fetchDomains(sourceContext.client, pair.sourceUuid),
               fetchDomains(targetContext.client, pair.targetUuid)
             ]);
-            const outcome = compareInstance(sourceSide.domains, targetSide.domains, {
+            const outcome = filterOutcomeByDomain(compareInstance(sourceSide.domains, targetSide.domains, {
               transform: !params.raw,
               ignoreStatus: !!params.ignoreStatus,
               dropValuePatterns: params.dropValue.map(pattern => new RegExp(pattern, 'i'))
-            });
+            }), params.domain);
             perInstance.push({ label: pair.label, ...outcome });
             for (const key of Object.keys(grand)) grand[key] += outcome.totals[key];
             if (!params.json) {
@@ -105,38 +105,30 @@ program
         process.exit(failed ? 1 : 0);
       }
 
-      const source = await loadSide(sourceEnv, {
-        file: params.sourceFile,
-        portalUrl: params.sourcePortalUrl,
-        token: params.sourceToken,
-        email: params.sourceEmail,
-        instanceUuid: params.sourceInstanceUuid,
-        label: 'source'
-      });
-      const target = await loadSide(targetEnv, {
-        file: params.targetFile,
-        portalUrl: params.targetPortalUrl,
-        token: params.targetToken,
-        email: params.targetEmail,
-        instanceUuid: params.targetInstanceUuid,
-        label: 'target'
-      });
+      const [source, target] = await Promise.all([
+        loadSide(sourceEnv, {
+          file: params.sourceFile,
+          portalUrl: params.sourcePortalUrl,
+          token: params.sourceToken,
+          email: params.sourceEmail,
+          instanceUuid: params.sourceInstanceUuid,
+          label: 'source'
+        }),
+        loadSide(targetEnv, {
+          file: params.targetFile,
+          portalUrl: params.targetPortalUrl,
+          token: params.targetToken,
+          email: params.targetEmail,
+          instanceUuid: params.targetInstanceUuid,
+          label: 'target'
+        })
+      ]);
 
-      let { results, totals } = compareInstance(source.domains, target.domains, {
+      const { results, totals } = filterOutcomeByDomain(compareInstance(source.domains, target.domains, {
         transform: !params.raw,
         ignoreStatus: !!params.ignoreStatus,
         dropValuePatterns: params.dropValue.map(pattern => new RegExp(pattern, 'i'))
-      });
-
-      if (params.domain.length) {
-        const wanted = new Set(params.domain.map(domain => domain.toLowerCase()));
-        results = results.filter(result => wanted.has(result.domainName.toLowerCase()));
-        totals = results.reduce((acc, result) => {
-          const key = { OK: 'ok', ADVISORY: 'advisory', CRITICAL: 'critical', MISSING_BEFORE: 'missingBefore', MISSING_AFTER: 'missingAfter' }[result.level];
-          acc[key] += 1;
-          return acc;
-        }, { ok: 0, advisory: 0, critical: 0, missingBefore: 0, missingAfter: 0 });
-      }
+      }), params.domain);
 
       const failed = totals.critical > 0 || totals.missingBefore > 0 || totals.missingAfter > 0;
 
@@ -153,7 +145,7 @@ program
 
       process.exit(failed ? 1 : 0);
     } catch (error) {
-      logger.Error(error.message || error);
+      await reportError(error);
     }
   });
 

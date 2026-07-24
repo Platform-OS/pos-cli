@@ -10,16 +10,18 @@ import logger from '../lib/logger.js';
 import { resolvePortalContext } from '../lib/dns/auth.js';
 import { exportInstance } from '../lib/dns/export.js';
 import { transformEnvelope } from '../lib/dns/transform.js';
-import { applyPlans } from '../lib/dns/apply.js';
+import { applyPlans, collectAppliedTargetStatuses } from '../lib/dns/apply.js';
 import { renderPlans, renderSummary, renderResults } from '../lib/dns/plan.js';
 import { renderCutovers } from '../lib/dns/cutover.js';
 import { parseInstancesFile, parseMappingFile, matchByDomain } from '../lib/dns/mapping.js';
 import { confirmApply } from '../lib/dns/guard.js';
-import { collect, filterByDomains, backupPathFor, exitCodeFor, exitCodeForOutcomes } from '../lib/dns/cliHelpers.js';
+import { collect, filterByDomains, backupPathFor, resolveBulkBackupDir, summarizeBulkOutcome, exitCodeFor, exitCodeForOutcomes, describeApplyTarget, reportError } from '../lib/dns/cliHelpers.js';
 
 // Export -> backup -> transform -> confirm -> (apply -> cutover) for one source/target
 // instance pair. `confirm` is called after the plan is displayed; returning false aborts.
-const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, params, spinner, label, confirm, bulk = false }) => {
+// `backup` defaults to params.backup but bulk mode passes the ONE cohort-wide resolved
+// directory explicitly (TASK-1.18) instead of overriding it inside a cloned params object.
+const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, params, spinner, label, confirm, bulk = false, backup = params.backup }) => {
   spinner.start(`${label}: exporting from ${source.portalUrl}`);
   const { envelope } = await exportInstance({
     client: source.client,
@@ -29,8 +31,8 @@ const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, 
   });
   spinner.stop();
 
-  if (params.backup !== false) {
-    const outPath = backupPathFor(params.backup, sourceUuid, { bulk });
+  if (backup !== false) {
+    const outPath = backupPathFor(backup, sourceUuid, { bulk });
     fs.mkdirSync(path.dirname(path.resolve(outPath)), { recursive: true });
     fs.writeFileSync(outPath, JSON.stringify(envelope, null, 2));
     await logger.Info(`${label}: source export backed up to ${outPath}`, { hideTimestamp: true });
@@ -69,13 +71,7 @@ const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, 
   });
   spinner.stop();
 
-  const targetStatuses = [];
-  for (const result of results.filter(entry => entry.status === 'applied')) {
-    targetStatuses.push(
-      result.domainStatus ||
-      await target.client.getDomain(result.domainName, targetUuid).catch(() => null)
-    );
-  }
+  const targetStatuses = await collectAppliedTargetStatuses(target.client, targetUuid, results);
 
   if (!params.json) {
     await logger.Info(`\n${renderResults(results)}`, { hideTimestamp: true });
@@ -90,17 +86,8 @@ const migratePair = async ({ source, target, sourceUuid, targetUuid, sourceEnv, 
 };
 
 const bulkSummaryRow = (outcome) => {
-  const counts = outcome.results.reduce((acc, result) => {
-    acc[result.status] = (acc[result.status] || 0) + 1;
-    return acc;
-  }, {});
-  return [
-    `  ${outcome.label}`,
-    String(outcome.plans.filter(plan => !plan.skipped).length),
-    String(counts.applied || 0),
-    String(counts['blocked-destructive'] || 0),
-    String((counts.error || 0) + (counts.invalid || 0) + (outcome.hasErrors ? 1 : 0))
-  ];
+  const summary = summarizeBulkOutcome(outcome);
+  return [`  ${outcome.label}`, String(summary.domains), String(summary.applied), String(summary.blocked), String(summary.errors)];
 };
 
 program.showHelpAfterError();
@@ -163,7 +150,7 @@ program
           params,
           spinner,
           label: source.instanceUuid,
-          confirm: () => confirmApply({ yes: !!params.yes, json: !!params.json, target: target.portalUrl })
+          confirm: () => confirmApply({ yes: !!params.yes, json: !!params.json, target: describeApplyTarget(target) })
         });
         if (params.json) console.log(JSON.stringify({ plans: outcome.plans, results: outcome.results, target_domains: outcome.targetStatuses }, null, 2));
         process.exit(exitCodeForOutcomes([outcome]));
@@ -188,6 +175,8 @@ program
           return resolved;
         })();
 
+      const bulkBackupDir = resolveBulkBackupDir(params.backup);
+
       // Bulk applies to many instances — confirm once for the whole cohort upfront
       // (per-pair plans still print as the loop progresses; preview with --dry-run first).
       if (!params.dryRun && !(await confirmApply({ yes: !!params.yes, json: !!params.json, target: `${pairs.length} instance(s) on ${target.portalUrl}` }))) {
@@ -210,6 +199,7 @@ program
             targetUuid: pair.targetUuid,
             sourceEnv,
             params,
+            backup: bulkBackupDir,
             spinner,
             label: pair.label,
             bulk: true
@@ -231,7 +221,7 @@ program
       process.exit(exitCodeForOutcomes(outcomes));
     } catch (error) {
       spinner.stop();
-      logger.Error(error.message || error);
+      await reportError(error);
     }
   });
 

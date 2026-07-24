@@ -124,6 +124,41 @@ describe('compareInstance (cross-stack default)', () => {
     expect(levelsByDomain(compareInstance(source, target))['example.com']).toEqual('OK');
   });
 
+  test('live record names are normalized across differing backend conventions before matching (real-world: Route53 stores SRV names fully-qualified, Cloudflare short)', () => {
+    const source = [makeDomain('example.com', {
+      details: {
+        extra_dns_records: [
+          { name: '_sip._tls.example.com', type: 'SRV', records: ['100 1 443 sipdir.online.lync.com.'] }
+        ]
+      }
+    })];
+    const target = [makeDomain('example.com', {
+      details: {
+        extra_dns_records: [
+          { name: '_sip._tls', type: 'SRV', records: ['1 443 sipdir.online.lync.com'] }
+        ]
+      }
+    })];
+
+    // Same record on both sides (once normalized) — must report as a single value
+    // difference, not as "only on source" + "only on target" (which would hide the
+    // real drift: a dropped SRV priority field).
+    expect(compareInstance(source, target)).toEqual({
+      results: [{
+        domainName: 'example.com',
+        level: 'ADVISORY',
+        critical: [],
+        advisory: [
+          'details.extra_dns_records [_sip._tls/SRV] records differ:\n' +
+          '    source: ["100 1 443 sipdir.online.lync.com."]\n' +
+          '    target: ["1 443 sipdir.online.lync.com"]'
+        ],
+        status: 'ready'
+      }],
+      totals: { ok: 0, advisory: 1, critical: 0, missingBefore: 0, missingAfter: 0 }
+    });
+  });
+
   test('live details drift is ADVISORY only', () => {
     const source = [makeDomain('example.com', {
       details: { extra_dns_records: [{ name: '', type: 'TXT', records: ['v=spf1 -all'] }] }
@@ -162,6 +197,16 @@ describe('compareInstance (cross-stack default)', () => {
     })];
 
     expect(levelsByDomain(compareInstance(source, target))['example.com']).toEqual('OK');
+  });
+
+  test('a stripped (oversized) details field is CRITICAL, not silently OK (TASK-1.16)', () => {
+    const stripped = '[stripped: extra_dns_records exceeded 102400 bytes]';
+    const source = [makeDomain('example.com', { details: { extra_dns_records: stripped } })];
+    const target = [makeDomain('example.com', { details: { extra_dns_records: [] } })];
+
+    const outcome = compareInstance(source, target);
+    expect(levelsByDomain(outcome)['example.com']).toEqual('CRITICAL');
+    expect(outcome.results[0].critical.join()).toContain('could not be compared');
   });
 
   test('CF-native (txt_name) verification shape on target is CRITICAL — customers cannot act on it', () => {

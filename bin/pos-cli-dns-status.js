@@ -6,7 +6,7 @@ import { resolvePortalContext } from '../lib/dns/auth.js';
 import { fetchDomains } from '../lib/dns/export.js';
 import { renderCutovers } from '../lib/dns/cutover.js';
 import { domainName } from '../lib/dns/exportSchema.js';
-import { collect } from '../lib/dns/cliHelpers.js';
+import { collect, reportError } from '../lib/dns/cliHelpers.js';
 
 program.showHelpAfterError();
 program
@@ -51,7 +51,7 @@ program
         );
       }
     } catch (error) {
-      logger.Error(error.message || error);
+      await reportError(error);
     }
   });
 
