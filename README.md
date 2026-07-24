@@ -685,6 +685,62 @@ Example:
 
 This command manually runs a specific migration script that updates an admin password in the staging environment.
 
+### DNS (migrating domains between Partner Portals)
+
+The `dns` commands move an instance's custom domains and DNS records between two Partner Portal deployments (for example from `partners.platformos.com` to a private-stack portal). They talk to both portals' `/api/domains` API using the tokens stored in your `.pos` environments (each environment remembers its own `partner_portal_url`), so both the source and the target environment must be registered with `pos-cli env add` — or you can pass `--source-*`/`--target-*` flags (`-portal-url`, `-token`, `-email`, `-instance-uuid`) instead.
+
+Only your own records are migrated: platform-managed DNS (load-balancer targets, SSL validation entries, the www-redirect record) is re-created by the target portal automatically.
+
+#### Export
+
+Save all domains and DNS records of an instance to a versioned JSON file — a backup/audit artifact that `import` and `compare` also accept as input:
+
+    pos-cli dns export [environment]
+    pos-cli dns export [environment] -o backup.json
+
+#### Migrate
+
+Export from the source portal, transform, apply to the target portal, and print per-domain cutover instructions (which nameservers or verification records to set where). The source portal is only ever read, and a backup export file is always written before anything is applied:
+
+    pos-cli dns migrate [sourceEnv] [targetEnv] --dry-run    # review the plan first
+    pos-cli dns migrate [sourceEnv] [targetEnv]
+
+After the plan is displayed you are asked to confirm before anything is applied — pass `--yes` to skip the prompt (required in scripts/CI). `partners.platformos.com` is protected as read-only: it can only ever be a migration *source*, so an accidental argument swap (`migrate target source`) fails immediately instead of writing to the legacy production portal.
+
+Domains end up in `ownership_verification_pending` until you complete the printed cutover steps (repoint nameservers at your registrar for `domain-full`, or add the verification records and repoint your CNAME/A for `domain-external`). That state is expected before cutover, not an error.
+
+Useful options: `--domain <name>` (repeatable) migrates selected domains only; `--confirm-destructive` is required when an update would delete many records already managed on the target.
+
+#### Status
+
+Show each provisioned domain's status and any pending cutover steps (in case they were missed after a migrate):
+
+    pos-cli dns status [environment]
+    pos-cli dns status [environment] --domain example.com
+
+#### Import
+
+Apply a previously exported file to a portal (same transform and safety rules as `migrate`):
+
+    pos-cli dns import [environment] --file backup.json --dry-run
+    pos-cli dns import [environment] --file backup.json
+
+#### Compare
+
+Verify DNS parity between the two sides — exits non-zero when a domain differs in a way that matters (status, setup type, record intent). Expected cross-stack differences (data centers, nameservers, MX case, TXT chunking, and records whose name one DNS provider stores fully-qualified and another stores short, e.g. SRV records moving from Route53 to Cloudflare) are filtered out; `--raw` compares byte-for-byte instead:
+
+    pos-cli dns compare [sourceEnv] [targetEnv]
+    pos-cli dns compare [sourceEnv] [targetEnv] --ignore-status    # before cutover
+    pos-cli dns compare --source-file before.json --target-file after.json   # offline
+
+If the migration dropped records with `--drop-value`, pass the same patterns to `compare` so those records are excluded from the parity check instead of reporting as missing forever.
+
+The intended sequence is: `migrate` → complete the cutover steps → refresh validation from the target portal → `compare` comes back clean.
+
+#### Exit codes
+
+`import` and `migrate`: `0` success, `1` apply errors, `2` transform errors, `3` only destructive-blocked domains remain. `compare`: `0` parity, `1` any CRITICAL or missing domain. Dry-runs exit `0` (or `2` when the plan contains transform errors).
+
 ### Data
 
 #### Export

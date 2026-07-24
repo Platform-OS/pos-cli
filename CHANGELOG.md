@@ -1,12 +1,21 @@
 # Changelog
 
+## Unreleased
+
 ## 6.2.4 (2026-07-24)
+
+### New Features
+
+* `pos-cli dns` — new command group for migrating an instance's custom domains and DNS records between Partner Portal deployments (e.g. from `partners.platformos.com` to a private-stack portal). `dns export` snapshots all domains/records to a versioned JSON backup (bulk via `--instances-file`, sharing one backup directory per run, one file per instance); `dns migrate <sourceEnv> <targetEnv>` copies them portal-to-portal (dry-run support, always writes a backup first, source portal is read-only) and prints per-domain cutover instructions (registrar nameservers for `domain-full`, SSL validation records + CNAME/A targets for `domain-external`); `dns import --file` applies a saved export; `dns status` shows each domain's provisioning status and pending cutover steps; `dns compare` verifies parity between the two sides and exits non-zero on real differences. Bulk cohort support via `--instances-file`/`--mapping-file`, with a per-instance summary table (applied/blocked/error counts).
+* Safety: the plan is displayed and must be confirmed interactively before anything is applied — the prompt names the actual instance being written to — with `--yes` to skip in scripts/CI; `partners.platformos.com` is protected as read-only and can only be a migration source, so an accidental `migrate <target> <source>` argument swap fails immediately (`--unsafe-allow-protected-target` to override); `--json` runs refuse a blind interactive confirmation (pass `--yes` or `--dry-run` instead); exit codes are unified and documented across single and bulk modes (0/1/2/3).
+* `dns compare` filters out expected cross-stack noise (data centers, nameservers, MX case, TXT chunking, and records whose name one DNS provider stores fully-qualified and another stores short) while still catching real differences (status, setup type, record intent, and any field an export had to strip for exceeding the size limit); `--drop-value` excludes records a migration intentionally dropped; `--domain` scopes both single-pair and bulk (`--mapping-file`) runs; `--raw` compares byte-for-byte instead.
+* Network failures during any `dns` command get the same friendly, host-naming error messages the rest of pos-cli uses.
 
 ### Fixes
 
 * `pos-cli-mcp` no longer crashes the entire server when a single tool hits a fatal error. The MCP server runs all tools in one process, so a fatal `logger.Error` — which calls `process.exit(1)` — used to tear down the whole server and every tool it exposed, forcing a reconnect. Under the MCP server, fatal errors now throw instead of exiting, so the per-request handler returns a clean error and the server stays up. Standalone CLI behavior is unchanged (it still exits on fatal errors). The most common trigger — a tool called with an unresolvable environment — now returns a caught error instead of killing the server.
 
-
+## 6.2.3 (2026-07-23)
 
 ### Fixes
 
