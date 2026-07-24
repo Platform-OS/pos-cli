@@ -1,6 +1,12 @@
 # Changelog
 
-## 6.2.3 (2026-07-23)
+## 6.2.4 (2026-07-24)
+
+### Fixes
+
+* `pos-cli-mcp` no longer crashes the entire server when a single tool hits a fatal error. The MCP server runs all tools in one process, so a fatal `logger.Error` — which calls `process.exit(1)` — used to tear down the whole server and every tool it exposed, forcing a reconnect. Under the MCP server, fatal errors now throw instead of exiting, so the per-request handler returns a clean error and the server stays up. Standalone CLI behavior is unchanged (it still exits on fatal errors). The most common trigger — a tool called with an unresolvable environment — now returns a caught error instead of killing the server.
+
+
 
 ### Fixes
 
