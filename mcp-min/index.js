@@ -1,6 +1,12 @@
 import startStdio from './stdio-server.js';
 import startHttp from './http-server.js';
 import log from './log.js';
+import { setServerMode } from '../lib/logger.js';
+
+// This host loads CLI code in-process; a fatal logger.Error must throw (caught
+// per-request), never process.exit and take down all tools. Enable before any
+// tool can run.
+setServerMode(true);
 
 const PORT = process.env.MCP_MIN_PORT || 5910;
 
