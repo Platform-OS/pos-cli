@@ -6,7 +6,7 @@ import { resolvePortalContext } from '../lib/dns/auth.js';
 import { fetchDomains } from '../lib/dns/export.js';
 import { renderCutovers } from '../lib/dns/cutover.js';
 import { domainName } from '../lib/dns/exportSchema.js';
-import { collect } from '../lib/dns/cliHelpers.js';
+import { collect, filterByDomains, portalFlags, reportError } from '../lib/dns/cliHelpers.js';
 
 program.showHelpAfterError();
 program
@@ -21,26 +21,20 @@ program
   .action(async (environment, params) => {
     try {
       const context = await resolvePortalContext(environment, {
-        portalUrl: params.portalUrl,
-        token: params.token,
-        email: params.email,
-        instanceUuid: params.instanceUuid,
+        ...portalFlags(params),
         label: 'portal',
         readOnly: true
       });
 
       const { domains } = await fetchDomains(context.client, context.instanceUuid);
-      const wanted = new Set(params.domain.map(name => name.toLowerCase()));
-      const provisioned = domains.filter(domain =>
-        domain.status && (!wanted.size || wanted.has((domainName(domain) || '').toLowerCase()))
-      );
+      const provisioned = filterByDomains(domains.filter(domain => domain.status), params.domain, domainName);
 
       if (params.json) {
         console.log(JSON.stringify({ portal: context.portalUrl, instance_uuid: context.instanceUuid, domains: provisioned }, null, 2));
       } else if (!provisioned.length) {
         await logger.Info(
-          wanted.size
-            ? `No provisioned domain matching ${[...wanted].join(', ')} on ${context.portalUrl} (instance ${context.instanceUuid}).`
+          params.domain.length
+            ? `No provisioned domain matching ${params.domain.join(', ')} on ${context.portalUrl} (instance ${context.instanceUuid}).`
             : `No provisioned domains on ${context.portalUrl} (instance ${context.instanceUuid}).`,
           { hideTimestamp: true }
         );
@@ -51,7 +45,7 @@ program
         );
       }
     } catch (error) {
-      logger.Error(error.message || error);
+      await reportError(error);
     }
   });
 

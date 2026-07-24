@@ -153,6 +153,40 @@ describe('resolvePortalContext', () => {
     expect(context.client.token).toEqual('session-jwt');
   });
 
+  test('--email with interactive: false (--json runs) is refused instead of corrupting stdout with a prompt', async () => {
+    mockSettings.mockReturnValue({ url: INSTANCE_URL, partner_portal_url: PORTAL });
+
+    await expect(resolvePortalContext('staging', {
+      email: 'me@example.com',
+      instanceUuid: UUID,
+      label: 'source',
+      interactive: false
+    })).rejects.toThrow(/interactive password prompt.*--token/s);
+    expect(mockReadPassword).not.toHaveBeenCalled();
+  });
+
+  test('the expired-token prompt fallback is skipped with interactive: false (--json runs)', async () => {
+    mockSettings.mockReturnValue({
+      url: INSTANCE_URL,
+      token: 'expired-token',
+      email: 'stored@example.com',
+      partner_portal_url: PORTAL
+    });
+    const isTTY = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+
+    try {
+      nock(PORTAL).get('/api/instances').reply(401, { errors: ['Not authorized'] });
+
+      await expect(resolvePortalContext('staging', { instanceUuid: UUID, label: 'source', interactive: false }))
+        .rejects.toThrow(/Not authorized on/);
+      expect(mockReadPassword).not.toHaveBeenCalled();
+    } finally {
+      if (isTTY) Object.defineProperty(process.stdin, 'isTTY', isTTY);
+      else delete process.stdin.isTTY;
+    }
+  });
+
   test('a write context to partners.platformos.com is refused (swap guard); readOnly source is fine', async () => {
     mockSettings.mockReturnValue({ url: INSTANCE_URL, token: 't', partner_portal_url: 'https://partners.platformos.com' });
 

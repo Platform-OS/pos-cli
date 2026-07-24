@@ -69,6 +69,12 @@ describe('normalizeName', () => {
     expect(normalizeName('WWW', 'example.com')).toEqual('www');
     expect(normalizeName('_domainkey.mail', 'example.com')).toEqual('_domainkey.mail');
   });
+
+  test('mixed-case domainName still strips the suffix and matches apex (TASK-1.20)', () => {
+    expect(normalizeName('www.example.com', 'Example.com')).toEqual('www');
+    expect(normalizeName('Example.com', 'Example.com')).toEqual('');
+    expect(normalizeName('WWW.EXAMPLE.COM', 'EXAMPLE.COM')).toEqual('www');
+  });
 });
 
 describe('sortedRecordValues', () => {

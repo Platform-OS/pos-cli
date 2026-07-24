@@ -29,7 +29,7 @@ describe('assertWritablePortal', () => {
 
   test('private-stack portals are writable', () => {
     expect(() => assertWritablePortal('https://portal.ps-01-platformos.com')).not.toThrow();
-    expect(() => assertWritablePortal('https://portal.private-stack.example')).not.toThrow();
+    expect(() => assertWritablePortal('https://portal.example-stack.com')).not.toThrow();
   });
 });
 
