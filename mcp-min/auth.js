@@ -37,7 +37,7 @@ export async function resolveAuth(params, ctx = {}) {
   // Priority 2: Named .pos environment. When an env name is given we resolve it
   // directly without falling back to MPKIT_* — the caller is being explicit.
   if (params?.env) {
-    const found = await settingsModule.fetchSettings(params.env);
+    const found = await settingsModule.fetchSettings(params.env, { exit: false });
     if (found) return { ...found, source: `.pos(${params.env})` };
     throw new Error(`Environment '${params.env}' not found in .pos config`);
   }
