@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+* `pos-cli dns` — new command group for migrating an instance's custom domains and DNS records between Partner Portal deployments (e.g. from `partners.platformos.com` to a private-stack portal). `dns export` snapshots all domains/records to a versioned JSON backup; `dns migrate <sourceEnv> <targetEnv>` copies them portal-to-portal (dry-run support, destructive-change guard, always writes a backup first, source portal is read-only) and prints per-domain cutover instructions (registrar nameservers for `domain-full`, SSL validation records + CNAME/A targets for `domain-external`); `dns import --file` applies a saved export; `dns status` shows each domain's provisioning status and pending cutover steps; `dns compare` verifies parity between the two sides and exits non-zero on real differences while filtering expected cross-stack noise.
+* Safety defaults for `dns migrate`/`dns import`: the plan is displayed and must be confirmed interactively before anything is applied (`--yes` to skip in scripts/CI), and `partners.platformos.com` is protected as read-only — it can only be a migration source, so a `migrate <target> <source>` argument swap fails immediately (`--unsafe-allow-protected-target` to override).
+* Code-review hardening for the `dns` commands: `dns compare` accepts `--drop-value` so migrations that intentionally dropped records verify clean; `--json` runs refuse a blind interactive confirmation (pass `--yes` or `--dry-run`); exit codes are documented (0/1/2/3); scheme-less portal URLs get an actionable error; dns commands never read the ambient `PARTNER_PORTAL_HOST` env var (a process-global could point both sides of a two-portal command at the same place).
+
+
 ## 6.2.4 (2026-07-24)
 
 ### Fixes
@@ -7,6 +16,7 @@
 * `pos-cli-mcp` no longer crashes the entire server when a single tool hits a fatal error. The MCP server runs all tools in one process, so a fatal `logger.Error` — which calls `process.exit(1)` — used to tear down the whole server and every tool it exposed, forcing a reconnect. Under the MCP server, fatal errors now throw instead of exiting, so the per-request handler returns a clean error and the server stays up. Standalone CLI behavior is unchanged (it still exits on fatal errors). The most common trigger — a tool called with an unresolvable environment — now returns a caught error instead of killing the server.
 
 
+## 6.2.3 (2026-07-23)
 
 ### Fixes
 
