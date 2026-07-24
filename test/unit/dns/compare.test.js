@@ -89,6 +89,36 @@ describe('compareInstance (cross-stack default)', () => {
     ))['example.com']).toEqual('OK');
   });
 
+  test('domain names match case-insensitively across sides (legacy sources may report mixed case)', () => {
+    const outcome = compareInstance([makeDomain('Example.com')], [makeDomain('example.com')]);
+
+    expect(outcome.results).toHaveLength(1);
+    expect(outcome.results[0].level).toEqual('OK');
+    expect(outcome.totals.missingBefore).toEqual(0);
+    expect(outcome.totals.missingAfter).toEqual(0);
+  });
+
+  test('a transform error on one side surfaces as CRITICAL without desyncing the www/drop-value handling', () => {
+    const source = [makeDomain('example.com', {
+      records: [
+        record(),
+        record({ name: 'www', type: 'CNAME', records: ['example.com'] }),
+        record({ name: 'multi', type: 'CNAME', records: ['a.example.net', 'b.example.net'] })
+      ]
+    })];
+    const target = [makeDomain('example.com', { records: [record()] })];
+
+    const outcome = compareInstance(source, target);
+    const result = outcome.results[0];
+    expect(result.level).toEqual('CRITICAL');
+    // The invalid record reports as a transform failure the user can act on...
+    expect(result.critical.join()).toContain('source transform:');
+    expect(result.critical.join()).toContain('exactly one value');
+    // ...while the valid records still compare through the transform on BOTH sides:
+    // no false "missing on target" for the www-redirect record from a raw fallback.
+    expect(result.critical.join()).not.toContain('missing on target');
+  });
+
   test('--drop-value patterns exclude intentionally dropped records from the comparison (TASK-1.11)', () => {
     const source = [makeDomain('example.com', {
       records: [record(), record({ name: 'london', type: 'CNAME', records: ['lb.eu-west-2.elb.amazonaws.com'] })]
@@ -122,6 +152,41 @@ describe('compareInstance (cross-stack default)', () => {
     })];
 
     expect(levelsByDomain(compareInstance(source, target))['example.com']).toEqual('OK');
+  });
+
+  test('live record names are normalized across differing backend conventions before matching (real-world: Route53 stores SRV names fully-qualified, Cloudflare short)', () => {
+    const source = [makeDomain('example.com', {
+      details: {
+        extra_dns_records: [
+          { name: '_sip._tls.example.com', type: 'SRV', records: ['100 1 443 sipdir.online.lync.com.'] }
+        ]
+      }
+    })];
+    const target = [makeDomain('example.com', {
+      details: {
+        extra_dns_records: [
+          { name: '_sip._tls', type: 'SRV', records: ['1 443 sipdir.online.lync.com'] }
+        ]
+      }
+    })];
+
+    // Same record on both sides (once normalized) — must report as a single value
+    // difference, not as "only on source" + "only on target" (which would hide the
+    // real drift: a dropped SRV priority field).
+    expect(compareInstance(source, target)).toEqual({
+      results: [{
+        domainName: 'example.com',
+        level: 'ADVISORY',
+        critical: [],
+        advisory: [
+          'details.extra_dns_records [_sip._tls/SRV] records differ:\n' +
+          '    source: ["100 1 443 sipdir.online.lync.com."]\n' +
+          '    target: ["1 443 sipdir.online.lync.com"]'
+        ],
+        status: 'ready'
+      }],
+      totals: { ok: 0, advisory: 1, critical: 0, missingBefore: 0, missingAfter: 0 }
+    });
   });
 
   test('live details drift is ADVISORY only', () => {
@@ -162,6 +227,16 @@ describe('compareInstance (cross-stack default)', () => {
     })];
 
     expect(levelsByDomain(compareInstance(source, target))['example.com']).toEqual('OK');
+  });
+
+  test('a stripped (oversized) details field is CRITICAL, not silently OK (TASK-1.16)', () => {
+    const stripped = '[stripped: extra_dns_records exceeded 102400 bytes]';
+    const source = [makeDomain('example.com', { details: { extra_dns_records: stripped } })];
+    const target = [makeDomain('example.com', { details: { extra_dns_records: [] } })];
+
+    const outcome = compareInstance(source, target);
+    expect(levelsByDomain(outcome)['example.com']).toEqual('CRITICAL');
+    expect(outcome.results[0].critical.join()).toContain('could not be compared');
   });
 
   test('CF-native (txt_name) verification shape on target is CRITICAL — customers cannot act on it', () => {

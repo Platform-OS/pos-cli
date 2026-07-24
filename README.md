@@ -727,7 +727,7 @@ Apply a previously exported file to a portal (same transform and safety rules as
 
 #### Compare
 
-Verify DNS parity between the two sides — exits non-zero when a domain differs in a way that matters (status, setup type, record intent). Expected cross-stack differences (data centers, nameservers, MX case, TXT chunking) are filtered out; `--raw` compares byte-for-byte instead:
+Verify DNS parity between the two sides — exits non-zero when a domain differs in a way that matters (status, setup type, record intent). Expected cross-stack differences (data centers, nameservers, MX case, TXT chunking, and records whose name one DNS provider stores fully-qualified and another stores short, e.g. SRV records moving from Route53 to Cloudflare) are filtered out; `--raw` compares byte-for-byte instead:
 
     pos-cli dns compare [sourceEnv] [targetEnv]
     pos-cli dns compare [sourceEnv] [targetEnv] --ignore-status    # before cutover

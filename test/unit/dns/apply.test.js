@@ -10,7 +10,7 @@ vi.mock('#lib/logger.js', () => ({
 }));
 
 import { DnsPortalClient } from '#lib/dns/portalClient.js';
-import { applyPlans } from '#lib/dns/apply.js';
+import { applyPlans, collectAppliedTargetStatuses } from '#lib/dns/apply.js';
 
 const PORTAL = 'https://portal.target.test';
 const UUID = 'target-uuid';
@@ -157,6 +157,34 @@ describe('applyPlans', () => {
     expect(results[0].status).toEqual('blocked-destructive');
   });
 
+  test('persistent poll failures surface as an error instead of a silently unobserved applied', async () => {
+    nock(PORTAL).post('/api/domains').reply(200, { data: { status: 'initializing' } });
+    nock(PORTAL).get('/api/domains/a.test').query(true).times(3).reply(500, { errors: ['boom'] });
+
+    const { results } = await applyPlans({ client, plans: [plan('a.test')], ...fastOpts, timeoutMs: 2000 });
+
+    expect(results[0].status).toEqual('error');
+    expect(results[0].serverMessage).toContain('polling the provisioning status failed');
+    expect(results[0].stillProcessing).toBe(true);
+  });
+
+  test('a transient poll blip recovers and still settles', async () => {
+    nock(PORTAL).post('/api/domains').reply(200, { data: { status: 'initializing' } });
+    nock(PORTAL).get('/api/domains/a.test').query(true).reply(500, { errors: ['blip'] });
+    nock(PORTAL).get('/api/domains/a.test').query(true).reply(200, { status: 'ready', locked: false });
+
+    const { results } = await applyPlans({ client, plans: [plan('a.test')], ...fastOpts, timeoutMs: 2000 });
+    expect(results[0]).toMatchObject({ status: 'applied', finalStatus: 'ready', stillProcessing: false });
+  });
+
+  test('a 401 while polling aborts the apply — lost auth affects every remaining domain', async () => {
+    nock(PORTAL).post('/api/domains').reply(200, { data: { status: 'initializing' } });
+    nock(PORTAL).get('/api/domains/a.test').query(true).reply(401, { errors: ['Not authorized'] });
+
+    await expect(applyPlans({ client, plans: [plan('a.test')], ...fastOpts }))
+      .rejects.toThrow(/Not authorized on/);
+  });
+
   test('polling timeout reports the last seen status as still processing', async () => {
     nock(PORTAL).post('/api/domains').reply(200, { data: { status: 'initializing' } });
     nock(PORTAL).get('/api/domains/a.test').query(true).times(100)
@@ -166,5 +194,43 @@ describe('applyPlans', () => {
     expect(results[0].status).toEqual('applied');
     expect(results[0].finalStatus).toEqual('initializing');
     expect(results[0].stillProcessing).toBe(true);
+  });
+});
+
+describe('collectAppliedTargetStatuses (TASK-1.23: shared by dns migrate and dns import)', () => {
+  let client;
+
+  beforeEach(() => {
+    nock.disableNetConnect();
+    client = new DnsPortalClient({ baseUrl: PORTAL, token: 't' });
+  });
+
+  afterEach(() => {
+    nock.cleanAll();
+    nock.enableNetConnect();
+  });
+
+  test('reuses domainStatus already captured by applyPlans, without a re-fetch', async () => {
+    const results = [{ domainName: 'a.test', status: 'applied', domainStatus: { status: 'ready' } }];
+    const statuses = await collectAppliedTargetStatuses(client, UUID, results);
+    expect(statuses).toEqual([{ status: 'ready' }]);
+    expect(nock.pendingMocks()).toEqual([]);
+  });
+
+  test('re-fetches when domainStatus is missing (e.g. --no-wait) and skips non-applied results', async () => {
+    nock(PORTAL).get('/api/domains/a.test').query(true).reply(200, { status: 'ready' });
+    const results = [
+      { domainName: 'a.test', status: 'applied' },
+      { domainName: 'b.test', status: 'error' }
+    ];
+
+    const statuses = await collectAppliedTargetStatuses(client, UUID, results);
+    expect(statuses).toEqual([{ status: 'ready' }]);
+  });
+
+  test('a failed re-fetch resolves to null instead of throwing', async () => {
+    nock(PORTAL).get('/api/domains/a.test').query(true).reply(500, { errors: ['boom'] });
+    const statuses = await collectAppliedTargetStatuses(client, UUID, [{ domainName: 'a.test', status: 'applied' }]);
+    expect(statuses).toEqual([null]);
   });
 });

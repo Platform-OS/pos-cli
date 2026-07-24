@@ -76,6 +76,17 @@ describe('transformDomain', () => {
     expect(result.dropped[0].reason).toContain('enable_www_redirect');
   });
 
+  test('drops the www redirect CNAME for a mixed-case source domain name (TASK-1.20 follow-up)', () => {
+    const domain = withRecords([record({ name: 'www', type: 'CNAME', records: ['Example-Shop.com.'] })]);
+    domain.attributes.domain_name = 'Example-Shop.com';
+
+    const result = transformDomain(domain, { targetInstanceUuid: TARGET_UUID });
+
+    expect(result.dropped).toHaveLength(1);
+    expect(result.dropped[0].reason).toContain('enable_www_redirect');
+    expect(result.payload.extra_dns_records).toEqual([]);
+  });
+
   test('keeps the www CNAME when it points elsewhere or the redirect is off', () => {
     const external = transformDomain(
       withRecords([record({ name: 'www', type: 'CNAME', records: ['sites.example-cdn.net'] })]),

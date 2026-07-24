@@ -23,7 +23,7 @@ const externalDomain = {
         resource_record_value: 'shop.example.org.313e8bf2329b2f4a.dcv.cloudflare.com'
       }
     ],
-    private_lb_cname: 'fallback.private-stack.example',
+    private_lb_cname: 'fallback.example-lb.com',
     lb_public_ip: '132.145.42.224'
   }
 };
@@ -42,7 +42,7 @@ describe('cutoverInstructions', () => {
     expect(output).toContain('CUTOVER shop.example.org');
     expect(output).toContain('_acme-challenge.shop.example.org');
     expect(output).toContain('dcv.cloudflare.com');
-    expect(output).toContain('CNAME -> fallback.private-stack.example');
+    expect(output).toContain('CNAME -> fallback.example-lb.com');
     expect(output).toContain('A     -> 132.145.42.224');
     expect(output).toContain('waiting for the DNS changes below');
   });
