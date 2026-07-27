@@ -11,7 +11,11 @@ program
   .arguments('<environment>', 'name of environment. Example: staging')
   .option('--email <email>', 'Partner Portal account email. Example: admin@example.com')
   .requiredOption('--url <url>', 'marketplace url. Example: https://example.com')
-  .option('--partner-portal-url <partnerPortalUrl>', 'Partner Partner URL', 'https://partners.platformos.com')
+  .option(
+    '--partner-portal-url <partnerPortalUrl>',
+    'Partner Portal managing this instance, stored with the environment. Example: https://portal.private-stack.online',
+    'https://partners.platformos.com'
+  )
   .option(
     '--token <token>',
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'

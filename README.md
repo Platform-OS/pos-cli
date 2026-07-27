@@ -28,12 +28,18 @@ To authenticate, you'll need your [**Partner Portal**](https://partners.platform
 
 To add an environment to your configuration file, use the `env add` command and authenticate with your **Partner Portal** credentials:
 
-    pos-cli env add [environment] --url [your application url] [optional: --partner-portal-url]
+    pos-cli env add [environment] --url [your application url] [--partner-portal-url [portal url]]
 
 Examples: 
 
     pos-cli env add staging --url https://example.com
     pos-cli env add staging --url https://example.com --partner-portal-url https://portal.private-stack.online
+
+`--partner-portal-url` selects which Partner Portal deployment the CLI authenticates against. It defaults to `https://partners.platformos.com`, so you only need it when your Instance is managed by a different portal — for example a private stack. The value is saved with the environment as `partner_portal_url` in the `.pos` file, so you pass it only when adding the environment: the [`dns`](#dns-migrating-domains-between-partner-portals) commands read it back per environment, and `pos-cli deploy` exports it as `PARTNER_PORTAL_HOST` for the deploy run.
+
+Note that [`modules install`/`update`](#installation) take their registry URL from the `PARTNER_PORTAL_HOST` environment variable (or [per-module overrides](#per-module-registry-overrides)), not from `.pos` — so to resolve modules from a non-default portal, set that variable as well.
+
+The Instance details page in the Partner Portal shows the `env add` command pre-filled with both URLs, ready to copy.
 
 The configuration for your environments is stored in the `.pos` file.
 

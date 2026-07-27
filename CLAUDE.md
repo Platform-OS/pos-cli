@@ -317,7 +317,7 @@ Key variables that affect behavior:
 - `DEBUG` - Enables debug logging
 - `NO_COLOR` - Disables colored output
 - `CONCURRENCY` - Override sync concurrency (default: 3)
-- `PARTNER_PORTAL_HOST` - Override the module registry URL used by `modules install` and `modules update` (default: `https://partners.platformos.com`)
+- `PARTNER_PORTAL_HOST` - Override the module registry URL used by `modules install` and `modules update` (default: `https://partners.platformos.com`). `pos-cli env add --partner-portal-url` stores its value per environment as `partner_portal_url` in `.pos`, and `pos-cli deploy` exports that stored value as `PARTNER_PORTAL_HOST` for the run.
 
 #### Module System
 Complete lifecycle:
