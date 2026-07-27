@@ -25,6 +25,7 @@ program
   .command('constants', 'manage constants')
   .command('data', 'export, import or clean data on instance')
   .command('deploy <environment>', 'deploy code to environment').alias('d')
+  .command('dns', 'export, migrate and verify instance domains/DNS between Partner Portals')
   .command('env', 'manage environments')
   .command('exec', 'execute code on instance')
   .command('gui', 'gui for content editor, graphql, logs')
