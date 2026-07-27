@@ -283,6 +283,10 @@ project/
 
 Run all commands from project root (one level above `app/` or `modules/`).
 
+**Module staging** (`lib/modules/staging.js`). `pos-cli modules install/update` never downloads or extracts into an installed module directory. Each archive is fetched into its own throwaway staging directory under `tmp/pos-cli-module-staging/` and unpacked there; only after it is verified to contain the expected `<name>/` root is it published with two renames — the old `modules/<name>` moves into the staging directory, then the staged tree is renamed onto `modules/<name>`. Moving the old tree aside wholesale (rather than unpacking over it) is what makes files deleted between two versions actually disappear; the second rename being atomic is what guarantees `modules/<name>` is never observed half-written. A half-written module whose `pos-module.json` already reports the target version is indistinguishable from an up-to-date one (see `modulesNotOnDisk`), so it would never be repaired.
+
+Staging lives under the project's `tmp/` (already pos-cli's scratch area — deploy writes `tmp/release.zip` there) for two reasons: publishing ends in a `rename()` onto `modules/<name>`, which fails with `EXDEV` across filesystems, so `os.tmpdir()` is not safe to use; and nothing enumerates project-root `tmp/`, since every glob over modules runs with `cwd` set to `modules/` and sync only watches `dir.toWatch()`. A staging directory therefore cannot be deployed, packed, or synced by construction, with no per-enumerator exclusions to maintain.
+
 #### API Architecture
 Main endpoints (`${INSTANCE_URL}/api/app_builder/`):
 - `/marketplace_releases` (POST) - Deploy archive
