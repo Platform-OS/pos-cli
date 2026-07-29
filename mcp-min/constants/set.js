@@ -1,17 +1,8 @@
 // platformos.constants.set tool - set a constant
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
-
-function buildSetMutation(name, value) {
-  // Escape quotes in name and value for GraphQL string
-  const escapedName = name.replace(/"/g, '\\"');
-  const escapedValue = value.replace(/"/g, '\\"');
-  return `mutation {
-    constant_set(name: "${escapedName}", value: "${escapedValue}") {
-      name, value
-    }
-  }`;
-}
+import { setConstant } from '../../lib/graph/queries.js';
+import { graphQLErrorMessage } from '../../lib/graph/response.js';
 
 const constantsSetTool = {
   description: 'Set a constant on a platformOS instance. Creates or updates the constant.',
@@ -34,16 +25,13 @@ const constantsSetTool = {
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-      const query = buildSetMutation(params.name, params.value);
-      const resp = await gateway.graph({ query });
+      const resp = await gateway.graph(setConstant(params.name, params.value));
 
-      if (resp && Array.isArray(resp.errors) && resp.errors.length > 0) {
+      const errorMessage = graphQLErrorMessage(resp);
+      if (errorMessage) {
         return {
           ok: false,
-          error: {
-            code: 'GRAPHQL_ERROR',
-            message: resp.errors[0]?.message || 'GraphQL error'
-          }
+          error: { code: 'GRAPHQL_ERROR', message: errorMessage }
         };
       }
 
