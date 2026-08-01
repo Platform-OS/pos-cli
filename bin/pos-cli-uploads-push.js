@@ -7,7 +7,7 @@ import { fetchSettings } from '../lib/settings.js';
 import { uploadFile } from '../lib/s3UploadFile.js';
 import { presignUrl } from '../lib/presignUrl.js';
 import logger from '../lib/logger.js';
-import ora from 'ora';
+import ora from '../lib/ora.js';
 
 const uploadZip = async (filepath, gateway) => {
 

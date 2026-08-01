@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { program } from '../lib/program.js';
 import logger from '../lib/logger.js';
-import ora from 'ora';
+import ora from '../lib/ora.js';
+import { MISSING_PACKAGE_MESSAGE } from '../lib/check-messages.js';
 
 program
   .name('pos-cli check update-docs')
@@ -11,10 +12,7 @@ program
     try {
       platformosCheck = await import('@platformos/platformos-check-node');
     } catch {
-      await logger.Error(
-        'The @platformos/platformos-check-node package is not installed.\n' +
-        'Install it with: npm install @platformos/platformos-check-node'
-      );
+      await logger.Error(MISSING_PACKAGE_MESSAGE);
       return;
     }
 

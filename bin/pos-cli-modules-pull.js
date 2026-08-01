@@ -6,7 +6,7 @@ import logger from '../lib/logger.js';
 import { fetchSettings } from '../lib/settings.js';
 import downloadFile from '../lib/downloadFile.js';
 import waitForStatus from '../lib/data/waitForStatus.js';
-import ora from 'ora';
+import ora from '../lib/ora.js';
 
 program
   .name('pos-cli modules pull')

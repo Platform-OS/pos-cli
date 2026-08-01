@@ -2,7 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import ora from 'ora';
+import ora from '../lib/ora.js';
 
 import { program } from '../lib/program.js';
 import logger from '../lib/logger.js';
