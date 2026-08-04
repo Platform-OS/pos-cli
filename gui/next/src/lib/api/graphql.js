@@ -2,6 +2,13 @@
   an interface to call graphql queries against the instance
 */
 
+// imports
+// ------------------------------------------------------------------------
+// Shared with the CLI and the MCP tools so every surface agrees on what
+// "this response failed" means. The module is dependency-free, so vite
+// bundles it into this app without pulling anything Node-only in.
+import { graphQLErrors } from '../../../../../lib/graph/response.js';
+
 
 
 // purpose:		run a graphql query
@@ -19,8 +26,10 @@ const graphql = (body) => {
   })
     .then((res) => res.json())
     .then((res) => {
-      if(res.errors) {
-        res.errors.forEach(error => {
+      const errors = graphQLErrors(res);
+
+      if(errors) {
+        errors.forEach(error => {
           console.log(body.query);
           console.info(error);
         });

@@ -95,10 +95,10 @@ describe('constants-list', () => {
 
 describe('constants-set', () => {
   test('sets constant successfully', async () => {
-    let capturedQuery;
+    let capturedBody;
     class MockGateway {
-      async graph({ query }) {
-        capturedQuery = query;
+      async graph(body) {
+        capturedBody = body;
         return {
           data: {
             constant_set: { name: 'API_KEY', value: 'newvalue' }
@@ -115,15 +115,15 @@ describe('constants-set', () => {
     expect(res.ok).toBe(true);
     expect(res.data.name).toBe('API_KEY');
     expect(res.data.value).toBe('newvalue');
-    expect(capturedQuery).toContain('constant_set');
-    expect(capturedQuery).toContain('API_KEY');
+    expect(capturedBody.query).toContain('constant_set');
+    expect(capturedBody.variables).toEqual({ name: 'API_KEY', value: 'newvalue' });
   });
 
-  test('escapes quotes in name and value', async () => {
-    let capturedQuery;
+  test('passes name and value as GraphQL variables, not interpolated into the query', async () => {
+    let capturedBody;
     class MockGateway {
-      async graph({ query }) {
-        capturedQuery = query;
+      async graph(body) {
+        capturedBody = body;
         return { data: { constant_set: { name: 'test', value: 'val' } } };
       }
     }
@@ -133,7 +133,27 @@ describe('constants-set', () => {
       { Gateway: MockGateway, settings: mockSettings }
     );
 
-    expect(capturedQuery).toContain('\\"');
+    expect(capturedBody.query).not.toContain('KEY"WITH"QUOTES');
+    expect(capturedBody.variables).toEqual({ name: 'KEY"WITH"QUOTES', value: 'value"here' });
+  });
+
+  test('sets a multiline value (e.g. a PEM key) without breaking the query', async () => {
+    let capturedBody;
+    const multilineValue = '-----BEGIN KEY-----\nline one\nline two\n-----END KEY-----';
+    class MockGateway {
+      async graph(body) {
+        capturedBody = body;
+        return { data: { constant_set: { name: 'PEM_KEY', value: multilineValue } } };
+      }
+    }
+
+    const res = await constantsSetTool.handler(
+      { env: 'staging', name: 'PEM_KEY', value: multilineValue },
+      { Gateway: MockGateway, settings: mockSettings }
+    );
+
+    expect(res.ok).toBe(true);
+    expect(capturedBody.variables.value).toBe(multilineValue);
   });
 
   test('returns error when env not found', async () => {
@@ -171,10 +191,10 @@ describe('constants-set', () => {
 
 describe('constants-unset', () => {
   test('deletes constant successfully', async () => {
-    let capturedQuery;
+    let capturedBody;
     class MockGateway {
-      async graph({ query }) {
-        capturedQuery = query;
+      async graph(body) {
+        capturedBody = body;
         return {
           data: {
             constant_unset: { name: 'OLD_KEY' }
@@ -191,7 +211,8 @@ describe('constants-unset', () => {
     expect(res.ok).toBe(true);
     expect(res.data.name).toBe('OLD_KEY');
     expect(res.data.deleted).toBe(true);
-    expect(capturedQuery).toContain('constant_unset');
+    expect(capturedBody.query).toContain('constant_unset');
+    expect(capturedBody.variables).toEqual({ name: 'OLD_KEY' });
   });
 
   test('handles non-existent constant', async () => {

@@ -1,15 +1,8 @@
 // platformos.constants.unset tool - delete a constant
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
-
-function buildUnsetMutation(name) {
-  const escapedName = name.replace(/"/g, '\\"');
-  return `mutation {
-    constant_unset(name: "${escapedName}") {
-      name
-    }
-  }`;
-}
+import { unsetConstant } from '../../lib/graph/queries.js';
+import { graphQLErrorMessage } from '../../lib/graph/response.js';
 
 const constantsUnsetTool = {
   description: 'Delete a constant from a platformOS instance.',
@@ -31,16 +24,13 @@ const constantsUnsetTool = {
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-      const query = buildUnsetMutation(params.name);
-      const resp = await gateway.graph({ query });
+      const resp = await gateway.graph(unsetConstant(params.name));
 
-      if (resp && Array.isArray(resp.errors) && resp.errors.length > 0) {
+      const errorMessage = graphQLErrorMessage(resp);
+      if (errorMessage) {
         return {
           ok: false,
-          error: {
-            code: 'GRAPHQL_ERROR',
-            message: resp.errors[0]?.message || 'GraphQL error'
-          }
+          error: { code: 'GRAPHQL_ERROR', message: errorMessage }
         };
       }
 

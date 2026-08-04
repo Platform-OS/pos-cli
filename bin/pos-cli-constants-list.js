@@ -3,13 +3,9 @@
 import { program } from '../lib/program.js';
 import Gateway from '../lib/proxy.js';
 import { getConstants } from '../lib/graph/queries.js';
+import { graphQLErrorMessage } from '../lib/graph/response.js';
 import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
-
-const success = (msg) => {
-  msg.data.constants.results.forEach(x => console.log(x.name.padEnd(50), safe(x.value)));
-  logger.Print('\n');
-};
 
 const safe = (str) => {
   if ( process.env.SAFE )
@@ -26,9 +22,17 @@ program
     const gateway = new Gateway(authData);
 
     gateway
-      .graph({query: getConstants()})
-      .then(success)
-      .catch(console.log);
+      .graph(getConstants())
+      .then((msg) => {
+        const errorMessage = graphQLErrorMessage(msg);
+        if (errorMessage) throw new Error(errorMessage);
+
+        msg.data.constants.results.forEach(x => console.log(x.name.padEnd(50), safe(x.value)));
+        logger.Print('\n');
+      })
+      .catch(async (err) => {
+        await logger.Error(`Listing constants failed: ${err.message || err}`);
+      });
   });
 
 program.parse(process.argv);

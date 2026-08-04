@@ -1,4 +1,4 @@
-import{g as t}from"./BD1m7lx9.js";const i={get:e=>t({query:`
+import{g as t}from"./CjsQ2dqX.js";const i={get:e=>t({query:`
       query(
         $per_page: Int
         $id: ID

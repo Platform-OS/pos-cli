@@ -4904,20 +4904,20 @@ var app = (function () {
         return graph({ query }, false);
       },
       setConstant(name, value) {
-        const query = `mutation {
-      constant_set(name: "${name}", value: "${value}") {
+        const query = `mutation SetConstant($name: String!, $value: String!) {
+      constant_set(name: $name, value: $value) {
         name, value
       }
     }`;
-        return graph({ query }, "Constant updated");
+        return graph({ query, variables: { name, value } }, "Constant updated");
       },
       unsetConstant(name) {
-        const query = `mutation {
-      constant_unset(name: "${name}") {
+        const query = `mutation UnsetConstant($name: String!) {
+      constant_unset(name: $name) {
         name
       }
     }`;
-        return graph({ query }, "Constant unset");
+        return graph({ query, variables: { name } }, "Constant unset");
       }
     };
 

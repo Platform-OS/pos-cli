@@ -5,6 +5,13 @@ import pageStore from '../pages/Models/Manage/_page-store';
 
 import typeMap from './_typemap';
 
+// Mirrors lib/graph/response.js. Not imported from there: this is a separate
+// npm package with its own lockfile, and its build cannot run on current Node
+// (routify 1.x), so a cross-package import could not be verified here.
+const graphQLErrors = (res) =>
+  res && Array.isArray(res.errors) && res.errors.length > 0 ? res.errors : null;
+const formatGraphQLErrors = (errors) => (errors || []).map((e) => e.message).join(', ');
+
 const getPropsString = (props) => {
   return Object.keys(props)
     .map((prop) => {
@@ -36,9 +43,10 @@ const graph = (body, successMessage = 'Success') => {
   })
     .then((res) => res.json())
     .then((res) => {
-      if (res.errors) {
-        const err = res.errors[0].message;
-        return notifier.danger(`Error: ${err}`, 5000);
+      const errors = graphQLErrors(res);
+
+      if (errors) {
+        return notifier.danger(`Error: ${formatGraphQLErrors(errors)}`, 5000);
       } else {
         if (successMessage !== false) {
           notifier.success(successMessage);
@@ -204,21 +212,21 @@ export default {
     return graph({ query }, false);
   },
   setConstant(name, value) {
-    const query = `mutation {
-      constant_set(name: "${name}", value: "${value}") {
+    const query = `mutation SetConstant($name: String!, $value: String!) {
+      constant_set(name: $name, value: $value) {
         name, value
       }
     }`;
 
-    return graph({ query }, 'Constant updated');
+    return graph({ query, variables: { name, value } }, 'Constant updated');
   },
   unsetConstant(name) {
-    const query = `mutation {
-      constant_unset(name: "${name}") {
+    const query = `mutation UnsetConstant($name: String!) {
+      constant_unset(name: $name) {
         name
       }
     }`;
 
-    return graph({ query }, 'Constant unset');
+    return graph({ query, variables: { name } }, 'Constant unset');
   }
 };

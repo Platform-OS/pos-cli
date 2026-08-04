@@ -3,6 +3,7 @@
 import { program } from '../lib/program.js';
 import logger from '../lib/logger.js';
 import { execGraphql } from '../lib/exec/graphql.js';
+import { graphQLErrors } from '../lib/graph/response.js';
 
 program
   .name('pos-cli exec graphql')
@@ -25,8 +26,11 @@ program
         process.exit(0);
       }
 
-      if (response.errors) {
-        await logger.Error(`GraphQL execution error: ${JSON.stringify(response.errors, null, 2)}`);
+      const errors = graphQLErrors(response);
+      if (errors) {
+        // Keep the full array here: this command's whole job is to show the
+        // instance's raw response, locations and extensions included.
+        await logger.Error(`GraphQL execution error: ${JSON.stringify(errors, null, 2)}`);
         process.exit(1);
       }
 

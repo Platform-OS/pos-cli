@@ -1,12 +1,8 @@
 // platformos.constants.list tool - list all constants
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
-
-const QUERY = `query getConstants {
-  constants(per_page: 99) {
-    results { name, value, updated_at }
-  }
-}`;
+import { getConstants } from '../../lib/graph/queries.js';
+import { graphQLErrorMessage } from '../../lib/graph/response.js';
 
 const constantsListTool = {
   description: 'List all constants configured on a platformOS instance.',
@@ -27,15 +23,13 @@ const constantsListTool = {
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-      const resp = await gateway.graph({ query: QUERY });
+      const resp = await gateway.graph(getConstants());
 
-      if (resp && Array.isArray(resp.errors) && resp.errors.length > 0) {
+      const errorMessage = graphQLErrorMessage(resp);
+      if (errorMessage) {
         return {
           ok: false,
-          error: {
-            code: 'GRAPHQL_ERROR',
-            message: resp.errors[0]?.message || 'GraphQL error'
-          }
+          error: { code: 'GRAPHQL_ERROR', message: errorMessage }
         };
       }
 

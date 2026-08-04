@@ -4,6 +4,7 @@ import { program } from '../lib/program.js';
 import Gateway from '../lib/proxy.js';
 import { existence as validateExistence } from '../lib/validators/index.js';
 import { setConstant } from '../lib/graph/queries.js';
+import { graphQLErrorMessage } from '../lib/graph/response.js';
 import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
 
@@ -17,14 +18,6 @@ const checkParams = ({name, value}) => {
   validateExistence({ argumentValue: name, argumentName: 'name', fail: help });
 };
 
-const success = (msg) => {
-  logger.Success(`Constant variable <${msg.data.constant_set.name}> added successfully.`);
-};
-
-const error = (msg) => {
-  logger.Error(`Adding Constant variable <${msg.data.constant_set.name}> failed.`);
-};
-
 program
   .name('pos-cli constants set')
   .option('--name <name>', 'name of constant. Example: TOKEN')
@@ -36,9 +29,16 @@ program
     const gateway = new Gateway(authData);
 
     gateway
-      .graph({query: setConstant(params.name, params.value)})
-      .then(success)
-      .catch(error);
+      .graph(setConstant(params.name, params.value))
+      .then((msg) => {
+        const errorMessage = graphQLErrorMessage(msg);
+        if (errorMessage) throw new Error(errorMessage);
+
+        logger.Success(`Constant variable <${msg.data.constant_set.name}> added successfully.`);
+      })
+      .catch(async (err) => {
+        await logger.Error(`Adding Constant variable <${params.name}> failed: ${err.message || err}`);
+      });
   });
 
 program.parse(process.argv);
