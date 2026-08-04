@@ -32,14 +32,12 @@ program
       .graph(setConstant(params.name, params.value))
       .then((msg) => {
         const errorMessage = graphQLErrorMessage(msg);
-        if (errorMessage) {
-          logger.Error(`Adding Constant variable <${params.name}> failed: ${errorMessage}`);
-          return;
-        }
+        if (errorMessage) throw new Error(errorMessage);
+
         logger.Success(`Constant variable <${msg.data.constant_set.name}> added successfully.`);
       })
-      .catch((err) => {
-        logger.Error(`Adding Constant variable <${params.name}> failed: ${err.message || err}`);
+      .catch(async (err) => {
+        await logger.Error(`Adding Constant variable <${params.name}> failed: ${err.message || err}`);
       });
   });
 

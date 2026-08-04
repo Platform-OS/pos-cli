@@ -35,28 +35,28 @@ const constant = {
     data = Object.fromEntries(data.entries());
 
     const query = `
-      mutation {
-        constant_set(name: "${data.name}", value: "${data.value}"){
+      mutation SetConstant($name: String!, $value: String!) {
+        constant_set(name: $name, value: $value){
           name,
           value
         }
       }`;
 
-    return graphql({ query }, false);
+    return graphql({ query, variables: { name: data.name, value: data.value } }, false);
   },
 
   delete: (data) => {
     data = Object.fromEntries(data.entries());
 
     const query = `
-      mutation {
-        constant_unset(name: "${data.name}"){
+      mutation UnsetConstant($name: String!) {
+        constant_unset(name: $name){
           name
         }
       }
     `;
 
-    return graphql({ query }, false);
+    return graphql({ query, variables: { name: data.name } }, false);
   }
 
 };

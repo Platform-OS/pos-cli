@@ -30,17 +30,15 @@ program
       .graph(unsetConstant(params.name))
       .then((msg) => {
         const errorMessage = graphQLErrorMessage(msg);
-        if (errorMessage) {
-          logger.Error(`Deleting Constant variable <${params.name}> failed: ${errorMessage}`);
-          return;
-        }
+        if (errorMessage) throw new Error(errorMessage);
+
         if (msg.data.constant_unset)
           logger.Success(`Constant variable <${msg.data.constant_unset.name}> deleted successfully.`);
         else
           logger.Success('Constant variable not found.');
       })
-      .catch((err) => {
-        logger.Error(`Deleting Constant variable <${params.name}> failed: ${err.message || err}`);
+      .catch(async (err) => {
+        await logger.Error(`Deleting Constant variable <${params.name}> failed: ${err.message || err}`);
       });
   });
 

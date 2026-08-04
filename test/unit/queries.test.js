@@ -7,7 +7,7 @@ import { getConstants, setConstant, unsetConstant } from '../../lib/graph/querie
 
 describe('graph/queries', () => {
   test('getConstants returns a query for all constants', () => {
-    const query = getConstants();
+    const { query } = getConstants();
     expect(query).toContain('query getConstants');
     expect(query).toContain('constants(per_page: 99)');
     expect(query).toContain('results { name, value, updated_at }');

@@ -1,6 +1,7 @@
 // platformos.graphql.exec tool - execute GraphQL via Gateway.graph
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { graphQLErrors, formatGraphQLErrors } from '../../lib/graph/response.js';
 
 const execGraphqlTool = {
   description: 'Execute a GraphQL query or mutation on a platformOS instance via /api/graph. Returns JSON data and errors from the instance. Auth resolved from: explicit params > MPKIT_* env vars > .pos config. Use variables to pass dynamic values safely instead of string interpolation.',
@@ -30,15 +31,15 @@ const execGraphqlTool = {
     try {
       const resp = await gateway.graph(body);
 
-      if (resp && Array.isArray(resp.errors) && resp.errors.length > 0) {
+      const errors = graphQLErrors(resp);
+      if (errors) {
         // Return error object but do not throw (keep HTTP 200 at MCP layer)
-        const firstMsg = resp.errors[0]?.message || 'GraphQL execution error';
         return {
           ok: false,
           error: {
             code: 'GRAPHQL_EXEC_ERROR',
-            message: `GraphQLError: ${firstMsg}`,
-            details: { errors: resp.errors, data: resp.data ?? null }
+            message: `GraphQLError: ${formatGraphQLErrors(errors) || 'GraphQL execution error'}`,
+            details: { errors, data: resp.data ?? null }
           },
           meta: {
             startedAt,
