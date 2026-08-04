@@ -8,7 +8,7 @@ import transform from '../lib/data/uploadFiles.js';
 import isValidJSON from '../lib/data/isValidJSON.js';
 import logger from '../lib/logger.js';
 import report from '../lib/logger/report.js';
-import ora from 'ora';
+import ora from '../lib/ora.js';
 
 let gateway;
 
