@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
@@ -9,13 +9,28 @@ const __dirname = path.dirname(__filename);
 
 const cliPath = path.join(process.cwd(), 'bin', 'pos-cli.js');
 
+// Every generator run spawns a real node process. In isolation each finishes in
+// well under a second, but the suite runs test files in parallel, so a run can
+// take several seconds under load. One generous shared ceiling keeps these tests
+// from failing on scheduling noise while still catching a hung generator.
+const CLI_TIMEOUT = 20000;
+
+// Must stay above CLI_TIMEOUT, otherwise vitest aborts the test before
+// execCommand gets a chance to report what the CLI actually printed.
+vi.setConfig({ testTimeout: CLI_TIMEOUT + 10000 });
+
 const execCommand = (cmd, opts = {}) => {
   return new Promise((resolve) => {
-    const child = exec(cmd, { ...opts, stdio: ['pipe', 'pipe', 'pipe'] }, (err, stdout, stderr) => {
+    // exec's own `timeout` option kills the child for us and still passes the
+    // output collected so far to the callback, which a manual timer would lose.
+    const child = exec(cmd, opts, (err, stdout, stderr) => {
       // Extract exit code from error or default to 0
       // Different environments might use err.code, err.exitCode, or err.signal
       let code = 0;
       if (err) {
+        if (err.killed) {
+          return resolve({ stdout, stderr: `${stderr}\nTimed out after ${opts.timeout}ms`, code: null });
+        }
         code = err.code || err.exitCode || (err.signal ? 1 : 0);
       }
       return resolve({ stdout, stderr, code });
@@ -25,13 +40,6 @@ const execCommand = (cmd, opts = {}) => {
     // arguments receive EOF instead of hanging waiting for user input.
     if (child.stdin) {
       child.stdin.end();
-    }
-
-    if (opts.timeout) {
-      setTimeout(() => {
-        child.kill();
-        resolve({ stdout: '', stderr: 'Test timed out', code: null });
-      }, opts.timeout);
     }
   });
 };
@@ -107,7 +115,7 @@ describe('pos-cli generate command', () => {
     test('requires modelName argument', async () => {
       const { stderr } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud',
-        { cwd: testDir, timeout: 5000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       // Yeoman shows error but exits with code 0
@@ -117,7 +125,7 @@ describe('pos-cli generate command', () => {
     test('generates CRUD files for model with attributes', async () => {
       const { stdout, stderr, code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud product name:string price:integer description:text active:boolean',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       if (code !== 0) {
@@ -177,7 +185,7 @@ describe('pos-cli generate command', () => {
     test('generates view files when --includeViews option is used', async () => {
       const { stdout, stderr, code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud article title:text --includeViews',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       if (code !== 0) {
@@ -225,7 +233,7 @@ describe('pos-cli generate command', () => {
     test('does not generate view files without --includeViews option', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud book title:string',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -239,7 +247,7 @@ describe('pos-cli generate command', () => {
     test('pluralizes model name correctly', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud person name:string',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -257,7 +265,7 @@ describe('pos-cli generate command', () => {
     test('generates files with correct content using template variables', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud user name:string email:string age:integer',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -275,7 +283,7 @@ describe('pos-cli generate command', () => {
     test('handles model with multiple word names', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud blog_post title:string content:text',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -287,7 +295,7 @@ describe('pos-cli generate command', () => {
     test('supports array type attributes', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud tag name:string categories:array',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -301,7 +309,7 @@ describe('pos-cli generate command', () => {
     test('supports float and date types', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud product price:float published_at:date',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -316,7 +324,7 @@ describe('pos-cli generate command', () => {
     test('generates config.yml file', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud custom_model name:string',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -343,7 +351,7 @@ describe('pos-cli generate command', () => {
     test('requires commandName argument', async () => {
       const { stderr } = await run(
         'test/fixtures/yeoman/modules/core/generators/command',
-        { cwd: testDir, timeout: 5000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       // Yeoman shows error but exits with code 0
@@ -353,7 +361,7 @@ describe('pos-cli generate command', () => {
     test('generates command files with model/action format', async () => {
       const { stdout, stderr, code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command users/create',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       if (code !== 0) {
@@ -383,7 +391,7 @@ describe('pos-cli generate command', () => {
     test('generates command directory with build and check phases', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command products/update',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -399,7 +407,7 @@ describe('pos-cli generate command', () => {
     test('parses modelName and actionName from command path', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command orders/process_payment',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -414,7 +422,7 @@ describe('pos-cli generate command', () => {
     test('handles simple command name without model', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command simple_task',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -430,7 +438,7 @@ describe('pos-cli generate command', () => {
     test('generates GraphQL mutation file', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command notifications/send',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -446,7 +454,7 @@ describe('pos-cli generate command', () => {
     test('handles multiple directory levels', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command admin/users/create',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -461,7 +469,7 @@ describe('pos-cli generate command', () => {
     test('substitutes actionName template variable correctly', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command comments/delete',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -475,7 +483,7 @@ describe('pos-cli generate command', () => {
     test('substitutes modelName template variable correctly', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command sessions/destroy',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -489,7 +497,7 @@ describe('pos-cli generate command', () => {
     test('generates build phase with correct structure', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command reports/generate',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -514,7 +522,7 @@ describe('pos-cli generate command', () => {
     test('generates check phase with correct structure', async () => {
       const { code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command documents/approve',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -550,7 +558,7 @@ describe('pos-cli generate command', () => {
     test('shows help for crud generator', async () => {
       const { stdout, code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud --generator-help',
-        { cwd: testDir, timeout: 5000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -563,7 +571,7 @@ describe('pos-cli generate command', () => {
     test('shows help for command generator', async () => {
       const { stdout, code } = await run(
         'test/fixtures/yeoman/modules/core/generators/command --generator-help',
-        { cwd: testDir, timeout: 5000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -590,7 +598,7 @@ describe('pos-cli generate command', () => {
     test('runs custom generator from non-module path', async () => {
       const { stdout, stderr, code } = await run(
         'test/fixtures/yeoman/custom/generators/simple myitem --auto-confirm',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       if (code !== 0) {
@@ -614,7 +622,7 @@ describe('pos-cli generate command', () => {
     test('shows help for custom generator', async () => {
       const { stdout, code } = await run(
         'test/fixtures/yeoman/custom/generators/simple --generator-help --auto-confirm',
-        { cwd: testDir, timeout: 5000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -636,7 +644,7 @@ describe('pos-cli generate command', () => {
 
       const { code } = await run(
         'test/fixtures/yeoman/custom/generators/simple testitem --auto-confirm',
-        { cwd: testDir, timeout: 15000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       // Generator should still work after installing dependencies
@@ -645,7 +653,7 @@ describe('pos-cli generate command', () => {
       // Verify dependencies were installed
       const installed = await fileExists(nodeModulesPath);
       expect(installed).toBe(true);
-    }, 20000);
+    });
   });
 
   describe('error handling and validation', () => {
@@ -664,7 +672,7 @@ describe('pos-cli generate command', () => {
     test('fails with clear error for non-existent generator path', async () => {
       const { stderr, code } = await run(
         'test/fixtures/nonexistent/generator',
-        { cwd: testDir, timeout: 5000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).not.toBe(0);
@@ -678,7 +686,7 @@ describe('pos-cli generate command', () => {
 
       const { stderr, code } = await run(
         badGenPath,
-        { cwd: testDir, timeout: 5000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).not.toBe(0);
@@ -713,7 +721,7 @@ export default class extends Generator {
       // The important thing is it doesn't crash with a different error
       const { stderr, code } = await run(
         genPath,
-        { cwd: testDir, timeout: 5000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       // It's okay if this fails due to missing dependencies
@@ -726,7 +734,7 @@ export default class extends Generator {
     test('handles deeply nested generator paths', async () => {
       const { stdout, code } = await run(
         'test/fixtures/yeoman/modules/core/generators/crud product name:string',
-        { cwd: testDir, timeout: 10000 }
+        { cwd: testDir, timeout: CLI_TIMEOUT }
       );
 
       expect(code).toBe(0);
@@ -759,7 +767,7 @@ export default class extends Generator {
 
         const { code } = await run(
           'test/fixtures/yeoman/modules/core/generators/crud item name:string',
-          { cwd: testDir, timeout: 10000 }
+          { cwd: testDir, timeout: CLI_TIMEOUT }
         );
 
         expect(code).toBe(0);

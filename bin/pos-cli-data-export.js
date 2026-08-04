@@ -10,7 +10,7 @@ import waitForStatus from '../lib/data/waitForStatus.js';
 import downloadFile from '../lib/downloadFile.js';
 import logger from '../lib/logger.js';
 import report from '../lib/logger/report.js';
-import ora from 'ora';
+import ora from '../lib/ora.js';
 
 let gateway;
 
@@ -64,7 +64,15 @@ program
     };
 
     const handleZipFileExport = (exportTask, filename) => {
-      downloadFile(exportTask.zip_file_url, filename).then(exportFinished);
+      // Not chained into the caller's promise, so it needs its own handler: downloadFile
+      // rejects on a non-2xx response (e.g. an expired presigned URL).
+      downloadFile(exportTask.zip_file_url, filename)
+        .then(exportFinished)
+        .catch((e) => {
+          spinner.fail('Export failed');
+          logger.Error(e.message);
+          report('[ERR] Data: Export - Failed');
+        });
     };
 
     const handleJsonFileExport = (exportTask, filename) => {

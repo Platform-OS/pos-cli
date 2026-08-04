@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import ora from 'ora';
+import ora from '../lib/ora.js';
 import table from 'text-table';
 
 import { program } from '../lib/program.js';

@@ -12,7 +12,7 @@ import { uploadFile } from '../lib/s3UploadFile.js';
 import { presignUrl } from '../lib/presignUrl.js';
 import logger from '../lib/logger.js';
 import report from '../lib/logger/report.js';
-import ora from 'ora';
+import ora from '../lib/ora.js';
   
 let gateway;
 

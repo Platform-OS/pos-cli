@@ -5,7 +5,7 @@ import Gateway from '../lib/proxy.js';
 import { fetchSettings } from '../lib/settings.js';
 import waitForStatus from '../lib/data/waitForStatus.js';
 import logger from '../lib/logger.js';
-import ora from 'ora';
+import ora from '../lib/ora.js';
 
 program.showHelpAfterError();
 program
