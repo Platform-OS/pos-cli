@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixes
+
+* `pos-cli modules install/update` no longer leaves a module directory whose manifest claims a version its files don't match — the state behind "the version was bumped but the code is stale and a file is missing". Archives are now unpacked into a throwaway staging directory under `tmp/` and swapped into `modules/<name>` only once complete, so an interrupted install leaves either the old module or no module, and both are correctly re-downloaded next run. The swap moves the old directory aside rather than unpacking over it, so files a new version no longer ships are actually removed. Previously the module directory was deleted and the archive unpacked over it in place: an interruption left a partial tree, and because staleness is detected by reading the version out of the module's own `pos-module.json`, a partial tree that had already written that file looked up-to-date to every later `install` and `update` — the stale code then shipped on the next deploy.
+* `pos-cli modules install/update` now rejects an archive that does not contain the expected `<module-name>/` directory. Such an archive used to delete `modules/<module-name>`, unpack its differently-named root beside it, and still report success.
+* `pos-cli modules install/update` waits for every module download to settle before reporting a failure. A failing module used to abort the command while its siblings were still being replaced on disk, so a Ctrl-C at the error prompt could interrupt an install that appeared to be over. All download failures are now reported together instead of only the first.
+* `pos-module.lock.json` is written only after every module has downloaded successfully. Writing it up front recorded versions that were never installed, and the next run — seeing the lock and the modules that *did* download agree — had no way to tell the install was incomplete.
+* File downloads (module archives, data exports, `pos-cli pull`) now fail on a non-2xx response instead of saving the error body as the downloaded file, and follow redirects. An expired presigned URL answers `403` with an XML body, which used to be written out as a `.zip` and only surfaced later as a corrupt-archive error. Signed query strings are stripped from error messages.
+
 ## 6.3.0 (2026-07-27)
 
 ### New Features

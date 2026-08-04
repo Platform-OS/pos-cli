@@ -8,6 +8,7 @@ import {
   downloadModule,
   downloadAllModules,
 } from '#lib/modules/downloadModule.js';
+import { getStagingBase } from '#lib/modules/staging.js';
 import { withTmpDir } from '#test/utils/withTmpDir.js';
 
 vi.mock('#lib/portal.js', () => ({
@@ -242,6 +243,27 @@ describe('modulesNotOnDisk', () => {
   });
 });
 
+// Staging directories are named `pos-cli-unpack-<moduleName>-<random>`; recover the
+// module name so one unzip stub can serve a whole batch of concurrent downloads.
+const moduleNameFromStagingDir = (dest) =>
+  path.basename(dest).replace(/^pos-cli-unpack-/, '').replace(/-\w+$/, '');
+
+/**
+ * Stubs unzip the way the real one behaves: writing <dest>/<moduleName>/…
+ * downloadModule verifies that root exists before it touches modules/<moduleName>,
+ * so a no-op stub would (correctly) be rejected as a malformed archive.
+ */
+const extractsModule = (files = {}) => async (_zipPath, dest) => {
+  const name = moduleNameFromStagingDir(dest);
+  const root = path.join(dest, name);
+  fs.mkdirSync(root, { recursive: true });
+  fs.writeFileSync(path.join(root, 'pos-module.json'), JSON.stringify({ machine_name: name }));
+  for (const [rel, content] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+    fs.writeFileSync(path.join(root, rel), content);
+  }
+};
+
 // downloadModule downloads a single module archive and extracts it.
 // Uses mocked Portal, downloadFile, and unzip to avoid real network/filesystem ops.
 describe('downloadModule', () => {
@@ -256,7 +278,7 @@ describe('downloadModule', () => {
 
     Portal.moduleVersionsSearch.mockResolvedValue({ public_archive: 'https://example.com/core-2.0.6.zip' });
     downloadFile.mockResolvedValue(undefined);
-    unzip.mockResolvedValue(undefined);
+    unzip.mockImplementation(extractsModule());
   });
 
   test('calls Portal.moduleVersionsSearch with name@version and registryUrl', async () => {
@@ -268,22 +290,43 @@ describe('downloadModule', () => {
     );
   });
 
-  test('calls downloadFile with public_archive URL', async () => {
+  test('downloads the archive into the staging directory it is unzipped in', async () => {
     await downloadModule('core', '2.0.6');
 
+    const [, dest] = unzip.mock.calls[0];
     expect(downloadFile).toHaveBeenCalledWith(
       'https://example.com/core-2.0.6.zip',
-      expect.stringContaining('pos-module-core-')
+      path.join(dest, 'archive.zip')
     );
   });
 
-  test('calls unzip to extract to modules/ directory', async () => {
+  test('extracts to a staging directory outside modules/, never over the installed module', async () => {
     await downloadModule('core', '2.0.6');
 
-    expect(unzip).toHaveBeenCalledWith(
-      expect.any(String),
-      path.join(process.cwd(), 'modules')
-    );
+    const [, dest] = unzip.mock.calls[0];
+    expect(path.basename(dest)).toMatch(/^pos-cli-unpack-core-\w+$/);
+    expect(path.dirname(dest)).toBe(getStagingBase());
+    expect(getStagingBase().startsWith(path.join(process.cwd(), 'modules'))).toBe(false);
+  });
+
+  test('removes its staging directory on success', async () => {
+    await downloadModule('core', '2.0.6');
+    const [, dest] = unzip.mock.calls[0];
+
+    expect(fs.existsSync(dest)).toBe(false);
+    expect(fs.existsSync(path.join(process.cwd(), 'modules', 'core'))).toBe(true);
+    expect(fs.readdirSync(path.join(process.cwd(), 'modules'))).toEqual(['core']);
+  });
+
+  test('removes its staging directory when the swap fails', async () => {
+    unzip.mockImplementation(async (_zip, dest) => {
+      fs.mkdirSync(path.join(dest, 'wrong-root'), { recursive: true });
+    });
+
+    await expect(downloadModule('core', '2.0.6')).rejects.toThrow();
+
+    const [, dest] = unzip.mock.calls[0];
+    expect(fs.existsSync(dest)).toBe(false);
   });
 
   test('throws formatted error message on 404', async () => {
@@ -300,31 +343,62 @@ describe('downloadModule', () => {
     await expect(downloadModule('core', '2.0.6')).rejects.toThrow('core@2.0.6: Service Unavailable');
   });
 
-  test('cleans up temp file in finally block even when an error is thrown', async () => {
-    Portal.moduleVersionsSearch.mockRejectedValue(new Error('Service Unavailable'));
-    const rmSpy = vi.spyOn(fs.promises, 'rm');
+  test('removes the downloaded archive with the staging directory when the download fails', async () => {
+    downloadFile.mockImplementation(async (_url, dest) => {
+      fs.writeFileSync(dest, 'partial');
+      throw new Error('Network error');
+    });
 
-    await expect(downloadModule('core', '2.0.6')).rejects.toThrow();
+    await expect(downloadModule('core', '2.0.6')).rejects.toThrow('Network error');
 
-    // The finally block must call fs.promises.rm on the temp file path (force: true).
-    const cleanupCall = rmSpy.mock.calls.find(([p, opts]) =>
-      typeof p === 'string' && p.includes('pos-module-core-') && opts?.force === true
-    );
-    expect(cleanupCall).toBeDefined();
-
-    rmSpy.mockRestore();
+    const [, archive] = downloadFile.mock.calls[0];
+    expect(fs.existsSync(path.dirname(archive))).toBe(false);
   });
 
-  test('removes old module directory before downloading', async () => {
+  test('replaces the old module directory wholesale — no leftovers from the old version', async () => {
     fs.mkdirSync(path.join(process.cwd(), 'modules', 'core'), { recursive: true });
     fs.writeFileSync(path.join(process.cwd(), 'modules', 'core', 'old-file.txt'), 'old');
+    unzip.mockImplementation(extractsModule({ 'new-file.txt': 'new' }));
 
     await downloadModule('core', '2.0.6');
 
-    // unzip was called, meaning the old directory was removed and download proceeded
-    expect(unzip).toHaveBeenCalled();
-    // The old directory should be gone (removed before download, not re-created by mock)
     expect(fs.existsSync(path.join(process.cwd(), 'modules', 'core', 'old-file.txt'))).toBe(false);
+    expect(fs.existsSync(path.join(process.cwd(), 'modules', 'core', 'new-file.txt'))).toBe(true);
+  });
+
+  test('rejects an archive whose root directory is not <moduleName>/ and keeps the installed module', async () => {
+    fs.mkdirSync(path.join(process.cwd(), 'modules', 'core'), { recursive: true });
+    fs.writeFileSync(path.join(process.cwd(), 'modules', 'core', 'existing-file.txt'), 'keep me');
+    unzip.mockImplementation(async (_zip, dest) => {
+      fs.mkdirSync(path.join(dest, 'pos-module-core'), { recursive: true });
+    });
+
+    await expect(downloadModule('core', '2.0.6')).rejects.toThrow(
+      /archive does not contain a "core\/" directory \(archive contains: pos-module-core\)/
+    );
+
+    // The previously installed module must survive a malformed archive untouched.
+    expect(fs.existsSync(path.join(process.cwd(), 'modules', 'core', 'existing-file.txt'))).toBe(true);
+    expect(fs.existsSync(path.join(process.cwd(), 'modules', 'pos-module-core'))).toBe(false);
+  });
+
+  test('does NOT delete the module directory when extraction fails midway', async () => {
+    fs.mkdirSync(path.join(process.cwd(), 'modules', 'core'), { recursive: true });
+    fs.writeFileSync(path.join(process.cwd(), 'modules', 'core', 'existing-file.txt'), 'keep me');
+    unzip.mockImplementation(async (_zip, dest) => {
+      // Partial extraction: the manifest lands, then the process dies.
+      const root = path.join(dest, 'core');
+      fs.mkdirSync(root, { recursive: true });
+      fs.writeFileSync(path.join(root, 'pos-module.json'), JSON.stringify({ version: '2.0.6' }));
+      throw new Error('Unexpected end of archive');
+    });
+
+    await expect(downloadModule('core', '2.0.6')).rejects.toThrow('Unexpected end of archive');
+
+    // The half-extracted tree must never reach modules/core — that is the state that
+    // used to look up-to-date forever while missing files.
+    expect(fs.existsSync(path.join(process.cwd(), 'modules', 'core', 'existing-file.txt'))).toBe(true);
+    expect(readInstalledVersion('core')).toBeNull();
   });
 
   test('does NOT delete module directory when downloadFile fails', async () => {
@@ -353,6 +427,8 @@ describe('downloadModule', () => {
 
 // downloadAllModules iterates all modules and calls downloadModule for each.
 describe('downloadAllModules', () => {
+  withTmpDir();
+
   let Portal, downloadFile, unzip;
 
   beforeEach(async () => {
@@ -363,7 +439,7 @@ describe('downloadAllModules', () => {
     vi.clearAllMocks();
     Portal.moduleVersionsSearch.mockResolvedValue({ public_archive: 'https://example.com/module.zip' });
     downloadFile.mockResolvedValue(undefined);
-    unzip.mockResolvedValue(undefined);
+    unzip.mockImplementation(extractsModule());
   });
 
   const REGISTRY = 'https://custom.registry.example.com';
@@ -386,8 +462,47 @@ describe('downloadAllModules', () => {
       downloadAllModules({ core: '2.0.6', user: '5.1.2' }, getRegistryUrl)
     ).rejects.toThrow(/404 not found/);
 
-    // Promise.all starts all downloads concurrently, so both modules are queried
+    // downloads start concurrently, so both modules are queried
     expect(Portal.moduleVersionsSearch).toHaveBeenCalledTimes(2);
+  });
+
+  test('waits for every download to settle before rejecting — no work outlives the failure', async () => {
+    // Bug guard: with Promise.all the command reported failure while sibling modules
+    // were still being replaced on disk, so a Ctrl-C at the error prompt could leave a
+    // module half-installed.
+    let slowFinished = false;
+    Portal.moduleVersionsSearch.mockImplementation(async (nameWithVersion) => {
+      if (nameWithVersion.startsWith('broken')) throw new Error('Not Found');
+      return { public_archive: 'https://example.com/module.zip' };
+    });
+    unzip.mockImplementation(async (zipPath, dest) => {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await extractsModule()(zipPath, dest);
+      slowFinished = true;
+    });
+
+    await expect(
+      downloadAllModules({ core: '2.0.6', broken: '1.0.0' }, getRegistryUrl)
+    ).rejects.toThrow('Not Found');
+
+    expect(slowFinished).toBe(true);
+    expect(fs.existsSync(path.join(process.cwd(), 'modules', 'core'))).toBe(true);
+  });
+
+  test('reports every failure, not just the first', async () => {
+    Portal.moduleVersionsSearch.mockImplementation(async (nameWithVersion) => {
+      throw new Error(`boom for ${nameWithVersion}`);
+    });
+
+    await expect(
+      downloadAllModules({ core: '2.0.6', user: '5.1.2' }, getRegistryUrl)
+    ).rejects.toThrow(/Failed to download 2 modules[\s\S]*core@2\.0\.6[\s\S]*user@5\.1\.2/);
+  });
+
+  test('removes the staging directory once all downloads settle', async () => {
+    await downloadAllModules({ core: '2.0.6', user: '5.1.2' }, getRegistryUrl);
+
+    expect(fs.readdirSync(path.join(process.cwd(), 'modules')).sort()).toEqual(['core', 'user']);
   });
 
   test('passes registryUrl to every download call', async () => {

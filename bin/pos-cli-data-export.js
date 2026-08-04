@@ -64,7 +64,15 @@ program
     };
 
     const handleZipFileExport = (exportTask, filename) => {
-      downloadFile(exportTask.zip_file_url, filename).then(exportFinished);
+      // Not chained into the caller's promise, so it needs its own handler: downloadFile
+      // rejects on a non-2xx response (e.g. an expired presigned URL).
+      downloadFile(exportTask.zip_file_url, filename)
+        .then(exportFinished)
+        .catch((e) => {
+          spinner.fail('Export failed');
+          logger.Error(e.message);
+          report('[ERR] Data: Export - Failed');
+        });
     };
 
     const handleJsonFileExport = (exportTask, filename) => {
