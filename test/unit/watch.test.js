@@ -8,7 +8,7 @@
  * These tests lock in the correct behaviour: a 422 response must log a
  * human-readable error message and throw so the queue can continue.
  */
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // --- module mocks (hoisted by vitest before any import) ------------------
 
@@ -58,7 +58,12 @@ vi.mock('#lib/directories.js', () => ({
 }));
 vi.mock('#lib/watch-files-extensions.js', () => ({ default: ['liquid', 'yml'] }));
 vi.mock('#lib/assets/manifest.js', () => ({ manifestGenerateForAssets: vi.fn() }));
-vi.mock('#lib/s3UploadFile.js', () => ({ uploadFileFormData: vi.fn() }));
+// uploadError stays real so the tests build upload failures in exactly the shape
+// the 403 retry keys on.
+vi.mock('#lib/s3UploadFile.js', async () => ({
+  ...(await vi.importActual('#lib/s3UploadFile.js')),
+  uploadFileFormData: vi.fn()
+}));
 vi.mock('#lib/presignUrl.js', () => ({ presignDirectory: vi.fn() }));
 vi.mock('#lib/shouldBeSynced.js', () => ({ default: vi.fn() }));
 vi.mock('#lib/settings.js', () => ({ loadSettingsFileForModule: vi.fn().mockReturnValue({}) }));
@@ -70,7 +75,10 @@ import fs from 'fs';
 import logger from '#lib/logger.js';
 import ServerError from '#lib/ServerError.js';
 import Gateway from '#lib/proxy.js';
-import { pushFile, deleteFile, start, watchIgnored, handleWatcherError } from '#lib/watch.js';
+import { uploadError, uploadFileFormData } from '#lib/s3UploadFile.js';
+import { presignDirectory } from '#lib/presignUrl.js';
+import { manifestGenerateForAssets } from '#lib/assets/manifest.js';
+import { pushFile, deleteFile, sendFile, start, watchIgnored, handleWatcherError } from '#lib/watch.js';
 
 // --- test helpers ---------------------------------------------------------
 
@@ -267,6 +275,194 @@ describe('deleteFile', () => {
       { exit: false, notify: false }
     );
     expect(ServerError.handler).not.toHaveBeenCalled();
+  });
+});
+
+// --- asset sync tests (sendAsset via sendFile) -----------------------------
+
+// Regression tests for the 403 crash: the presigned upload authorization is
+// fetched once at sync start and expires server-side. sendAsset used to call
+// logger.Error without { exit: false } on any upload failure, so an expired
+// authorization killed the whole watch process with "Upload failed with
+// status 403". Now a 403 refreshes the authorization and retries once, and no
+// asset upload failure ever exits the process.
+describe('asset sync', () => {
+  const assetPath = 'app/assets/style/main.css';
+
+  let gateway;
+
+  beforeEach(() => {
+    // sendAsset schedules the debounced manifest flush on success; fake timers keep
+    // that 1s timer from firing during a later test.
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    manifestGenerateForAssets.mockReturnValue({ files: {} });
+    presignDirectory.mockResolvedValue({
+      url: 'https://s3.example.com/bucket',
+      fields: { key: 'assets/${filename}' }
+    });
+    gateway = {
+      getInstance: vi.fn().mockResolvedValue({ id: 'inst-1' }),
+      sendManifest: vi.fn().mockResolvedValue({})
+    };
+  });
+
+  afterEach(async () => {
+    // Let the pending flush run instead of cancelling it: the debounce is module
+    // level, and cancelling its timer behind its back leaves it thinking one is
+    // still scheduled, so it would never fire again in any later test.
+    await vi.runOnlyPendingTimersAsync();
+    vi.useRealTimers();
+  });
+
+  test('uploads the asset and flushes the manifest on success', async () => {
+    uploadFileFormData.mockResolvedValue(true);
+
+    await sendFile(gateway, assetPath);
+
+    expect(uploadFileFormData).toHaveBeenCalledTimes(1);
+    expect(logger.Success).toHaveBeenCalledWith(`[Sync] Synced asset: ${assetPath}`);
+    expect(gateway.sendManifest).toHaveBeenCalled();
+    expect(logger.Error).not.toHaveBeenCalled();
+  });
+
+  test('refreshes the upload authorization and retries once on 403', async () => {
+    uploadFileFormData.mockRejectedValueOnce(uploadError(403)).mockResolvedValueOnce(true);
+
+    await sendFile(gateway, assetPath);
+
+    // Initial fetch at sendFile start + one refresh after the 403.
+    expect(presignDirectory).toHaveBeenCalledTimes(2);
+    expect(uploadFileFormData).toHaveBeenCalledTimes(2);
+    expect(logger.Success).toHaveBeenCalledWith(`[Sync] Synced asset: ${assetPath}`);
+    // The refresh is silent — debug-only trace, no user-facing warning or error.
+    expect(logger.Warn).not.toHaveBeenCalled();
+    expect(logger.Error).not.toHaveBeenCalled();
+  });
+
+  test('logs without exiting and throws when the 403 persists after a refresh', async () => {
+    uploadFileFormData.mockRejectedValue(uploadError(403));
+
+    await expect(sendFile(gateway, assetPath)).rejects.toMatchObject({ alreadyLogged: true });
+
+    // Exactly one retry — no infinite refresh loop.
+    expect(uploadFileFormData).toHaveBeenCalledTimes(2);
+    expect(logger.Error).toHaveBeenCalledWith(
+      `[Sync] Failed to sync ${assetPath}: Upload failed with status 403`,
+      { exit: false, notify: false }
+    );
+  });
+
+  test('logs without exiting and throws on non-403 upload failures, with no retry', async () => {
+    uploadFileFormData.mockRejectedValue(uploadError(500));
+
+    await expect(sendFile(gateway, assetPath)).rejects.toMatchObject({ alreadyLogged: true });
+
+    expect(uploadFileFormData).toHaveBeenCalledTimes(1);
+    expect(presignDirectory).toHaveBeenCalledTimes(1);
+    expect(logger.Error).toHaveBeenCalledWith(
+      `[Sync] Failed to sync ${assetPath}: Upload failed with status 500`,
+      { exit: false, notify: false }
+    );
+  });
+
+  test('normalizes Windows backslash paths in messages and throws with exit disabled', async () => {
+    uploadFileFormData.mockRejectedValue(uploadError(403));
+    const windowsPath = 'modules\\community\\public\\assets\\style\\notification.css';
+
+    await expect(sendFile(gateway, windowsPath)).rejects.toMatchObject({ alreadyLogged: true });
+
+    expect(logger.Error).toHaveBeenCalledWith(
+      '[Sync] Failed to sync modules/community/public/assets/style/notification.css: Upload failed with status 403',
+      { exit: false, notify: false }
+    );
+  });
+
+  test('sends an API error from the authorization refresh through the centralized handler', async () => {
+    // The refresh talks to the API, so its failures need the handler's guidance —
+    // a 401 has to tell the user to refresh their token, not just print the status.
+    const unauthorized = Object.assign(new Error('Request failed with status 401'), {
+      name: 'StatusCodeError',
+      statusCode: 401
+    });
+    uploadFileFormData.mockRejectedValue(uploadError(403));
+    // The initial fetch succeeds; the refresh the 403 triggers is what fails.
+    gateway.getInstance.mockResolvedValueOnce({ id: 'inst-1' }).mockRejectedValue(unauthorized);
+
+    await expect(sendFile(gateway, assetPath)).rejects.toMatchObject({ alreadyLogged: true });
+
+    expect(ServerError.handler).toHaveBeenCalledWith(unauthorized);
+  });
+
+  test('derives the S3 key per asset without mutating the shared authorization', async () => {
+    // presignDirectory hands back the same object every call, so a key written back
+    // into it would surface as a wrong key on the second upload.
+    uploadFileFormData.mockResolvedValue(true);
+
+    await sendFile(gateway, assetPath);
+
+    expect(uploadFileFormData).toHaveBeenLastCalledWith(assetPath, {
+      url: 'https://s3.example.com/bucket',
+      fields: { key: 'assets/style/${filename}' }
+    });
+
+    await sendFile(gateway, 'modules/community/public/assets/images/logo.png');
+
+    expect(uploadFileFormData).toHaveBeenLastCalledWith('modules/community/public/assets/images/logo.png', {
+      url: 'https://s3.example.com/bucket',
+      fields: { key: 'assets/modules/community/images/${filename}' }
+    });
+  });
+
+  test('keeps the batch for the next flush when registering the assets fails', async () => {
+    uploadFileFormData.mockResolvedValue(true);
+    gateway.sendManifest.mockRejectedValueOnce(new Error('502 Bad Gateway'));
+
+    // The asset itself uploaded — only registering it failed.
+    await expect(sendFile(gateway, assetPath)).rejects.toThrow('502 Bad Gateway');
+
+    gateway.sendManifest.mockResolvedValue({});
+    await sendFile(gateway, 'app/assets/style/other.css');
+
+    // The asset that was dropped is registered along with the new one, and was not
+    // re-uploaded to get there.
+    expect(manifestGenerateForAssets).toHaveBeenLastCalledWith([assetPath, 'app/assets/style/other.css']);
+    expect(uploadFileFormData).toHaveBeenCalledTimes(2);
+  });
+
+  test('keeps the batch when the manifest cannot be built', async () => {
+    // Building the manifest stats every file, so an asset deleted right after its
+    // upload makes the build fail rather than the request.
+    uploadFileFormData.mockResolvedValue(true);
+    manifestGenerateForAssets.mockImplementationOnce(() => {
+      throw Object.assign(new Error(`ENOENT: no such file or directory, stat '${assetPath}'`), { code: 'ENOENT' });
+    });
+
+    await expect(sendFile(gateway, assetPath)).rejects.toThrow('ENOENT');
+    expect(gateway.sendManifest).not.toHaveBeenCalled();
+
+    await sendFile(gateway, assetPath);
+
+    expect(gateway.sendManifest).toHaveBeenCalledTimes(1);
+  });
+
+  test('logs instead of throwing when the debounced flush fails', async () => {
+    // This flush fires from a timer, where a rejection would go unhandled and kill
+    // the process — the crash this whole path exists to prevent.
+    uploadFileFormData.mockResolvedValue(true);
+    gateway.sendManifest.mockRejectedValue(new Error('502 Bad Gateway'));
+
+    await expect(sendFile(gateway, assetPath)).rejects.toThrow('502 Bad Gateway');
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(logger.Error).toHaveBeenCalledWith('[Sync] Failed to update assets manifest: 502 Bad Gateway', {
+      exit: false,
+      notify: false
+    });
+
+    // Drain the retained batch so it does not leak into the next test.
+    gateway.sendManifest.mockResolvedValue({});
+    await sendFile(gateway, assetPath);
   });
 });
 
