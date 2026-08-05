@@ -4,6 +4,7 @@
  */
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
+import path from 'path';
 import mime from 'mime';
 
 // Mock fs module
@@ -114,7 +115,11 @@ describe('s3UploadFile', () => {
         status: 403
       });
 
-      await expect(uploadFile(fileName, s3Url)).rejects.toThrow('Upload failed with status 403');
+      // statusCode lets callers (sendAsset) detect an expired upload authorization and retry
+      await expect(uploadFile(fileName, s3Url)).rejects.toMatchObject({
+        message: 'Upload failed with status 403',
+        statusCode: 403
+      });
     });
 
     test('throws error when upload fails with 500 server error', async () => {
@@ -260,8 +265,10 @@ describe('s3UploadFile', () => {
       expect(result).toBe(true);
     });
 
-    test('correctly extracts filename from Unix path', async () => {
-      const filePath = '/home/user/projects/app/assets/images/logo.png';
+    // S3 expands the uploaded file's name into the ${filename} placeholder in the
+    // presigned key, so anything but the basename puts the object at the wrong key
+    // while the upload still reports success.
+    const uploadedFileName = async filePath => {
       const data = {
         url: 'https://s3.amazonaws.com/bucket',
         fields: { key: 'assets/${filename}' }
@@ -273,26 +280,21 @@ describe('s3UploadFile', () => {
 
       await uploadFileFormData(filePath, data);
 
-      // Verify FormData was created (we can't easily inspect FormData contents)
-      expect(global.fetch).toHaveBeenCalled();
-      const fetchCall = global.fetch.mock.calls[0];
-      expect(fetchCall[1].body).toBeInstanceOf(FormData);
+      const body = global.fetch.mock.calls[0][1].body;
+      expect(body).toBeInstanceOf(FormData);
+      return body.get('file').name;
+    };
+
+    test('correctly extracts filename from Unix path', async () => {
+      expect(await uploadedFileName('/home/user/projects/app/assets/images/logo.png')).toBe('logo.png');
     });
 
-    test('correctly extracts filename from Windows path', async () => {
-      const filePath = 'C:\\Users\\user\\projects\\app\\assets\\images\\logo.png';
-      const data = {
-        url: 'https://s3.amazonaws.com/bucket',
-        fields: { key: 'assets/${filename}' }
-      };
+    test('correctly extracts filename from a native OS path', async () => {
+      // Built with path.join so it uses backslashes on Windows, where a path split
+      // on '/' alone would yield the whole path as the filename.
+      const filePath = path.join('modules', 'community', 'public', 'assets', 'images', 'logo.png');
 
-      fs.readFileSync.mockReturnValue(Buffer.from('image'));
-      mime.getType.mockReturnValue('image/png');
-      global.fetch.mockResolvedValue({ ok: true, status: 200 });
-
-      await uploadFileFormData(filePath, data);
-
-      expect(global.fetch).toHaveBeenCalled();
+      expect(await uploadedFileName(filePath)).toBe('logo.png');
     });
 
     test('handles large file near 50MB limit with FormData', async () => {
@@ -328,7 +330,10 @@ describe('s3UploadFile', () => {
         status: 403
       });
 
-      await expect(uploadFileFormData(filePath, data)).rejects.toThrow('Upload failed with status 403');
+      await expect(uploadFileFormData(filePath, data)).rejects.toMatchObject({
+        message: 'Upload failed with status 403',
+        statusCode: 403
+      });
     });
 
     test('throws error when FormData upload fails with network error', async () => {
@@ -584,7 +589,10 @@ describe('s3UploadFile', () => {
         status: 403
       });
 
-      await expect(uploadFile(fileName, s3Url)).rejects.toThrow('Upload failed with status 403');
+      await expect(uploadFile(fileName, s3Url)).rejects.toMatchObject({
+        message: 'Upload failed with status 403',
+        statusCode: 403
+      });
     });
 
     test('uploadFileFormData handles invalid presigned data', async () => {
