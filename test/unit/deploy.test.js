@@ -516,13 +516,11 @@ describe.skip('Dry Run', () => {
       params: {}
     });
 
-    // printDeployReport should receive merged report with both Page and Asset
+    // printDeployReport owns the merge, so it receives the release report plus the
+    // asset report alongside it
     expect(printSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        Page: expect.any(Object),
-        Asset: { upserted: 1, deleted: 0, skipped: 0 }
-      }),
-      expect.any(Object)
+      expect.objectContaining({ Page: expect.any(Object) }),
+      expect.objectContaining({ asset: { upserted: 1, deleted: 0, skipped: 0 } })
     );
   });
 
@@ -582,6 +580,27 @@ describe('printDeployReport', () => {
     expect(output).toContain('1 deleted');
     expect(output).toContain('1 skipped');
     expect(output).toContain('views');
+  });
+
+  test('shows the asset report as its own category', () => {
+    printDeployReport(
+      { views: { upserted: ['app/views/pages/index.liquid'], deleted: [], skipped: [] } },
+      { asset: { upserted: 8, deleted: 0, skipped: 271 } }
+    );
+
+    const output = logger.Success.mock.calls[0][0];
+    expect(output).toContain('views');
+    expect(output).toContain('Asset');
+    expect(output).toContain('8 upserted');
+    expect(output).toContain('271 skipped');
+  });
+
+  test('prints the asset report even when there is no release report', () => {
+    printDeployReport(undefined, { asset: { upserted: 2, deleted: 0, skipped: 0 } });
+
+    const output = logger.Success.mock.calls[0][0];
+    expect(output).toContain('Asset');
+    expect(output).toContain('2 upserted');
   });
 
   test('displays skipped files in verbose mode', () => {
