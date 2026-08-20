@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import exec from '#test/utils/exec';
 import cliPath from '#test/utils/cliPath';
+import { path as checkPaths } from '@platformos/platformos-check-node';
 import path from 'path';
 
 vi.setConfig({ testTimeout: 60000 });
@@ -148,11 +149,18 @@ describe('pos-cli check run', () => {
       const specificPath = path.join(root, 'app/views/pages');
       const { stdout, stderr } = await exec(`${cliPath} check run ${specificPath}`);
 
+      // The refusal is platformos-check's own message, and it names a path the way it keys one:
+      // through a URI, which lowercases a Windows drive letter. So `D:\…` comes back as `d:\…`,
+      // while path.join above keeps the case it was given. Spell the expectation with the same
+      // conversion that produced the output rather than comparing case-insensitively — it is
+      // exported for this, and is the identity on Linux and macOS.
+      const asReported = p => checkPaths.fsPath(checkPaths.toUri(p));
+
       expect(stdout).not.toMatch('offenses found');
       expect(stderr).toContain(
-        `Nothing was checked: ${specificPath} is not a platformOS project root.`
+        `Nothing was checked: ${asReported(specificPath)} is not a platformOS project root.`
       );
-      expect(stderr).toContain(`The nearest above it is ${root}, matched on app/ alone`);
+      expect(stderr).toContain(`The nearest above it is ${asReported(root)}, matched on app/ alone`);
     });
 
     test('A project root with no source files says so, instead of reporting it clean', async () => {
