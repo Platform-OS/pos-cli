@@ -108,9 +108,8 @@ const checkRunTool = {
       // Run checks
       const result = await platformosCheck.appCheckRun(checkPath, configPath);
       let offenses = result.offenses;
-      // `size`, not `length`: `App` is not an array, so `.length` was `undefined` and this
-      // field reached every MCP client as `undefined` rather than a count. Pre-existing, and
-      // already failing `check-run.test.js`'s "includes timing metadata" assertion.
+      // `app` is an App model, whose file count is its `size` getter. It was an array of source
+      // files before platformos-check-node 1.0.0, so `.length` here silently became undefined.
       const filesChecked = result.app ? result.app.size : 0;
 
       // Auto-fix if requested.
