@@ -112,9 +112,22 @@ const checkRunTool = {
       // files before platformos-check-node 1.0.0, so `.length` here silently became undefined.
       const filesChecked = result.app ? result.app.size : 0;
 
-      // Auto-fix if requested
+      // Auto-fix if requested.
+      //
+      // Gated on the offenses autofix will actually WRITE — the same predicate it filters
+      // on internally — not on how many were reported. Most findings are suggest-only, so
+      // `offenses.length > 0` bought a second whole-project lint that reproduced an
+      // identical list (3.1 s of a 14.5 s run on a real 1509-file project with 454
+      // offenses, none of them fixable) and reported `autoFixed: true` for a pass that
+      // wrote nothing.
+      //
+      // The re-lint stays WHOLE-PROJECT rather than narrowed to the files that changed: a
+      // fix to a partial's `{% doc %}` params changes that partial's contract, so it can
+      // resolve a caller's offense in a file autofix never wrote. It is also what keeps
+      // positions honest, since every offense after a fix in the same file shifts.
+      const fixable = autoFix ? offenses.filter((o) => 'fix' in o && !!o.fix) : [];
       let autoFixed = false;
-      if (autoFix && offenses.length > 0) {
+      if (fixable.length > 0) {
         await platformosCheck.autofix(result.app, offenses);
         autoFixed = true;
 
