@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import exec from '#test/utils/exec';
 import cliPath from '#test/utils/cliPath';
+import { path as checkPaths } from '@platformos/platformos-check-node';
 import path from 'path';
 
 vi.setConfig({ testTimeout: 60000 });
@@ -139,13 +140,54 @@ describe('pos-cli check run', () => {
       expect(stderr).toMatch('Unknown check: NonExistentCheck');
     });
 
-    test('Specific path argument', async () => {
-      const cwdPath = cwd('with-issues');
-      const specificPath = path.join(cwdPath, 'app/views/pages');
-      const { stdout, code } = await exec(`${cliPath} check run ${specificPath}`);
+    test('A subdirectory is refused, naming the root instead of checking nothing', async () => {
+      // This previously asserted that a subdirectory path lints that subdirectory. It never did:
+      // the path is taken as the project ROOT, and no source files are found beneath it, so the
+      // run reported "No offenses found" over zero files. It now refuses and says where the root
+      // is. `app/` is the only marker here, so the message reports an inference, not a fact.
+      const root = cwd('with-issues');
+      const specificPath = path.join(root, 'app/views/pages');
+      const { stdout, stderr } = await exec(`${cliPath} check run ${specificPath}`);
 
-      expect(code).toEqual(1);
-      expect(stdout).toMatch('3 offenses found in 1 file');
+      // The refusal is platformos-check's own message, and it names a path the way it keys one:
+      // through a URI, which lowercases a Windows drive letter. So `D:\…` comes back as `d:\…`,
+      // while path.join above keeps the case it was given. Spell the expectation with the same
+      // conversion that produced the output rather than comparing case-insensitively — it is
+      // exported for this, and is the identity on Linux and macOS.
+      const asReported = p => checkPaths.fsPath(checkPaths.toUri(p));
+
+      expect(stdout).not.toMatch('offenses found');
+      expect(stderr).toContain(
+        `Nothing was checked: ${asReported(specificPath)} is not a platformOS project root.`
+      );
+      expect(stderr).toContain(`The nearest above it is ${asReported(root)}, matched on app/ alone`);
+    });
+
+    test('A project root with no source files says so, instead of reporting it clean', async () => {
+      // The fixture is a real project root (it has app/) holding no .liquid, .yml or .graphql
+      // file. Reporting "No offenses found" here would be the same false-clean this branch fixes:
+      // a success message over nothing examined.
+      const { stdout, code } = await run('no-source-files');
+
+      expect(code).toEqual(0);
+      expect(stdout).not.toMatch('No offenses found');
+      expect(stdout).toContain(
+        `Nothing was checked: no source files found in ${cwd('no-source-files')}.`
+      );
+      expect(stdout).toContain(
+        'Sources are .liquid, .yml, .graphql files under app/, marketplace_builder/, ' +
+          'modules/*/public/, modules/*/private/ — minus anything .platformos-check.yml ignores.'
+      );
+    });
+
+    test('A clean run states how many files it checked', async () => {
+      // The general form of the same rule: every clean run says what was examined, so "nothing was
+      // wrong" can never be confused with "nothing was looked at".
+      const { stdout, code } = await run('clean');
+
+      expect(code).toEqual(0);
+      expect(stdout).toContain('No offenses found.');
+      expect(stdout).toMatch(/Checked \d+ files?\. No offenses found\./);
     });
   });
 

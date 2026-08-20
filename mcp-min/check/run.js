@@ -108,7 +108,9 @@ const checkRunTool = {
       // Run checks
       const result = await platformosCheck.appCheckRun(checkPath, configPath);
       let offenses = result.offenses;
-      const filesChecked = result.app ? result.app.length : 0;
+      // `app` is an App model, whose file count is its `size` getter. It was an array of source
+      // files before platformos-check-node 1.0.0, so `.length` here silently became undefined.
+      const filesChecked = result.app ? result.app.size : 0;
 
       // Auto-fix if requested
       let autoFixed = false;
