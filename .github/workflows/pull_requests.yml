@@ -32,12 +32,12 @@ jobs:
       CI: true
     steps:
       - name: Checkout test instance code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Platform-OS/pos-cli-gui-qa
           path: instance
       - name: Checkout pos-cli code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: pos-cli
       - uses: actions/setup-node@v4
