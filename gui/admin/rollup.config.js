@@ -52,8 +52,10 @@ function createConfig({ output, inlineDynamicImports, plugins = [] }) {
       }),
 
       svelte({
-        dev: !production,
-        hydratable: true
+        compilerOptions: {
+          dev: !production,
+          hydratable: true
+        }
       }),
 
       resolve({
