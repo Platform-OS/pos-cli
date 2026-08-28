@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@graphiql/plugin-explorer": "^3.2.6",
-    "assert": "^2.0.0",
+    "assert": "^2.1.0",
     "graphiql": "^3.0.6",
     "graphql": "^15.8.0",
     "graphql-ws": "^5.14.1",
