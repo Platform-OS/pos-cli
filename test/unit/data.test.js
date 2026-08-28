@@ -1,5 +1,4 @@
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli, { feedStdin } from '#test/utils/exec';
 
 const env = Object.assign(process.env, {
   CI: true,
@@ -10,7 +9,7 @@ const env = Object.assign(process.env, {
 
 describe('Data clean', () => {
   test('shows message when wrong confirmation passed inline', async () => {
-    const {code, stderr} = await exec(`echo "wrong confirm" | ${cliPath} data clean`, { env });
+    const {code, stderr} = await cli('data clean', { env }, feedStdin('wrong confirm\n'));
     expect(stderr).toMatch('Wrong confirmation. Closed without cleaning instance data.');
     expect(code).toEqual(1);
   });
@@ -18,10 +17,7 @@ describe('Data clean', () => {
 
 describe('Data clean real', () => {
   test('shows message when wrong confirmation passed inline', async () => {
-    const {code, stderr, stdout} = await exec(`${cliPath} data clean`, { env }, (child) => {
-      child.stdin.write('CLEAN DATA\n');
-      child.stdin.end();
-    });
+    const {code, stderr, stdout} = await cli('data clean', { env }, feedStdin('CLEAN DATA\n'));
     expect(stderr).toMatch('WARNING!!! You are going to REMOVE your data from instance: http://google.com')
     expect(stderr).toMatch('There is no coming back.')
     expect(stderr).toMatch('data_clean')
@@ -31,7 +27,7 @@ describe('Data clean real', () => {
 
 describe('Data import', () => {
   test('should show message when wrong file for data import', async ()  => {
-    const {code, stderr} = await exec(`echo "wrong confirm" | ${cliPath} data import foo -p ./test/fixtures/wrong_json.json`, { env });
+    const {code, stderr} = await cli('data import foo -p ./test/fixtures/wrong_json.json', { env }, feedStdin('wrong confirm\n'));
     expect(stderr).toMatch('Invalid format of ./test/fixtures/wrong_json.json. Must be a valid json file. Check file using one of JSON validators online: https://jsonlint.com');
     expect(code).toEqual(1);
   });

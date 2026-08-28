@@ -109,7 +109,9 @@ describe('transformDomain', () => {
     );
 
     expect(result.payload.extra_dns_records).toHaveLength(1);
-    expect(result.warnings.some(w => w.includes('elb.amazonaws.com'))).toBe(true);
+    // Assert on the warning the transform owns, not on the record value it echoes back:
+    // the value is only there because the fixture put it there.
+    expect(result.warnings.some(w => w.includes('old-stack infrastructure'))).toBe(true);
   });
 
   test('--drop-value patterns drop matching records with a reason', () => {

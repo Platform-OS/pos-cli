@@ -2,8 +2,7 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli from '#test/utils/exec';
 
 vi.setConfig({ testTimeout: 60000 });
 
@@ -17,7 +16,7 @@ afterEach(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-const run = (options = '') => exec(`${cliPath} ai init ${options}`, { cwd: tmpDir });
+const run = (options = '') => cli(`ai init ${options}`, { cwd: tmpDir });
 
 describe('pos-cli ai init', () => {
   test('--tool claude creates .mcp.json with both servers', async () => {
@@ -48,12 +47,12 @@ describe('pos-cli ai init', () => {
   });
 
   test('help lists the ai command and its init subcommand', async () => {
-    const aiHelp = await exec(`${cliPath} ai --help`);
+    const aiHelp = await cli('ai --help');
     expect(aiHelp.stdout).toMatch('Usage: pos-cli ai');
     expect(aiHelp.stdout).toMatch('init');
     expect(aiHelp.stdout).toMatch('register platformOS MCP servers');
 
-    const rootHelp = await exec(`${cliPath} --help`);
+    const rootHelp = await cli('--help');
     expect(rootHelp.stdout).toMatch('configure AI tools');
   });
 });

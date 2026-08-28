@@ -1,11 +1,10 @@
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli from '#test/utils/exec';
 import path from 'path';
 import normalize from 'normalize-path';
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'audit', name);
 
-const run = fixtureName => exec(`${cliPath} audit`, { cwd: cwd(fixtureName) });
+const run = fixtureName => cli('audit', { cwd: cwd(fixtureName) });
 
 test('Reports no errors with empty directory', async () => {
   const { stderr } = await run('empty');

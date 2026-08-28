@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import { describe, test, expect, afterAll, afterEach, vi } from 'vitest';
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli from '#test/utils/exec';
 import waitForOutput from '#test/utils/waitForOutput';
 import path from 'path';
 import fs from 'fs';
@@ -11,8 +10,8 @@ vi.setConfig({ testTimeout: 30000 });
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name);
 const run = (fixtureName, options, callback) => {
-  return exec(
-    `${cliPath} sync ${options || ''}`,
+  return cli(
+    `sync ${options || ''}`,
     { cwd: cwd(fixtureName), env: process.env },
     callback
   );
@@ -51,7 +50,7 @@ describe('Happy path', () => {
 
     const steps = async (child) => {
       await waitForOutput(child, /Synchronizing changes to/);
-      exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
+      fs.appendFileSync(barJsPath, 'x\n');
       await waitForOutput(child, /\[Sync\] Synced asset: app\/assets\/bar\.js/);
       kill(child);
     };
@@ -65,7 +64,7 @@ describe('Happy path', () => {
   test('sync with direct assets upload', { retry: 2 }, async () => {
     const steps = async (child) => {
       await waitForOutput(child, /Synchronizing changes to/);
-      exec('echo "x" >> app/assets/bar.js', { cwd: cwd('correct_with_assets') });
+      fs.appendFileSync(barJsPath, 'x\n');
       await waitForOutput(child, /\[Sync\] Synced asset: app\/assets\/bar\.js/);
       kill(child);
     };
@@ -119,8 +118,8 @@ properties:
     fs.writeFileSync(fullTestPath, testContent);
 
     try {
-      const { stdout, code } = await exec(
-        `${cliPath} sync -f ${testFilePath}`,
+      const { stdout, code } = await cli(
+        ['sync', '-f', testFilePath],
         { cwd: cwd('correct_with_assets'), env: process.env }
       );
 
@@ -143,8 +142,8 @@ properties:
     fs.writeFileSync(fullTestPath, testContent);
 
     try {
-      const { stdout, code } = await exec(
-        `${cliPath} sync -f ${testFilePath}`,
+      const { stdout, code } = await cli(
+        ['sync', '-f', testFilePath],
         { cwd: cwd('correct_with_assets'), env: process.env }
       );
 
@@ -162,8 +161,8 @@ properties:
 
     const testFilePath = 'app/schema/invalid-property-type.yml';
 
-    const { stderr, code } = await exec(
-      `${cliPath} sync -f ${testFilePath}`,
+    const { stderr, code } = await cli(
+      ['sync', '-f', testFilePath],
       { cwd: cwd('invalid_schema'), env: process.env }
     );
 
