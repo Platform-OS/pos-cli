@@ -12,10 +12,10 @@
     "@playwright/test": "1.57.0",
     "@sveltejs/adapter-auto": "^3.3.1",
     "@sveltejs/adapter-static": "^3.0.6",
-    "@sveltejs/kit": "^2.7.3",
-    "@sveltejs/vite-plugin-svelte": "^3.1.2",
-    "svelte": "^4.2.19",
-    "vite": "^5.4.10"
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "svelte": "^5.55.7",
+    "vite": "^8.2.2"
   },
   "type": "module",
   "dependencies": {
