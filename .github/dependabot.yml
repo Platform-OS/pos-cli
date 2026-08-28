@@ -1,11 +1,30 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
+# Dependabot configuration.
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Every npm project in this repo is listed explicitly: Dependabot only scans the
+# directories named here, so a manifest that is missing from this list gets no
+# version-update PRs (security alerts still fire for it).
 
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "npm"
+    directories:
+      - "/"          # the published pos-cli package
+      - "/mcp-min"   # MCP server subpackage
+      - "/gui/next"  # admin GUI (SvelteKit) - build tooling only
+      - "/gui/graphql" # GraphiQL IDE - build tooling only
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      # One PR per project for routine patch/minor bumps; majors stay separate
+      # so they can be reviewed and rebuilt individually.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
       interval: "weekly"

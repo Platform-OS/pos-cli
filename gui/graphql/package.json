@@ -11,19 +11,16 @@
   "author": "platformOS",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.19.4",
+    "esbuild": "^0.28.2",
     "punycode": "^2.3.1"
   },
   "dependencies": {
-    "@graphiql/plugin-explorer": "^0.3.5",
+    "@graphiql/plugin-explorer": "^3.2.6",
     "assert": "^2.0.0",
     "graphiql": "^3.0.6",
     "graphql": "^15.8.0",
     "graphql-ws": "^5.14.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
-  },
-  "overrides": {
-    "linkify-it": "5.0.2"
   }
 }

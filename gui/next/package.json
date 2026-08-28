@@ -11,15 +11,21 @@
   "devDependencies": {
     "@playwright/test": "1.57.0",
     "@sveltejs/adapter-auto": "^3.3.1",
-    "@sveltejs/adapter-static": "^3.0.6",
-    "@sveltejs/kit": "^2.7.3",
-    "@sveltejs/vite-plugin-svelte": "^3.1.2",
-    "svelte": "^4.2.19",
-    "vite": "^5.4.10"
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "svelte": "^5.56.10",
+    "vite": "^6.4.3"
   },
   "type": "module",
   "dependencies": {
     "svelte-autosize": "^1.1.0",
     "svelte-json-tree": "^2.2.0"
+  },
+  "overrides": {
+    "cookie": "^0.7.0",
+    "svelte-json-tree": {
+      "svelte": "$svelte"
+    }
   }
 }
