@@ -42,14 +42,14 @@ program
       inquirer
         .prompt([
           {
-            type: 'list',
+            type: 'select',
             name: 'repo',
             message: 'Example app',
             default: 'empty',
             choices: Object.keys(repos)
           },
           {
-            type: 'string',
+            type: 'input',
             name: 'branch',
             message: 'Branch',
             default: 'master'

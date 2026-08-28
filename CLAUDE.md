@@ -653,7 +653,8 @@ expect(stderr).toMatch(/Could not connect|Request to( the)? server failed/);
 
 ## Node.js Version
 
-- **Minimum**: Node.js 22
+- **Minimum**: Node.js 22.13.0 — set by the dependencies, not by our own code: `commander` 15 needs
+  >=22.12.0 (it is ESM-only and relies on `require(esm)`) and `inquirer` 14 needs ^22.13.0.
 - **Recommended**: Node.js 22+
 - **Tested on**: 22, 24
 - Check enforced by `scripts/check-node-version.js` postinstall hook

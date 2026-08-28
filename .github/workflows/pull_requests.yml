@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
-      image: mcr.microsoft.com/playwright:v1.57.0-jammy
+      image: mcr.microsoft.com/playwright:v1.62.1-jammy
     env:
       MPKIT_EMAIL: ${{ secrets.MPKIT_EMAIL }}
       MPKIT_TOKEN: ${{ secrets.MPKIT_TOKEN }}
@@ -32,17 +32,17 @@ jobs:
       CI: true
     steps:
       - name: Checkout test instance code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Platform-OS/pos-cli-gui-qa
           path: instance
       - name: Checkout pos-cli code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: pos-cli
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
       - name: Install pos-cli
         run: |
           npm install -g @platformos/pos-cli
@@ -69,10 +69,22 @@ jobs:
         shell: sh
         run: |
           set -eu
-          pos-cli gui serve &
+          # --host 127.0.0.1, not the default name "localhost": the container resolves localhost
+          # to ::1 first, so express bound IPv6-only while node's fetch resolved the same name to
+          # 127.0.0.1 and got ECONNREFUSED. undici does not fall back to the other family, so the
+          # two ends have to agree on a literal address rather than both trusting the resolver.
+          pos-cli gui serve --host 127.0.0.1 &
           npm run preview &
-          sleep 5 && npx playwright test
-      - uses: actions/upload-artifact@v4
+          # Wait for the API server to answer instead of assuming 5s is enough. node, not curl:
+          # setup-node guarantees it, and this is the exact client the tests use.
+          for _ in $(seq 1 60); do
+            if node -e "fetch('http://127.0.0.1:3333/info').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"; then
+              break
+            fi
+            sleep 1
+          done
+          npx playwright test
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results

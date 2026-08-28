@@ -4,8 +4,9 @@
   "description": "",
   "main": "",
   "scripts": {
-    "start": "esbuild src/index.jsx --bundle --outfile=public/main.js --loader:.js=jsx --format=cjs --watch",
-    "build": "esbuild src/index.jsx --bundle --outfile=public/main.js --loader:.js=jsx --format=cjs --minify"
+    "start": "npm run build:workers && esbuild src/index.jsx --bundle --outfile=public/main.js --loader:.js=jsx --loader:.ttf=file --asset-names=[name] --format=cjs --watch",
+    "build": "npm run build:workers && esbuild src/index.jsx --bundle --outfile=public/main.js --loader:.js=jsx --loader:.ttf=file --asset-names=[name] --format=cjs --minify",
+    "build:workers": "esbuild node_modules/monaco-editor/esm/vs/editor/editor.worker.js --bundle --outfile=public/editor.worker.js --format=iife --minify && esbuild node_modules/monaco-editor/esm/vs/language/json/json.worker.js --bundle --outfile=public/json.worker.js --format=iife --minify && esbuild node_modules/monaco-graphql/esm/graphql.worker.js --bundle --outfile=public/graphql.worker.js --format=iife --minify"
   },
   "keywords": [],
   "author": "platformOS",
@@ -15,12 +16,12 @@
     "punycode": "^2.3.1"
   },
   "dependencies": {
-    "@graphiql/plugin-explorer": "^3.2.6",
-    "assert": "^2.0.0",
-    "graphiql": "^3.0.6",
+    "@graphiql/plugin-explorer": "^5.1.4",
+    "assert": "^2.1.0",
+    "graphiql": "^5.3.0",
     "graphql": "^15.8.0",
-    "graphql-ws": "^5.14.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "graphql-ws": "^6.2.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }
