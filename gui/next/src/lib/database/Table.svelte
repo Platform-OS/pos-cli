@@ -208,7 +208,10 @@ td, th {
             {@const value = parseValue(record.properties[property.name], property.attribute_type)}
             <td class:value-null={value.type === 'null'}>
               {#if value.value !== undefined}
-                {#if value.type === 'json' || value.type === 'jsonEscaped'}
+                {#if value.type === 'null'}
+                  <!-- svelte renders a null value as an empty string -->
+                  null
+                {:else if value.type === 'json' || value.type === 'jsonEscaped'}
                   {#if $state.view.tableStyle === 'expanded'}
                     <JSONTree value={value.value} />
                   {:else}

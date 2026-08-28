@@ -9,7 +9,7 @@ pos-cli is a Node.js CLI tool (v22+) for deploying and managing platformOS appli
 ### Installation & Build
 ```bash
 npm ci                    # Install dependencies (clean install)
-npm run build             # Build GUI assets (admin, graphql, next, liquid)
+npm run build             # Build GUI assets (graphql, next, liquid)
 ```
 
 ### Testing
@@ -105,7 +105,7 @@ pos-cli/
 │   ├── ServerError.js
 │   ├── settings.js   # Environment config (.pos file)
 │   └── deploy/       # Deployment strategies
-├── gui/              # Pre-built web apps (admin, graphql, liquid, next)
+├── gui/              # Pre-built web apps (graphql, liquid, next)
 ├── mcp-min/          # MCP server implementation
 │   ├── tools.js      # Tool definitions
 │   ├── index.js      # Server entry point

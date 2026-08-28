@@ -44,14 +44,13 @@ vi.mock('#lib/logger.js', () => ({
 }));
 
 describe('server - Express 5.x routing', () => {
-  let app, legacy;
+  let app;
 
   beforeEach(async () => {
     vi.clearAllMocks();
 
     // Create Express apps similar to lib/server.js
     app = express();
-    legacy = express();
 
     const Gateway = (await import('#lib/proxy.js')).default;
     const gateway = new Gateway({
@@ -68,19 +67,12 @@ describe('server - Express 5.x routing', () => {
       next();
     });
 
-    legacy.use((req, res, next) => {
-      res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-      next();
-    });
-
     // Setup static file serving
     // Note: In real tests with actual files, these would serve real directories
     // For unit tests, we'll mock the static middleware behavior
     const guiNextPath = path.resolve(__dirname, '..', '..', 'gui', 'next', 'build');
     const guiGraphqlPath = path.resolve(__dirname, '..', '..', 'gui', 'graphql', 'public');
     const guiLiquidPath = path.resolve(__dirname, '..', '..', 'gui', 'liquid', 'public');
-    const guiAdminPath = path.resolve(__dirname, '..', '..', 'gui', 'admin', 'dist');
 
     // For unit testing, we'll create mock static middleware
     const mockStatic = (basePath) => (req, res, next) => {
@@ -95,7 +87,6 @@ describe('server - Express 5.x routing', () => {
     app.use('/', mockStatic(guiNextPath));
     app.use('/gui/graphql', mockStatic(guiGraphqlPath));
     app.use('/gui/liquid', mockStatic(guiLiquidPath));
-    legacy.use('/', mockStatic(guiAdminPath));
 
     // Setup API routes
     app.get('/info', (req, res) => {
@@ -149,11 +140,6 @@ describe('server - Express 5.x routing', () => {
     app.get('/*splat', (req, res) => {
       // In real implementation, this sends index.html
       res.send('<html><body>Main App SPA</body></html>');
-    });
-
-    legacy.get('/*splat', (req, res) => {
-      // In real implementation, this sends __app.html
-      res.send('<html><body>Legacy Admin SPA</body></html>');
     });
   });
 
@@ -305,55 +291,10 @@ describe('server - Express 5.x routing', () => {
     });
   });
 
-  describe('Legacy app /*splat routing', () => {
-    test('legacy /*splat matches root path', async () => {
-      // Note: Root path / may be handled by static middleware first
-      await request(legacy)
-        .get('/')
-        .expect((res) => {
-          // Either static middleware serves or /*splat catches it
-          expect([200, 404]).toContain(res.status);
-        });
-    });
-
-    test('legacy /*splat matches single path segment', async () => {
-      const response = await request(legacy)
-        .get('/admin')
-        .expect(200);
-
-      expect(response.text).toContain('Legacy Admin SPA');
-    });
-
-    test('legacy /*splat matches nested paths', async () => {
-      const response = await request(legacy)
-        .get('/admin/users/list')
-        .expect(200);
-
-      expect(response.text).toContain('Legacy Admin SPA');
-    });
-
-    test('legacy /*splat matches paths with query params', async () => {
-      const response = await request(legacy)
-        .get('/settings?tab=general')
-        .expect(200);
-
-      expect(response.text).toContain('Legacy Admin SPA');
-    });
-  });
-
   describe('CORS headers', () => {
     test('main app includes CORS headers', async () => {
       const response = await request(app)
         .get('/dashboard')
-        .expect(200);
-
-      expect(response.headers['access-control-allow-origin']).toBe('*');
-      expect(response.headers['access-control-allow-headers']).toContain('Content-Type');
-    });
-
-    test('legacy app includes CORS headers', async () => {
-      const response = await request(legacy)
-        .get('/admin')
         .expect(200);
 
       expect(response.headers['access-control-allow-origin']).toBe('*');

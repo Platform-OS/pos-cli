@@ -90,7 +90,6 @@ pos-cli/
 │   ├── tools.config.json        # Enable/disable tools, customize descriptions
 │   └── <tool-name>/             # One directory per tool group (deploy/, data/, etc.)
 ├── gui/              # Web UI applications
-│   ├── admin/                   # Admin panel (Svelte, pre-built)
 │   ├── graphql/                 # GraphiQL IDE (React, pre-built)
 │   ├── liquid/                  # Liquid evaluator (pre-built)
 │   └── next/                    # Main GUI (Next.js, pre-built)
@@ -428,7 +427,7 @@ Tests require environment variables (MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN) pointi
 
 ### Working with GUI Components
 GUI apps are pre-built (in dist/ or build/ directories). To modify:
-1. Navigate to specific GUI directory (e.g., `gui/admin/`)
+1. Navigate to specific GUI directory (e.g., `gui/next/`)
 2. Make changes to source files
 3. Run build process (`npm run build`)
 4. Commit built assets (they're included in npm package)
