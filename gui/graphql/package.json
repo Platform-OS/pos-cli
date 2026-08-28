@@ -21,6 +21,6 @@
     "graphql": "^15.8.0",
     "graphql-ws": "^5.14.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^19.2.8"
   }
 }
