@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import { describe, test, expect } from 'vitest';
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli from '#test/utils/exec';
 import fs from 'fs';
 import path from 'path';
 import { requireRealCredentials, noCredentials, applyCredentials, saveCredentials } from '#test/utils/credentials';
@@ -9,7 +8,7 @@ import { plainMessages } from '#test/utils/parseOutput';
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', name);
 const run = async (fixtureName, options = '') =>
-  exec(`${cliPath} modules install ${options}`, { cwd: cwd(fixtureName), env: process.env });
+  cli(`modules install ${options}`, { cwd: cwd(fixtureName), env: process.env });
 
 describe('modules install', () => {
   test('downloads module with transitive dependencies, skipping what is already on disk', async () => {

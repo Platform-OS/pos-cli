@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import { describe, test, expect } from 'vitest';
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli from '#test/utils/exec';
 import path from 'path';
 import { requireRealCredentials } from '#test/utils/credentials';
 
@@ -11,7 +10,7 @@ Object.assign(process.env, {
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'modules', name);
 
-const run = (fixtureName, options) => exec(`${cliPath} modules push ${options}`, { cwd: cwd(fixtureName), env: process.env });
+const run = (fixtureName, options) => cli(`modules push ${options}`, { cwd: cwd(fixtureName), env: process.env });
 
 describe('Server errors', () => {
   test('Empty directory', async () => {

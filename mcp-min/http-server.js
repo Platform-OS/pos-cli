@@ -1,5 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
+import { randomUUID } from 'crypto';
 import tools from './tools.js';
 import { sseHandler, writeSSE } from './sse.js';
 import { DEBUG } from './config.js';
@@ -8,8 +9,12 @@ import log from './log.js';
 // SSE sessions keyed by Mcp-Session-Id. Supports multiple concurrent clients.
 const sseSessions = new Map();
 
+// A session id is the only thing separating one SSE client's stream from another's, so it
+// has to be unguessable: Math.random() is seeded per process and its output is predictable
+// from a couple of prior samples, which would let a local caller attach to someone else's
+// session by supplying the Mcp-Session-Id it derived.
 function generateSessionId() {
-  return `mcpmin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `mcpmin-${randomUUID()}`;
 }
 
 export default async function startHttp({ port = 5910 } = {}) {

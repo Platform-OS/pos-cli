@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ master ]
 
+# The token only ever needs to read this repository's code.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}

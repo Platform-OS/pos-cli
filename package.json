@@ -54,6 +54,7 @@
     "email-validator": "^2.0.4",
     "execa": "^10.0.1",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
     "fast-glob": "^3.3.3",
     "ignore": "^7.0.5",
     "inquirer": "^14.2.0",

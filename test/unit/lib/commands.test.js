@@ -1,5 +1,4 @@
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli from '#test/utils/exec';
 
 const getEnvs = () => {
   const env = Object.assign({}, process.env, { CI: true });
@@ -9,7 +8,7 @@ const getEnvs = () => {
   delete env.MPKIT_PASSWORD;
   return env;
 };
-const run = async args => exec(`${cliPath} ${args}`, { env: getEnvs() });
+const run = async args => cli(args, { env: getEnvs() });
 
 test('should return error for missing command on stdout', async () => {
   let { stderr, code } = await run('missing');

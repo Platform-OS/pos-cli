@@ -30,8 +30,22 @@ const applyCredentials = (creds) => {
   }
 };
 
+// Tells the placeholder URL above apart from a real instance. Compares the parsed hostname
+// instead of searching the raw string: `includes('example.com')` also matches
+// https://example.com.attacker.test and https://real-instance.io/?ref=example.com, either of
+// which would silently skip every test that needs real credentials.
+const isExampleUrl = (url) => {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === 'example.com' || host.endsWith('.example.com');
+  } catch {
+    return false;
+  }
+};
+
 const hasRealCredentials = () => {
-  return !!(process.env.MPKIT_URL && process.env.MPKIT_TOKEN && process.env.MPKIT_EMAIL && !process.env.MPKIT_URL.includes('example.com'));
+  return !!(process.env.MPKIT_URL && process.env.MPKIT_TOKEN && process.env.MPKIT_EMAIL && !isExampleUrl(process.env.MPKIT_URL));
 };
 
 const requireRealCredentials = () => {
@@ -52,6 +66,6 @@ const restoreCredentials = (saved) => {
 };
 
 export {
-  exampleCredentials, noCredentials, applyCredentials,
+  exampleCredentials, noCredentials, applyCredentials, isExampleUrl,
   hasRealCredentials, requireRealCredentials, saveCredentials, restoreCredentials
 };

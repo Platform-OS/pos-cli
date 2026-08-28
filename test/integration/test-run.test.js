@@ -1,17 +1,16 @@
 import 'dotenv/config';
 import { describe, test, expect, vi } from 'vitest';
-import { spawn, exec as cpExec } from 'child_process';
-import path from 'path';
+import { spawn } from 'child_process';
+import cli from '#test/utils/exec';
+import cliScript from '#test/utils/cliPath';
 import { requireRealCredentials } from '#test/utils/credentials';
 import { TestLogStream } from '#lib/test-runner/logStream.js';
 import { formatDuration, formatTestLog, transformTestResponse } from '#lib/test-runner/formatters.js';
 
 vi.setConfig({ testTimeout: 30000 });
 
-const cliPath = path.join(process.cwd(), 'bin', 'pos-cli.js');
-
 const startCommand = (args, env = process.env) => {
-  const child = spawn('node', [cliPath, ...args], {
+  const child = spawn(process.execPath, [cliScript, ...args], {
     env: { ...process.env, ...env },
     stdio: ['pipe', 'pipe', 'pipe']
   });
@@ -36,18 +35,6 @@ const startCommand = (args, env = process.env) => {
       child.kill();
     }
   };
-};
-
-const exec = (command, options = {}) => {
-  return new Promise((resolve) => {
-    // Use child_process.exec instead of spawn for better cross-platform compatibility
-    // This is the same approach used in test/utils/exec.js
-    cpExec(command, options, (err, stdout, stderr) => {
-      // err.code contains the exit code when process exits with error
-      const code = err ? (err.code ?? 1) : 0;
-      resolve({ stdout, stderr, code });
-    });
-  });
 };
 
 describe('pos-cli test-run command', () => {
@@ -633,20 +620,20 @@ describe('pos-cli test-run command', () => {
     const CLI_TIMEOUT = 5000;
 
     test('requires environment argument', async () => {
-      const { code, stderr } = await exec(`node "${cliPath}" test run`, { env, timeout: CLI_TIMEOUT });
+      const { code, stderr } = await cli(['test', 'run'], { env, timeout: CLI_TIMEOUT });
 
       expect(code).toBe(1);
       expect(stderr).toMatch("error: missing required argument 'environment'");
     });
 
     test('accepts test name argument', async () => {
-      const { stderr } = await exec(`node "${cliPath}" test run staging my_test_name`, { env, timeout: CLI_TIMEOUT });
+      const { stderr } = await cli(['test', 'run', 'staging', 'my_test_name'], { env, timeout: CLI_TIMEOUT });
 
       expect(stderr).not.toMatch('error: missing required argument');
     });
 
     test('accepts test name with path', async () => {
-      const { stderr } = await exec(`node "${cliPath}" test run staging test/examples/assertions_test`, { env, timeout: CLI_TIMEOUT });
+      const { stderr } = await cli(['test', 'run', 'staging', 'test/examples/assertions_test'], { env, timeout: CLI_TIMEOUT });
 
       expect(stderr).not.toMatch('error: missing required argument');
     });
@@ -660,7 +647,7 @@ describe('pos-cli test-run command', () => {
         MPKIT_EMAIL: 'test@example.com'
       };
 
-      const { code, stderr } = await exec(`node "${cliPath}" test run staging`, { env: badEnv, timeout: CLI_TIMEOUT });
+      const { code, stderr } = await cli(['test', 'run', 'staging'], { env: badEnv, timeout: CLI_TIMEOUT });
 
       expect(code).toBe(1);
       expect(stderr).toMatch(/Could not connect|Request to( the)? server failed/);
@@ -675,7 +662,7 @@ describe('pos-cli test-run command', () => {
         MPKIT_EMAIL: 'test@example.com'
       };
 
-      const { code } = await exec(`node "${cliPath}" test run staging`, { env: badEnv, timeout: CLI_TIMEOUT });
+      const { code } = await cli(['test', 'run', 'staging'], { env: badEnv, timeout: CLI_TIMEOUT });
 
       expect(code).toBe(1);
     });

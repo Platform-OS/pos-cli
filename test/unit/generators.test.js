@@ -1,13 +1,12 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
+import cliScript from '#test/utils/cliPath';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const cliPath = path.join(process.cwd(), 'bin', 'pos-cli.js');
 
 // Every generator run spawns a real node process. In isolation each finishes in
 // well under a second, but the suite runs test files in parallel, so a run can
@@ -19,11 +18,13 @@ const CLI_TIMEOUT = 20000;
 // execCommand gets a chance to report what the CLI actually printed.
 vi.setConfig({ testTimeout: CLI_TIMEOUT + 10000 });
 
-const execCommand = (cmd, opts = {}) => {
+// execFile with an argv array, not exec with a command string: the generator paths below are
+// absolute, and a shell would re-split them on any space in the checkout path.
+const execCommand = (file, args, opts = {}) => {
   return new Promise((resolve) => {
-    // exec's own `timeout` option kills the child for us and still passes the
+    // execFile's own `timeout` option kills the child for us and still passes the
     // output collected so far to the callback, which a manual timer would lose.
-    const child = exec(cmd, opts, (err, stdout, stderr) => {
+    const child = execFile(file, args, opts, (err, stdout, stderr) => {
       // Extract exit code from error or default to 0
       // Different environments might use err.code, err.exitCode, or err.signal
       let code = 0;
@@ -44,18 +45,19 @@ const execCommand = (cmd, opts = {}) => {
   });
 };
 
+const GENERATOR_FIXTURE = /^test\/fixtures\/yeoman\/(modules\/core|custom)\/generators\/\w+$/;
+
 const run = (args, opts = {}) => {
-  // Convert relative generator paths to absolute paths
-  // __dirname is test/unit, so we need to go up two levels to reach project root
-  const absoluteArgs = args
-    .replace(/(test\/fixtures\/yeoman\/modules\/core\/generators\/\w+)(?=\s|$)/g, (match) => {
-      return path.resolve(__dirname, '../..', match);
-    })
-    .replace(/(test\/fixtures\/yeoman\/custom\/generators\/\w+)(?=\s|$)/g, (match) => {
-      return path.resolve(__dirname, '../..', match);
-    });
-  // Use process.execPath to ensure we use the same node executable
-  return execCommand(`"${process.execPath}" "${cliPath}" generate run ${absoluteArgs}`, {
+  // Split into argv first, then resolve each generator path on its own. Substituting before
+  // splitting would tear an absolute path apart at the first space inside it.
+  // __dirname is test/unit, so we go up two levels to reach the project root.
+  const argv = args
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(token => (GENERATOR_FIXTURE.test(token) ? path.resolve(__dirname, '../..', token) : token));
+
+  // process.execPath so the child runs on the same node as the suite.
+  return execCommand(process.execPath, [cliScript, 'generate', 'run', ...argv], {
     ...opts,
     cwd: opts.cwd || process.cwd()
   });

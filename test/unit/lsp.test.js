@@ -1,14 +1,12 @@
 import { describe, test, expect, vi } from 'vitest';
 import { spawn } from 'child_process';
-import path from 'path';
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli from '#test/utils/exec';
+import cliScript from '#test/utils/cliPath';
 
 vi.setConfig({ testTimeout: 15000 });
 
 const spawnLsp = () => {
-  const binPath = path.join(process.cwd(), 'bin', 'pos-cli.js');
-  const child = spawn('node', [binPath, 'lsp'], {
+  const child = spawn(process.execPath, [cliScript, 'lsp'], {
     stdio: ['pipe', 'pipe', 'pipe']
   });
 
@@ -35,14 +33,14 @@ const spawnLsp = () => {
 describe('pos-cli lsp', () => {
   describe('Help text', () => {
     test('shows correct usage and description', async () => {
-      const { stdout } = await exec(`${cliPath} lsp --help`);
+      const { stdout } = await cli('lsp --help');
 
       expect(stdout).toMatch('Usage: pos-cli lsp');
       expect(stdout).toMatch('Language Server Protocol');
     });
 
     test('lsp is listed in main help', async () => {
-      const { stdout } = await exec(`${cliPath} --help`);
+      const { stdout } = await cli('--help');
 
       expect(stdout).toMatch('lsp');
       expect(stdout).toMatch('Language Server Protocol');

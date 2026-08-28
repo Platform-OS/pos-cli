@@ -1,13 +1,12 @@
 import { describe, test, expect, vi } from 'vitest';
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli from '#test/utils/exec';
 import { path as checkPaths } from '@platformos/platformos-check-node';
 import path from 'path';
 
 vi.setConfig({ testTimeout: 60000 });
 
 const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'check', name);
-const run = (fixtureName, options = '') => exec(`${cliPath} check run ${options}`, { cwd: cwd(fixtureName) });
+const run = (fixtureName, options = '') => cli(`check run ${options}`, { cwd: cwd(fixtureName) });
 
 describe('pos-cli check run', () => {
   describe('Happy path', () => {
@@ -147,7 +146,7 @@ describe('pos-cli check run', () => {
       // is. `app/` is the only marker here, so the message reports an inference, not a fact.
       const root = cwd('with-issues');
       const specificPath = path.join(root, 'app/views/pages');
-      const { stdout, stderr } = await exec(`${cliPath} check run ${specificPath}`);
+      const { stdout, stderr } = await cli(['check', 'run', specificPath]);
 
       // The refusal is platformos-check's own message, and it names a path the way it keys one:
       // through a URI, which lowercases a Windows drive letter. So `D:\…` comes back as `d:\…`,
@@ -194,7 +193,7 @@ describe('pos-cli check run', () => {
   describe('Error handling', () => {
     test('Non-existent path', async () => {
       const nonExistentPath = path.join(process.cwd(), 'test', 'fixtures', 'check', 'nonexistent');
-      const { stderr, code } = await exec(`${cliPath} check run ${nonExistentPath}`);
+      const { stderr, code } = await cli(['check', 'run', nonExistentPath]);
 
       expect(code).toEqual(1);
       expect(stderr).toMatch('Path does not exist');
@@ -202,7 +201,7 @@ describe('pos-cli check run', () => {
 
     test('File instead of directory', async () => {
       const filePath = path.join(cwd('clean'), 'app/views/pages/index.liquid');
-      const { stderr, code } = await exec(`${cliPath} check run ${filePath}`);
+      const { stderr, code } = await cli(['check', 'run', filePath]);
 
       expect(code).toEqual(1);
       expect(stderr).toMatch('Path is not a directory');
@@ -219,7 +218,7 @@ describe('pos-cli check run', () => {
       fs.writeFileSync(path.join(tempDir, '.pos'), '{}');
 
       try {
-        const { stdout, code } = await exec(`${cliPath} check init ${tempDir}`);
+        const { stdout, code } = await cli(['check', 'init', tempDir]);
 
         expect(code).toEqual(0);
         expect(stdout).toMatch('Created .platformos-check.yml');
@@ -250,7 +249,7 @@ describe('pos-cli check run', () => {
       fs.writeFileSync(path.join(tempDir, '.platformos-check.yml'), 'existing config');
 
       try {
-        const { stdout, code } = await exec(`${cliPath} check init ${tempDir}`);
+        const { stdout, code } = await cli(['check', 'init', tempDir]);
 
         expect(code).toEqual(0);
         expect(stdout).toMatch('.platformos-check.yml already exists');
@@ -267,7 +266,7 @@ describe('pos-cli check run', () => {
 
   describe('Help text', () => {
     test('Check command help', async () => {
-      const { stdout } = await exec(`${cliPath} check --help`);
+      const { stdout } = await cli('check --help');
 
       expect(stdout).toMatch('Usage: pos-cli check');
       expect(stdout).toMatch('run [path]');
@@ -277,7 +276,7 @@ describe('pos-cli check run', () => {
     });
 
     test('Check run command help', async () => {
-      const { stdout } = await exec(`${cliPath} check run --help`);
+      const { stdout } = await cli('check run --help');
 
       expect(stdout).toMatch('Usage: pos-cli check run');
       expect(stdout).toMatch('-a');
@@ -290,7 +289,7 @@ describe('pos-cli check run', () => {
     });
 
     test('Check init command help', async () => {
-      const { stdout } = await exec(`${cliPath} check init --help`);
+      const { stdout } = await cli('check init --help');
 
       expect(stdout).toMatch('Usage: pos-cli check init');
       expect(stdout).toMatch('initialize .platformos-check.yml configuration file');

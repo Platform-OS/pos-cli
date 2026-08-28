@@ -1,15 +1,16 @@
 
 import process from 'process';
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import fs from 'fs';
+import cli from '#test/utils/exec';
 import { settingsFromDotPos } from '#lib/settings.js';
 
 process.env['CI'] = 'true';
 
-const run = (options) => exec(`${cliPath} env add ${options}`);
+const run = (options) => cli(`env add ${options}`);
 
 describe('commander env add', () => {
-  afterEach(() => exec('rm -f .pos'));
+  // fs, not `rm -f`: nothing here needs a shell, and the suite spawns no shell at all.
+  afterEach(() => fs.rmSync('.pos', { force: true }));
 
   test('adding with email and token', async () => {
     const { stdout } = await run('--url https://example.com --email pos-cli-ci@platformos.com --token 12345 e1');

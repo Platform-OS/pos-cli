@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import { describe, test, expect, vi, beforeAll } from 'vitest';
-import exec from '#test/utils/exec';
-import cliPath from '#test/utils/cliPath';
+import cli from '#test/utils/exec';
 import unzip from 'unzipper';
 import fs from 'fs';
 import path from 'path';
@@ -23,7 +22,7 @@ beforeAll(() => {
   cleanupTmp();
 });
 
-const run = (fixtureName, options, env = process.env) => exec(`${cliPath} deploy ${options || ''}`, { cwd: cwd(fixtureName), env });
+const run = (fixtureName, options, env = process.env) => cli(`deploy ${options || ''}`, { cwd: cwd(fixtureName), env });
 
 const extract = async (inputPath, outputPath) => {
   return unzip.Open.file(inputPath).then(d => d.extract({ path: outputPath, concurrency: 5 }));

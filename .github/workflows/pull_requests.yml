@@ -5,9 +5,18 @@ on:
   push:
     branches: [ master ]
 
+# Default for every job below: read this repository's code and nothing else.
+permissions:
+  contents: read
+
 jobs:
   pre_job:
     runs-on: ubuntu-latest
+    # skip-duplicate-actions lists this workflow's previous runs to decide whether the
+    # GUI paths changed, which needs read access to the Actions API on top of the default.
+    permissions:
+      contents: read
+      actions: read
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
