@@ -4,6 +4,6 @@
   "dependencies": {
     "pluralize": "^8.0.0",
     "lodash.startcase": "^4.4.0",
-    "yeoman-generator": "^7.3.2"
+    "yeoman-generator": "^8.3.0"
   }
 }

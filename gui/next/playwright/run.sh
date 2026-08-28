@@ -34,7 +34,7 @@ npm run build
 
 npm run preview & pids+=( "$!" ) &
 wait &
-pos-cli gui serve & pids+=( "$!" ) &
+pos-cli gui serve --host 127.0.0.1 & pids+=( "$!" ) &
 npx playwright test & pids+=( "$!" )
 
 cd playwright

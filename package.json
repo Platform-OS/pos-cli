@@ -32,7 +32,7 @@
   ],
   "main": "./bin/pos-cli.js",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13.0"
   },
   "keywords": [
     "pos-cli",
@@ -40,23 +40,23 @@
     "pOS"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^8.3.0",
+    "@inquirer/prompts": "^8.7.0",
     "@platformos/platformos-check-node": "^1.0.0",
     "@platformos/platformos-common": "^0.1.0",
     "@platformos/platformos-language-server-node": "^0.1.0",
     "@platformos/platformos-mcp-supervisor": "^0.1.0",
     "async": "^3.2.6",
     "body-parser": "^2.2.2",
-    "chalk": "^5.6.2",
+    "chalk": "^6.0.0",
     "chokidar": "^5.0.0",
-    "commander": "^14.0.3",
-    "degit": "^2.8.4",
+    "commander": "^15.0.0",
+    "degit": "^3.8.0",
     "email-validator": "^2.0.4",
-    "execa": "^9.6.1",
+    "execa": "^10.0.1",
     "express": "^5.2.1",
     "fast-glob": "^3.3.3",
     "ignore": "^7.0.5",
-    "inquirer": "^13.3.0",
+    "inquirer": "^14.2.0",
     "is-stream": "^4.0.1",
     "livereload": "^0.10.3",
     "lodash.compact": "^3.0.1",
@@ -67,7 +67,7 @@
     "multer": "^2.0.2",
     "mustache": "^4.2.0",
     "normalize-path": "^3.0.0",
-    "open": "^11.0.0",
+    "open": "^11.0.1",
     "ora": "^9.3.0",
     "prompts": "^2.4.2",
     "semver": "^7.7.4",
@@ -79,8 +79,8 @@
     "update-notifier": "^7.3.1",
     "yaml": "^2.8.2",
     "yazl": "^3.3.1",
-    "yeoman-environment": "^6.1.0",
-    "yeoman-generator": "^7.5.1"
+    "yeoman-environment": "^6.2.0",
+    "yeoman-generator": "^8.3.0"
   },
   "preferGlobal": true,
   "bin": {
@@ -128,12 +128,12 @@
   },
   "homepage": "https://github.com/Platform-OS/pos-cli/issues#readme",
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/coverage-v8": "^4.1.11",
     "dotenv": "^17.3.1",
-    "globals": "^17.3.0",
-    "nock": "^14.0.11",
+    "globals": "^17.11.0",
+    "nock": "^14.0.17",
     "supertest": "^7.2.2",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.11"
   },
   "bundleDependencies": [
     "commander",
