@@ -50,7 +50,7 @@
     "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
     "commander": "^14.0.3",
-    "degit": "^2.8.4",
+    "degit": "^3.8.0",
     "email-validator": "^2.0.4",
     "execa": "^9.6.1",
     "express": "^5.2.1",
