@@ -26,7 +26,7 @@ vi.mock('#lib/portal.js', async () => {
         interval: 1
       }),
       fetchDeviceAccessToken: () => Promise.resolve({ access_token: mockAccessToken }),
-      login: () => Promise.resolve([{ token: mockAccessToken }])
+      login: vi.fn(() => Promise.resolve([{ token: mockAccessToken }]))
     }
   };
 });
@@ -44,6 +44,28 @@ vi.mock('#lib/logger.js', async () => {
   };
 });
 
+vi.mock('#lib/utils/password.js', () => ({
+  readPassword: vi.fn(() => Promise.resolve('test-password'))
+}));
+
+// Stands in for the readline prompt withTwoFactor() puts up; answers are queued per test.
+const otpAnswers = [];
+vi.mock('readline', () => ({
+  default: {
+    createInterface: () => {
+      const handlers = {};
+      return {
+        on: (event, handler) => { handlers[event] = handler; },
+        close: () => {},
+        question: (_prompt, callback) => {
+          if (otpAnswers.length) return callback(otpAnswers.shift());
+          return handlers.close?.();
+        }
+      };
+    }
+  }
+}));
+
 vi.mock('#lib/validators/index.js', () => ({
   existence: { directoryExists: () => true, fileExists: () => true },
   url: () => true,
@@ -53,24 +75,43 @@ vi.mock('#lib/validators/index.js', () => ({
 }));
 
 let addEnv;
+let mockPortal;
 let originalCwd;
+let originalIsTTY;
 let tempDir;
 
 beforeAll(async () => {
   const addMod = await import('#lib/envs/add.js');
   addEnv = addMod.default;
+
+  mockPortal = (await import('#lib/portal.js')).default;
 });
 
 beforeEach(() => {
   originalCwd = process.cwd();
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-test-'));
   process.chdir(tempDir);
+
+  originalIsTTY = process.stdin.isTTY;
+  process.stdin.isTTY = true;
+  otpAnswers.length = 0;
+  delete process.env.POS_PORTAL_OTP_CODE;
+  mockPortal.login.mockReset();
+  mockPortal.login.mockResolvedValue([{ token: mockAccessToken }]);
 });
 
 afterEach(() => {
   process.chdir(originalCwd);
+  process.stdin.isTTY = originalIsTTY;
+  delete process.env.POS_PORTAL_OTP_CODE;
   fs.rmSync(tempDir, { recursive: true, force: true });
   mockAccessToken = 'mock-token-12345';
+});
+
+const twoFactorRequired = () => Object.assign(new Error('Request failed with status 401'), {
+  name: 'StatusCodeError',
+  statusCode: 401,
+  response: { statusCode: 401, body: { error: 'two_factor_required', errors: ['Two-factor code required'] } }
 });
 
 describe('env add with mocked portal', () => {
@@ -228,5 +269,45 @@ describe('env add with mocked portal', () => {
 
     // Restore original mock
     Portal.default.requestDeviceAuthorization = originalRequestDeviceAuth;
+  });
+
+  test('sends --otp-code to the portal without prompting', async () => {
+    await addEnv('staging', {
+      url: 'https://staging.example.com',
+      email: 'user@example.com',
+      otpCode: '123 456'
+    });
+
+    expect(mockPortal.login).toHaveBeenCalledWith(
+      'user@example.com', 'test-password', 'https://staging.example.com/', '123456'
+    );
+    expect(settingsFromDotPos('staging')['token']).toBe('mock-token-12345');
+  });
+
+  test('prompts for a code when the portal answers two_factor_required, then stores the token', async () => {
+    otpAnswers.push('654321');
+    mockPortal.login.mockImplementation((_email, _password, _url, otpCode) => {
+      if (!otpCode) return Promise.reject(twoFactorRequired());
+      return Promise.resolve([{ token: 'token-behind-2fa' }]);
+    });
+
+    await addEnv('staging', { url: 'https://staging.example.com', email: 'user@example.com' });
+
+    expect(mockPortal.login).toHaveBeenCalledTimes(2);
+    expect(settingsFromDotPos('staging')['token']).toBe('token-behind-2fa');
+  });
+
+  test('fails with an actionable error instead of prompting when stdin is not a terminal', async () => {
+    process.stdin.isTTY = false;
+    mockPortal.login.mockRejectedValue(twoFactorRequired());
+
+    await expect(
+      addEnv('staging', { url: 'https://staging.example.com', email: 'user@example.com' })
+    ).rejects.toMatchObject({
+      name: 'TwoFactorError',
+      message: expect.stringContaining('POS_PORTAL_OTP_CODE')
+    });
+
+    expect(fs.existsSync('.pos')).toBe(false);
   });
 });

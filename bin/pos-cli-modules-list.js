@@ -5,6 +5,7 @@ import { program } from '../lib/program.js';
 import Gateway from '../lib/proxy.js';
 import logger from '../lib/logger.js';
 import { fetchSettings } from '../lib/settings.js';
+import { reportCommandError } from '../lib/reportCommandError.js';
 
 program
   .name('pos-cli modules list')
@@ -22,7 +23,7 @@ program
           logger.Info(`\t- ${module}`, { hideTimestamp: true });
         });
       }
-    }).catch(logger.Debug);
+    }).catch(error => reportCommandError(error, { prefix: 'Listing modules failed' }));
   });
 
 program.parse(process.argv);

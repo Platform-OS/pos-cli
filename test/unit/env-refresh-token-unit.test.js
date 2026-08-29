@@ -31,6 +31,7 @@ vi.mock('#lib/portal.js', async () => {
 
 vi.mock('#lib/logger.js', () => ({
   default: {
+    Log: vi.fn(),
     Success: vi.fn(),
     Debug: vi.fn(),
     Info: vi.fn(),
@@ -43,10 +44,35 @@ vi.mock('#lib/utils/password.js', () => ({
   readPassword: vi.fn(() => Promise.resolve('test-password'))
 }));
 
+// Stands in for the readline prompt withTwoFactor() puts up; answers are queued per test.
+const otpAnswers = [];
+vi.mock('readline', () => ({
+  default: {
+    createInterface: () => {
+      const handlers = {};
+      return {
+        on: (event, handler) => { handlers[event] = handler; },
+        close: () => {},
+        question: (_prompt, callback) => {
+          if (otpAnswers.length) return callback(otpAnswers.shift());
+          return handlers.close?.();
+        }
+      };
+    }
+  }
+}));
+
+const twoFactorRequired = () => Object.assign(new Error('Request failed with status 401'), {
+  name: 'StatusCodeError',
+  statusCode: 401,
+  response: { statusCode: 401, body: { error: 'two_factor_required', errors: ['Two-factor code required'] } }
+});
+
 let refreshToken;
 let mockLogger;
 let mockPortal;
 let originalCwd;
+let originalIsTTY;
 let tempDir;
 
 beforeAll(async () => {
@@ -67,6 +93,12 @@ beforeEach(() => {
 
   vi.clearAllMocks();
 
+  originalIsTTY = process.stdin.isTTY;
+  process.stdin.isTTY = true;
+  otpAnswers.length = 0;
+  delete process.env.POS_PORTAL_OTP_CODE;
+  mockPortal.login.mockResolvedValue([{ token: 'refreshed-token-12345' }]);
+
   mockPortal.requestDeviceAuthorization.mockResolvedValue({
     verification_uri_complete: 'http://example.com/xxxx',
     device_code: 'device_code',
@@ -76,6 +108,8 @@ beforeEach(() => {
 
 afterEach(() => {
   process.chdir(originalCwd);
+  process.stdin.isTTY = originalIsTTY;
+  delete process.env.POS_PORTAL_OTP_CODE;
   fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
@@ -99,7 +133,7 @@ describe('env refresh-token', () => {
     const token = await refreshToken(environment, authData);
 
     expect(token).toBe('refreshed-token-12345');
-    expect(mockPortal.login).toHaveBeenCalledWith('user@example.com', 'test-password', 'https://staging.example.com');
+    expect(mockPortal.login).toHaveBeenCalledWith('user@example.com', 'test-password', 'https://staging.example.com', null);
     expect(mockPortal.requestDeviceAuthorization).not.toHaveBeenCalled();
 
     const settings = settingsFromDotPos(environment);
@@ -152,5 +186,50 @@ describe('env refresh-token', () => {
       expect.stringContaining('is not registered in the Partner Portal'),
       expect.anything()
     );
+  });
+
+  test('sends --otp-code to the portal without prompting', async () => {
+    const authData = { url: 'https://staging.example.com', token: 'old-token', email: 'user@example.com' };
+
+    await refreshToken('staging', authData, { otpCode: '123 456' });
+
+    expect(mockPortal.login).toHaveBeenCalledWith(
+      'user@example.com', 'test-password', 'https://staging.example.com', '123456'
+    );
+  });
+
+  test('reads a code from POS_PORTAL_OTP_CODE when no flag is given', async () => {
+    process.env.POS_PORTAL_OTP_CODE = '654321';
+    const authData = { url: 'https://staging.example.com', token: 'old-token', email: 'user@example.com' };
+
+    await refreshToken('staging', authData);
+
+    expect(mockPortal.login).toHaveBeenCalledWith(
+      'user@example.com', 'test-password', 'https://staging.example.com', '654321'
+    );
+  });
+
+  test('prompts for a code when the portal answers two_factor_required', async () => {
+    otpAnswers.push('654321');
+    mockPortal.login.mockImplementation((_email, _password, _url, otpCode) => {
+      if (!otpCode) return Promise.reject(twoFactorRequired());
+      return Promise.resolve([{ token: 'token-behind-2fa' }]);
+    });
+
+    const authData = { url: 'https://staging.example.com', token: 'old-token', email: 'user@example.com' };
+    const token = await refreshToken('staging', authData);
+
+    expect(token).toBe('token-behind-2fa');
+    expect(settingsFromDotPos('staging').token).toBe('token-behind-2fa');
+  });
+
+  test('leaves the stored token alone when 2FA cannot be answered', async () => {
+    process.stdin.isTTY = false;
+    mockPortal.login.mockRejectedValue(twoFactorRequired());
+
+    const authData = { url: 'https://staging.example.com', token: 'old-token', email: 'user@example.com' };
+
+    await expect(refreshToken('staging', authData)).rejects.toMatchObject({ name: 'TwoFactorError' });
+    expect(fs.existsSync('.pos')).toBe(false);
   });
 });

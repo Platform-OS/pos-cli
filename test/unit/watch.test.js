@@ -64,7 +64,10 @@ vi.mock('#lib/s3UploadFile.js', async () => ({
   ...(await vi.importActual('#lib/s3UploadFile.js')),
   uploadFileFormData: vi.fn()
 }));
-vi.mock('#lib/presignUrl.js', () => ({ presignDirectory: vi.fn() }));
+vi.mock('#lib/presignUrl.js', async () => ({
+  ...(await vi.importActual('#lib/presignUrl.js')),
+  presignDirectory: vi.fn()
+}));
 vi.mock('#lib/shouldBeSynced.js', () => ({ default: vi.fn() }));
 vi.mock('#lib/settings.js', () => ({ loadSettingsFileForModule: vi.fn().mockReturnValue({}) }));
 vi.mock('#lib/templates.js', () => ({ fillInTemplateValues: vi.fn().mockReturnValue('') }));
@@ -72,6 +75,7 @@ vi.mock('#lib/templates.js', () => ({ fillInTemplateValues: vi.fn().mockReturnVa
 // --- static imports (resolved after mocks) --------------------------------
 
 import fs from 'fs';
+import path from 'path';
 import logger from '#lib/logger.js';
 import ServerError from '#lib/ServerError.js';
 import Gateway from '#lib/proxy.js';
@@ -303,8 +307,14 @@ describe('asset sync', () => {
     });
     gateway = {
       getInstance: vi.fn().mockResolvedValue({ id: 'inst-1' }),
-      sendManifest: vi.fn().mockResolvedValue({})
+      sendManifest: vi.fn().mockResolvedValue({}),
+      // Present so the routing tests can assert an asset never takes the
+      // code-file path; the upload tests below never reach it.
+      sync: vi.fn().mockResolvedValue({})
     };
+    // The only fs.existsSync on this path is the public/private precedence check.
+    // Default to "no private twin" so every other test uploads as it always did.
+    vi.spyOn(fs, 'existsSync').mockReturnValue(false);
   });
 
   afterEach(async () => {
@@ -313,6 +323,7 @@ describe('asset sync', () => {
     // still scheduled, so it would never fire again in any later test.
     await vi.runOnlyPendingTimersAsync();
     vi.useRealTimers();
+    fs.existsSync.mockRestore();
   });
 
   test('uploads the asset and flushes the manifest on success', async () => {
@@ -414,6 +425,79 @@ describe('asset sync', () => {
     });
   });
 
+  // A module directory name is not restricted to word characters, and hyphens are
+  // the norm ("common-styling", "oauth-github"). The asset matcher used `\w+`, so
+  // for those modules every asset was misrouted to pushFile and uploaded as a code
+  // file: it came back with line endings rewritten and a Content-Type derived
+  // remotely rather than the one sync sends, which is enough for a browser to
+  // refuse to execute a .js file that is otherwise byte-perfect. deploy globs
+  // `modules/*/...` and so never had the problem, which is why deploying the same
+  // file always appeared to "fix" it.
+  test.each([
+    ['modules/common-styling/public/assets/js/styleguide.js', 'assets/modules/common-styling/js/${filename}'],
+    ['modules/oauth-github/public/assets/style/main.css', 'assets/modules/oauth-github/style/${filename}'],
+    ['modules/pos.module/public/assets/js/app.js', 'assets/modules/pos.module/js/${filename}'],
+    // private/assets is served from the same CDN path as public/assets — deploy
+    // packs `{public,private}/assets/**` — so sync has to upload it the same way.
+    ['modules/common-styling/private/assets/js/styleguide.js', 'assets/modules/common-styling/js/${filename}'],
+    ['modules/user/private/assets/style/main.css', 'assets/modules/user/style/${filename}'],
+    // A directory named "public" below the asset root is part of the asset path,
+    // not the module's public/private split.
+    ['modules/user/public/assets/public/app.js', 'assets/modules/user/public/${filename}']
+  ])('uploads %s directly instead of sending it as a code file', async (assetPath, key) => {
+    uploadFileFormData.mockResolvedValue(true);
+
+    await sendFile(gateway, assetPath);
+
+    expect(gateway.sync).not.toHaveBeenCalled();
+    expect(uploadFileFormData).toHaveBeenCalledTimes(1);
+    expect(uploadFileFormData).toHaveBeenLastCalledWith(assetPath, {
+      url: 'https://s3.example.com/bucket',
+      fields: { key }
+    });
+    expect(gateway.sendManifest).toHaveBeenCalledTimes(1);
+  });
+
+  // deploy resolves a public/private collision in favour of the private copy
+  // (packAssets skips the public one), and both land on one CDN path. Uploading
+  // the public copy would put content there that the next deploy replaces.
+  test('skips a public asset that a private copy shadows, as deploy does', async () => {
+    vi.spyOn(fs, 'existsSync').mockImplementation(
+      (p) => path.normalize(p) === path.normalize('modules/theme/private/assets/js/app.js')
+    );
+
+    await sendFile(gateway, 'modules/theme/public/assets/js/app.js');
+
+    expect(uploadFileFormData).not.toHaveBeenCalled();
+    expect(gateway.sync).not.toHaveBeenCalled();
+    expect(logger.Warn).toHaveBeenCalledWith(expect.stringContaining('modules/theme/private/assets/js/app.js'));
+  });
+
+  test('uploads the private copy of a shadowed asset', async () => {
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+    uploadFileFormData.mockResolvedValue(true);
+
+    await sendFile(gateway, 'modules/theme/private/assets/js/app.js');
+
+    expect(uploadFileFormData).toHaveBeenCalledTimes(1);
+  });
+
+  test('uploads a public asset when the module has no private copy of it', async () => {
+    vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+    uploadFileFormData.mockResolvedValue(true);
+
+    await sendFile(gateway, 'modules/theme/public/assets/js/app.js');
+
+    expect(uploadFileFormData).toHaveBeenCalledTimes(1);
+  });
+
+  test('still sends non-asset files in a hyphenated module as code files', async () => {
+    await sendFile(gateway, 'modules/common-styling/public/views/pages/index.liquid');
+
+    expect(uploadFileFormData).not.toHaveBeenCalled();
+    expect(gateway.sync).toHaveBeenCalledTimes(1);
+  });
+
   test('keeps the batch for the next flush when registering the assets fails', async () => {
     uploadFileFormData.mockResolvedValue(true);
     gateway.sendManifest.mockRejectedValueOnce(new Error('502 Bad Gateway'));
@@ -500,6 +584,25 @@ describe('start', () => {
     expect(mockGatewayInstance.ping).toHaveBeenCalled();
   });
 
+  // Refusing to step up mid-run is the Gateway's policy to enforce, so the command the
+  // operator gets told to restart has to reach it. `gui serve --sync` names itself rather
+  // than `pos-cli sync`, because restarting sync alone would not bring the web server back.
+  test('hands the Gateway the command to name when a session expires mid-run', async () => {
+    await start(env, false, false, { restartCommand: 'pos-cli gui serve staging --sync' });
+
+    expect(Gateway).toHaveBeenCalledWith(
+      expect.objectContaining({ restartCommand: 'pos-cli gui serve staging --sync' })
+    );
+  });
+
+  // Left unset by callers that are a single request: those step up in place, which is the
+  // right thing when the prompt is the only thing on screen.
+  test('leaves the restart command unset when the caller did not name one', async () => {
+    await start(env, false, false);
+
+    expect(Gateway).toHaveBeenCalledWith(expect.objectContaining({ restartCommand: undefined }));
+  });
+
   test('calls ServerError.handler and exits on network error during ping', async () => {
     const networkErr = Object.assign(new Error('Connection refused'), { name: 'RequestError' });
     mockGatewayInstance.ping.mockRejectedValue(networkErr);
@@ -567,6 +670,84 @@ describe('start', () => {
   });
 });
 
+// An instance with no object storage configured cannot presign an upload and answers 501
+// instead of handing out a policy. fetchDirectUploadData used to let that throw out of
+// start(), so sync stopped before its watcher was up (`Failed: fetch failed` when the
+// instance dropped the connection instead of answering) and such an instance could not be
+// synced at all.
+describe('an instance that cannot presign an upload', () => {
+  const assetPath = 'app/assets/style/main.css';
+  const warning =
+    '[Sync] This instance has no object storage configured, so assets cannot be uploaded directly — sending them through the instance instead.';
+  const unavailable = () =>
+    Object.assign(new Error('presignDirectory failed with status 501'), { statusCode: 501 });
+
+  let gateway;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(fs, 'createReadStream').mockReturnValue('mock-stream');
+    vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+    presignDirectory.mockRejectedValue(unavailable());
+    gateway = {
+      getInstance: vi.fn().mockResolvedValue({ id: 'inst-1' }),
+      ping: vi.fn().mockResolvedValue([]),
+      sendManifest: vi.fn().mockResolvedValue({}),
+      sync: vi.fn().mockResolvedValue({})
+    };
+    vi.mocked(Gateway).mockImplementation(function() { return gateway; });
+    ServerError.isNetworkError.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test('sends an asset through the instance instead of uploading it directly', async () => {
+    await sendFile(gateway, assetPath);
+
+    expect(uploadFileFormData).not.toHaveBeenCalled();
+    expect(gateway.sync).toHaveBeenCalledTimes(1);
+    expect(logger.Warn).toHaveBeenCalledWith(warning);
+    // The instance records the asset itself on that path, so there is nothing to register.
+    expect(gateway.sendManifest).not.toHaveBeenCalled();
+  });
+
+  // A code file has no use for an upload authorization either way, so `sync -f` on a page
+  // no longer asks for one — it used to fail on an instance that cannot presign.
+  test('sends a code file without asking for an upload authorization', async () => {
+    await sendFile(gateway, 'app/views/pages/index.liquid');
+
+    expect(presignDirectory).not.toHaveBeenCalled();
+    expect(gateway.sync).toHaveBeenCalledTimes(1);
+  });
+
+  test('starts the watcher instead of ending the run', async () => {
+    const env = {
+      MARKETPLACE_EMAIL: 'test@example.com',
+      MARKETPLACE_TOKEN: 'test-token',
+      MARKETPLACE_URL: 'https://test.example.com',
+      CONCURRENCY: 1
+    };
+
+    const result = await start(env, true, false);
+
+    expect(result).toHaveProperty('watcher');
+    expect(gateway.ping).toHaveBeenCalled();
+    expect(logger.Warn).toHaveBeenCalledWith(warning);
+  });
+
+  // Only the 501 is routed around: an expired or refused authorization is a real failure.
+  test('still fails on a presign error that is not the 501', async () => {
+    presignDirectory.mockRejectedValue(
+      Object.assign(new Error('presignDirectory failed with status 403'), { statusCode: 403 })
+    );
+
+    await expect(sendFile(gateway, assetPath)).rejects.toThrow('presignDirectory failed with status 403');
+    expect(gateway.sync).not.toHaveBeenCalled();
+  });
+});
+
 // --- watchIgnored tests ---------------------------------------------------
 
 describe('watchIgnored', () => {
@@ -618,5 +799,51 @@ describe('handleWatcherError', () => {
       '[Sync] File watcher error: weird failure',
       { exit: false, notify: false }
     );
+  });
+});
+
+// --- expired two-factor session -------------------------------------------
+
+describe('an expired two-factor session', () => {
+  // What Gateway throws in place of stepping up, once watch mode has set restartCommand:
+  // a prompt cannot be raised into a queue that has CONCURRENCY uploads in flight and
+  // file events still arriving behind them.
+  const sessionExpired = () =>
+    Object.assign(
+      new Error(
+        'Your two-factor session has expired, so the instance stopped accepting changes.' +
+          '\nRun `pos-cli sync staging` again — it asks for a code once, before watching starts.'
+      ),
+      { name: 'TwoFactorError' }
+    );
+
+  test('ends the run once, instead of blaming every queued file in turn', async () => {
+    vi.clearAllMocks();
+    vi.spyOn(fs, 'createReadStream').mockReturnValue('mock-stream');
+    const gateway = { sync: vi.fn().mockRejectedValue(sessionExpired()) };
+
+    // Resolves rather than throwing: the queue callback still has to run, and there is
+    // nothing here for it to retry.
+    await expect(pushFile(gateway, 'app/views/pages/a.liquid')).resolves.toBeUndefined();
+
+    expect(logger.Error).toHaveBeenCalledWith(
+      expect.stringContaining('Your two-factor session has expired'),
+      expect.objectContaining({ hideTimestamp: true })
+    );
+    expect(logger.Error).toHaveBeenCalledWith(
+      expect.stringContaining('pos-cli sync staging'),
+      expect.anything()
+    );
+    // Never routed through the per-file handlers — those would report it against the file,
+    // which had nothing wrong with it.
+    expect(ServerError.handler).not.toHaveBeenCalled();
+
+    // The rest of the in-flight batch is refused together; the operator must not read the
+    // same four lines once per file.
+    logger.Error.mockClear();
+    await pushFile(gateway, 'app/views/pages/b.liquid');
+    expect(logger.Error).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
   });
 });

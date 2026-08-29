@@ -3,6 +3,7 @@ import log from '../log.js';
 import { getPortalConfig, portalRequest } from './portal-client.js';
 import fs from 'fs';
 import path from 'path';
+import { writeFileOwnerOnly } from '../../lib/filePermissions.js';
 
 // Default Partner Portal URL
 const DEFAULT_PORTAL_URL = 'https://partners.platformos.com';
@@ -365,7 +366,7 @@ function storeEnvironment(settings) {
   log.debug('storeEnvironment:newConfig', config);
 
   try {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    writeFileOwnerOnly(configPath, JSON.stringify(config, null, 2));
     log.info('storeEnvironment:success', { configPath });
   } catch (e) {
     log.error('storeEnvironment:writeError', { error: e.message });

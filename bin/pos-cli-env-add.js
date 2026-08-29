@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 import { program } from '../lib/program.js';
-import ServerError from '../lib/ServerError.js';
-import logger from '../lib/logger.js';
+import { reportCommandError } from '../lib/reportCommandError.js';
 import addEnv from '../lib/envs/add.js';
 
 program.showHelpAfterError();
@@ -20,14 +19,15 @@ program
     '--token <token>',
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
+  .option(
+    '--otp-code <otpCode>',
+    'two-factor code (or a recovery code) for accounts with 2FA enabled. Can also be set as POS_PORTAL_OTP_CODE. Only needed with --email; you are prompted for one when it is missing'
+  )
   .action(async (environment, params) => {
     try {
       await addEnv(environment, params);
     } catch (e) {
-      if (ServerError.isNetworkError(e))
-        await ServerError.handler(e);
-      else
-        await logger.Error(e);
+      await reportCommandError(e);
     }
   });
 
