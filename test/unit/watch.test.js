@@ -303,7 +303,10 @@ describe('asset sync', () => {
     });
     gateway = {
       getInstance: vi.fn().mockResolvedValue({ id: 'inst-1' }),
-      sendManifest: vi.fn().mockResolvedValue({})
+      sendManifest: vi.fn().mockResolvedValue({}),
+      // Present so the routing tests can assert an asset never takes the
+      // code-file path; the upload tests below never reach it.
+      sync: vi.fn().mockResolvedValue({})
     };
   });
 
@@ -412,6 +415,39 @@ describe('asset sync', () => {
       url: 'https://s3.example.com/bucket',
       fields: { key: 'assets/modules/community/images/${filename}' }
     });
+  });
+
+  // A module directory name is not restricted to word characters, and hyphens are
+  // the norm ("common-styling", "oauth-github"). The asset matcher used `\w+`, so
+  // for those modules every asset was misrouted to pushFile and uploaded as a code
+  // file: it came back with line endings rewritten and a Content-Type derived
+  // remotely rather than the one sync sends, which is enough for a browser to
+  // refuse to execute a .js file that is otherwise byte-perfect. deploy globs
+  // `modules/*/...` and so never had the problem, which is why deploying the same
+  // file always appeared to "fix" it.
+  test.each([
+    ['modules/common-styling/public/assets/js/styleguide.js', 'assets/modules/common-styling/js/${filename}'],
+    ['modules/oauth-github/public/assets/style/main.css', 'assets/modules/oauth-github/style/${filename}'],
+    ['modules/pos.module/public/assets/js/app.js', 'assets/modules/pos.module/js/${filename}']
+  ])('uploads %s directly instead of sending it as a code file', async (assetPath, key) => {
+    uploadFileFormData.mockResolvedValue(true);
+
+    await sendFile(gateway, assetPath);
+
+    expect(gateway.sync).not.toHaveBeenCalled();
+    expect(uploadFileFormData).toHaveBeenCalledTimes(1);
+    expect(uploadFileFormData).toHaveBeenLastCalledWith(assetPath, {
+      url: 'https://s3.example.com/bucket',
+      fields: { key }
+    });
+    expect(gateway.sendManifest).toHaveBeenCalledTimes(1);
+  });
+
+  test('still sends non-asset files in a hyphenated module as code files', async () => {
+    await sendFile(gateway, 'modules/common-styling/public/views/pages/index.liquid');
+
+    expect(uploadFileFormData).not.toHaveBeenCalled();
+    expect(gateway.sync).toHaveBeenCalledTimes(1);
   });
 
   test('keeps the batch for the next flush when registering the assets fails', async () => {

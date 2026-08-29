@@ -41,6 +41,42 @@ Note that [`modules install`/`update`](#installation) take their registry URL fr
 
 The Instance details page in the Partner Portal shows the `env add` command pre-filled with both URLs, ready to copy.
 
+#### Two-Factor Authentication
+
+If your Partner Portal account has two-factor authentication enabled, the token `env add` mints is good for a year against every Instance you can deploy to, so the portal asks for a second factor before issuing one.
+
+Nothing extra is needed for the default flow: `pos-cli env add [environment] --url [url]` (no `--email`) authorizes in the browser, where you answer the 2FA challenge like any other portal login.
+
+When you authenticate with `--email`, pos-cli prompts for the code after your password:
+
+    pos-cli env add staging --url https://example.com --email you@example.com
+    Password: ******
+    This account has two-factor authentication enabled. Your password was accepted.
+    Two-factor code (or a recovery code): 123456
+
+A recovery code from the list you saved when you enabled 2FA is accepted anywhere the six-digit code is. To skip the prompt, pass `--otp-code` or set `POS_PORTAL_OTP_CODE`:
+
+    pos-cli env add staging --url https://example.com --email you@example.com --otp-code 123456
+    POS_PORTAL_OTP_CODE=123456 pos-cli env refresh-token staging
+
+The same applies to `pos-cli env refresh-token` and `pos-cli modules push`. In a non-interactive environment (CI, a `--json` run) pos-cli will not prompt — supply `POS_PORTAL_OTP_CODE`, or prefer `pos-cli env add [environment] --url [url] --token [token]`, which needs neither a password nor a code.
+
+#### Instance Sessions
+
+An instance can require that it is used with a credential whose holder has proved a second factor — the year-long token in `.pos` is not one. This covers **every command that talks to the instance**, not just deploys: `deploy`, `sync`, `exec`, `exec-graphql`, `exec-liquid`, `constants`, `data export`/`import`, `migrations`, `logs`, `pull`, the GUI. A token reaches every record in the instance through GraphQL and runs arbitrary Liquid through `exec liquid`, so reads are not exempt.
+
+The first command that needs one asks for a code:
+
+    pos-cli deploy staging
+    This instance requires a two-factor code.
+    Two-factor code (or a recovery code): 123456
+
+The resulting session lasts 8 hours and is cached in `~/.pos-cli/sessions.json` (owner-readable only), so every later command in that window runs without a prompt — one code unlocks the whole session, whichever command asked for it.
+
+For scripted runs, set `POS_PORTAL_OTP_CODE`: it works for **every** command, while the `--otp-code` flag exists only on `deploy`, `sync`, `env add`, `env refresh-token` and `modules push`. A recovery code works in either and does not expire on a timer. `deploy` and `sync` ask up front, before doing any work; other commands ask at the moment the instance refuses, and then retry the request that was refused.
+
+pos-cli stops after three rejected codes. The Partner Portal locks an account for 15 minutes after five, and that counter is shared with the web UI, so the remaining attempts are left for you to spend deliberately. If the account is already locked, pos-cli says so and stops without asking for a code — while the lock holds, even a correct code is refused unread.
+
 The configuration for your environments is stored in the `.pos` file.
 
 ### Syncing Changes

@@ -68,6 +68,7 @@ pos-cli/
 │   ├── ServerError.js           # Centralized error handling
 │   ├── settings.js              # Environment configuration (.pos file)
 │   ├── environments.js          # Authentication flows
+│   ├── utils/twoFactor.js       # Partner Portal 2FA: prompt/retry around password auth
 │   ├── portal.js                # Partner Portal API client
 │   ├── watch.js                 # File watching for sync mode
 │   ├── archive.js               # Deployment archive creation
