@@ -9,7 +9,10 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
 
 let tmpDir;
 
@@ -87,7 +90,6 @@ describe('tools config validation', () => {
   });
 
   test('the config shipped in the package satisfies its own schema', () => {
-    const here = path.dirname(new URL(import.meta.url).pathname);
     const schema = JSON.parse(fs.readFileSync(path.join(here, '..', 'tools.config.schema.json'), 'utf8'));
     const config = JSON.parse(fs.readFileSync(path.join(here, '..', 'tools.config.json'), 'utf8'));
 
