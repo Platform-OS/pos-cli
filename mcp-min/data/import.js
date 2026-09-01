@@ -6,6 +6,7 @@ import path from 'path';
 import os from 'os';
 import { jsonToZipBuffer } from './json-to-csv.js';
 import { validateRecords, validateJsonStructure } from './validate.js';
+import { authProperties } from '../schemas/auth.js';
 import log from '../log.js';
 import { resolveAuth, runWithAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
@@ -37,9 +38,9 @@ const dataImportTool = {
   inputSchema: {
     type: 'object',
     additionalProperties: false,
-    required: ['env'],
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config' },
+      ...authProperties,
       filePath: { type: 'string', description: 'Path to JSON or ZIP file to import' },
       jsonData: { type: 'object', description: 'JSON data object to import (records, users)' },
       zipFileUrl: { type: 'string', description: 'Remote URL of ZIP archive to import' },

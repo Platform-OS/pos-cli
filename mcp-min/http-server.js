@@ -2,6 +2,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import { randomUUID } from 'crypto';
 import tools from './tools.js';
+import { validateToolParams } from './validate-params.js';
 import { sseHandler, writeSSE } from './sse.js';
 import { DEBUG } from './config.js';
 import log from './log.js';
@@ -91,6 +92,14 @@ export default async function startHttp({ port = 5910 } = {}) {
     if (!tool) return res.status(400).json({ error: 'tool required (expected body.tool/name/id)' });
     const entry = tools[tool];
     if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
+
+    const validation = validateToolParams(tool, entry, params);
+    if (!validation.valid) {
+      // A schema that will not compile is our defect, not the caller's — but the call is
+      // still rejected, because an uncompilable schema means nothing was checked.
+      const status = validation.schemaError ? 500 : 400;
+      return res.status(status).json({ error: `invalid params: ${validation.message}`, details: validation.errors });
+    }
 
     try {
       log.debug('HTTP /call', { tool, params, rawBodyKeys: Object.keys(body) });
@@ -182,6 +191,12 @@ export default async function startHttp({ port = 5910 } = {}) {
             respond({ error: { code: -32601, message: `Tool not found: ${name}` } });
             return;
           }
+          const validation = validateToolParams(name, entry, args);
+          if (!validation.valid) {
+            const code = validation.schemaError ? -32603 : -32602;
+            respond({ error: { code, message: `Invalid params: ${validation.message}`, data: { errors: validation.errors } } });
+            return;
+          }
           const result = await entry.handler(args, { transport: 'jsonrpc', debug: DEBUG });
           // Wrap result as text content for broad client compatibility
           const text = (() => { try { return JSON.stringify(result); } catch { return String(result); } })();
@@ -210,6 +225,14 @@ export default async function startHttp({ port = 5910 } = {}) {
     if (!tool) return res.status(400).json({ error: 'tool required (expected body.tool/name/id)' });
     const entry = tools[tool];
     if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
+
+    // Validate before the SSE handshake: once the stream is open the status code is
+    // already sent, so a rejection could only be reported as an in-band error event.
+    const streamValidation = validateToolParams(tool, entry, params);
+    if (!streamValidation.valid) {
+      const status = streamValidation.schemaError ? 500 : 400;
+      return res.status(status).json({ error: `invalid params: ${streamValidation.message}`, details: streamValidation.errors });
+    }
 
     // Prepare SSE response
     sseHandler(req, res);

@@ -81,7 +81,8 @@ pos-cli/
 │   ├── data/                    # Import/export/clean
 │   ├── assets/                  # Asset deployment
 │   ├── logsv2/                  # OpenObserve logs integration
-│   └── validators/              # Input validation
+│   ├── validation/              # Ajv schema validation (shared by GUI + MCP)
+│   └── validators/              # CLI argument validators (url, email, paths)
 ├── mcp-min/          # MCP server implementation
 │   ├── index.js                 # Starts stdio + HTTP/SSE transports
 │   ├── stdio-server.js          # MCP over stdio (for editor integrations)
@@ -396,6 +397,61 @@ Can run with sync: `pos-cli gui serve staging --sync --open`
 - **chalk** - Terminal colors
 - **ora** - Loading spinners
 - **yeoman-generator** - Code generators
+
+## Input Validation (Ajv)
+
+**Key files**: `lib/validation/index.js`, `lib/validation/schemas/gui.js`, `mcp-min/validate-params.js`, `mcp-min/schemas/auth.js`
+
+Untrusted input is validated against JSON Schema with **Ajv** (draft-07) before it reaches
+any handler. Ajv is used rather than a code-first library because the MCP protocol requires
+JSON Schema on the wire: each tool's `inputSchema` is advertised verbatim in `tools/list`,
+so the schema we publish and the schema we enforce are the same object and cannot drift.
+
+`lib/validation/index.js` exposes one function:
+
+```javascript
+import { validate } from '#lib/validation/index.js';
+
+const result = validate(schema, data);            // { valid, errors, message, schemaError }
+const coerced = validate(schema, req.query, { mode: 'coercing' });
+```
+
+- **`strict` mode (default)** — for JSON bodies. Leaves the caller's data untouched.
+- **`coercing` mode** — for query strings, where every value arrives as a string. Ajv
+  applies coercion and defaults **by mutating the object in place**.
+- **`result.schemaError`** — the schema itself would not compile. That is our defect, not
+  the caller's, so report it as 500 / `-32603` — but still reject, because nothing was
+  actually checked.
+
+Ajv runs in `strict: true` mode so a malformed schema fails loudly at compile time.
+`allowUnionTypes` is the one rule relaxed, for fields that genuinely accept two types.
+
+### Enforcement points
+
+| Where | What is validated |
+|---|---|
+| `mcp-min/http-server.js` — `POST /call`, `/call-stream` | tool params vs `inputSchema` → 400 |
+| `mcp-min/http-server.js` — JSON-RPC `tools/call` | same → `-32602` |
+| `mcp-min/stdio-server.js` — `tools/call` + legacy direct invocation | same → `-32602` |
+| `mcp-min/tools.js` | `tools.config.json` vs `tools.config.schema.json` |
+| `lib/server.js` | GUI requests for graph / liquid / logs / logsv2 / sync |
+
+Adding a tool to `mcp-min/` needs no wiring: both transports validate against whatever
+`inputSchema` the tool declares. A tool with no schema accepts any object.
+
+### Two rules to preserve
+
+**`env` must stay optional on tools that authenticate.** `resolveAuth` (`mcp-min/auth.js`)
+resolves credentials from explicit `url`+`email`+`token` params, then `MPKIT_*` env vars,
+then the named `.pos` environment, then the first `.pos` entry. Marking `env` as `required`
+would reject three of those four supported call styles. Tools closing their schema with
+`additionalProperties: false` must also spread in `authProperties` from
+`mcp-min/schemas/auth.js`, or the explicit-credentials path becomes unreachable.
+
+**The tools config fails closed.** An unparseable or missing config falls back to defaults,
+but one that parses and fails schema validation throws at import. That file decides which
+tools are exposed, so ignoring a broken one would silently re-enable every tool the author
+meant to switch off.
 
 ### Testing Philosophy
 Integration tests against real platformOS instances for reliability. Tests cover:

@@ -3,15 +3,16 @@ import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { getConstants } from '../../lib/graph/queries.js';
 import { graphQLErrorMessage } from '../../lib/graph/response.js';
+import { authProperties } from '../schemas/auth.js';
 
 const constantsListTool = {
   description: 'List all constants configured on a platformOS instance.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
-    required: ['env'],
     properties: {
-      env: { type: 'string', description: 'Environment name from .pos config' }
+      env: { type: 'string', description: 'Environment name from .pos config' },
+      ...authProperties
     }
   },
   handler: async (params, ctx = {}) => {

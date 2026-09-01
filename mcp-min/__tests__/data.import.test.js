@@ -23,7 +23,9 @@ describe('data-import tool', () => {
       expect(dataImportTool.inputSchema.properties).toHaveProperty('filePath');
       expect(dataImportTool.inputSchema.properties).toHaveProperty('jsonData');
       expect(dataImportTool.inputSchema.properties).toHaveProperty('zipFileUrl');
-      expect(dataImportTool.inputSchema.required).toContain('env');
+      // `env` is optional: resolveAuth also accepts url/email/token or MPKIT_* env vars.
+      expect(dataImportTool.inputSchema.required).toBeUndefined();
+      expect(dataImportTool.inputSchema.properties).toHaveProperty('token');
     });
 
     test('returns error when env not found', async () => {

@@ -2,6 +2,7 @@ import { createInterface } from 'readline';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import tools from './tools.js';
+import { validateToolParams } from './validate-params.js';
 import { DEBUG } from './config.js';
 import log from './log.js';
 
@@ -84,6 +85,15 @@ const mcpHandlers = {
       return;
     }
 
+    const validation = validateToolParams(name, tool, args);
+    if (!validation.valid) {
+      // -32603 (internal error) when our own schema failed to compile; -32602 (invalid
+      // params) when the caller is genuinely at fault.
+      const code = validation.schemaError ? -32603 : -32602;
+      sendError(id, code, `Invalid params: ${validation.message}`, { errors: validation.errors });
+      return;
+    }
+
     // Send progress notification (keeps connection alive, prevents client timeout)
     let progressCounter = 0;
     function sendProgress(current, total, message) {
@@ -160,6 +170,18 @@ export default function startStdio() {
     // Fallback: direct tool invocation (legacy/custom protocol)
     const tool = tools[method];
     if (tool) {
+      const validation = validateToolParams(method, tool, params);
+      if (!validation.valid) {
+        const message = `Invalid params: ${validation.message}`;
+        if (jsonrpc === '2.0') {
+          sendError(id, validation.schemaError ? -32603 : -32602, message, { errors: validation.errors });
+        } else {
+          send({ id, error: message });
+        }
+        log.debug('STDIO invalid params', { id, method, message });
+        return;
+      }
+
       try {
         const result = await tool.handler(params || {}, { transport: 'stdio', debug: DEBUG, log: log.info.bind(log) });
         if (jsonrpc === '2.0') {

@@ -7,15 +7,17 @@ import Gateway from '../../lib/proxy.js';
 import { presignUrl } from '../../lib/presignUrl.js';
 import { uploadFile } from '../../lib/s3UploadFile.js';
 import { resolveAuth, runWithAuth } from '../auth.js';
+import { authProperties } from '../schemas/auth.js';
 
 const uploadsPushTool = {
   description: 'Upload a ZIP file containing property uploads to platformOS instance. The ZIP should contain files referenced by upload-type properties.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
-    required: ['env', 'filePath'],
+    required: ['filePath'],
     properties: {
       env: { type: 'string', description: 'Environment name' },
+      ...authProperties,
       filePath: { type: 'string', description: 'Path to ZIP file with uploads' }
     }
   },

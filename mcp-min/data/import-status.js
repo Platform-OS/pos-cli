@@ -2,15 +2,17 @@
 import log from '../log.js';
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 const dataImportStatusTool = {
   description: 'Check the status of a data import job. Poll until status is "done" or "failed".',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
-    required: ['env', 'jobId'],
+    required: ['jobId'],
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config' },
+      ...authProperties,
       jobId: { type: 'string', description: 'Import job ID returned from data-import' }
     }
   },

@@ -9,7 +9,7 @@ const dataValidateTool = {
   inputSchema: {
     type: 'object',
     additionalProperties: false,
-    required: ['env'],
+    // Nothing is required: validation runs entirely locally, and `env` is context only.
     properties: {
       env: {
         type: 'string',

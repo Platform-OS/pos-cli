@@ -4,17 +4,39 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import files from '../lib/files.js';
+import { validate } from '../lib/validation/index.js';
 
 // Load tool configuration (descriptions and enabled/disabled state)
 // MCP_TOOLS_CONFIG env var overrides the bundled config
 const __dirname = dirname(fileURLToPath(import.meta.url));
 let toolsConfig = { tools: {} };
 const configPath = process.env.MCP_TOOLS_CONFIG || join(__dirname, 'tools.config.json');
+const configSchema = JSON.parse(readFileSync(join(__dirname, 'tools.config.schema.json'), 'utf-8'));
+
+// Tracked separately from the parsed value: `null`, `false`, `0` and `""` are all valid
+// JSON, so testing the value for truthiness would skip validation on exactly the configs
+// that need rejecting and fall through to defaults with every tool enabled.
+let rawConfig;
+let configParsed = false;
 try {
-  toolsConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
-  log.debug('tools config loaded', { path: configPath, tools: Object.keys(toolsConfig.tools || {}).length });
+  rawConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
+  configParsed = true;
 } catch (err) {
-  log.debug('tools config not found or invalid, using defaults', { path: configPath, error: String(err) });
+  // A missing file is the normal case for a custom path that was never created, and a
+  // malformed one cannot be interpreted at all. Either way there is nothing to apply.
+  log.debug('tools config not found or unparseable, using defaults', { path: configPath, error: String(err) });
+}
+
+if (configParsed) {
+  const result = validate(configSchema, rawConfig);
+  if (!result.valid) {
+    // Fail closed. This config decides which tools are exposed, so ignoring a broken one
+    // would silently re-enable every tool the author meant to switch off.
+    log.error(`invalid tools config at ${configPath}: ${result.message}`);
+    throw new Error(`Invalid tools config at ${configPath}: ${result.message}`);
+  }
+  toolsConfig = rawConfig;
+  log.debug('tools config loaded', { path: configPath, tools: Object.keys(toolsConfig.tools || {}).length });
 }
 
 // Keep tools.js lean by extracting complex tools into modules

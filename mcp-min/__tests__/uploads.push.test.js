@@ -93,7 +93,8 @@ describe('uploads-push', () => {
 
   test('has correct description and schema with required fields', () => {
     expect(uploadsTool.description).toContain('ZIP');
-    expect(uploadsTool.inputSchema.required).toContain('env');
+    // `env` is optional: resolveAuth also accepts url/email/token or MPKIT_* env vars.
+    expect(uploadsTool.inputSchema.required).not.toContain('env');
     expect(uploadsTool.inputSchema.required).toContain('filePath');
     expect(uploadsTool.inputSchema.properties.env).toBeDefined();
     expect(uploadsTool.inputSchema.properties.filePath).toBeDefined();

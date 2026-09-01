@@ -257,7 +257,9 @@ const testsRunTool = {
       path: { type: 'string', description: 'Optional test path filter (e.g., "tests/users")' },
       name: { type: 'string', description: 'Test name filter (e.g., "create_user_test"). Required to avoid running all tests which causes timeouts.' }
     },
-    required: ['env', 'name']
+    // `env` is not required: resolveAuth also accepts url+email+token, MPKIT_* env
+    // vars, or falls back to the first .pos environment.
+    required: ['name']
   },
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
