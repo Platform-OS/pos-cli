@@ -6,7 +6,7 @@ import { graphQLErrorMessage } from '../../lib/graph/response.js';
 import { authProperties } from '../schemas/auth.js';
 
 const constantsUnsetTool = {
-  description: 'Delete a constant from a platformOS instance.',
+  description: 'Delete a constant from a platformOS instance. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,

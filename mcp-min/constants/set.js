@@ -6,7 +6,7 @@ import { graphQLErrorMessage } from '../../lib/graph/response.js';
 import { authProperties } from '../schemas/auth.js';
 
 const constantsSetTool = {
-  description: 'Set a constant on a platformOS instance. Creates or updates the constant.',
+  description: 'Set a constant on a platformOS instance. Creates or updates the constant. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,

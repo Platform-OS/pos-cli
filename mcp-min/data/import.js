@@ -34,7 +34,7 @@ async function uploadZipBuffer(buffer, gateway, presignUrlFn, uploadFileFn) {
 }
 
 const dataImportTool = {
-  description: 'Import data to platformOS instance. Accepts JSON (converted to CSV internally) or ZIP file with CSV files.',
+  description: 'Import data to platformOS instance. Accepts JSON (converted to CSV internally) or ZIP file with CSV files. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,

@@ -169,3 +169,42 @@ describe('required relaxations', () => {
     expect(tools[name].inputSchema.required).toEqual(expected);
   });
 });
+
+// logs-fetch documents `lastId` as the cursor to hand back on the next call, so what it
+// returns has to satisfy the schema it accepts. It previously returned a string while the
+// schema demanded an integer, which broke paging with -32602.
+describe('logs-fetch cursor round-trips', () => {
+  test('the returned cursor is accepted as the next request cursor', async () => {
+    const rows = [{ id: 41, message: 'a' }, { id: 42, message: 'b' }];
+    let call = 0;
+    class MockGateway {
+      async logs() {
+        call += 1;
+        return { logs: call === 1 ? rows : [] };
+      }
+    }
+
+    const result = await tools['logs-fetch'].handler(
+      { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
+      { Gateway: MockGateway }
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.lastId).toBe(42);
+    expect(check('logs-fetch', { lastId: result.lastId }).valid).toBe(true);
+  });
+
+  test('the default cursor is also a valid next cursor', async () => {
+    class MockGateway {
+      async logs() { return { logs: [] }; }
+    }
+
+    const result = await tools['logs-fetch'].handler(
+      { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
+      { Gateway: MockGateway }
+    );
+
+    expect(result.lastId).toBe(0);
+    expect(check('logs-fetch', { lastId: result.lastId }).valid).toBe(true);
+  });
+});

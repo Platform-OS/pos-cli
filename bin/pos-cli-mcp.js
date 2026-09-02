@@ -10,7 +10,7 @@ try {
   await import('../mcp-min/index.js');
 } catch (error) {
   if (error?.name === 'ToolsConfigError') {
-    await logger.Error(error.message, { exit: false, hideTimestamp: true });
+    await logger.Error(error.message, { exit: false, notify: false, hideTimestamp: true });
     process.exit(1);
   }
   throw error;

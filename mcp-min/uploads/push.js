@@ -10,7 +10,7 @@ import { resolveAuth, runWithAuth } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
 
 const uploadsPushTool = {
-  description: 'Upload a ZIP file containing property uploads to platformOS instance. The ZIP should contain files referenced by upload-type properties.',
+  description: 'Upload a ZIP file containing property uploads to platformOS instance. The ZIP should contain files referenced by upload-type properties. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,

@@ -102,6 +102,19 @@ describe('tools config validation', () => {
     expect(stdout).toContain('constants-lst');
   });
 
+  // `name in registry` would accept these, because `in` walks the prototype chain — they
+  // would then match nothing in applyConfig and be silently ignored.
+  test.each(['toString', 'constructor', 'hasOwnProperty', 'valueOf'])(
+    'refuses a config keyed by the inherited property %s',
+    key => {
+      const configPath = write(`proto-${key}.json`, JSON.stringify({ tools: { [key]: { enabled: false } } }));
+      const { stdout, status } = loadWithConfig(configPath);
+
+      expect(stdout).toContain(`no such tool: ${key}`);
+      expect(status).not.toBe(0);
+    }
+  );
+
   test('accepts a config naming only real tools', () => {
     const configPath = write('real.json', JSON.stringify({
       tools: { 'deploy-start': { description: 'Ship it' } }

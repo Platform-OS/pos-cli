@@ -445,8 +445,11 @@ auth properties are what use it.
 | `mcp-min/tools.js` | `tools.config.json` vs `tools.config.schema.json`, plus tool names |
 | `lib/server.js` | GUI requests for graph / liquid / logs / logsv2 / sync |
 
-All five sites route through `rejectionFor` in `mcp-min/validate-params.js`, so the mapping
-from a rejection to a status code (400/500, `-32602`/`-32603`) is made in exactly one place.
+The five MCP dispatch sites (the first three rows) route through `rejectionFor` in
+`mcp-min/validate-params.js`, so the mapping from a rejection to a status code (400/500,
+`-32602`/`-32603`) is made in one place for the transports. The GUI server keeps its own
+`rejectInvalid` in `lib/server.js` because it answers with a different body shape; the two
+apply the same 400/500 rule and have to be changed together.
 A tool that declares no schema falls back to `OPEN_OBJECT_SCHEMA` in
 `mcp-min/schemas/default.js` — the same constant both `tools/list` responses advertise, so
 what is published and what is enforced cannot disagree.

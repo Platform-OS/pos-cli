@@ -63,7 +63,10 @@ const fetchLogsTool = {
       return {
         ok: true,
         logs: out,
-        lastId: latestId,
+        // Number, not the string the paging loop carries: `lastId` is declared as an
+        // integer on the way in, and the documented use of this field is to hand it
+        // straight back as the next call's cursor.
+        lastId: Number(latestId),
         meta: {
           startedAt,
           finishedAt: new Date().toISOString(),

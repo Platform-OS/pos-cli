@@ -183,7 +183,10 @@ function loadToolsConfig(registry) {
   // typo like "deploy-strt" would otherwise be accepted, match nothing in applyConfig,
   // and leave "deploy-start" enabled — the exact fail-open the schema check exists to
   // prevent, and the harder one to notice because the config looks like it took effect.
-  const unknown = Object.keys(raw.tools || {}).filter(name => !(name in registry));
+  // hasOwnProperty, not `in`: `in` walks the prototype chain, so an entry keyed
+  // `toString` or `constructor` would pass as a known tool and then be ignored.
+  const unknown = Object.keys(raw.tools || {})
+    .filter(name => !Object.prototype.hasOwnProperty.call(registry, name));
   if (unknown.length > 0) {
     throw new ToolsConfigError(
       `Invalid tools config at ${configPath}: no such tool: ${unknown.join(', ')}`
