@@ -1,6 +1,7 @@
 // platformos.logs.fetch tool - batch fetch logs based on pos-cli fetch-logs
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 const fetchLogsTool = {
   description: 'Fetch recent logs in batches (NDJSON semantics, returns JSON array here). Mirrors pos-cli fetch-logs.',
@@ -9,10 +10,8 @@ const fetchLogsTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
-      lastId: { type: 'string' },
+      ...authProperties,
+      lastId: { type: 'integer', minimum: 0, description: 'Log row id to resume from (default 0)' },
       endpoint: { type: 'string', description: 'Override API base url' },
       limit: { type: 'integer', minimum: 1, maximum: 10000 }
     }
@@ -64,7 +63,10 @@ const fetchLogsTool = {
       return {
         ok: true,
         logs: out,
-        lastId: latestId,
+        // Number, not the string the paging loop carries: `lastId` is declared as an
+        // integer on the way in, and the documented use of this field is to hand it
+        // straight back as the next call's cursor.
+        lastId: Number(latestId),
         meta: {
           startedAt,
           finishedAt: new Date().toISOString(),

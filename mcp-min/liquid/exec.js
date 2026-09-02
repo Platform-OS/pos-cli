@@ -1,6 +1,7 @@
 // platformos.liquid.exec tool - execute Liquid on remote instance via Gateway.liquid
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 const execLiquidTool = {
   description: 'Render a Liquid template on a platformOS instance server-side via /api/app_builder/liquid_exec. Returns the rendered output. Useful for testing Liquid code, running one-off queries via {% graphql %}, or inspecting instance state. Auth resolved from: explicit params > MPKIT_* env vars > .pos config.',
@@ -9,9 +10,7 @@ const execLiquidTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config (e.g., staging, production). Used to resolve auth when url/email/token are not provided.' },
-      url: { type: 'string', description: 'Instance URL (e.g., https://my-app.staging.oregon.platform-os.com). Requires email and token.' },
-      email: { type: 'string', description: 'Email for instance authentication. Required with url and token.' },
-      token: { type: 'string', description: 'API token for instance authentication. Required with url and email.' },
+      ...authProperties,
       endpoint: { type: 'string', description: 'Override the base URL for the Liquid exec endpoint. Defaults to the resolved instance URL.' },
       template: { type: 'string', description: 'Liquid template string to render server-side (e.g., "Hello {{ name }}", "{% graphql g = \'users/search\' %}").' },
       locals: { type: 'object', additionalProperties: true, description: 'Variables available inside the template as top-level Liquid variables (e.g., { "name": "World" } makes {{ name }} render "World").' }

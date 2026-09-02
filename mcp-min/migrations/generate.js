@@ -4,6 +4,7 @@ import path from 'path';
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import dir from '../../lib/directories.js';
+import { authProperties } from '../schemas/auth.js';
 
 function ensureMigrationsDir() {
   const appDirectory = fs.existsSync(dir.APP) ? dir.APP : dir.LEGACY_APP;
@@ -18,9 +19,7 @@ const generateMigrationTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
+      ...authProperties,
       name: { type: 'string', description: 'Base name of the migration, without timestamp' },
       skipWrite: { type: 'boolean', description: 'When true, do not create local file', default: false },
       endpoint: { type: 'string', description: 'Override API base URL' }

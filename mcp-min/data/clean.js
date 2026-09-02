@@ -2,6 +2,7 @@
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 const CONFIRMATION_TEXT = 'CLEAN DATA';
 
@@ -12,9 +13,7 @@ const dataCleanTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config' },
-      url: { type: 'string', description: 'Instance URL (alternative to env)' },
-      email: { type: 'string', description: 'Account email (alternative to env)' },
-      token: { type: 'string', description: 'API token (alternative to env)' },
+      ...authProperties,
       confirmation: {
         type: 'string',
         description: `Confirmation text - must be exactly "${CONFIRMATION_TEXT}" to proceed`

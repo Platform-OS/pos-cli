@@ -1,6 +1,7 @@
 // platformos.migrations.list - list migrations and their statuses via Gateway
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 const listMigrationsTool = {
   description: 'List migrations deployed to the server with their current status.',
@@ -9,9 +10,7 @@ const listMigrationsTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
+      ...authProperties,
       endpoint: { type: 'string', description: 'Override API base URL' }
     }
   },

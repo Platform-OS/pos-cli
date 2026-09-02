@@ -23,7 +23,9 @@ describe('data-import tool', () => {
       expect(dataImportTool.inputSchema.properties).toHaveProperty('filePath');
       expect(dataImportTool.inputSchema.properties).toHaveProperty('jsonData');
       expect(dataImportTool.inputSchema.properties).toHaveProperty('zipFileUrl');
-      expect(dataImportTool.inputSchema.required).toContain('env');
+      // `env` is optional: resolveAuth also accepts url/email/token or MPKIT_* env vars.
+      expect(dataImportTool.inputSchema.required).toBeUndefined();
+      expect(dataImportTool.inputSchema.properties).toHaveProperty('token');
     });
 
     test('returns error when env not found', async () => {
@@ -326,7 +328,7 @@ describe('data-import tool', () => {
     test('has correct description and inputSchema', () => {
       expect(dataImportStatusTool.description).toContain('status');
       expect(dataImportStatusTool.inputSchema.properties).toHaveProperty('jobId');
-      expect(dataImportStatusTool.inputSchema.required).toContain('jobId');
+      expect(dataImportStatusTool.inputSchema.required).toEqual(['jobId']);
     });
 
     test('returns validation error when jobId not provided', async () => {

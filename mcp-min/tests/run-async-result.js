@@ -1,6 +1,7 @@
 // platformos.tests.run-async-result - check result of an async test run via /_tests/results/:id
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
+import { authProperties } from '../schemas/auth.js';
 
 async function makeRequest(options) {
   const { uri, method = 'GET', headers = {} } = options;
@@ -34,9 +35,7 @@ const testsRunAsyncResultTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config' },
-      url: { type: 'string', description: 'Instance URL (alternative to env)' },
-      email: { type: 'string', description: 'Account email (alternative to env)' },
-      token: { type: 'string', description: 'API token (alternative to env)' },
+      ...authProperties,
       id: { type: 'string', description: 'Test run ID returned by tests-run-async' }
     },
     required: ['id']

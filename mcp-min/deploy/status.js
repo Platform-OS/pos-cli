@@ -1,6 +1,7 @@
 // platformos.deploy.status - check deployment status via Gateway.getStatus
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 const statusDeployTool = {
   description: 'Get current deployment status using Gateway.getStatus(id).',
@@ -9,9 +10,7 @@ const statusDeployTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
+      ...authProperties,
       endpoint: { type: 'string' },
       id: { type: 'string', description: 'Deployment ID returned from start' }
     },

@@ -88,8 +88,12 @@ describe('constants-list', () => {
     expect(res.error.message).toBe('Unauthorized');
   });
 
+  // `env` is optional across these tools: resolveAuth also accepts explicit
+  // url/email/token, MPKIT_* env vars, or the first .pos entry.
   test('has correct schema', () => {
-    expect(constantsListTool.inputSchema.required).toContain('env');
+    expect(constantsListTool.inputSchema.required).toBeUndefined();
+    expect(constantsListTool.inputSchema.properties).toHaveProperty('env');
+    expect(constantsListTool.inputSchema.properties).toHaveProperty('token');
   });
 });
 
@@ -183,9 +187,8 @@ describe('constants-set', () => {
   });
 
   test('has correct schema', () => {
-    expect(constantsSetTool.inputSchema.required).toContain('env');
-    expect(constantsSetTool.inputSchema.required).toContain('name');
-    expect(constantsSetTool.inputSchema.required).toContain('value');
+    expect(constantsSetTool.inputSchema.required).toEqual(['name', 'value']);
+    expect(constantsSetTool.inputSchema.properties).toHaveProperty('env');
   });
 });
 
@@ -259,7 +262,7 @@ describe('constants-unset', () => {
   });
 
   test('has correct schema', () => {
-    expect(constantsUnsetTool.inputSchema.required).toContain('env');
-    expect(constantsUnsetTool.inputSchema.required).toContain('name');
+    expect(constantsUnsetTool.inputSchema.required).toEqual(['name']);
+    expect(constantsUnsetTool.inputSchema.properties).toHaveProperty('env');
   });
 });

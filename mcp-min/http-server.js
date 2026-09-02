@@ -2,6 +2,8 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import { randomUUID } from 'crypto';
 import tools from './tools.js';
+import { rejectionFor } from './validate-params.js';
+import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import { sseHandler, writeSSE } from './sse.js';
 import { DEBUG } from './config.js';
 import log from './log.js';
@@ -92,6 +94,13 @@ export default async function startHttp({ port = 5910 } = {}) {
     const entry = tools[tool];
     if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
 
+    const rejection = rejectionFor(tool, entry, params);
+    if (rejection) {
+      return res
+        .status(rejection.httpStatus)
+        .json({ error: `invalid params: ${rejection.message}`, details: rejection.errors });
+    }
+
     try {
       log.debug('HTTP /call', { tool, params, rawBodyKeys: Object.keys(body) });
       const result = await entry.handler(params || {}, { transport: 'http', debug: DEBUG });
@@ -163,7 +172,7 @@ export default async function startHttp({ port = 5910 } = {}) {
         const list = Object.keys(tools).map((name) => ({
           name,
           description: tools[name].description || '',
-          inputSchema: tools[name].inputSchema || { type: 'object', additionalProperties: true }
+          inputSchema: tools[name].inputSchema || OPEN_OBJECT_SCHEMA
         }));
         respond({ result: { tools: list } });
         return;
@@ -180,6 +189,17 @@ export default async function startHttp({ port = 5910 } = {}) {
           const entry = tools[name];
           if (!entry || typeof entry.handler !== 'function') {
             respond({ error: { code: -32601, message: `Tool not found: ${name}` } });
+            return;
+          }
+          const rejection = rejectionFor(name, entry, args);
+          if (rejection) {
+            respond({
+              error: {
+                code: rejection.jsonRpcCode,
+                message: `Invalid params: ${rejection.message}`,
+                data: { errors: rejection.errors }
+              }
+            });
             return;
           }
           const result = await entry.handler(args, { transport: 'jsonrpc', debug: DEBUG });
@@ -210,6 +230,15 @@ export default async function startHttp({ port = 5910 } = {}) {
     if (!tool) return res.status(400).json({ error: 'tool required (expected body.tool/name/id)' });
     const entry = tools[tool];
     if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
+
+    // Validate before the SSE handshake: once the stream is open the status code is
+    // already sent, so a rejection could only be reported as an in-band error event.
+    const streamRejection = rejectionFor(tool, entry, params);
+    if (streamRejection) {
+      return res
+        .status(streamRejection.httpStatus)
+        .json({ error: `invalid params: ${streamRejection.message}`, details: streamRejection.errors });
+    }
 
     // Prepare SSE response
     sseHandler(req, res);

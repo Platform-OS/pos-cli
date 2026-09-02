@@ -14,6 +14,7 @@ import { fillInTemplateValues } from '../../lib/templates.js';
 import dir from '../../lib/directories.js';
 import log from '../log.js';
 import { resolveAuth, maskToken, runWithAuth } from '../auth.js';
+import { authProperties } from '../schemas/auth.js';
 
 // Alias for backwards compatibility
 const templates = { fillInTemplateValues };
@@ -97,9 +98,7 @@ const singleFileTool = {
     properties: {
       filePath: { type: 'string', description: 'Absolute or relative path to the file to sync. Must be inside app/, marketplace_builder/, or modules/.' },
       env: { type: 'string', description: 'Environment name from .pos config (e.g., staging, production). Used to resolve auth when url/email/token are not provided.' },
-      url: { type: 'string', description: 'Instance URL (e.g., https://my-app.staging.oregon.platform-os.com). Requires email and token.' },
-      email: { type: 'string', description: 'Email for instance authentication. Required with url and token.' },
-      token: { type: 'string', description: 'API token for instance authentication. Required with url and email.' },
+      ...authProperties,
       op: { type: 'string', enum: ['upload', 'delete'], description: 'Operation: "upload" to push file, "delete" to remove from instance. Auto-detected from file existence if omitted.' },
       dryRun: { type: 'boolean', description: 'Validate file path, auth, and sync rules without actually uploading. Default: false.' },
       confirmDelete: { type: 'boolean', description: 'Safety flag -- must be true to execute delete operations. Default: false.' }

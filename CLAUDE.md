@@ -81,7 +81,8 @@ pos-cli/
 │   ├── data/                    # Import/export/clean
 │   ├── assets/                  # Asset deployment
 │   ├── logsv2/                  # OpenObserve logs integration
-│   └── validators/              # Input validation
+│   ├── validation/              # Ajv schema validation (shared by GUI + MCP)
+│   └── validators/              # CLI argument validators (url, email, paths)
 ├── mcp-min/          # MCP server implementation
 │   ├── index.js                 # Starts stdio + HTTP/SSE transports
 │   ├── stdio-server.js          # MCP over stdio (for editor integrations)
@@ -396,6 +397,96 @@ Can run with sync: `pos-cli gui serve staging --sync --open`
 - **chalk** - Terminal colors
 - **ora** - Loading spinners
 - **yeoman-generator** - Code generators
+
+## Input Validation (Ajv)
+
+**Key files**: `lib/validation/index.js`, `lib/validation/schemas/gui.js`,
+`mcp-min/validate-params.js`, `mcp-min/schemas/auth.js`, `mcp-min/schemas/default.js`
+
+Untrusted input is validated against JSON Schema with **Ajv** (draft-07) before it reaches
+any handler. Ajv is used rather than a code-first library because the MCP protocol requires
+JSON Schema on the wire: each tool's `inputSchema` is advertised verbatim in `tools/list`,
+so the schema we publish and the schema we enforce are the same object and cannot drift.
+
+`lib/validation/index.js` exposes one function:
+
+```javascript
+import { validate } from '#lib/validation/index.js';
+
+const result = validate(schema, data);            // { valid, errors, message, schemaError }
+const coerced = validate(schema, req.query, { mode: 'coercing' });
+```
+
+- **`strict` mode (default)** — for JSON bodies. Leaves the caller's data untouched.
+- **`coercing` mode** — for query strings, where every value arrives as a string. Ajv
+  applies coercion and defaults **by mutating the object in place**.
+- **`result.schemaError`** — the schema itself would not compile. That is our defect, not
+  the caller's, so report it as 500 / `-32603` — but still reject, because nothing was
+  actually checked. Reserved for genuine compile failures: an unknown `mode` throws a
+  `RangeError` (a caller bug), and boolean schemas — legal JSON Schema that cannot key the
+  compile cache — validate normally rather than surfacing as a phantom compile failure.
+
+`validate()` returns only `{ valid, errors, message, schemaError }`. It does not return the
+data; in `coercing` mode the caller's own object is what gets mutated.
+
+Ajv runs in `strict: true` mode so a malformed schema fails loudly at compile time.
+`allowUnionTypes` is the one rule relaxed, for fields that genuinely accept two types —
+`logsSearchSchema.query`, which arrives as an object over POST and a string over GET, is
+the only one. `ajv-formats` is loaded, and `format: 'uri'` / `format: 'email'` on the shared
+auth properties are what use it.
+
+### Enforcement points
+
+| Where | What is validated |
+|---|---|
+| `mcp-min/http-server.js` — `POST /call`, `/call-stream` | tool params vs `inputSchema` → 400 |
+| `mcp-min/http-server.js` — JSON-RPC `tools/call` | same → `-32602` |
+| `mcp-min/stdio-server.js` — `tools/call` + legacy direct invocation | same → `-32602` |
+| `mcp-min/tools.js` | `tools.config.json` vs `tools.config.schema.json`, plus tool names |
+| `lib/server.js` | GUI requests for graph / liquid / logs / logsv2 / sync |
+
+The five MCP dispatch sites (the first three rows) route through `rejectionFor` in
+`mcp-min/validate-params.js`, so the mapping from a rejection to a status code (400/500,
+`-32602`/`-32603`) is made in one place for the transports. The GUI server keeps its own
+`rejectInvalid` in `lib/server.js` because it answers with a different body shape; the two
+apply the same 400/500 rule and have to be changed together.
+A tool that declares no schema falls back to `OPEN_OBJECT_SCHEMA` in
+`mcp-min/schemas/default.js` — the same constant both `tools/list` responses advertise, so
+what is published and what is enforced cannot disagree.
+
+Adding a tool to `mcp-min/` needs no wiring: both transports validate against whatever
+`inputSchema` the tool declares. A tool with no schema accepts any object.
+
+### Two rules to preserve
+
+**`env` must stay optional on tools that authenticate.** `resolveAuth` (`mcp-min/auth.js`)
+resolves credentials in this order:
+
+1. explicit `url` + `email` + `token` params
+2. the named `.pos` environment (`params.env`)
+3. `MPKIT_URL` / `MPKIT_EMAIL` / `MPKIT_TOKEN` env vars
+4. the first entry in `.pos`
+
+Marking `env` as `required` would reject three of those four supported call styles. Tools
+closing their schema with `additionalProperties: false` must also spread in
+`authProperties` from `mcp-min/schemas/auth.js`, or the explicit-credentials path becomes
+unreachable. That rule is enforced by `mcp-min/__tests__/validate-params.test.js`, which
+derives the tool list by scanning for `resolveAuth` rather than hard-coding names — a
+hand-written list silently stops guarding tools added later.
+
+Because `env` is advertised as optional, an MCP client that omits it lands on step 4 — the
+*first* `.pos` entry — including for mutating tools (`data-import`, `constants-set`,
+`uploads-push`). Runtime behaviour is unchanged, since nothing enforced `required` before,
+but the advertised contract now invites the omission.
+
+**The tools config fails closed.** A missing or unparseable config falls back to defaults;
+one that parses but is invalid throws `ToolsConfigError`. That file decides which tools are
+exposed, so ignoring a broken one would silently re-enable every tool the author meant to
+switch off. Two checks, because the schema alone is not enough: it validates the shape, and
+`loadToolsConfig` separately rejects entries naming a tool that does not exist — a typo
+like `deploy-strt` matches nothing in `applyConfig` and would otherwise leave `deploy-start`
+enabled while the config looks like it took effect. `bin/pos-cli-mcp.js` catches the error
+and reports it through `logger`, so a config mistake never surfaces as a Node stack trace.
 
 ### Testing Philosophy
 Integration tests against real platformOS instances for reliability. Tests cover:

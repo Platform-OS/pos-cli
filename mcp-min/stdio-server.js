@@ -2,6 +2,8 @@ import { createInterface } from 'readline';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import tools from './tools.js';
+import { rejectionFor } from './validate-params.js';
+import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import { DEBUG } from './config.js';
 import log from './log.js';
 
@@ -48,7 +50,7 @@ function getToolsList() {
   return Object.entries(tools).map(([name, tool]) => ({
     name,
     description: tool.description || '',
-    inputSchema: tool.inputSchema || { type: 'object', properties: {} }
+    inputSchema: tool.inputSchema || OPEN_OBJECT_SCHEMA
   }));
 }
 
@@ -81,6 +83,12 @@ const mcpHandlers = {
     const tool = tools[name];
     if (!tool) {
       sendError(id, -32601, `Unknown tool: ${name}`);
+      return;
+    }
+
+    const rejection = rejectionFor(name, tool, args);
+    if (rejection) {
+      sendError(id, rejection.jsonRpcCode, `Invalid params: ${rejection.message}`, { errors: rejection.errors });
       return;
     }
 
@@ -160,6 +168,18 @@ export default function startStdio() {
     // Fallback: direct tool invocation (legacy/custom protocol)
     const tool = tools[method];
     if (tool) {
+      const rejection = rejectionFor(method, tool, params);
+      if (rejection) {
+        const message = `Invalid params: ${rejection.message}`;
+        if (jsonrpc === '2.0') {
+          sendError(id, rejection.jsonRpcCode, message, { errors: rejection.errors });
+        } else {
+          send({ id, error: message });
+        }
+        log.debug('STDIO invalid params', { id, method, message });
+        return;
+      }
+
       try {
         const result = await tool.handler(params || {}, { transport: 'stdio', debug: DEBUG, log: log.info.bind(log) });
         if (jsonrpc === '2.0') {

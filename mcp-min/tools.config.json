@@ -56,7 +56,7 @@
     },
     "data-import": {
       "enabled": true,
-      "description": "Import data to platformOS instance. Accepts JSON (converted to CSV internally) or ZIP file with CSV files."
+      "description": "Import data to platformOS instance. Accepts JSON (converted to CSV internally) or ZIP file with CSV files. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly."
     },
     "data-import-status": {
       "enabled": true,
@@ -108,7 +108,7 @@
     },
     "uploads-push": {
       "enabled": true,
-      "description": "Upload a ZIP file containing property uploads to platformOS instance. The ZIP should contain files referenced by upload-type properties."
+      "description": "Upload a ZIP file containing property uploads to platformOS instance. The ZIP should contain files referenced by upload-type properties. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly."
     },
     "constants-list": {
       "enabled": true,
@@ -116,11 +116,11 @@
     },
     "constants-set": {
       "enabled": true,
-      "description": "Set a constant on a platformOS instance. Creates or updates the constant."
+      "description": "Set a constant on a platformOS instance. Creates or updates the constant. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly."
     },
     "constants-unset": {
       "enabled": true,
-      "description": "Delete a constant from a platformOS instance."
+      "description": "Delete a constant from a platformOS instance. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly."
     },
     "instance-create": {
       "enabled": true,
