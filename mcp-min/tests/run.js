@@ -1,6 +1,7 @@
 // platformos.tests.run - execute tests via /_tests/run?formatter=text
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
+import { authProperties } from '../schemas/auth.js';
 
 // Helper to make HTTP requests (replaces request-promise)
 async function makeRequest(options) {
@@ -251,9 +252,7 @@ const testsRunTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config' },
-      url: { type: 'string', description: 'Instance URL (alternative to env)' },
-      email: { type: 'string', description: 'Account email (alternative to env)' },
-      token: { type: 'string', description: 'API token (alternative to env)' },
+      ...authProperties,
       path: { type: 'string', description: 'Optional test path filter (e.g., "tests/users")' },
       name: { type: 'string', description: 'Test name filter (e.g., "create_user_test"). Required to avoid running all tests which causes timeouts.' }
     },

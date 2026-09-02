@@ -11,6 +11,7 @@ import { deployAssets } from '../../lib/assets.js';
 const archive = { makeArchive };
 const assets = { deployAssets };
 import dir from '../../lib/directories.js';
+import { authProperties } from '../schemas/auth.js';
 
 const startDeployTool = {
   description: 'Deploy to platformOS instance. Creates archive from app/ and modules/ directories, uploads it, and deploys assets directly to S3.',
@@ -19,9 +20,7 @@ const startDeployTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config' },
-      url: { type: 'string', description: 'Instance URL (alternative to env)' },
-      email: { type: 'string', description: 'Account email (alternative to env)' },
-      token: { type: 'string', description: 'API token (alternative to env)' },
+      ...authProperties,
       partial: { type: 'boolean', description: 'Partial deploy - does not remove files missing from build', default: false }
     }
   },

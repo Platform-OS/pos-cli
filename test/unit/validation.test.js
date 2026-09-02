@@ -74,6 +74,26 @@ describe('validate', () => {
     expect(result.schemaError).toBe(true);
   });
 
+  // schemaError routes to 500 / -32603, which blames our schema. An unknown mode is a
+  // caller bug and a boolean schema is perfectly legal, so neither belongs on that path.
+  test('throws on an unknown mode rather than blaming the schema', () => {
+    expect(() => validate(schema, { name: 'core' }, { mode: 'nope' })).toThrow(RangeError);
+    expect(() => validate(schema, { name: 'core' }, { mode: 'nope' })).toThrow(/Unknown validation mode/);
+  });
+
+  test('accepts boolean schemas, which cannot key the compile cache', () => {
+    expect(validate(true, { anything: 1 })).toEqual({ valid: true });
+
+    const rejected = validate(false, { anything: 1 });
+    expect(rejected.valid).toBe(false);
+    expect(rejected.schemaError).toBeUndefined();
+  });
+
+  test('does not return a data field', () => {
+    expect(validate(schema, { name: 'core' })).not.toHaveProperty('data');
+    expect(validate(schema, {})).not.toHaveProperty('data');
+  });
+
   test('caps the summary message but keeps every error', () => {
     const wide = {
       type: 'object',
@@ -87,8 +107,21 @@ describe('validate', () => {
   });
 
   test('compiles each schema once and reuses it', () => {
-    const first = validate(schema, { name: 'a' });
-    const second = validate(schema, { name: 'b' });
-    expect(first.valid && second.valid).toBe(true);
+    // Counting compiles directly: a schema object validated twice must reach Ajv once.
+    const counted = { type: 'object', properties: { name: { type: 'string' } } };
+    const seen = [];
+    const proxied = new Proxy(counted, {
+      get(target, prop, receiver) {
+        seen.push(prop);
+        return Reflect.get(target, prop, receiver);
+      }
+    });
+
+    validate(proxied, { name: 'a' });
+    const afterFirst = seen.length;
+    validate(proxied, { name: 'b' });
+
+    expect(afterFirst).toBeGreaterThan(0);        // first call compiled, so it read the schema
+    expect(seen.length).toBe(afterFirst);         // second call read nothing: cache hit
   });
 });

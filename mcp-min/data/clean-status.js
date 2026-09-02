@@ -2,6 +2,7 @@
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 const dataCleanStatusTool = {
   description: 'Check the status of a data clean job. Poll until status is "done" or "failed".',
@@ -10,9 +11,7 @@ const dataCleanStatusTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config' },
-      url: { type: 'string', description: 'Instance URL (alternative to env)' },
-      email: { type: 'string', description: 'Account email (alternative to env)' },
-      token: { type: 'string', description: 'API token (alternative to env)' },
+      ...authProperties,
       jobId: { type: 'string', description: 'Clean job ID returned from data-clean' }
     },
     required: ['jobId']

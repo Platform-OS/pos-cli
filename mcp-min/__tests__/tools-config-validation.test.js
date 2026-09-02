@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(here, '..', '..');
 
 let tmpDir;
 
@@ -65,12 +66,50 @@ describe('tools config validation', () => {
 
   // These parse as valid JSON but are not configs. Testing the parsed value for
   // truthiness would skip validation and fall through to defaults with everything on.
+  //
+  // The assertion names the schema violation deliberately: a bare `null` also crashes
+  // applyConfig with a TypeError, so asserting only that startup failed would pass even
+  // with the fail-closed check removed.
   test.each(['null', 'false', '0', '""'])('refuses to start on a bare %s config', literal => {
     const configPath = write(`falsy-${literal.replace(/\W/g, '_')}.json`, literal);
     const { stdout, status } = loadWithConfig(configPath);
 
     expect(stdout).toContain('REJECTED:');
+    expect(stdout).toContain('Invalid tools config');
+    expect(stdout).toContain('must be object');
+    expect(stdout).not.toContain('TypeError');
     expect(status).not.toBe(0);
+  });
+
+  // The schema constrains each entry's shape but cannot enumerate tool names, so this
+  // is the case it structurally cannot catch: a typo leaves the real tool enabled while
+  // the config looks like it took effect.
+  test('refuses to start when a config names a tool that does not exist', () => {
+    const configPath = write('typo.json', JSON.stringify({ tools: { 'deploy-strt': { enabled: false } } }));
+    const { stdout, status } = loadWithConfig(configPath);
+
+    expect(stdout).toContain('no such tool: deploy-strt');
+    expect(status).not.toBe(0);
+  });
+
+  test('names every unknown tool, not just the first', () => {
+    const configPath = write('typos.json', JSON.stringify({
+      tools: { 'deploy-strt': { enabled: false }, 'constants-lst': { enabled: false } }
+    }));
+    const { stdout } = loadWithConfig(configPath);
+
+    expect(stdout).toContain('deploy-strt');
+    expect(stdout).toContain('constants-lst');
+  });
+
+  test('accepts a config naming only real tools', () => {
+    const configPath = write('real.json', JSON.stringify({
+      tools: { 'deploy-start': { description: 'Ship it' } }
+    }));
+    const { stdout, status } = loadWithConfig(configPath);
+
+    expect(status).toBe(0);
+    expect(stdout).toContain('deploy-start');
   });
 
   test('applies a valid config and disables the named tool', () => {
@@ -87,6 +126,27 @@ describe('tools config validation', () => {
 
     expect(status).toBe(0);
     expect(stdout).toContain('envs-list');
+  });
+
+  // CLAUDE.md requires user-facing errors to go through the logger. A module-loader
+  // stack trace reaching the terminal is the failure mode this guards.
+  test('reports an invalid config as a message, not a Node stack trace', () => {
+    const configPath = write('for-cli.json', JSON.stringify({ tools: { 'envs-list': { enabled: 'yes' } } }));
+
+    const result = spawnSync(process.execPath, [path.join(here, '..', '..', 'bin', 'pos-cli-mcp.js')], {
+      cwd: repoRoot,
+      env: { ...process.env, MCP_TOOLS_CONFIG: configPath },
+      encoding: 'utf8',
+      timeout: 30000
+    });
+
+    const output = `${result.stdout || ''}${result.stderr || ''}`;
+
+    expect(result.status).toBe(1);
+    expect(output).toContain('Invalid tools config');
+    expect(output).toContain('must be boolean');
+    expect(output).not.toMatch(/^\s+at .+:\d+:\d+\)?$/m);   // no stack frames
+    expect(output).not.toContain('node:internal');
   });
 
   test('the config shipped in the package satisfies its own schema', () => {

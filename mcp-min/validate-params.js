@@ -1,9 +1,6 @@
 import { validate } from '../lib/validation/index.js';
+import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import log from './log.js';
-
-// Tools that declare no schema accept any object — which is exactly what the transports
-// already advertise on their behalf in tools/list.
-const OPEN_SCHEMA = { type: 'object' };
 
 /**
  * Validate tool params against the tool's advertised `inputSchema`.
@@ -17,7 +14,7 @@ const OPEN_SCHEMA = { type: 'object' };
  * @returns {{valid: boolean, errors?: Array, message?: string, schemaError?: boolean}}
  */
 const validateToolParams = (name, tool, params) => {
-  const result = validate(tool.inputSchema || OPEN_SCHEMA, params ?? {});
+  const result = validate(tool.inputSchema || OPEN_OBJECT_SCHEMA, params ?? {});
 
   if (!result.valid) {
     log.debug('tool params rejected', {
@@ -30,5 +27,33 @@ const validateToolParams = (name, tool, params) => {
   return result;
 };
 
-export { validateToolParams };
+/**
+ * Validate tool params and, if they are rejected, describe the rejection in the terms
+ * both transports need.
+ *
+ * The status mapping lives here rather than at each call site so there is exactly one
+ * decision about how a rejection is reported. A schema that will not compile is our own
+ * defect, so it is a server error (500 / -32603) rather than the caller's fault
+ * (400 / -32602) — but either way the call is rejected, because a schema that did not
+ * compile checked nothing.
+ *
+ * @param {string} name - tool name, for logging
+ * @param {object} tool - tool entry from tools.js
+ * @param {*} params - untrusted params from the client
+ * @returns {null|{httpStatus: number, jsonRpcCode: number, message: string, errors: Array}}
+ *   null when the params are valid.
+ */
+const rejectionFor = (name, tool, params) => {
+  const result = validateToolParams(name, tool, params);
+  if (result.valid) return null;
+
+  return {
+    httpStatus: result.schemaError ? 500 : 400,
+    jsonRpcCode: result.schemaError ? -32603 : -32602,
+    message: result.message,
+    errors: result.errors
+  };
+};
+
+export { validateToolParams, rejectionFor };
 export default validateToolParams;

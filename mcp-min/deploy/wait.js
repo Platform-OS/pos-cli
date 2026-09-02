@@ -1,6 +1,7 @@
 // platformos.deploy.wait - poll deployment status until completion
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -11,9 +12,7 @@ const waitDeployTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
+      ...authProperties,
       endpoint: { type: 'string' },
       id: { type: 'string', description: 'Deployment ID' },
       intervalMs: { type: 'integer', minimum: 200, default: 1000 },

@@ -129,11 +129,23 @@ describe('GET /api/logs', () => {
     expect(forwarded.logs.at(-1).lastId).toBe(42);
   });
 
-  test('allows a first poll with no cursor', async () => {
+  // 0 is the "from the beginning" sentinel. Before the schema supplied it as a default,
+  // an absent cursor put the string "undefined" into the upstream URL.
+  test('defaults an absent cursor to 0', async () => {
     const res = await agent.get('/api/logs');
 
     expect(res.status).toBe(200);
-    expect(forwarded.logs.at(-1).lastId).toBeUndefined();
+    expect(forwarded.logs.at(-1).lastId).toBe(0);
+  });
+
+  // gui/next up to this change built the query with `args.last ?? null`, so every first
+  // poll sent the literal string "null". Ajv will not coerce that to an integer, which
+  // made the admin Logs page 400 on load. Installed GUI builds still send it.
+  test.each(['null', '', 'undefined'])('accepts the cursor an older gui/next sends: %p', async value => {
+    const res = await agent.get('/api/logs').query({ lastId: value });
+
+    expect(res.status).toBe(200);
+    expect(forwarded.logs.at(-1).lastId).toBe(0);
   });
 
   // Gateway.logs interpolates the cursor into the request URL, so a value carrying its
@@ -183,6 +195,58 @@ describe('/api/logsv2', () => {
   });
 });
 
+describe('/api/logsv2 payload shapes', () => {
+  // gui/next posts the search as an object; the GET route can only ever deliver a string.
+  // Both branches are live in Gateway.logsv2, and the union is why the Ajv instance runs
+  // with allowUnionTypes.
+  test('accepts query as an object on POST', async () => {
+    const res = await agent.post('/api/logsv2').send({ query: { sql: 'select 1', from: 0, size: 10 } });
+
+    expect(res.status).toBe(200);
+    expect(forwarded.logsv2.at(-1).query).toEqual({ sql: 'select 1', from: 0, size: 10 });
+  });
+
+  test('accepts query as a string on GET', async () => {
+    const res = await agent.get('/api/logsv2').query({ query: 'select 1' });
+
+    expect(res.status).toBe(200);
+    expect(forwarded.logsv2.at(-1).query).toBe('select 1');
+  });
+
+  // Coercing mode narrows a scalar into the string half of the union rather than
+  // rejecting it; the route is a pass-through, so normalising is the useful behaviour.
+  test('coerces a scalar query into the string branch of the union', async () => {
+    const res = await agent.post('/api/logsv2').send({ query: 42 });
+
+    expect(res.status).toBe(200);
+    expect(forwarded.logsv2.at(-1).query).toBe('42');
+  });
+
+  test('rejects a query that matches neither branch of the union', async () => {
+    const res = await agent.post('/api/logsv2').send({ query: ['select 1'] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('/query');
+  });
+
+  // The route runs POST bodies through coercing mode too, so a client that spells a
+  // numeric field as a string is normalised rather than rejected.
+  test('coerces numeric fields in a POST body', async () => {
+    const res = await agent.post('/api/logsv2').send({ sql: 'select 1', size: '25', from: '5' });
+
+    expect(res.status).toBe(200);
+    expect(forwarded.logsv2.at(-1).size).toBe(25);
+    expect(forwarded.logsv2.at(-1).from).toBe(5);
+  });
+
+  test('accepts a searchAround payload', async () => {
+    const res = await agent.post('/api/logsv2').send({ key: 'abc', stream_name: 'logs', size: 10 });
+
+    expect(res.status).toBe(200);
+    expect(forwarded.logsv2.at(-1).key).toBe('abc');
+  });
+});
+
 describe('PUT /api/app_builder/marketplace_releases/sync', () => {
   const url = '/api/app_builder/marketplace_releases/sync';
 
@@ -211,5 +275,33 @@ describe('PUT /api/app_builder/marketplace_releases/sync', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('marketplace_builder_file_body');
+  });
+});
+
+// A schema that will not compile is our defect, not the caller's, so the GUI routes must
+// answer 500 rather than 400 — while still refusing to forward the request upstream.
+describe('uncompilable schema on a GUI route', () => {
+  test('answers 500 and does not call the gateway', async () => {
+    const express = (await import('express')).default;
+    const bodyParser = (await import('body-parser')).default;
+    const { validate } = await import('#lib/validation/index.js');
+
+    let forwardedCalls = 0;
+    const app = express();
+    app.use(bodyParser.json());
+    app.post('/broken', (req, res) => {
+      const result = validate({ type: 'not-a-real-type' }, req.body);
+      if (!result.valid) {
+        return res.status(result.schemaError ? 500 : 400).json({ error: `Invalid request: ${result.message}` });
+      }
+      forwardedCalls += 1;
+      return res.json({ ok: true });
+    });
+
+    const res = await request(app).post('/broken').send({ anything: true });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toContain('Schema failed to compile');
+    expect(forwardedCalls).toBe(0);
   });
 });

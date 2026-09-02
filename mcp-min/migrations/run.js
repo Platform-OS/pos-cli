@@ -1,6 +1,7 @@
 // platformos.migrations.run - run a specific migration by name or timestamp via Gateway
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 function buildFormData({ timestamp, name }) {
   if (!timestamp && !name) throw new Error('INVALID_INPUT: Provide timestamp or name');
@@ -15,9 +16,7 @@ const runMigrationTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
+      ...authProperties,
       timestamp: { type: 'string', description: 'Numeric timestamp' },
       name: { type: 'string', description: 'Alias for timestamp; full migration name without .liquid' },
       endpoint: { type: 'string', description: 'Override API base URL' }

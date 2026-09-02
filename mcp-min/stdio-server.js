@@ -2,7 +2,8 @@ import { createInterface } from 'readline';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import tools from './tools.js';
-import { validateToolParams } from './validate-params.js';
+import { rejectionFor } from './validate-params.js';
+import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import { DEBUG } from './config.js';
 import log from './log.js';
 
@@ -49,7 +50,7 @@ function getToolsList() {
   return Object.entries(tools).map(([name, tool]) => ({
     name,
     description: tool.description || '',
-    inputSchema: tool.inputSchema || { type: 'object', properties: {} }
+    inputSchema: tool.inputSchema || OPEN_OBJECT_SCHEMA
   }));
 }
 
@@ -85,12 +86,9 @@ const mcpHandlers = {
       return;
     }
 
-    const validation = validateToolParams(name, tool, args);
-    if (!validation.valid) {
-      // -32603 (internal error) when our own schema failed to compile; -32602 (invalid
-      // params) when the caller is genuinely at fault.
-      const code = validation.schemaError ? -32603 : -32602;
-      sendError(id, code, `Invalid params: ${validation.message}`, { errors: validation.errors });
+    const rejection = rejectionFor(name, tool, args);
+    if (rejection) {
+      sendError(id, rejection.jsonRpcCode, `Invalid params: ${rejection.message}`, { errors: rejection.errors });
       return;
     }
 
@@ -170,11 +168,11 @@ export default function startStdio() {
     // Fallback: direct tool invocation (legacy/custom protocol)
     const tool = tools[method];
     if (tool) {
-      const validation = validateToolParams(method, tool, params);
-      if (!validation.valid) {
-        const message = `Invalid params: ${validation.message}`;
+      const rejection = rejectionFor(method, tool, params);
+      if (rejection) {
+        const message = `Invalid params: ${rejection.message}`;
         if (jsonrpc === '2.0') {
-          sendError(id, validation.schemaError ? -32603 : -32602, message, { errors: validation.errors });
+          sendError(id, rejection.jsonRpcCode, message, { errors: rejection.errors });
         } else {
           send({ id, error: message });
         }

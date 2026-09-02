@@ -5,39 +5,13 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import files from '../lib/files.js';
 import { validate } from '../lib/validation/index.js';
+import { ToolsConfigError } from './tools-config-error.js';
 
-// Load tool configuration (descriptions and enabled/disabled state)
-// MCP_TOOLS_CONFIG env var overrides the bundled config
+// MCP_TOOLS_CONFIG env var overrides the bundled config. The config itself is loaded
+// further down, once the tool registry exists to validate its keys against.
 const __dirname = dirname(fileURLToPath(import.meta.url));
-let toolsConfig = { tools: {} };
 const configPath = process.env.MCP_TOOLS_CONFIG || join(__dirname, 'tools.config.json');
 const configSchema = JSON.parse(readFileSync(join(__dirname, 'tools.config.schema.json'), 'utf-8'));
-
-// Tracked separately from the parsed value: `null`, `false`, `0` and `""` are all valid
-// JSON, so testing the value for truthiness would skip validation on exactly the configs
-// that need rejecting and fall through to defaults with every tool enabled.
-let rawConfig;
-let configParsed = false;
-try {
-  rawConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
-  configParsed = true;
-} catch (err) {
-  // A missing file is the normal case for a custom path that was never created, and a
-  // malformed one cannot be interpreted at all. Either way there is nothing to apply.
-  log.debug('tools config not found or unparseable, using defaults', { path: configPath, error: String(err) });
-}
-
-if (configParsed) {
-  const result = validate(configSchema, rawConfig);
-  if (!result.valid) {
-    // Fail closed. This config decides which tools are exposed, so ignoring a broken one
-    // would silently re-enable every tool the author meant to switch off.
-    log.error(`invalid tools config at ${configPath}: ${result.message}`);
-    throw new Error(`Invalid tools config at ${configPath}: ${result.message}`);
-  }
-  toolsConfig = rawConfig;
-  log.debug('tools config loaded', { path: configPath, tools: Object.keys(toolsConfig.tools || {}).length });
-}
 
 // Keep tools.js lean by extracting complex tools into modules
 import singleFileTool from './sync/single-file.js';
@@ -99,6 +73,7 @@ const tools = {
     description: 'List configured environments from .pos (name and url)',
     inputSchema: {
       type: 'object',
+      additionalProperties: false,
       properties: {}
     },
     handler: async (_params, ctx) => {
@@ -179,6 +154,46 @@ const tools = {
   'env-add': envAddTool
 };
 
+/**
+ * Read and validate the tools config.
+ *
+ * Fails closed on anything it can detect: this file decides which tools are exposed, so
+ * a config that is present but wrong must stop the server rather than be ignored, which
+ * would silently re-enable every tool the author meant to switch off. A missing or
+ * unparseable file is the one benign case — there is nothing to apply, so defaults win.
+ *
+ * @param {object} registry - the tool registry, used to reject names that match no tool
+ * @throws {ToolsConfigError} when the file is present but does not describe a valid config
+ */
+function loadToolsConfig(registry) {
+  let raw;
+  try {
+    raw = JSON.parse(readFileSync(configPath, 'utf-8'));
+  } catch (err) {
+    log.debug('tools config not found or unparseable, using defaults', { path: configPath, error: String(err) });
+    return { tools: {} };
+  }
+
+  const result = validate(configSchema, raw);
+  if (!result.valid) {
+    throw new ToolsConfigError(`Invalid tools config at ${configPath}: ${result.message}`);
+  }
+
+  // The schema constrains the shape of each entry but cannot enumerate tool names, so a
+  // typo like "deploy-strt" would otherwise be accepted, match nothing in applyConfig,
+  // and leave "deploy-start" enabled — the exact fail-open the schema check exists to
+  // prevent, and the harder one to notice because the config looks like it took effect.
+  const unknown = Object.keys(raw.tools || {}).filter(name => !(name in registry));
+  if (unknown.length > 0) {
+    throw new ToolsConfigError(
+      `Invalid tools config at ${configPath}: no such tool: ${unknown.join(', ')}`
+    );
+  }
+
+  log.debug('tools config loaded', { path: configPath, tools: Object.keys(raw.tools || {}).length });
+  return raw;
+}
+
 // Apply configuration: override descriptions and filter disabled tools
 function applyConfig(allTools, config) {
   const result = {};
@@ -201,6 +216,6 @@ function applyConfig(allTools, config) {
   return result;
 }
 
-const configuredTools = applyConfig(tools, toolsConfig);
+const configuredTools = applyConfig(tools, loadToolsConfig(tools));
 
 export default configuredTools;

@@ -2,6 +2,7 @@
 import log from '../log.js';
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 function matchesFilter(row, filter) {
   if (!filter) return true;
@@ -16,13 +17,11 @@ const streamTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
+      ...authProperties,
       endpoint: { type: 'string' },
       interval: { type: 'integer', minimum: 250 },
       filter: { type: 'string' },
-      startLastId: { type: 'string', description: 'Starting last id (default 0)' },
+      startLastId: { type: 'integer', minimum: 0, description: 'Starting log row id (default 0)' },
       maxDuration: { type: 'integer', description: 'Optional max duration ms' }
     }
   },

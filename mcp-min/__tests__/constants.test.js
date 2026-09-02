@@ -187,9 +187,7 @@ describe('constants-set', () => {
   });
 
   test('has correct schema', () => {
-    expect(constantsSetTool.inputSchema.required).not.toContain('env');
-    expect(constantsSetTool.inputSchema.required).toContain('name');
-    expect(constantsSetTool.inputSchema.required).toContain('value');
+    expect(constantsSetTool.inputSchema.required).toEqual(['name', 'value']);
     expect(constantsSetTool.inputSchema.properties).toHaveProperty('env');
   });
 });
@@ -264,8 +262,7 @@ describe('constants-unset', () => {
   });
 
   test('has correct schema', () => {
-    expect(constantsUnsetTool.inputSchema.required).not.toContain('env');
-    expect(constantsUnsetTool.inputSchema.required).toContain('name');
+    expect(constantsUnsetTool.inputSchema.required).toEqual(['name']);
     expect(constantsUnsetTool.inputSchema.properties).toHaveProperty('env');
   });
 });

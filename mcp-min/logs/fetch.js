@@ -1,6 +1,7 @@
 // platformos.logs.fetch tool - batch fetch logs based on pos-cli fetch-logs
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 const fetchLogsTool = {
   description: 'Fetch recent logs in batches (NDJSON semantics, returns JSON array here). Mirrors pos-cli fetch-logs.',
@@ -9,10 +10,8 @@ const fetchLogsTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string' },
-      url: { type: 'string' },
-      email: { type: 'string' },
-      token: { type: 'string' },
-      lastId: { type: 'string' },
+      ...authProperties,
+      lastId: { type: 'integer', minimum: 0, description: 'Log row id to resume from (default 0)' },
       endpoint: { type: 'string', description: 'Override API base url' },
       limit: { type: 'integer', minimum: 1, maximum: 10000 }
     }

@@ -2,6 +2,7 @@
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
+import { authProperties } from '../schemas/auth.js';
 
 const dataExportStatusTool = {
   description: 'Check the status of a data export job. When done, returns data (JSON) or zip_file_url (ZIP).',
@@ -10,9 +11,7 @@ const dataExportStatusTool = {
     additionalProperties: false,
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config' },
-      url: { type: 'string', description: 'Instance URL (alternative to env)' },
-      email: { type: 'string', description: 'Account email (alternative to env)' },
-      token: { type: 'string', description: 'API token (alternative to env)' },
+      ...authProperties,
       jobId: { type: 'string', description: 'Export job ID returned from data-export' },
       isZip: { type: 'boolean', description: 'Whether the export is a ZIP file', default: false }
     },
