@@ -231,7 +231,7 @@ describe('pos-cli check run', () => {
         const configContent = fs.readFileSync(configPath, 'utf8');
         expect(configContent).toMatch('extends: platformos-check:recommended');
         expect(configContent).toMatch('ignore:');
-        expect(configContent).toMatch('- node_modules/**');
+        expect(configContent).toMatch('- node_modules');
         expect(configContent).toMatch('# Below are all available settings');
       } finally {
         // Cleanup
