@@ -41,6 +41,46 @@ Note that [`modules install`/`update`](#installation) take their registry URL fr
 
 The Instance details page in the Partner Portal shows the `env add` command pre-filled with both URLs, ready to copy.
 
+#### Two-Factor Authentication
+
+If your Partner Portal account has two-factor authentication enabled, the token `env add` mints is good for a year against every Instance you can deploy to, so the portal asks for a second factor before issuing one.
+
+Nothing extra is needed for the default flow: `pos-cli env add [environment] --url [url]` (no `--email`) authorizes in the browser, where you answer the 2FA challenge like any other portal login.
+
+When you authenticate with `--email`, pos-cli prompts for the code after your password:
+
+    pos-cli env add staging --url https://example.com --email you@example.com
+    Password: ******
+    This account has two-factor authentication enabled. Your password was accepted.
+    Two-factor code (or a recovery code): 123456
+
+A recovery code from the list you saved when you enabled 2FA is accepted anywhere the six-digit code is. To skip the prompt, pass `--otp-code` or set `POS_PORTAL_OTP_CODE`:
+
+    pos-cli env add staging --url https://example.com --email you@example.com --otp-code 123456
+    POS_PORTAL_OTP_CODE=123456 pos-cli env refresh-token staging
+
+The same applies to `pos-cli env refresh-token` and `pos-cli modules push`. In a non-interactive environment (CI, a `--json` run) pos-cli will not prompt — supply `POS_PORTAL_OTP_CODE`, or prefer `pos-cli env add [environment] --url [url] --token [token]`, which needs neither a password nor a code.
+
+#### Instance Sessions
+
+An instance can require that it is used with a credential whose holder has proved a second factor — the year-long token in `.pos` is not one. This covers **every command that talks to the instance**, not just deploys: `deploy`, `sync`, `exec`, `exec-graphql`, `exec-liquid`, `constants`, `data export`/`import`, `migrations`, `logs`, `pull`, the GUI. A token reaches every record in the instance through GraphQL and runs arbitrary Liquid through `exec liquid`, so reads are not exempt.
+
+The first command that needs one asks for a code:
+
+    pos-cli deploy staging
+    Your Partner Portal account (you@example.com) has 2FA enabled.
+      Instance: https://example.com
+      Portal:   https://partners.platformos.com
+    Two-factor code (or a recovery code): 123456
+
+2FA is enabled on your Partner Portal account, not on the Instance — the Instance only insists that the credential it is handed belongs to someone who has proved it. The Instance, portal and account are printed so you can confirm what a code is about to unlock, and which account it should come from, before typing it. The account is the email stored for the environment in `.pos`; environments added through the browser device flow store none, and that line is left out.
+
+The Partner Portal decides how long the session lasts and pos-cli prints the expiry as it starts one (`Two-factor session started — it expires in 59 minutes.`). It is cached as `two_factor_session` inside that environment's entry in `.pos`, so every later command in that window runs without a prompt — one code unlocks the whole session, whichever command asked for it. Caching a session tightens `.pos` to owner-only (0600), since it now holds a credential shorter-lived than the year-long token. When settings come from `MPKIT_URL`/`MPKIT_EMAIL`/`MPKIT_TOKEN` there is no `.pos` entry to write to, and the session is kept only for the life of the process — enough for one long `sync`, but the next command asks again.
+
+For scripted runs, set `POS_PORTAL_OTP_CODE`: it works for **every** command, while the `--otp-code` flag exists only on `deploy`, `sync`, `gui serve`, `env add`, `env refresh-token` and `modules push`. A recovery code works in either and does not expire on a timer. If your orchestrator already holds a session token, `POS_PORTAL_SESSION_TOKEN` supplies it directly and skips the exchange entirely; pos-cli only reads that variable, and never writes a session token to its output. `deploy`, `sync` and `gui serve` ask up front, before doing any work; other commands ask at the moment the instance refuses, and then retry the request that was refused. `gui serve` asks even without `--sync`, because the GUI proxies every panel query through the same credential. If a session expires part-way through a `sync`, watch mode stops rather than prompting into a queue that is mid-flight — it reports what did not reach the instance and asks you to restart the command you started, which takes a code once, up front. Under `gui serve --sync` that stops the web server too: the same session the watcher was refused is one no panel query could have used either.
+
+pos-cli stops after three rejected codes. The Partner Portal locks an account for 15 minutes after five, and that counter is shared with the web UI, so the remaining attempts are left for you to spend deliberately. If the account is already locked, pos-cli says so and stops without asking for a code — while the lock holds, even a correct code is refused unread.
+
 The configuration for your environments is stored in the `.pos` file.
 
 ### Syncing Changes

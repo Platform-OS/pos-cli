@@ -68,6 +68,8 @@ pos-cli/
 │   ├── ServerError.js           # Centralized error handling
 │   ├── settings.js              # Environment configuration (.pos file)
 │   ├── environments.js          # Authentication flows
+│   ├── utils/twoFactor.js       # Partner Portal 2FA: prompt/retry around password auth
+│   ├── twoFactorSession.js      # Instance 2FA sessions, cached in .pos per environment
 │   ├── portal.js                # Partner Portal API client
 │   ├── watch.js                 # File watching for sync mode
 │   ├── archive.js               # Deployment archive creation
@@ -249,7 +251,7 @@ Centralized error handling with specific handlers for different HTTP status code
 ### Important Technical Details
 
 #### Configuration Files
-- `.pos` - Environment credentials (URL, token, email) as JSON
+- `.pos` - Environment credentials (URL, token, email) as JSON. Also caches a `two_factor_session` (`{token, expires_at}`) per environment when an instance requires one. Every writer goes through `writeFileOwnerOnly` (`lib/filePermissions.js`), so each write leaves the file at 0600 where the platform has permission bits
 - `.posignore` - Files to exclude from sync/deploy (gitignore syntax)
 - `pos-module.json` - Universal platformOS project manifest (analogous to `package.json`). Its presence in a consuming app is normal — it lists `dependencies`. Publishable modules additionally have `machine_name`, `version`, and `name`. It is the **sole source** for all `modules` CLI commands (`install`, `update`, `push`, `version`, `migrate`).
 - `pos-module.lock.json` - Resolved dependency versions (separate prod/dev sections) plus a `registries` map recording which registry each module was resolved from; makes the lock self-contained for `--frozen` mode
@@ -656,6 +658,45 @@ const isAssetsPath = path => {
 };
 ```
 
+### File Permission Patterns
+
+**Key file**: `lib/filePermissions.js`
+
+Windows has no POSIX permission bits. `fs.chmod` there collapses the whole mode onto the
+single read-only attribute — clearing every write bit sets it, leaving one set clears it —
+so a file asked for `0600` still reports `0666`, and no mode hides it from other accounts.
+Permission handling therefore goes through `lib/filePermissions.js` rather than a
+`process.platform` check at each call site, exactly as path handling goes through the
+helpers above:
+
+```javascript
+import { writeFileOwnerOnly, restrictToOwner, permissionsOf, supportsPosixPermissions }
+  from '#lib/filePermissions.js';
+
+writeFileOwnerOnly(configPath, JSON.stringify(config, null, 2));  // write a credential file
+restrictToOwner(existingPath);                                    // tighten one already there
+```
+
+- **`writeFileOwnerOnly(filePath, contents)`** — the only way a file holding credentials
+  should be written. Two steps, because neither covers the other: the mode passed to
+  `writeFileSync` applies **only on creation**, so it is what stops a new file existing
+  world-readable even for an instant, and the follow-up `chmod` is what tightens a file that
+  was already there (`.pos` files written by earlier versions are `0644`).
+- **`restrictToOwner(filePath)`** — best effort by design. It returns a boolean and never
+  throws: the mode of a file just written successfully is not worth failing a command over,
+  and on Windows there is nothing to apply. Write errors, by contrast, propagate.
+- **`supportsPosixPermissions`** — the single definition of "this platform has mode bits",
+  used by implementation **and tests**. A test that asserts a mode guards with
+  `test.skipIf(!supportsPosixPermissions)` / `describe.skipIf(...)`; it never re-derives the
+  platform question inline.
+- **`permissionsOf(filePath)`** — `statSync().mode & 0o777`, so the masking lives in one
+  place too. Only meaningful where `supportsPosixPermissions` is true.
+
+Every writer of `.pos` uses this: `lib/environments.js` (`storeEnvironment`),
+`lib/twoFactorSession.js` (`persistSession`) and `mcp-min/portal/env-add.js`. A new writer of
+any credential-bearing file must too — the file holds a long-lived API token, and one writer
+leaving it at `0644` undoes what the others do.
+
 ### Testing Cross-Platform Code
 
 When adding or modifying path-handling code:
@@ -696,6 +737,16 @@ path.relative(basePath, absolutePath);  // May give incorrect results
 path.relative(path.normalize(path.resolve(basePath)), path.normalize(absolutePath));
 ```
 
+**❌ Raw `chmod` / mode assertions at the call site:**
+```javascript
+fs.writeFileSync(configPath, body, { mode: 0o600 });  // no-op on Windows, and only on create
+fs.chmodSync(configPath, 0o600);
+expect(fs.statSync(configPath).mode & 0o777).toBe(0o600);  // can never hold on Windows
+// Should be:
+writeFileOwnerOnly(configPath, body);
+test.skipIf(!supportsPosixPermissions)('...', () => expect(permissionsOf(configPath)).toBe(0o600));
+```
+
 ### Key Files Demonstrating Best Practices
 
 - **`lib/check.js`** - Comprehensive path normalization for linter output
@@ -703,6 +754,7 @@ path.relative(path.normalize(path.resolve(basePath)), path.normalize(absolutePat
 - **`lib/shouldBeSynced.js`** - Pattern matching with normalized paths
 - **`lib/overwrites.js`** - Relative path generation
 - **`lib/assets/manifest.js`** - Asset path normalization
+- **`lib/filePermissions.js`** - Owner-only writes with a documented Windows no-op
 
 ## Network Error Handling (Node.js 22+ fetch / undici)
 
