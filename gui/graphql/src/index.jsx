@@ -6,7 +6,7 @@ import { explorerPlugin } from '@graphiql/plugin-explorer';
 import '@graphiql/plugin-explorer/style.css';
 import { GraphiQL } from "graphiql";
 import "graphiql/style.css";
-import { astFromValue, buildClientSchema, getIntrospectionQuery } from "graphql";
+import { buildClientSchema, getIntrospectionQuery } from "graphql";
 import React from "react"; // This import is required!!!
 import { useEffect, useState } from "react";
 import { createRoot } from 'react-dom/client';
@@ -73,34 +73,6 @@ const cleanSchema = schema => {
   return schema;
 };
 
-// GraphiQL 5 hands the schema to the Monaco GraphQL worker as SDL, so every input default has to
-// survive printSchema(). A custom scalar with an object default has no literal astFromValue can
-// build — platformOS ships one, UpdateFormConfigurationInputType.configuration: HashObject = {} —
-// and printSchema throws on the first one it meets, which costs the WHOLE schema its validation
-// and autocompletion. Clearing just those defaults gives up nothing that SDL could have expressed
-// anyway. Done by trying the conversion rather than by matching type names, so a new offending
-// field in a later schema is handled without a change here.
-const dropUnprintableDefaults = schema => {
-  for (const type of Object.values(schema.getTypeMap())) {
-    if (typeof type.getFields !== 'function') continue;
-    for (const field of Object.values(type.getFields())) {
-      // Object/interface fields carry their input values in `args`; input object fields are
-      // input values themselves.
-      for (const input of field.args ?? [field]) {
-        if (input.defaultValue === undefined) continue;
-        try {
-          astFromValue(input.defaultValue, input.type);
-        } catch {
-          // undefined, not null: null is a legitimate default and prints as `= null`.
-          input.defaultValue = undefined;
-        }
-      }
-    }
-  }
-
-  return schema;
-};
-
 // Built once, at module scope: the plugin object is part of GraphiQL's state, so rebuilding it
 // on every render would reset the explorer as you type.
 const explorer = explorerPlugin();
@@ -114,7 +86,15 @@ function App() {
     fetcher({
       query: getIntrospectionQuery()
     }).then(result => {
-      setSchema(dropUnprintableDefaults(buildClientSchema(cleanSchema(result.data))));
+      // GraphiQL 5 hands the schema to the Monaco GraphQL worker as SDL, so every input default
+      // has to survive printSchema(). Under graphql 17 they all do: buildClientSchema keeps an
+      // introspected default as the literal the server sent it as, and printSchema prints that
+      // literal back. Nothing reconstructs a literal from a coerced value any more, so a custom
+      // scalar with an object default — platformOS ships one,
+      // UpdateFormConfigurationInputType.configuration: HashObject = {} — no longer costs the
+      // WHOLE schema its validation and autocompletion. Under graphql 15 it did, and this call
+      // was wrapped in a pass that cleared those defaults; don't reintroduce it.
+      setSchema(buildClientSchema(cleanSchema(result.data)));
     });
   }, []);
 
