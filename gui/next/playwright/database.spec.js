@@ -555,48 +555,64 @@ test('adding a record with broken array and expecting validation error', async (
 });
 
 
-test('editing a record', async ({ page }) => {
+test('editing a record', async ({ page }, testInfo) => {
+  // Unique per attempt: a retry runs against the record the previous attempt left behind, and
+  // a value shared with it would match two cells and fail Playwright's strict mode.
+  const item = `new_array_item_3_${testInfo.retry}`;
+  const editedItem = `edited_array_item_3_${testInfo.retry}`;
+
   await page.goto(url);
 
   await page.getByText('qa_table_1').click();
 
   await page.getByRole('button', { name: 'Create new record' }).click();
-  await page.getByLabel('qa_table_1_array').fill('["new_array_item_3", "new_array_item_4"]');
+  await page.getByLabel('qa_table_1_array').fill(`["${item}", "new_array_item_4"]`);
 
   await page.getByRole('button', { name: 'Create record' }).click();
 
-  await expect(page.getByRole('cell', { name: '["new_array_item_3"' })).toBeVisible();
+  const createdCell = page.getByRole('cell', { name: `["${item}"` });
+  await expect(createdCell).toBeVisible();
 
-  await page.getByRole('button', { name: 'Edit record' }).first().click();
-  await page.getByLabel('qa_table_1_array').fill('["edited_array_item_3", "edited_array_item_4"]');
+  // Edit the row holding this test's own record, not the first row: records are listed newest
+  // first and the other workers create records in the same table, so between this create and
+  // the list refresh that follows it another test's record can take the top row.
+  await page.locator('tr', { has: createdCell }).getByRole('button', { name: 'Edit record' }).click();
+  await page.getByLabel('qa_table_1_array').fill(`["${editedItem}", "edited_array_item_4"]`);
   const dialog = page.locator('dialog');
   await dialog.getByRole('button', { name: 'Edit record' }).first().click();
 
-  await expect(page.getByRole('cell', { name: '["new_array_item_3"' })).toBeHidden();
-  await expect(page.getByRole('cell', { name: '["edited_array_item_3"' })).toBeVisible();
+  await expect(createdCell).toBeHidden();
+  await expect(page.getByRole('cell', { name: `["${editedItem}"` })).toBeVisible();
 });
 
 
-test('deleting a record', async ({ page }) => {
+test('deleting a record', async ({ page }, testInfo) => {
   page.on('dialog', async dialog => {
     expect(dialog.message()).toEqual('Are you sure you want to delete this record?');
     await dialog.accept();
   });
 
+  // Unique per attempt, for the same reason as in 'editing a record' above.
+  const item = `to_be_deleted_array_${testInfo.retry}`;
+
   await page.goto(url);
   await page.getByText('qa_table_1').click();
 
   await page.getByRole('button', { name: 'Create new record' }).click();
-  await page.getByLabel('qa_table_1_array').fill('["to_be_deleted_array"]');
+  await page.getByLabel('qa_table_1_array').fill(`["${item}"]`);
 
   await page.getByRole('button', { name: 'Create record' }).click();
 
-  await expect(page.getByRole('cell', { name: '["to_be_deleted_array"' })).toBeVisible();
+  const createdCell = page.getByRole('cell', { name: `["${item}"` });
+  await expect(createdCell).toBeVisible();
 
-  await page.getByRole('button', { name: 'More options' }).first().click();
-  await page.getByRole('button', { name: 'Delete record' }).click();
+  // Delete the row holding this test's own record, not the first row: another test's record can
+  // take the top row while this one runs.
+  const createdRow = page.locator('tr', { has: createdCell });
+  await createdRow.getByRole('button', { name: 'More options' }).click();
+  await createdRow.getByRole('button', { name: 'Delete record' }).click();
 
-  await expect(page.getByRole('cell', { name: '["to_be_deleted_array"' })).toBeHidden();
+  await expect(createdCell).toBeHidden();
 });
 
 
