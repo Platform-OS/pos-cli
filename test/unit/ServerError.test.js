@@ -29,6 +29,60 @@ describe('ServerError', () => {
     vi.clearAllMocks();
   });
 
+  /**
+   * An Instance that could not reach the Partner Portal has not judged the token at all,
+   * so the advice a 401 carries -- check it, refresh it -- is the one thing that cannot
+   * help. Reported as a 401 (which is what this was before the Instance distinguished it)
+   * it costs an operator a working credential while they hunt for a problem that was never
+   * theirs, and it stops being reproducible the moment the Portal comes back.
+   */
+  describe('partner portal unavailable', () => {
+    const unavailable = (body = {}) => ({
+      name: 'StatusCodeError',
+      statusCode: 503,
+      options: { uri: 'https://shop.example.com/api/app_builder/marketplace_releases' },
+      response: {
+        statusCode: 503,
+        headers: { 'retry-after': '15' },
+        body: { error: 'partner_portal_unavailable', errors: ['The Partner Portal at https://partners.example.com answered HTTP 502.'], ...body }
+      }
+    });
+
+    test('repeats what the instance said and rules out refreshing the token', async () => {
+      await ServerError.handler(unavailable());
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        'The Partner Portal at https://partners.example.com answered HTTP 502.' +
+          '\nThis is not something `pos-cli env refresh-token` can fix — the token was never the problem.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+      expect(report).toHaveBeenCalledWith('[503] Partner Portal unavailable');
+    });
+
+    test('falls back to its own wording when the instance sent no explanation', async () => {
+      await ServerError.handler(unavailable({ errors: [] }));
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        'This Instance could not reach the Partner Portal to verify your API token.' +
+          '\nThis is not something `pos-cli env refresh-token` can fix — the token was never the problem.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+    });
+
+    // 503 is also what a proxy in front of an Instance answers when the Instance itself is
+    // down, and saying "the Partner Portal" about that would send someone to the wrong
+    // status page.
+    test('does not blame the portal for an unrelated 503', async () => {
+      await ServerError.handler({ name: 'StatusCodeError', statusCode: 503, options: { uri: 'https://shop.example.com/x' }, response: { statusCode: 503, body: 'nginx' } });
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        'The server is temporarily unavailable. Please try again in a moment.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+      expect(report).toHaveBeenCalledWith('[503] Service Unavailable');
+    });
+  });
+
   describe('isNetworkError', () => {
     test('returns true for StatusCodeError', () => {
       const error = { name: 'StatusCodeError' };

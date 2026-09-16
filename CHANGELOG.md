@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixes
+
+* A Partner Portal that is being deployed no longer looks like a bad token. An instance cannot validate an API token by itself — the Portal owns that answer — so while the Portal is down, restarting or rate-limiting, the instance has no verdict at all, and it used to report that as a `401`, which pos-cli printed as "You are unauthorized to do this operation. Check if your Token/URL or email/password are correct. To refresh your token, run: pos-cli env refresh-token". Every client saw it at once, none could tell it from a revoked token, the advice could not work because the credential was never judged, following it cost a working token, and the whole thing stopped reproducing a minute later. Instances now answer `503 partner_portal_unavailable` with a `Retry-After` and the reason, and pos-cli waits it out: every Gateway request retries up to five times at the interval the instance asks for (clamped to 2–30s), saying once why it is holding. A Portal deploy is over well inside that, so what used to be a failed deploy is a pause. A `401` or `403` from the Portal is still a `401` here — that is the Portal deciding, and re-authenticating really is the answer to it. Requires the matching platformOS release; against an older instance a Portal outage still surfaces as the old message.
+
+* The step-up itself names the Portal when the Portal is the thing that is not answering. `pos-cli` talks to the Portal directly to trade a code for a two-factor session, and a 5xx or a refused connection on that leg was reported by the generic HTTP handling as either "You are unauthorized to do this operation" or "Could not connect … make sure the server is running" — the first blames a credential that was never checked, the second reads as advice about the instance being deployed to, which is the one host that is demonstrably fine.
+
 ## 6.5.0 (2026-09-09)
 
 ### New Features

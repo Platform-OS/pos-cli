@@ -482,17 +482,22 @@ describe('ensureSessionForCommand', () => {
 
     await expect(ensureSessionForCommand(authData, { otpCode: '123456' })).resolves.toBeUndefined();
 
-    expect(logger.Error).toHaveBeenCalledWith(expect.stringContaining('service unavailable'), expect.anything());
+    expect(logger.Error).toHaveBeenCalledWith(expect.stringContaining('is not answering (HTTP 503)'), expect.anything());
   });
 
   // The portal is a second host the command depends on, and an unreachable one is worth
-  // naming as such rather than as a bare 'fetch failed' — ServerError already knows how.
-  test('reports an unreachable portal through ServerError', async () => {
+  // naming as such rather than as a bare 'fetch failed'. It used to be named by ServerError
+  // as "Could not connect ... make sure the server is running", which reads as advice about
+  // the instance the operator was deploying to — the one host that is demonstrably fine.
+  test('names the portal as the host that is unreachable', async () => {
     Portal.twoFactorSession.mockRejectedValue(portalUnreachable());
 
     await expect(ensureSessionForCommand(authData, { otpCode: '123456' })).resolves.toBeUndefined();
 
-    expect(logger.Error).toHaveBeenCalledWith(expect.stringContaining('Could not connect'), expect.anything());
+    expect(logger.Error).toHaveBeenCalledWith(
+      expect.stringContaining(`The Partner Portal at ${PORTAL} is not answering (connect ECONNREFUSED).`),
+      expect.anything()
+    );
   });
 
   // Not a StatusCodeError and not a TwoFactorError: the branch that used to escape as a
@@ -528,5 +533,56 @@ describe('ensureSessionForCommand', () => {
       expect.stringContaining('Could not start a two-factor session'),
       expect.anything()
     );
+  });
+});
+
+/**
+ * The step-up is the one leg pos-cli walks to the Partner Portal itself, so a Portal that
+ * is being deployed fails here as an ordinary HTTP error — which ServerError reports as
+ * "You are unauthorized to do this operation. Check if your Token/URL are correct. To
+ * refresh your token, run: pos-cli env refresh-token". Wrong on both counts: no credential
+ * was judged, and refreshing one costs the operator a token that was working.
+ */
+describe('a partner portal that is not answering', () => {
+  const portalFailure = (extra) => Object.assign(new Error('Request failed with status 502'), {
+    name: 'StatusCodeError',
+    statusCode: 502,
+    response: { statusCode: 502, body: '' },
+    ...extra
+  });
+
+  test('names the portal instead of blaming the token', async () => {
+    Portal.twoFactorSession.mockRejectedValue(portalFailure());
+
+    const error = await startSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'long-lived', otpCode: '123456' })
+      .catch(e => e);
+
+    expect(error.name).toBe('TwoFactorError');
+    expect(error.message).toContain(`The Partner Portal at ${PORTAL} is not answering (HTTP 502).`);
+    expect(error.message).toContain('Nothing is wrong with your token');
+  });
+
+  test('covers a portal that refused the connection outright', async () => {
+    Portal.twoFactorSession.mockRejectedValue(
+      Object.assign(new Error('fetch failed'), { name: 'RequestError', cause: { message: 'connect ECONNREFUSED' } })
+    );
+
+    const error = await startSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'long-lived', otpCode: '123456' })
+      .catch(e => e);
+
+    expect(error.message).toContain(`The Partner Portal at ${PORTAL} is not answering (connect ECONNREFUSED).`);
+  });
+
+  // A 401 is the Portal deciding, not failing to decide, and it has to keep reaching the
+  // code-handling it already had.
+  test('leaves a refused code to the two-factor handling', async () => {
+    process.stdin.isTTY = false;
+    Portal.twoFactorSession.mockRejectedValue(portalFailure({ statusCode: 401, response: { statusCode: 401, body: '' } }));
+
+    const error = await startSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'long-lived', otpCode: '123456' })
+      .catch(e => e);
+
+    expect(error.message).toContain('was rejected by the Partner Portal');
+    expect(error.message).not.toContain('is not answering');
   });
 });
