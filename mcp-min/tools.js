@@ -1,17 +1,13 @@
-// Define tools for the minimal MCP server
+/**
+ * Every tool the MCP server can expose, in the order clients see them.
+ *
+ * Only the registry: importing this module reads no configuration and decides nothing about
+ * what is exposed. Which of these tools a server actually serves is resolved once at startup
+ * from the profile, --include-tools/--exclude-tools and the tools config (tool-selection.js),
+ * and the transports are handed that result.
+ */
 import log from './log.js';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import files from '../lib/files.js';
-import { validate } from '../lib/validation/index.js';
-import { ToolsConfigError } from './tools-config-error.js';
-
-// MCP_TOOLS_CONFIG env var overrides the bundled config. The config itself is loaded
-// further down, once the tool registry exists to validate its keys against.
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const configPath = process.env.MCP_TOOLS_CONFIG || join(__dirname, 'tools.config.json');
-const configSchema = JSON.parse(readFileSync(join(__dirname, 'tools.config.schema.json'), 'utf-8'));
 
 // Keep tools.js lean by extracting complex tools into modules
 import singleFileTool from './sync/single-file.js';
@@ -154,71 +150,8 @@ const tools = {
   'env-add': envAddTool
 };
 
-/**
- * Read and validate the tools config.
- *
- * Fails closed on anything it can detect: this file decides which tools are exposed, so
- * a config that is present but wrong must stop the server rather than be ignored, which
- * would silently re-enable every tool the author meant to switch off. A missing or
- * unparseable file is the one benign case — there is nothing to apply, so defaults win.
- *
- * @param {object} registry - the tool registry, used to reject names that match no tool
- * @throws {ToolsConfigError} when the file is present but does not describe a valid config
- */
-function loadToolsConfig(registry) {
-  let raw;
-  try {
-    raw = JSON.parse(readFileSync(configPath, 'utf-8'));
-  } catch (err) {
-    log.debug('tools config not found or unparseable, using defaults', { path: configPath, error: String(err) });
-    return { tools: {} };
-  }
+// A Map, not an object literal: lookups by an untrusted name must not reach Object.prototype
+// (`constructor`, `toString`…), and iteration order is the registry order clients see.
+const registry = new Map(Object.entries(tools));
 
-  const result = validate(configSchema, raw);
-  if (!result.valid) {
-    throw new ToolsConfigError(`Invalid tools config at ${configPath}: ${result.message}`);
-  }
-
-  // The schema constrains the shape of each entry but cannot enumerate tool names, so a
-  // typo like "deploy-strt" would otherwise be accepted, match nothing in applyConfig,
-  // and leave "deploy-start" enabled — the exact fail-open the schema check exists to
-  // prevent, and the harder one to notice because the config looks like it took effect.
-  // hasOwnProperty, not `in`: `in` walks the prototype chain, so an entry keyed
-  // `toString` or `constructor` would pass as a known tool and then be ignored.
-  const unknown = Object.keys(raw.tools || {})
-    .filter(name => !Object.prototype.hasOwnProperty.call(registry, name));
-  if (unknown.length > 0) {
-    throw new ToolsConfigError(
-      `Invalid tools config at ${configPath}: no such tool: ${unknown.join(', ')}`
-    );
-  }
-
-  log.debug('tools config loaded', { path: configPath, tools: Object.keys(raw.tools || {}).length });
-  return raw;
-}
-
-// Apply configuration: override descriptions and filter disabled tools
-function applyConfig(allTools, config) {
-  const result = {};
-  for (const [name, tool] of Object.entries(allTools)) {
-    const cfg = config.tools?.[name];
-
-    // Skip disabled tools
-    if (cfg && cfg.enabled === false) {
-      log.debug('tool disabled by config', { name });
-      continue;
-    }
-
-    // Override description from config if present
-    if (cfg && cfg.description) {
-      result[name] = { ...tool, description: cfg.description };
-    } else {
-      result[name] = tool;
-    }
-  }
-  return result;
-}
-
-const configuredTools = applyConfig(tools, loadToolsConfig(tools));
-
-export default configuredTools;
+export default registry;

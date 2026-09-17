@@ -12,7 +12,7 @@ Run
 
 Debug mode
 - To enable verbose debug logging, use: npm run start:debug
-- Or set env variable manually: MCP_MIN_DEBUG=1 node index.js
+- Or set env variable manually: MCP_MIN_DEBUG=1 pos-cli-mcp
 - Debug logs include: detailed HTTP access logs, request/response tracing, stdio requests/responses, SSE connection status and heartbeats, and tool-level progress
 
 Root configuration (recommended)
@@ -36,19 +36,28 @@ Security
 - A malformed MCP_MIN_HOST, MCP_MIN_PORT or MCP_MIN_ALLOWED_HOSTS stops the server at startup. A port that is already taken is logged as an error ("HTTP transport not started") and stdio keeps working.
 
 Lifecycle
-- Start it as `pos-cli-mcp` (or `pos-cli mcp`); it accepts only --help and --version.
+- Start it as `pos-cli-mcp` (or `pos-cli mcp`); it accepts only --profile, --include-tools, --exclude-tools, --help and --version.
 - The server exits when its MCP client closes stdin: new work stops, running calls finish (at most 120 s), then the process exits and releases the HTTP port.
 - stdin from /dev/null, a file or a terminal with no MCP messages does not end it; use `pos-cli-mcp </dev/null` to run the HTTP transport alone.
 
+Tool selection
+- exposed = (tools of --profile ∪ --include-tools) − --exclude-tools − tools disabled in tools.config.json; profiles: full (default), dev, none.
+- Resolved once at startup, the same for both transports; a tool that is not exposed is also not callable.
+- An unknown profile or tool name, a tool in both lists, including a config-disabled tool, or an empty result stops startup with a message.
+- `pos-cli mcp-config` takes the same options and shows what they expose.
+
 Files
-- index.js: entry point; starts stdio and HTTP servers with one shared shutdown
+- index.js: start({ selection }); starts stdio and HTTP servers with one shared shutdown (importing it starts nothing)
 - lifecycle.js: when the process ends (stdin EOF rule, drain, deadline)
-- cli-args.js: argument parsing for bin/pos-cli-mcp.js
+- cli-args.js: argument parsing for bin/pos-cli-mcp.js, and the tool-selection options shared with bin/pos-cli-mcp-config.js
+- tools.js: the tool registry (every tool, in client order); reads no configuration
+- profiles.js: built-in profiles (full, dev, none)
+- tools-config.js: reads and validates tools.config.json / MCP_TOOLS_CONFIG; the one place its rules live
+- tool-selection.js: resolves profile + options + config into the exposed tools; findTool, the lookup every dispatch path uses
 - stdio-server.js: simple JSON-line protocol over stdin/stdout
 - http-server.js: Express-based HTTP API and SSE streaming endpoint
 - http-config.js: reads MCP_MIN_HOST / MCP_MIN_PORT / MCP_MIN_ALLOWED_HOSTS
 - host-validation.js: Host/Origin check applied to every HTTP route
-- tools.js: Tool registry with handlers (echo, list-envs, sync.singleFile)
 - sync/single-file.js: Extracted implementation of sync.singleFile tool
 - sse.js: Server-Sent Events helpers and heartbeat
 - config.js: Centralized DEBUG flag and debugLog helper

@@ -8,7 +8,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import startHttp from '../http-server.js';
-import tools from '../tools.js';
+import { toolsWith } from './helpers/tools.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..', '..');
@@ -45,30 +45,25 @@ const post = (path, body) =>
 // No .pos fixture on purpose: every assertion here is about params being rejected before
 // a handler runs, and writing .pos into the working directory races other suites.
 beforeAll(async () => {
-  // The registry is a live object shared with http-server, so adding an entry here is
-  // visible to the running server. Port 0 lets the OS assign a free one, which removes
-  // the collision this suite previously risked with a hardcoded 5931.
-  tools['broken-schema'] = BROKEN_SCHEMA_TOOL;
-  server = await startHttp({ port: 0 });
+  // Port 0 lets the OS assign a free one, which removes the collision this suite previously
+  // risked with a hardcoded 5931.
+  server = await startHttp({ port: 0, tools: toolsWith({ 'broken-schema': BROKEN_SCHEMA_TOOL }) });
   PORT = server.address().port;
 });
 
 afterAll(() => {
-  delete tools['broken-schema'];
   if (server) server.close();
 });
 
 
 // Drives one request through a freshly spawned stdio server and resolves with the
 // response carrying the same id. `injectBrokenTool` starts the server from an inline
-// module that adds the uncompilable-schema tool to the live registry first — the server
-// reads tools[name] per request, so a mutation before startStdio() is visible.
+// module that exposes the default tools plus the uncompilable-schema tool.
 const runStdio = (message, { injectBrokenTool = false } = {}) => new Promise((done, reject) => {
   const inline = [
-    `import tools from ${JSON.stringify(pathToFileURL(resolve(__dirname, '..', 'tools.js')).href)};`,
+    `import { toolsWith } from ${JSON.stringify(pathToFileURL(resolve(__dirname, 'helpers', 'tools.js')).href)};`,
     `import startStdio from ${JSON.stringify(pathToFileURL(stdioScript).href)};`,
-    `tools['broken-schema'] = { inputSchema: { type: 'not-a-real-type' }, handler: async () => ({ ok: true }) };`,
-    'startStdio();'
+    "startStdio({ tools: toolsWith({ 'broken-schema': { inputSchema: { type: 'not-a-real-type' }, handler: async () => ({ ok: true }) } }) });"
   ].join('\n');
 
   const child = injectBrokenTool

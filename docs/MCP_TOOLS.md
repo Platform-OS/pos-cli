@@ -9,20 +9,21 @@ Complete reference guide for all platformOS Model Context Protocol (MCP) tools a
 ## Table of Contents
 
 1. [HTTP Transport Security](#http-transport-security)
-2. [Authentication](#authentication)
-3. [Environment Management](#environment-management)
-4. [Logging & Monitoring](#logging--monitoring)
-5. [GraphQL & Liquid](#graphql--liquid)
-6. [Generators](#generators)
-7. [Migrations](#migrations)
-8. [Deployment](#deployment)
-9. [Data Operations](#data-operations)
-10. [Testing](#testing)
-11. [Linting](#linting)
-12. [File Sync](#file-sync)
-13. [Property Uploads](#property-uploads)
-14. [Constants](#constants)
-15. [Response Patterns](#response-patterns)
+2. [Tool Selection](#tool-selection)
+3. [Authentication](#authentication)
+4. [Environment Management](#environment-management)
+5. [Logging & Monitoring](#logging--monitoring)
+6. [GraphQL & Liquid](#graphql--liquid)
+7. [Generators](#generators)
+8. [Migrations](#migrations)
+9. [Deployment](#deployment)
+10. [Data Operations](#data-operations)
+11. [Testing](#testing)
+12. [Linting](#linting)
+13. [File Sync](#file-sync)
+14. [Property Uploads](#property-uploads)
+15. [Constants](#constants)
+16. [Response Patterns](#response-patterns)
 
 ---
 
@@ -54,6 +55,33 @@ The HTTP transport (the `curl` examples below, port 5910) has **no authenticatio
 | `MCP_MIN_ALLOWED_HOSTS` | *(none)* | Comma-separated hostnames or IP addresses accepted in `Host`/`Origin` in addition to the loopback names, e.g. `devbox.local,10.0.0.5,[fd00::5]`. No scheme, no port; IPv6 in brackets. Clients that address the server by any other name need their name listed here. |
 
 A malformed value in any of the three stops the server at startup with a message naming it. If the port is already taken, the server logs `HTTP transport not started (EADDRINUSE)` and keeps serving MCP over stdio. A `pos-cli-mcp` started by an older pos-cli listens on **all** interfaces with no Host/Origin checks, and keeps answering on that port until it is stopped — restart MCP clients after upgrading.
+
+---
+
+## Tool Selection
+
+Which tools a server exposes is decided once, when it starts, and is the same on stdio and HTTP for every client:
+
+```
+exposed = (tools of --profile  ∪  --include-tools)  −  --exclude-tools  −  tools disabled in tools.config.json
+```
+
+| Option | Effect |
+| --- | --- |
+| `--profile <name>` | Starting set. `full` (default): every tool. `dev`: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-start`, `deploy-status`, `deploy-wait`, `unit-tests-run`, `tests-run-async`, `tests-run-async-result`. `none`: no tools. |
+| `--include-tools <names>` | Adds tools to the profile — not an allowlist, unlike Gemini CLI's `includeTools`. For an allowlist: `--profile none --include-tools a,b`. |
+| `--exclude-tools <names>` | Removes tools. Excluding a tool the profile does not contain is allowed, so one exclude list works with any profile. |
+
+Names are comma-separated and each option can be repeated. Tools are always listed in the same order, whatever order they are named in. A tool that is not exposed is also not callable: `tools/call`, `POST /call` and `POST /call-stream` answer it as an unknown tool (`-32601` / `404`), exactly like a name that matches no tool.
+
+The server does not start — it prints one message and exits 1 before either transport opens — for an unknown profile, an unknown tool name in either option (close matches are suggested), a tool named in both, `--include-tools` naming a tool that `tools.config.json` disables, or a selection that leaves no tools.
+
+```bash
+pos-cli-mcp --profile dev </dev/null &
+curl -s http://localhost:5910/tools | jq '.tools[].id'
+```
+
+`pos-cli mcp-config` takes the same options and prints what they expose, and why each other tool is not exposed (`not in profile`, `excluded`, `disabled in the tools config`); add `--json` for the same report as JSON. Bare `pos-cli-mcp` exposes `full`; `pos-cli ai init` configures `--profile dev`.
 
 ---
 

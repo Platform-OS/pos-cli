@@ -1,0 +1,308 @@
+/**
+ * The tool selection as clients meet it: a spawned `pos-cli-mcp` with --profile,
+ * --include-tools and --exclude-tools, observed on every path that lists or calls tools, and
+ * `pos-cli mcp-config` asked about the same selection.
+ */
+import fs from 'fs';
+import http from 'http';
+import path from 'path';
+import { spawnSync } from 'child_process';
+import { pathToFileURL } from 'url';
+import { describe, test, expect, beforeAll, afterAll } from 'vitest';
+import startHttp from '../http-server.js';
+import registry from '../tools.js';
+import {
+  launch, stop, stopAll, boundUrl, request, send, stdoutMessages, waitFor, exitWithin, makeWorkDir, serverEnv,
+  MCP_BIN, MCP_CONFIG_BIN, POS_CLI_BIN, STDIO_SERVER, LISTENING
+} from './helpers/server-process.js';
+
+const DEV_TOOLS = [
+  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'deploy-start', 'deploy-status', 'deploy-wait',
+  'unit-tests-run', 'tests-run-async', 'tests-run-async-result', 'check-run'
+];
+
+// stdio tools/list for --profile dev measured 8,234 bytes when the profile was introduced.
+// Growth past this needs a deliberate bump: the profile exists to keep this payload small.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 8250;
+
+// Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
+const PRE_PROFILES_TOOLS = [
+  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'generators-list', 'generators-help', 'generators-run',
+  'migrations-list', 'migrations-generate', 'migrations-run', 'deploy-start', 'deploy-status', 'deploy-wait',
+  'data-import', 'data-import-status', 'data-export', 'data-export-status', 'data-clean', 'data-clean-status',
+  'data-validate', 'unit-tests-run', 'tests-run-async', 'tests-run-async-result', 'check-run', 'sync-file',
+  'uploads-push', 'constants-list', 'constants-set', 'constants-unset', 'instance-create', 'partners-list',
+  'partner-get', 'endpoints-list', 'env-add'
+];
+const PRE_PROFILES_TOOLS_LIST_BYTES = 24612;
+
+const HANG_MS = 15000;
+
+let workDir;
+
+beforeAll(() => {
+  workDir = makeWorkDir('pos-cli-mcp-tool-surface');
+});
+
+afterAll(async () => {
+  await stopAll();
+  fs.rmSync(workDir, { recursive: true, force: true });
+});
+
+let nextId = 1;
+const rpc = (method, params = {}) => ({ jsonrpc: '2.0', id: `t${nextId++}`, method, params });
+
+function httpJson(baseUrl, method, path, body) {
+  const url = new URL(path, baseUrl);
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      { host: url.hostname, port: url.port, path: url.pathname, method, headers: { 'Content-Type': 'application/json' } },
+      (res) => {
+        let text = '';
+        res.setEncoding('utf8');
+        res.on('data', c => (text += c));
+        res.on('end', () => resolve({ status: res.statusCode, body: text ? JSON.parse(text) : null }));
+      }
+    );
+    req.on('error', reject);
+    req.end(body === undefined ? undefined : JSON.stringify(body));
+  });
+}
+
+/** Starts a server with the given arguments and collects what each list path exposes. */
+async function withServer(args, fn, { bin = [MCP_BIN] } = {}) {
+  const proc = launch({ workDir, args: [...bin, ...args], env: { MCP_MIN_PORT: '0' } });
+  try {
+    const baseUrl = await boundUrl(proc);
+    await request(proc, rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {} }));
+    return await fn({ proc, baseUrl });
+  } finally {
+    await stop(proc);
+  }
+}
+
+async function listedEverywhere({ proc, baseUrl }) {
+  const stdio = (await request(proc, rpc('tools/list'))).result.tools;
+  const jsonRpc = (await httpJson(baseUrl, 'POST', '/call-stream', rpc('tools/list'))).body.result.tools;
+  const rest = (await httpJson(baseUrl, 'GET', '/tools')).body.tools;
+  return { stdio, jsonRpc, rest };
+}
+
+function expectSameEverywhere(lists, expectedNames) {
+  expect(lists.stdio.map(t => t.name)).toEqual(expectedNames);
+  expect(lists.jsonRpc).toEqual(lists.stdio);
+  expect(lists.rest).toEqual(lists.stdio.map(t => ({ id: t.name, description: t.description })));
+}
+
+function mcpConfigJson(args) {
+  const result = spawnSync(process.execPath, [MCP_CONFIG_BIN, '--json', ...args], { cwd: workDir, env: serverEnv(workDir), encoding: 'utf8' });
+  expect(result.status, result.stderr).toBe(0);
+  return JSON.parse(result.stdout);
+}
+
+describe('which tools are listed', () => {
+  test('bare pos-cli-mcp lists exactly what it listed before profiles, byte for byte, on every path', async () => {
+    const bare = await withServer([], listedEverywhere);
+    expectSameEverywhere(bare, PRE_PROFILES_TOOLS);
+    expect(Buffer.byteLength(JSON.stringify(bare.stdio))).toBe(PRE_PROFILES_TOOLS_LIST_BYTES);
+
+    const full = await withServer(['--profile', 'full'], listedEverywhere);
+    expect(full).toEqual(bare);
+  }, 60000);
+
+  test('--profile dev lists the dev set in registry order on every path, within its byte budget', async () => {
+    const lists = await withServer(['--profile', 'dev'], listedEverywhere);
+
+    expectSameEverywhere(lists, DEV_TOOLS);
+    expect(Buffer.byteLength(JSON.stringify(lists.stdio))).toBeLessThanOrEqual(DEV_TOOLS_LIST_BYTE_BUDGET);
+  }, 60000);
+
+  test('`pos-cli mcp` passes the selection through to the same server', async () => {
+    const lists = await withServer(['mcp', '--profile', 'none', '--include-tools', 'sync-file,envs-list'], listedEverywhere, { bin: [POS_CLI_BIN] });
+
+    expectSameEverywhere(lists, ['envs-list', 'sync-file']);
+  }, 60000);
+
+  test.each([
+    ['an allowlist', ['--profile', 'none', '--include-tools', 'graphql-exec,envs-list'], ['envs-list', 'graphql-exec']],
+    ['the same allowlist as repeated flags', ['--profile', 'none', '--include-tools', 'graphql-exec', '--include-tools', 'envs-list'], ['envs-list', 'graphql-exec']],
+    ['dev plus one tool minus another', ['--profile', 'dev', '--include-tools', 'sync-file', '--exclude-tools', 'deploy-wait,check-run'],
+      ['envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'deploy-start', 'deploy-status', 'unit-tests-run',
+        'tests-run-async', 'tests-run-async-result', 'sync-file']],
+    ['full minus a group', ['--exclude-tools', 'data-import,data-export,data-clean'],
+      PRE_PROFILES_TOOLS.filter(name => !['data-import', 'data-export', 'data-clean'].includes(name))]
+  ])('%s', async (_label, args, expected) => {
+    const lists = await withServer(args, listedEverywhere);
+
+    expectSameEverywhere(lists, expected);
+    // What pos-cli mcp-config reports for the same options is what the server serves.
+    const config = mcpConfigJson(args);
+    expect(config.exposed).toEqual(lists.stdio.map(t => ({ name: t.name, description: t.description })));
+  }, 60000);
+});
+
+describe('a selection that does not resolve stops startup', () => {
+  const REFUSALS = [
+    ['an unknown profile', ['--profile', 'devv'], '--profile devv: no such profile. Available profiles: full, dev, none.'],
+    ['a prototype name as a profile', ['--profile', 'constructor'], '--profile constructor: no such profile. Available profiles: full, dev, none.'],
+    ['an unknown tool to include', ['--include-tools', 'deploy-strt'], '--include-tools: no such tool: deploy-strt (did you mean deploy-start?).'],
+    ['an unknown tool to exclude', ['--exclude-tools', 'toString'], '--exclude-tools: no such tool: toString.'],
+    ['a tool in both flags', ['--include-tools', 'sync-file', '--exclude-tools', 'sync-file'],
+      'Named in both --include-tools and --exclude-tools: sync-file. Name each tool in only one of them.'],
+    ['including a tool the tools config disables', ['--profile', 'dev', '--include-tools', 'check'],
+      /^--include-tools names tools disabled in the tools config at .+tools\.config\.json: check\. Enable them there, or remove them from --include-tools\.$/],
+    ['an empty selection', ['--profile', 'none'],
+      'No tools to expose: profile none with --include-tools (none) and --exclude-tools (none) leaves none enabled. Choose another profile or name tools with --include-tools.']
+  ];
+
+  test.each(REFUSALS)('%s: one message, exit 1, nothing started', async (_label, args, message) => {
+    const proc = launch({ workDir, args: [MCP_BIN, ...args], env: { MCP_MIN_PORT: '0' } });
+    try {
+      const exit = await exitWithin(proc, HANG_MS);
+
+      expect(exit, `still running\n${proc.stderr}`).not.toBeNull();
+      expect(exit.code).toBe(1);
+      expect(proc.stdout).toBe('');
+      expect(proc.stderr).not.toContain('stdio transport started');
+      expect(proc.stderr).not.toMatch(LISTENING);
+      expect(proc.stderr).not.toMatch(/^\s+at .+:\d+:\d+\)?$/m);
+      if (message instanceof RegExp) expect(proc.stderr.trim()).toMatch(message);
+      else expect(proc.stderr.trim()).toBe(message);
+    } finally {
+      await stop(proc);
+    }
+  }, 30000);
+
+  test.each(REFUSALS)('pos-cli mcp-config refuses %s with the same message', (_label, args, message) => {
+    const server = spawnSync(process.execPath, [MCP_BIN, ...args], { cwd: workDir, env: serverEnv(workDir, { MCP_MIN_PORT: '0' }), input: '', encoding: 'utf8', timeout: HANG_MS });
+    const config = spawnSync(process.execPath, [MCP_CONFIG_BIN, ...args], { cwd: workDir, env: serverEnv(workDir), encoding: 'utf8', timeout: HANG_MS });
+
+    expect(config.status).toBe(1);
+    expect(config.stdout).toBe('');
+    expect(config.stderr.trim()).toBe(server.stderr.trim());
+    if (message instanceof RegExp) expect(config.stderr.trim()).toMatch(message);
+    else expect(config.stderr.trim()).toBe(message);
+  }, 30000);
+});
+
+// A hidden tool that can still be called would make profiles cosmetic: the HTTP transport has
+// no authentication. Checked with a registered tool this server does not expose, and with
+// names inherited from Object.prototype, which used to reach past the lookup (TASK-5).
+describe('a tool that is not exposed cannot be called', () => {
+  let proc;
+  let baseUrl;
+
+  beforeAll(async () => {
+    proc = launch({ workDir, args: [MCP_BIN, '--profile', 'none', '--include-tools', 'envs-list'], env: { MCP_MIN_PORT: '0' } });
+    baseUrl = await boundUrl(proc);
+    await request(proc, rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {} }));
+  }, 30000);
+
+  afterAll(() => stop(proc));
+
+  const HIDDEN = ['deploy-start', 'check', 'constructor', 'toString', '__proto__', 'hasOwnProperty'];
+
+  const PATHS = {
+    'stdio tools/call': {
+      call: async name => (await request(proc, rpc('tools/call', { name, arguments: {} }))),
+      found: response => expect(response.result.content[0].text).toContain('environments'),
+      notFound: (response, name) => expect(response.error).toEqual({ code: -32601, message: `Unknown tool: ${name}` })
+    },
+    'stdio direct method (JSON-RPC)': {
+      call: async name => (await request(proc, rpc(name, {}))),
+      found: response => expect(response.result.data.environments).toBeDefined(),
+      notFound: (response, name) => expect(response.error).toEqual({ code: -32601, message: `Method not found: ${name}` })
+    },
+    'stdio direct method (legacy)': {
+      call: async (name) => {
+        const id = `legacy-${nextId++}`;
+        send(proc, { id, method: name, params: {} });
+        return waitFor(proc, p => stdoutMessages(p).find(m => m.id === id), `the response to ${id}`);
+      },
+      found: response => expect(response.result.data.environments).toBeDefined(),
+      notFound: (response, name) => expect(response.error).toBe(`unknown_method: ${name}`)
+    },
+    'HTTP POST /call': {
+      call: name => httpJson(baseUrl, 'POST', '/call', { tool: name, params: {} }),
+      found: response => expect(response.body.result.data.environments).toBeDefined(),
+      notFound: (response, name) => expect(response).toEqual({ status: 404, body: { error: `tool not found: ${name}` } })
+    },
+    'HTTP POST /call-stream': {
+      // envs-list has no streamHandler, so a found tool opens the stream and says so in-band.
+      call: name => new Promise((resolve, reject) => {
+        const url = new URL('/call-stream', baseUrl);
+        const req = http.request({ host: url.hostname, port: url.port, path: url.pathname, method: 'POST', headers: { 'Content-Type': 'application/json' } }, (res) => {
+          let text = '';
+          res.setEncoding('utf8');
+          res.on('data', c => (text += c));
+          res.on('end', () => resolve({ status: res.statusCode, text }));
+        });
+        req.on('error', reject);
+        req.end(JSON.stringify({ tool: name, params: {} }));
+      }),
+      found: response => expect(response).toMatchObject({ status: 200, text: expect.stringContaining('tool has no streamHandler') }),
+      notFound: (response, name) => expect(response).toEqual({ status: 404, text: JSON.stringify({ error: `tool not found: ${name}` }) })
+    },
+    'HTTP JSON-RPC tools/call': {
+      call: name => httpJson(baseUrl, 'POST', '/call-stream', rpc('tools/call', { name, arguments: {} })),
+      found: response => expect(response.body.result.content[0].text).toContain('environments'),
+      notFound: (response, name) => expect(response.body.error).toEqual({ code: -32601, message: `Tool not found: ${name}` })
+    }
+  };
+
+  describe.each(Object.keys(PATHS))('%s', (path) => {
+    const { call, found, notFound } = PATHS[path];
+
+    test('reaches an exposed tool', async () => {
+      found(await call('envs-list'));
+    });
+
+    test.each(HIDDEN)('answers %s as not found', async (name) => {
+      notFound(await call(name), name);
+    });
+  });
+
+  // TASK-5: a method named after an Object.prototype function used to run that function and
+  // send nothing back, leaving the client waiting for its id.
+  test.each(['toString', 'constructor', 'valueOf', 'hasOwnProperty', '__proto__'])(
+    'the stdio protocol dispatcher answers the method %s as not found',
+    async (method) => {
+      const response = await request(proc, rpc(method, {}), 5000);
+
+      expect(response.error).toEqual({ code: -32601, message: `Method not found: ${method}` });
+    }
+  );
+});
+
+// A transport that fell back to every registered tool when not handed a selection would undo
+// the selection for whichever caller forgot to pass it — silently, on an unauthenticated port.
+describe('a transport has no default tool set', () => {
+  const NOT_A_SELECTION = [
+    ['no tools', undefined],
+    ['a plain object of tools', { 'envs-list': registry.get('envs-list') }]
+  ];
+
+  test.each(NOT_A_SELECTION)('startHttp refuses %s', async (_label, tools) => {
+    const outcome = await startHttp({ port: 0, tools }).then(
+      server => new Promise(resolve => server.close(() => resolve('started'))),
+      error => error
+    );
+
+    expect(outcome).toEqual(new TypeError('startHttp: tools must be the Map of exposed tools'));
+  });
+
+  test.each(NOT_A_SELECTION)('startStdio refuses %s', (_label, tools) => {
+    // In its own process: a startStdio that did start would take over this worker's stdin.
+    const script = [
+      `import startStdio from ${JSON.stringify(pathToFileURL(STDIO_SERVER).href)};`,
+      `import registry from ${JSON.stringify(pathToFileURL(path.join(path.dirname(STDIO_SERVER), 'tools.js')).href)};`,
+      `const tools = ${tools === undefined ? 'undefined' : "{ 'envs-list': registry.get('envs-list') }"};`,
+      "try { startStdio({ tools }); console.log('STARTED'); } catch (err) { console.log(`REFUSED ${err.name}: ${err.message}`); }"
+    ].join('\n');
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+      cwd: workDir, env: serverEnv(workDir), input: '', encoding: 'utf8', timeout: HANG_MS
+    });
+
+    expect(result.stdout).toBe('REFUSED TypeError: startStdio: tools must be the Map of exposed tools\n');
+  });
+});

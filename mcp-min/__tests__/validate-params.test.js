@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fg from 'fast-glob';
-import tools from '../tools.js';
+import registry from '../tools.js';
 import { validateToolParams } from '../validate-params.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -18,11 +18,11 @@ const authTools = await Promise.all(
   authFileList.map(file => import(pathToFileURL(file).href).then(mod => mod.default))
 );
 
-const check = (name, params) => validateToolParams(name, tools[name], params);
+const check = (name, params) => validateToolParams(name, registry.get(name), params);
 
 describe('tool input schemas', () => {
   test('every registered tool has a schema Ajv can compile', () => {
-    const uncompilable = Object.entries(tools)
+    const uncompilable = [...registry]
       .filter(([name, tool]) => validateToolParams(name, tool, {}).schemaError)
       .map(([name]) => name);
 
@@ -30,7 +30,7 @@ describe('tool input schemas', () => {
   });
 
   test('every registered tool declares an object schema', () => {
-    for (const [name, tool] of Object.entries(tools)) {
+    for (const [name, tool] of registry) {
       expect(tool.inputSchema?.type, `${name} inputSchema.type`).toBe('object');
     }
   });
@@ -123,12 +123,12 @@ describe('authentication params stay accepted', () => {
   };
 
   // Registry entries whose schema is the one exported by an authenticating file. Matched
-  // on the inputSchema object rather than the tool object, because applyConfig copies the
-  // tool when a config overrides its description but keeps the same schema reference.
+  // on the inputSchema object rather than the tool object, because an exposed tool is a copy
+  // when the tools config overrides its description, and the copy keeps the same schema.
   // A name-based heuristic would wrongly sweep in portal tools like env-add, whose
   // `token` parameter is data it sends rather than credentials it authenticates with.
   const authSchemas = new Set(authTools.map(tool => tool?.inputSchema).filter(Boolean));
-  const registeredAuthTools = Object.keys(tools).filter(name => authSchemas.has(tools[name].inputSchema));
+  const registeredAuthTools = [...registry].filter(([, tool]) => authSchemas.has(tool.inputSchema)).map(([name]) => name);
 
   test.each(registeredAuthTools)('%s accepts explicit url/email/token without env', name => {
     const params = { url: 'https://example.com', email: 'a@b.c', token: 'tok', ...requiredExtras[name] };
@@ -151,11 +151,11 @@ describe('authentication params stay accepted', () => {
 // actually needs; without an assertion the relaxation could be reverted unnoticed.
 describe('required relaxations', () => {
   test('data-validate requires nothing: validation runs locally and env is context only', () => {
-    expect(tools['data-validate'].inputSchema.required).toBeUndefined();
+    expect(registry.get('data-validate').inputSchema.required).toBeUndefined();
   });
 
   test('unit-tests-run requires only name', () => {
-    expect(tools['unit-tests-run'].inputSchema.required).toEqual(['name']);
+    expect(registry.get('unit-tests-run').inputSchema.required).toEqual(['name']);
   });
 
   test.each([
@@ -166,7 +166,7 @@ describe('required relaxations', () => {
     ['data-import-status', ['jobId']],
     ['uploads-push', ['filePath']]
   ])('%s no longer requires env', (name, expected) => {
-    expect(tools[name].inputSchema.required).toEqual(expected);
+    expect(registry.get(name).inputSchema.required).toEqual(expected);
   });
 });
 
@@ -184,7 +184,7 @@ describe('logs-fetch cursor round-trips', () => {
       }
     }
 
-    const result = await tools['logs-fetch'].handler(
+    const result = await registry.get('logs-fetch').handler(
       { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
       { Gateway: MockGateway }
     );
@@ -199,7 +199,7 @@ describe('logs-fetch cursor round-trips', () => {
       async logs() { return { logs: [] }; }
     }
 
-    const result = await tools['logs-fetch'].handler(
+    const result = await registry.get('logs-fetch').handler(
       { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
       { Gateway: MockGateway }
     );

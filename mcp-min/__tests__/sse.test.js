@@ -1,6 +1,7 @@
 
 import http from 'http';
 import startHttp from '../http-server.js';
+import { defaultTools } from './helpers/tools.js';
 import fixtures from '../../test/utils/fixtures';
 
 const PORT = 5940;
@@ -8,7 +9,7 @@ let server;
 
 beforeAll(async () => {
   fixtures.writeDotPos({ staging: { url: 'https://staging.example.com' } });
-  server = await startHttp({ port: PORT });
+  server = await startHttp({ port: PORT, tools: defaultTools() });
 });
 
 afterAll(() => {

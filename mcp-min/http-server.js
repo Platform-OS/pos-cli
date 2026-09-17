@@ -2,7 +2,7 @@ import http from 'http';
 import express from 'express';
 import bodyParser from 'body-parser';
 import { randomUUID } from 'crypto';
-import tools from './tools.js';
+import { findTool } from './tool-selection.js';
 import { rejectionFor } from './validate-params.js';
 import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import { sseHandler, writeSSE } from './sse.js';
@@ -58,17 +58,23 @@ export function stopHttp(server) {
  * The defaults are the safe ones on purpose: any caller that passes only a port gets a
  * loopback-only listener that answers loopback Host/Origin names only.
  *
- * @param {object} [options]
+ * The tools have no default for the same reason: a caller that leaves them out must fail, not
+ * serve every registered tool over an unauthenticated port.
+ *
+ * @param {object} options
+ * @param {Map<string, object>} options.tools - the exposed tools (selectTools().tools)
  * @param {number} [options.port]
  * @param {string} [options.host] - bind address
  * @param {readonly string[]} [options.allowedHostnames] - Host/Origin hostnames to accept
  * @returns {Promise<http.Server>}
  */
 export default async function startHttp({
+  tools,
   port = DEFAULT_PORT,
   host = DEFAULT_HOST,
   allowedHostnames = LOOPBACK_HOSTNAMES
 } = {}) {
+  if (!(tools instanceof Map)) throw new TypeError('startHttp: tools must be the Map of exposed tools');
   const app = express();
   const server = http.createServer(app);
   const state = { closing: false, stopped: null, streams: new Set() };
@@ -155,7 +161,7 @@ export default async function startHttp({
   router.get('/health', (req, res) => res.json({ status: 'ok' }));
 
   router.get('/tools', (req, res) => {
-    const list = Object.keys(tools).map((k) => ({ id: k, description: tools[k].description || '' }));
+    const list = [...tools].map(([id, tool]) => ({ id, description: tool.description || '' }));
     res.json({ tools: list });
   });
 
@@ -164,7 +170,7 @@ export default async function startHttp({
     const tool = body.tool || body.name || body.id;
     const params = body.params ?? body.input ?? body.data ?? {};
     if (!tool) return res.status(400).json({ error: 'tool required (expected body.tool/name/id)' });
-    const entry = tools[tool];
+    const entry = findTool(tools, tool);
     if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
 
     const rejection = rejectionFor(tool, entry, params);
@@ -242,10 +248,10 @@ export default async function startHttp({
       }
 
       if (method === 'tools/list') {
-        const list = Object.keys(tools).map((name) => ({
+        const list = [...tools].map(([name, tool]) => ({
           name,
-          description: tools[name].description || '',
-          inputSchema: tools[name].inputSchema || OPEN_OBJECT_SCHEMA
+          description: tool.description || '',
+          inputSchema: tool.inputSchema || OPEN_OBJECT_SCHEMA
         }));
         respond({ result: { tools: list } });
         return;
@@ -259,7 +265,7 @@ export default async function startHttp({
             respond({ error: { code: -32602, message: 'Invalid params: name required' } });
             return;
           }
-          const entry = tools[name];
+          const entry = findTool(tools, name);
           if (!entry || typeof entry.handler !== 'function') {
             respond({ error: { code: -32601, message: `Tool not found: ${name}` } });
             return;
@@ -301,7 +307,7 @@ export default async function startHttp({
     const tool = body.tool || body.name || body.id;
     const params = body.params ?? body.input ?? body.data ?? {};
     if (!tool) return res.status(400).json({ error: 'tool required (expected body.tool/name/id)' });
-    const entry = tools[tool];
+    const entry = findTool(tools, tool);
     if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
 
     // Validate before the SSE handshake: once the stream is open the status code is

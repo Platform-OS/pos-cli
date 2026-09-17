@@ -6,7 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-09-17 06:30'
-updated_date: '2026-09-17 09:40'
+updated_date: '2026-09-17 13:12'
 labels:
   - mcp
   - refactor
@@ -203,6 +203,14 @@ TASK-16 implementation (2026-09-17), names to use when preserving its contract:
   - a release with TASK-14 but without `--no-http` would refuse to start
   
   Either release TASK-14 and this task together, or teach TASK-14's parser `--no-http` before any release that writes it. The decision is recorded as an AC.
+
+## TASK-13 Part 1 landed (2026-09-17): facts this migration must keep
+- **Selection before start.** `bin/pos-cli-mcp.js` runs `parseServerArgs` (now with `--profile`, `--include-tools`, `--exclude-tools`, shared with `pos-cli-mcp-config` through `addToolSelectionOptions`), then `selectTools(selection)`, then `start({ selection })` from `mcp-min/index.js`. Importing index.js starts nothing. Add `--no-http` in `addToolSelectionOptions`' neighbour `parseServerArgs` only; it is not a selection option, so mcp-config should not accept it. Decide that explicitly.
+- **Transports require the exposed tools.** `startStdio({ tools })` and `startHttp({ tools })` throw a TypeError without a Map; tests pin this (tool-surface.test.js, 'a transport has no default tool set'). The SDK server factory must take `selection.tools` too: `createServer(tools)` must register only exposed tools, in Map order, and nothing may fall back to `mcp-min/tools.js` (the full registry).
+- **Hidden means uncallable on every path.** Legacy routes keep `findTool`. For `/mcp` and SDK stdio, a tool outside the selection must not be registered at all. Port tool-surface.test.js's 'a tool that is not exposed cannot be called' to the SDK paths; the SDK answers unknown tools with its own error, so update the expected messages, not the rule.
+- **`lib/ai.js`.** Adding `--no-http` means `SERVERS.platformos` becomes `{ command: 'pos-cli-mcp', args: ['--profile', 'dev', '--no-http'] }`, and **`PREVIOUS_SERVERS.platformos` must gain `{ command: 'pos-cli-mcp', args: ['--profile', 'dev'] }`**. Otherwise every entry written by the TASK-13 release counts as customised and is not upgraded (AC #14). Customised entries are kept and reported, never overwritten.
+- **AC #15 now covers both flag sets.** A release that writes `--profile dev` or `--no-http` must not follow one whose strict parser lacks them. TASK-13 Part 1's flags are unreleased together with TASK-14's parser on this branch.
+- **Tests to port (AC #12):** `tool-selection.test.js` (pure, unaffected), `tool-surface.test.js` (spawned; list paths, refusals, not-found per path, byte budget 8,250 for dev stdio tools/list, which the SDK's result shape may change — re-measure and re-pin deliberately), `tools-config-validation.test.js`, `test/unit/ai.test.js`.
 <!-- SECTION:NOTES:END -->
 
 ## Definition of Done

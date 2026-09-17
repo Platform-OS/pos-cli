@@ -26,8 +26,10 @@ describe('pos-cli ai init', () => {
     expect(stdout).toMatch('Registered MCP servers');
 
     const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.mcp.json'), 'utf8'));
-    expect(config.mcpServers.platformos.command).toEqual('pos-cli-mcp');
-    expect(config.mcpServers['platformos-supervisor'].command).toEqual('pos-cli-supervisor');
+    expect(config.mcpServers).toEqual({
+      platformos: { command: 'pos-cli-mcp', args: ['--profile', 'dev'] },
+      'platformos-supervisor': { command: 'pos-cli-supervisor' }
+    });
   });
 
   test('--tool other prints the snippet and writes nothing', async () => {

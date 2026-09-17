@@ -19,8 +19,11 @@ vi.mock('../auth.js', async (importOriginal) => {
 
 import startHttp from '../http-server.js';
 import hostValidation from '../host-validation.js';
-import tools from '../tools.js';
+import { defaultTools } from './helpers/tools.js';
 import { resolveAuth } from '../auth.js';
+
+// One map for the default server, so a spy on one of its tools is on the object it dispatches to.
+const tools = defaultTools();
 
 const lanAddress = Object.values(os.networkInterfaces())
   .flat()
@@ -131,7 +134,7 @@ describe('default server', () => {
   let port;
 
   beforeAll(async () => {
-    server = await startHttp({ port: 0 });
+    server = await startHttp({ port: 0, tools });
     port = server.address().port;
   });
 
@@ -251,7 +254,7 @@ describe('default server', () => {
 
     beforeEach(() => {
       vi.mocked(resolveAuth).mockClear();
-      handler = vi.spyOn(tools['data-clean'], 'handler');
+      handler = vi.spyOn(tools.get('data-clean'), 'handler');
     });
 
     afterEach(() => {
@@ -303,7 +306,7 @@ describe('default server', () => {
 
 describe('startHttp', () => {
   test('binds and answers the addresses and hostnames it is given', async () => {
-    const server = await startHttp({ port: 0, host: '0.0.0.0', allowedHostnames: ['localhost', '127.0.0.1', 'devbox.local'] });
+    const server = await startHttp({ port: 0, tools, host: '0.0.0.0', allowedHostnames: ['localhost', '127.0.0.1', 'devbox.local'] });
     try {
       const { port } = server.address();
       expect(server.address().address).toBe('0.0.0.0');
@@ -319,7 +322,7 @@ describe('startHttp', () => {
   test.skipIf(!lanAddress)(
     lanAddress ? `an explicit 0.0.0.0 bind is reachable on ${lanAddress} and still validates Host` : `0.0.0.0 bind — ${NO_LAN_REASON}`,
     async () => {
-      const server = await startHttp({ port: 0, host: '0.0.0.0' });
+      const server = await startHttp({ port: 0, tools, host: '0.0.0.0' });
       try {
         const { port } = server.address();
         expect(await connectOutcome(lanAddress, port)).toBe('connected');
@@ -345,14 +348,15 @@ describe('startHttp', () => {
     await new Promise(resolve => holder.listen(0, '127.0.0.1', resolve));
     const { port } = holder.address();
     try {
-      await expect(startHttp({ port })).rejects.toMatchObject({ code: 'EADDRINUSE', port });
+      await expect(startHttp({ port, tools })).rejects.toMatchObject({ code: 'EADDRINUSE', port });
     } finally {
       await new Promise(resolve => holder.close(resolve));
     }
   });
 
   test('refuses an allowlist that is not an array, which would match by substring', async () => {
-    expect(() => hostValidation('localhost,127.0.0.1')).toThrow(TypeError);
-    await expect(startHttp({ port: 0, allowedHostnames: 'localhost,127.0.0.1' })).rejects.toThrow(TypeError);
+    const notAnArray = new TypeError('hostValidation: allowedHostnames must be an array of hostnames');
+    expect(() => hostValidation('localhost,127.0.0.1')).toThrow(notAnArray);
+    await expect(startHttp({ port: 0, tools, allowedHostnames: 'localhost,127.0.0.1' })).rejects.toThrow(notAnArray);
   });
 });

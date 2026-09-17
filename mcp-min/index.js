@@ -1,8 +1,15 @@
+/**
+ * Starts the MCP server's transports for an already-resolved tool selection.
+ *
+ * Importing this module starts nothing: bin/pos-cli-mcp.js parses its arguments and resolves
+ * the selection first, so a bad option or tools config is reported before any transport opens.
+ */
 import net from 'net';
 import startStdio from './stdio-server.js';
 import startHttp, { stopHttp } from './http-server.js';
 import { readHttpConfig } from './http-config.js';
 import { createShutdown } from './lifecycle.js';
+import { describeSelection } from './tool-selection.js';
 import log from './log.js';
 import { setServerMode } from '../lib/logger.js';
 
@@ -10,10 +17,6 @@ import { setServerMode } from '../lib/logger.js';
 // per-request), never process.exit and take down all tools. Enable before any
 // tool can run.
 setServerMode(true);
-
-// Read while the module evaluates, before either transport starts: a malformed value
-// throws HttpConfigError out of the import, which bin/pos-cli-mcp.js reports as a message.
-const httpConfig = readHttpConfig(process.env);
 
 // Global handlers - exit cleanly on EPIPE (client disconnected)
 process.on('uncaughtException', (err) => {
@@ -59,10 +62,10 @@ function exposureWarning(url, allowedHostnames) {
 
 // The HTTP transport is optional next to stdio, which is what MCP clients launch this
 // process for, so a failed bind is reported and stdio keeps serving.
-async function startHttpTransport(config, shutdown) {
+async function startHttpTransport(config, tools, shutdown) {
   let server;
   try {
-    server = await startHttp(config);
+    server = await startHttp({ ...config, tools });
   } catch (err) {
     log.error(bindFailureMessage(err, config));
     return;
@@ -81,21 +84,28 @@ async function startHttpTransport(config, shutdown) {
   });
 }
 
-async function main() {
-  log.info('mcp-min: starting MCP minimal server...');
+/**
+ * @param {object} options
+ * @param {ReturnType<import('./tool-selection.js').selectTools>} options.selection - the tools to
+ *   expose, identical for both transports
+ * @throws {import('./http-config.js').HttpConfigError} before any transport starts, when an
+ *   MCP_MIN_* variable is malformed
+ */
+export async function start({ selection }) {
+  const httpConfig = readHttpConfig(process.env);
 
-  // One shutdown for both transports: the MCP client closing stdin ends the session, and the
-  // HTTP listener must not keep the process — and its port — alive after that.
-  const shutdown = createShutdown();
+  try {
+    log.info('mcp-min: starting MCP minimal server...');
+    log.info(describeSelection(selection));
 
-  // Start stdio transport (MCP over stdio)
-  startStdio({ shutdown });
+    // One shutdown for both transports: the MCP client closing stdin ends the session, and the
+    // HTTP listener must not keep the process — and its port — alive after that.
+    const shutdown = createShutdown();
 
-  // Start HTTP server (includes SSE streaming endpoint)
-  await startHttpTransport(httpConfig, shutdown);
+    startStdio({ tools: selection.tools, shutdown });
+    await startHttpTransport(httpConfig, selection.tools, shutdown);
+  } catch (err) {
+    log.error('Fatal error during startup', String(err));
+    process.exit(1);
+  }
 }
-
-main().catch(err => {
-  log.error('Fatal error during startup', String(err));
-  process.exit(1);
-});

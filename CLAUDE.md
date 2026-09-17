@@ -86,14 +86,17 @@ pos-cli/
 │   ├── validation/              # Ajv schema validation (shared by GUI + MCP)
 │   └── validators/              # CLI argument validators (url, email, paths)
 ├── mcp-min/          # MCP server implementation
-│   ├── index.js                 # Starts stdio + HTTP/SSE transports with one shared shutdown
-│   ├── cli-args.js              # pos-cli-mcp argument parsing (--help/--version only; rejects the rest)
+│   ├── index.js                 # start({ selection }): stdio + HTTP/SSE transports, one shared shutdown
+│   ├── cli-args.js              # pos-cli-mcp argument parsing (tool selection, --help/--version; rejects the rest)
 │   ├── lifecycle.js             # When the process ends: stdin EOF rule, drain, 120 s deadline
 │   ├── stdio-server.js          # MCP over stdio (for editor integrations)
 │   ├── http-server.js           # HTTP/SSE transport (127.0.0.1:5910)
 │   ├── http-config.js           # MCP_MIN_HOST / MCP_MIN_PORT / MCP_MIN_ALLOWED_HOSTS, fails closed
 │   ├── host-validation.js       # Host/Origin check on every HTTP route (DNS rebinding)
-│   ├── tools.js                 # Tool registry
+│   ├── tools.js                 # Tool registry (a Map, client order); reads no configuration
+│   ├── profiles.js              # Built-in tool profiles: full (default), dev, none
+│   ├── tools-config.js          # Reads + validates tools.config.json / MCP_TOOLS_CONFIG (the only reader)
+│   ├── tool-selection.js        # Profile + --include/--exclude-tools + config → exposed tools; findTool
 │   ├── tools.config.json        # Enable/disable tools, customize descriptions
 │   └── <tool-name>/             # One directory per tool group (deploy/, data/, etc.)
 ├── gui/              # Web UI applications
@@ -190,21 +193,34 @@ The MCP (Model Context Protocol) server exposes platformOS operations as tools f
 **The HTTP transport has no authentication** — whoever can reach it runs every enabled tool with this machine's platformOS credentials. Three invariants stand in for auth; keep them when touching `http-server.js` (including the SDK migration):
 - **Loopback bind by default.** `readHttpConfig` (`http-config.js`) defaults `MCP_MIN_HOST` to `127.0.0.1`, and `startHttp` defaults to it too, so a caller passing only a port is still loopback-only. A non-loopback `MCP_MIN_HOST` is an explicit opt-in and logs an unauthenticated-exposure warning on every start.
 - **Host/Origin validation before everything.** `hostValidation` (`host-validation.js`) is registered app-level after the request logger and *before* `bodyParser` and the router, so every route — including ones added later and unknown paths — answers `403` to a Host/Origin hostname outside `localhost`, `127.0.0.1`, `[::1]` plus `MCP_MIN_ALLOWED_HOSTS`, without the body being parsed or a tool resolved. Status, body and messages mirror `@modelcontextprotocol/express` 2.0.0 exactly, so swapping in the SDK middleware is invisible to clients; the allowlist is enforced for non-loopback binds too, where the SDK would skip it.
-- **Fail closed, report honestly.** A malformed `MCP_MIN_*` value throws `HttpConfigError` while `index.js` evaluates, before either transport starts; `bin/pos-cli-mcp.js` reports it like `ToolsConfigError`. `startHttp` resolves only on `listening` and rejects with the listen error; `index.js` logs the address from `server.address()` on success, and on failure logs `HTTP transport not started (<code>)` and keeps serving stdio. Never log "listening" from configuration: an older pos-cli-mcp bound to `*:5910` makes a new `127.0.0.1:5910` bind fail with `EADDRINUSE` while still answering localhost traffic itself.
+- **Fail closed, report honestly.** A malformed `MCP_MIN_*` value throws `HttpConfigError` from `start()` (`index.js`), before either transport starts; `bin/pos-cli-mcp.js` reports it like `ToolsConfigError`. `startHttp` resolves only on `listening` and rejects with the listen error; `index.js` logs the address from `server.address()` on success, and on failure logs `HTTP transport not started (<code>)` and keeps serving stdio. Never log "listening" from configuration: an older pos-cli-mcp bound to `*:5910` makes a new `127.0.0.1:5910` bind fail with `EADDRINUSE` while still answering localhost traffic itself.
 
 **Invocation and lifetime.** MCP clients start `pos-cli-mcp` (or `pos-cli mcp`, a commander executable subcommand that spawns the same bin with stdio inherited) and stop it by closing stdin. Keep these when touching the bins, `stdio-server.js` or `index.js`:
-- **Arguments are settled before the server loads.** Importing `mcp-min/index.js` starts both transports, so `bin/pos-cli-mcp.js` calls `parseServerArgs` (`cli-args.js`) first; `--help`/`--version` set `process.exitCode` (not `process.exit()`, which can truncate output on a pipe) and never import the server. Unknown options and positionals are rejected, not ignored: options added later (tool profiles) must fail closed on a typo. `pos-cli mcp -v` is answered by `pos-cli` itself, with the same package version.
+- **Arguments and the tool selection are settled before any transport starts.** `bin/pos-cli-mcp.js` calls `parseServerArgs` (`cli-args.js`), then `selectTools`, then `start({ selection })` from `mcp-min/index.js` (importing it starts nothing); `--help`/`--version` set `process.exitCode` (not `process.exit()`, which can truncate output on a pipe) and never load the server. Unknown options and positionals are rejected, not ignored: every option decides what an unauthenticated server exposes, so a typo must fail closed. `pos-cli mcp -v` is answered by `pos-cli` itself, with the same package version.
 - **stdin EOF ends the session** when stdin is a client pipe/socket, or when stdio carried at least one message (`stdinEndEndsSession`). `</dev/null`, a file or a TTY with no messages keeps HTTP serving — that is how the HTTP transport runs alone.
 - **Shutdown drains; it does not `process.exit()`.** `createShutdown` (`lifecycle.js`) is shared by both transports: on EOF, stdio stops reading and `stopHttp` (`http-server.js`) stops accepting, destroys SSE streams, and closes each keep-alive connection as soon as its in-flight response finishes (otherwise it idles for the 5 s keep-alive timeout and holds the process). The process then exits by itself, so responses are written and background work a tool started (deploy-start's asset upload) completes. An unref'd deadline (`SHUTDOWN_DEADLINE_MS`, 120 s — covers `waitForUnpack`'s 90 s) forces exit 0 if something never finishes. A transport that finishes starting after shutdown began is stopped at once (`onShutdown` runs late closers immediately).
 - A new long-lived handle (interval, stream, socket) in a tool or transport must end when its request does, or it will hold every shutdown until the deadline.
 
-Tools are registered in `tools.js` and can be enabled/disabled via `tools.config.json` (or `MCP_TOOLS_CONFIG` env var). Each tool group lives in its own directory (`deploy/`, `data/`, `logs/`, etc.) and calls the Gateway directly (no CLI subprocess spawning).
+**Tool selection.** Which tools a server exposes is `(tools of --profile ∪ --include-tools) − --exclude-tools − tools disabled in tools.config.json`, resolved once at startup. Keep these when touching tools, profiles, the config or a transport:
+- **`tools.js` is only the registry**: a `Map` of every tool in the order clients see, with no import-time configuration. `full` is computed from it, so a new tool reaches `full` by being registered; it reaches `dev` (`profiles.js`) only when added there on purpose.
+- **One resolution, shared.** `selectTools` (`tool-selection.js`) loads the config through `loadToolsConfig` (`tools-config.js`, the only reader of that file and the only place the enabled/disabled rule lives) and resolves the options. `bin/pos-cli-mcp.js` and `bin/pos-cli-mcp-config.js` both call it, with options defined once (`addToolSelectionOptions`), so `pos-cli mcp-config` prints — and refuses — exactly what the server would.
+- **Transports receive the exposed tools and have no default.** `startStdio({ tools })` and `startHttp({ tools })` throw without a `Map`, so no caller can end up serving every registered tool by leaving it out. The selection is fixed for the process and identical on both transports: MCP forbids `tools/list` varying per connection, and it is always registry order.
+- **Hidden means uncallable.** Every dispatch path (stdio `tools/call` and direct method, `POST /call`, `POST /call-stream`, JSON-RPC `tools/call`) looks tools up with `findTool`, which only finds exposed tools and never `Object.prototype` names. The HTTP transport has no authentication, so a listed-but-hidden tool that could still be called would make profiles cosmetic. Protocol method lookups use own properties (`Object.hasOwn`) for the same reason.
+- **The selection fails closed**: an unknown profile or tool name (Map lookups, so `constructor` is unknown), a name in both options, `--include-tools` naming a config-disabled tool, or an empty result throws `ToolsConfigError` before any transport starts.
+- **A description must not name a tool its built-in profile hides** — the model would go looking for it. `tool-selection.test.js` checks every built-in profile; a tool whose description points at another tool has to be exposed with it.
+- Bare `pos-cli-mcp` stays `full` in 6.x. `pos-cli ai init` writes `--profile dev`; `lib/ai.js` upgrades only entries equal to a form it wrote before (`PREVIOUS_SERVERS`) and leaves any other differing entry alone. Changing the written args means adding the old form there.
+
+Each tool group lives in its own directory (`deploy/`, `data/`, `logs/`, etc.) and calls the Gateway directly (no CLI subprocess spawning).
 
 ```javascript
-// mcp-min/index.js
-const shutdown = createShutdown();                // shared: stdin EOF stops both transports
-startStdio({ shutdown });                         // stdio transport
-await startHttpTransport(httpConfig, shutdown);   // HTTP/SSE transport; httpConfig = readHttpConfig(process.env)
+// bin/pos-cli-mcp.js
+const selection = selectTools(parsed.selection);  // profile + options + tools.config.json → exposed tools
+await start({ selection });                       // mcp-min/index.js
+
+// mcp-min/index.js — start()
+const shutdown = createShutdown();                                  // shared: stdin EOF stops both transports
+startStdio({ tools: selection.tools, shutdown });                   // stdio transport
+await startHttpTransport(httpConfig, selection.tools, shutdown);    // HTTP/SSE; httpConfig = readHttpConfig(process.env)
 ```
 
 Tools include: envs-list, env-add, deploy-start/status/wait, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, tests-run/run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, portal tools (instance-create, partners-list, partner-get, endpoints-list).
@@ -460,7 +476,7 @@ auth properties are what use it.
 | `mcp-min/http-server.js` — `POST /call`, `/call-stream` | tool params vs `inputSchema` → 400 |
 | `mcp-min/http-server.js` — JSON-RPC `tools/call` | same → `-32602` |
 | `mcp-min/stdio-server.js` — `tools/call` + legacy direct invocation | same → `-32602` |
-| `mcp-min/tools.js` | `tools.config.json` vs `tools.config.schema.json`, plus tool names |
+| `mcp-min/tools-config.js` | `tools.config.json` vs `tools.config.schema.json`, plus tool names |
 | `lib/server.js` | GUI requests for graph / liquid / logs / logsv2 / sync |
 
 The five MCP dispatch sites (the first three rows) route through `rejectionFor` in
@@ -497,14 +513,16 @@ Because `env` is advertised as optional, an MCP client that omits it lands on st
 `uploads-push`). Runtime behaviour is unchanged, since nothing enforced `required` before,
 but the advertised contract now invites the omission.
 
-**The tools config fails closed.** A missing or unparseable config falls back to defaults;
-one that parses but is invalid throws `ToolsConfigError`. That file decides which tools are
-exposed, so ignoring a broken one would silently re-enable every tool the author meant to
-switch off. Two checks, because the schema alone is not enough: it validates the shape, and
-`loadToolsConfig` separately rejects entries naming a tool that does not exist — a typo
-like `deploy-strt` matches nothing in `applyConfig` and would otherwise leave `deploy-start`
-enabled while the config looks like it took effect. `bin/pos-cli-mcp.js` catches the error
-and reports it through `logger`, so a config mistake never surfaces as a Node stack trace.
+**The tools config fails closed.** A missing, unreadable or unparseable config falls back to
+defaults (logged as a warning when `MCP_TOOLS_CONFIG` named it, and shown by `pos-cli
+mcp-config`); one that parses but is invalid throws `ToolsConfigError`. That file decides
+which tools are exposed, so ignoring a broken one would silently re-enable every tool the
+author meant to switch off. Two checks, because the schema alone is not enough: it validates
+the shape, and `loadToolsConfig` (`tools-config.js`) separately rejects entries naming a tool
+that does not exist — a typo like `deploy-strt` would match nothing and otherwise leave
+`deploy-start` enabled while the config looks like it took effect. Both
+`bin/pos-cli-mcp.js` and `bin/pos-cli-mcp-config.js` catch the error and report it through
+`logger`, with the same message, so a config mistake never surfaces as a Node stack trace.
 
 ### Testing Philosophy
 Integration tests against real platformOS instances for reliability. Tests cover:

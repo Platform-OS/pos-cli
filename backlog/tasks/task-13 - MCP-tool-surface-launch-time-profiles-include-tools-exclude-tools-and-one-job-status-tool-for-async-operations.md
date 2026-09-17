@@ -3,10 +3,10 @@ id: TASK-13
 title: >-
   MCP tool surface: launch-time profiles, --include-tools/--exclude-tools, and
   one job-status tool for async operations
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-09-17 06:29'
-updated_date: '2026-09-17 07:47'
+updated_date: '2026-09-17 13:11'
 labels:
   - mcp
   - enhancement
@@ -115,14 +115,14 @@ Non-goals: shrinking the shared auth properties, tool annotations (TASK-15), HTT
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 `pos-cli-mcp --profile dev` exposes exactly the documented dev set in registry order on stdio tools/list, JSON-RPC tools/list and GET /tools; a test pins the set and a byte budget for its tools/list payload
-- [ ] #2 Bare `pos-cli-mcp` exposes the same tools as before this change (full profile), verified by a test
-- [ ] #3 `--profile none --include-tools a,b` exposes exactly a and b; `--include-tools` adds to any profile; `--exclude-tools` removes; comma-separated and repeated flags are equivalent
-- [ ] #4 Startup exits non-zero with one stderr message and no transport started for: unknown profile, unknown tool name in either flag, a name in both flags, including a tool disabled by the tools config, an empty exposed set; prototype names such as `constructor` count as unknown
-- [ ] #5 A tool that is not exposed is answered as tool-not-found on all five dispatch paths, with a test per path
-- [ ] #6 `pos-cli-mcp-config` accepts the same three flags and lists exactly what the server exposes for them, including the same failures
-- [ ] #7 No exposed tool description names a tool that is not exposed in the same built-in profile; a test enforces this for every built-in profile
-- [ ] #8 `pos-cli ai init` writes the dev profile for Claude Code, Cursor and VS Code, upgrades an entry equal to a previous canonical form, leaves a customised entry untouched and reports it, and remains a no-op on re-run
+- [x] #1 `pos-cli-mcp --profile dev` exposes exactly the documented dev set in registry order on stdio tools/list, JSON-RPC tools/list and GET /tools; a test pins the set and a byte budget for its tools/list payload
+- [x] #2 Bare `pos-cli-mcp` exposes the same tools as before this change (full profile), verified by a test
+- [x] #3 `--profile none --include-tools a,b` exposes exactly a and b; `--include-tools` adds to any profile; `--exclude-tools` removes; comma-separated and repeated flags are equivalent
+- [x] #4 Startup exits non-zero with one stderr message and no transport started for: unknown profile, unknown tool name in either flag, a name in both flags, including a tool disabled by the tools config, an empty exposed set; prototype names such as `constructor` count as unknown
+- [x] #5 A tool that is not exposed is answered as tool-not-found on all five dispatch paths, with a test per path
+- [x] #6 `pos-cli-mcp-config` accepts the same three flags and lists exactly what the server exposes for them, including the same failures
+- [x] #7 No exposed tool description names a tool that is not exposed in the same built-in profile; a test enforces this for every built-in profile
+- [x] #8 `pos-cli ai init` writes the dev profile for Claude Code, Cursor and VS Code, upgrades an entry equal to a previous canonical form, leaves a customised entry untouched and reports it, and remains a no-op on re-run
 - [ ] #9 deploy-start, data-import, data-export, data-clean and tests-run-async return a `job_id` in addition to their current fields, and `job-status` accepts it
 - [ ] #10 `job-status` returns one normalised shape for all five kinds with state running/completed/failed per the documented mapping; tests cover every known remote status of every kind, including deploy `in_progress` as running, and an unknown status
 - [ ] #11 `job-status` returns a tool execution error without contacting the instance when the job_id is malformed or when the resolved instance differs from the one the job was started on
@@ -231,3 +231,46 @@ Repro used when filing:
 - **Sizes:** spawn `bin/pos-cli-mcp.js`, send `tools/list`, measure `Buffer.byteLength(JSON.stringify(result.tools))` in total, per tool, and for the dev subset.
 - **deploy-wait defect:** `(await import('mcp-min/deploy/wait.js')).default.handler({ id:'1', url:'https://x.example.com', email:'a@b.c', token:'t', intervalMs:200 }, { Gateway: class { async getStatus(){ return seq[Math.min(calls++,3)]; } } })` with seq `[ready_for_import, in_progress, in_progress, success]` returns ok:true with data `{status:'in_progress'}` after 2 polls.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## Part 1 implemented (2026-09-17): structure and deviations from the plan
+- **Modules.** `tools.js` is only the registry: a `Map` in client order with no import-time config. `profiles.js` holds full (computed), dev (list) and none. `tools-config.js` is TASK-6's loader and the only reader of the config (`loadToolsConfig`, `isDisabledByConfig`, `configuredTool`). `tool-selection.js` has `resolveTools` (pure), `selectTools` (load + resolve), `findTool` and `describeSelection`. `cli-args.js` exports `addToolSelectionOptions`/`selectionFrom`, used by both bins.
+- **Startup order.** `bin/pos-cli-mcp.js` runs parse, then `selectTools`, then `start({ selection })` from `index.js`. Importing index.js starts nothing now. `HttpConfigError` is still thrown before any transport starts.
+- **Deviation: transports require `tools`.** `startStdio({ tools })` and `startHttp({ tools })` throw a TypeError unless given a Map; there is no default. A default of the full registry would re-open the fail-open that profiles close.
+- **Deviation: `start({ selection })` instead of `start({ tools, port })`.** The port stays in `MCP_MIN_PORT`/readHttpConfig; the selection also carries profile, include and exclude for the startup log line.
+- **Resolver rules beyond the plan.**
+  - A repeated `--profile` and empty list entries are syntax errors (commander).
+  - Duplicate names within one flag are collapsed.
+  - Close matches use Levenshtein ≤ 2, up to 3.
+  - Checks run in a fixed order: profile, names, overlap, disabled include, empty.
+  - A hidden tool's reason is the first that applies: profile, then excluded, then disabled.
+- **Config fallback.** A missing, unreadable or unparseable config still falls back to defaults (the documented rule). The server now logs a warning when `MCP_TOOLS_CONFIG` named the file, and `mcp-config` shows the state. Before, mcp-config exited 1 on a missing or unparseable file while the server ignored it.
+- **mcp-config output.** Text shows Exposed and Not exposed (with a reason for each). **`--json` is now that report** (`config`, `profile`, `include`, `exclude`, `exposed`, `hidden`) instead of the raw file, recorded in the CHANGELOG as a behaviour change.
+- **`lib/ai.js`.** The rule applies to both servers: add a missing entry; skip one deep-equal to the current form (key order ignored); upgrade one equal to a `PREVIOUS_SERVERS` form; keep and warn about anything else. Customised supervisor entries used to be overwritten too. **TASK-15 must add `{ command: 'pos-cli-mcp', args: ['--profile','dev'] }` to `PREVIOUS_SERVERS.platformos` when it adds `--no-http`.**
+- **AC #7 check.** It scans each exposed tool's description and inputSchema text. Only hyphenated names count as references: `check`, the only single-word tool, appears as an English word in check-run's schema, and a test pins that it is the only one. No description changes were needed: instance-create names partners-list and endpoints-list, but it is not in dev.
+- **TASK-5 fixed here.** All 5 dispatch paths use `findTool`, and the stdio dispatcher uses `Object.hasOwn`.
+- **Cost.** `pos-cli mcp-config` now loads the tool registry: about 1.1 s instead of about 0.1 s, the same load the server does.
+- **Compatibility.** A project config with `--profile dev` gets the full set on pos-cli ≤ 6.5.1, which ignores argv (documented). A release that has TASK-14's strict parser without these flags would refuse to start; both are unreleased on this branch, so ship them together.
+- **AC #17** is done for Part 1 (profiles, flag semantics incl. the Gemini difference, the default-profile decision). Part 2 still has to document job-status, the endpoint removal and the deprecations.
+
+## Part 1 verification (2026-09-17)
+- **Baseline before any change** (spawned `pos-cli-mcp`, all three list paths): 34 tools, stdio tools/list 24,612 bytes. After the change, bare output is byte-identical on stdio tools/list, JSON-RPC tools/list and GET /tools. `--profile dev`: 11 tools in registry order, 8,234 bytes (budget pinned at 8,250).
+- **New tests.**
+  - `tool-selection.test.js` (51): every rule, prototype names in every position, profiles, bare parity, AC #7 cross-references, findTool.
+  - `tool-surface.test.js` (72, spawned): all 3 list paths; `pos-cli mcp` passthrough; `mcp-config --json` equals the server's list; 7 refusals with the exact message, exit 1, nothing started, and mcp-config giving the same message; not-found on 6 dispatch variants × 6 hidden/prototype names with positive controls; the stdio dispatcher answering prototype methods; transports refusing to start without a Map.
+  - `cli-args` (+9); `tools-config-validation` rewritten in-process plus both callers spawned (invalid / valid override / missing, and the server starting with a missing named config); `test/unit/ai.test.js` (+8); integration ai test asserts the whole entry.
+- **Ported, not deleted:** validate-params, http, sse, list-envs, http-shutdown, http-exposure (still 79; the non-array allowlist test now asserts the exact TypeError, since a missing-tools TypeError would have satisfied the old check), transport-validation, and cli-invocation's stuck server.
+- **Suite results.** mcp-min: 42 files, 802 tests green on Node 25. Node 22.23.2: mcp-min + ai unit + ai integration, 44 files, 822 green.
+- **Bite against the committed code (ba12cd2).**
+  - `tool-surface`: 21 fail and 47 are skipped, because the server cannot start with the flags.
+  - TASK-5 variant on the old server with every tool exposed: 25 fail, 10 pass. Prototype names get past the lookup on 5 of 6 dispatch variants, and 5 prototype methods get no response. The passes are the controls and the already-guarded JSON-RPC tools/call.
+  - `ai.test.js`: 13 of 16 fail.
+- **Mutation testing.**
+  - 54 mutants across transports, index, bins, parser, resolver, profiles and loader. First run: 51 killed of 53. S6 (startStdio defaulting to the registry) survived, so tests were added that both transports refuse a missing or plain-object `tools`; S6 and the added H7 (the same for startHttp) are killed on rerun. T13 (findTool without the string guard) is equivalent, because Map keys are all strings.
+  - `lib/ai.js`: 9 mutants, 8 killed. AI9 (`Object.hasOwn` on the fixed server names) is equivalent, so the code was simplified to a plain lookup.
+  - Every mutated file was restored and sha-verified.
+- **Full repo against a clean-HEAD worktree: no new failures.** The one extra, `test/unit/lib/commands.test.js > should run env list`, is a pre-existing race with `mcp-min/__tests__/http.test.js`/`sse.test.js`, which write `.pos` into the repo root; running those three together fails 5/5 on clean HEAD too. The generators tests only fail in the worktree, which lacks fixture installs.
+- **Side effects cleaned up.** `test/fixtures/yeoman/custom/package-lock.json` was rewritten by the generators test (reverted), and a fixture `.pos` was left in the repo root by the race runs (removed).
+<!-- SECTION:NOTES:END -->

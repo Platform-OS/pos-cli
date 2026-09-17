@@ -5,20 +5,10 @@
  * and holding the process open.
  */
 import http from 'http';
-import { describe, test, expect, afterEach } from 'vitest';
+import { describe, test, expect } from 'vitest';
 import startHttp, { stopHttp } from '../http-server.js';
-import tools from '../tools.js';
 import { connectOutcome } from './helpers/server-process.js';
-
-const injected = [];
-function injectTool(name, tool) {
-  tools[name] = tool;
-  injected.push(name);
-}
-
-afterEach(() => {
-  for (const name of injected.splice(0)) delete tools[name];
-});
+import { defaultTools, toolsWith } from './helpers/tools.js';
 
 function deferred() {
   let resolve;
@@ -48,7 +38,7 @@ describe('stopHttp', () => {
   });
 
   test('stops accepting connections at once and resolves; a second call returns the same promise', async () => {
-    const server = await startHttp({ port: 0 });
+    const server = await startHttp({ port: 0, tools: defaultTools() });
     const { port } = server.address();
 
     const stopped = stopHttp(server);
@@ -58,7 +48,7 @@ describe('stopHttp', () => {
   });
 
   test('an idle keep-alive connection does not delay it', async () => {
-    const server = await startHttp({ port: 0 });
+    const server = await startHttp({ port: 0, tools: defaultTools() });
     const { port } = server.address();
     const agent = new http.Agent({ keepAlive: true });
     try {
@@ -73,7 +63,7 @@ describe('stopHttp', () => {
   });
 
   test('ends the GET / SSE stream, which would otherwise never finish', async () => {
-    const server = await startHttp({ port: 0 });
+    const server = await startHttp({ port: 0, tools: defaultTools() });
     const { closed } = await openStream({ port: server.address().port });
 
     const stopped = stopHttp(server);
@@ -83,12 +73,14 @@ describe('stopHttp', () => {
   });
 
   test('ends a POST /call-stream tool stream, which would otherwise never finish', async () => {
-    injectTool('test-endless-stream', {
-      description: 'streams forever',
-      inputSchema: { type: 'object' },
-      streamHandler: () => new Promise(() => {})
+    const tools = toolsWith({
+      'test-endless-stream': {
+        description: 'streams forever',
+        inputSchema: { type: 'object' },
+        streamHandler: () => new Promise(() => {})
+      }
     });
-    const server = await startHttp({ port: 0 });
+    const server = await startHttp({ port: 0, tools });
     const { closed } = await openStream({
       port: server.address().port,
       method: 'POST',
@@ -107,12 +99,14 @@ describe('stopHttp', () => {
   test('a call in flight on a keep-alive connection is answered, then its connection closes promptly', async () => {
     const release = deferred();
     const started = deferred();
-    injectTool('test-slow', {
-      description: 'answers when released',
-      inputSchema: { type: 'object' },
-      handler: async () => { started.resolve(); await release.promise; return { ok: true, answered: 'after stop began' }; }
+    const tools = toolsWith({
+      'test-slow': {
+        description: 'answers when released',
+        inputSchema: { type: 'object' },
+        handler: async () => { started.resolve(); await release.promise; return { ok: true, answered: 'after stop began' }; }
+      }
     });
-    const server = await startHttp({ port: 0 });
+    const server = await startHttp({ port: 0, tools });
     const { port } = server.address();
     const agent = new http.Agent({ keepAlive: true });
     try {

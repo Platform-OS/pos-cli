@@ -348,11 +348,11 @@ describe('a call that never finishes cannot keep the server alive', () => {
   // poll would. The deadline is injected; the production value is pinned in lifecycle.test.js.
   const stuckServer = (deadlineMs) => {
     const script = [
-      `import tools from ${JSON.stringify(pathToFileURL(path.join(REPO_ROOT, 'mcp-min', 'tools.js')).href)};`,
+      `import { toolsWith } from ${JSON.stringify(pathToFileURL(path.join(REPO_ROOT, 'mcp-min', '__tests__', 'helpers', 'tools.js')).href)};`,
       `import startStdio from ${JSON.stringify(pathToFileURL(STDIO_SERVER).href)};`,
       `import { createShutdown } from ${JSON.stringify(pathToFileURL(path.join(REPO_ROOT, 'mcp-min', 'lifecycle.js')).href)};`,
-      "tools['stuck'] = { description: 'never returns', inputSchema: { type: 'object' }, handler: () => new Promise(() => { setInterval(() => {}, 1000); }) };",
-      `startStdio({ shutdown: createShutdown({ deadlineMs: ${deadlineMs} }) });`
+      "const tools = toolsWith({ stuck: { description: 'never returns', inputSchema: { type: 'object' }, handler: () => new Promise(() => { setInterval(() => {}, 1000); }) } });",
+      `startStdio({ tools, shutdown: createShutdown({ deadlineMs: ${deadlineMs} }) });`
     ].join('\n');
     return launch({ workDir, args: ['--input-type=module', '-e', script] });
   };

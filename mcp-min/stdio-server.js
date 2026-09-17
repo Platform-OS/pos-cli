@@ -1,7 +1,7 @@
 import { createInterface } from 'readline';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import tools from './tools.js';
+import { findTool, selectTools, describeSelection } from './tool-selection.js';
 import { rejectionFor } from './validate-params.js';
 import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import { DEBUG } from './config.js';
@@ -45,8 +45,8 @@ function sendError(id, code, message, data) {
 }
 
 // Build tools list for MCP tools/list response
-function getToolsList() {
-  return Object.entries(tools).map(([name, tool]) => ({
+function getToolsList(tools) {
+  return [...tools].map(([name, tool]) => ({
     name,
     description: tool.description || '',
     inputSchema: tool.inputSchema || OPEN_OBJECT_SCHEMA
@@ -54,7 +54,7 @@ function getToolsList() {
 }
 
 // MCP protocol handlers
-const mcpHandlers = {
+const mcpHandlersFor = (tools) => ({
   'initialize': async (params, id) => {
     log.debug('MCP initialize', { params });
     sendResult(id, {
@@ -71,7 +71,7 @@ const mcpHandlers = {
 
   'tools/list': async (params, id) => {
     log.debug('MCP tools/list');
-    sendResult(id, { tools: getToolsList() });
+    sendResult(id, { tools: getToolsList(tools) });
   },
 
   'tools/call': async (params, id) => {
@@ -79,7 +79,7 @@ const mcpHandlers = {
     const progressToken = _meta?.progressToken;
     log.debug('MCP tools/call', { name, args, progressToken });
 
-    const tool = tools[name];
+    const tool = findTool(tools, name);
     if (!tool) {
       sendError(id, -32601, `Unknown tool: ${name}`);
       return;
@@ -126,15 +126,19 @@ const mcpHandlers = {
       if (heartbeat) clearInterval(heartbeat);
     }
   }
-};
+});
 
 /**
- * @param {object} [options]
+ * @param {object} options
+ * @param {Map<string, object>} options.tools - the exposed tools (selectTools().tools); no
+ *   default, so a caller cannot end up serving every tool by leaving it out
  * @param {ReturnType<typeof createShutdown>} [options.shutdown] - shared with the other
  *   transports so that the client closing stdin stops all of them; a server started on its
  *   own gets one that only has stdio to stop
  */
-export default function startStdio({ shutdown = createShutdown() } = {}) {
+export default function startStdio({ tools, shutdown = createShutdown() } = {}) {
+  if (!(tools instanceof Map)) throw new TypeError('startStdio: tools must be the Map of exposed tools');
+  const mcpHandlers = mcpHandlersFor(tools);
   log.info('stdio transport started (MCP protocol)');
 
   // Created here, not at import: reading stdin before the close listener below is attached
@@ -177,15 +181,16 @@ export default function startStdio({ shutdown = createShutdown() } = {}) {
     const { jsonrpc, id, method, params } = msg;
     log.debug('STDIO request', { id, method, params });
 
-    // Handle MCP protocol methods
-    const mcpHandler = mcpHandlers[method];
+    // Handle MCP protocol methods. Own properties only: a method named `toString` or
+    // `constructor` would otherwise run the Object.prototype function and answer nothing.
+    const mcpHandler = typeof method === 'string' && Object.hasOwn(mcpHandlers, method) ? mcpHandlers[method] : undefined;
     if (mcpHandler) {
       await mcpHandler(params, id);
       return;
     }
 
     // Fallback: direct tool invocation (legacy/custom protocol)
-    const tool = tools[method];
+    const tool = findTool(tools, method);
     if (tool) {
       const rejection = rejectionFor(method, tool, params);
       if (rejection) {
@@ -250,5 +255,14 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
     log.info(`working directory set to ${process.cwd()}`);
   }
   log.info(`log file: ${log.LOG_FILE}`);
-  startStdio();
+  let selection;
+  try {
+    selection = selectTools();
+  } catch (err) {
+    if (err?.name !== 'ToolsConfigError') throw err;
+    log.error(err.message);
+    process.exit(1);
+  }
+  log.info(describeSelection(selection));
+  startStdio({ tools: selection.tools });
 }

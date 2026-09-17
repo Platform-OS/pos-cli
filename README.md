@@ -991,7 +991,7 @@ It asks which AI tool you use and registers both platformOS MCP servers — `pla
 | VS Code     | `.vscode/mcp.json`  | `servers`    |
 | Other       | prints the JSON snippet for manual setup | — |
 
-Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. To skip the prompt (e.g. in scripts), pass the tool directly:
+Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. `platformos` is registered with `--profile dev` (see [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed)). An entry written by an earlier pos-cli — `"command": "pos-cli-mcp"` with no arguments — is upgraded to that; an entry you have changed in any other way is left exactly as it is, and the command tells you so. To skip the prompt (e.g. in scripts), pass the tool directly:
 
     pos-cli ai init --tool claude
 
@@ -1011,7 +1011,27 @@ The server runs for as long as its MCP client keeps stdin open. When the client 
 
     pos-cli-mcp </dev/null
 
-The server accepts no arguments besides `--help` and `--version`. Anything else stops it with an error instead of being ignored — including `pos-cli mcp config`; the tool configuration is shown by `pos-cli mcp-config`.
+#### Choosing Which Tools Are Exposed
+
+Every tool definition the server exposes is sent to the AI model with each request, so a smaller set leaves more room for your code. Three options choose the set when the server starts:
+
+    pos-cli-mcp --profile dev
+    pos-cli-mcp --profile dev --include-tools data-import,data-import-status
+    pos-cli-mcp --profile none --include-tools graphql-exec,liquid-exec
+    pos-cli-mcp --exclude-tools data-clean,constants-unset
+
+- `--profile <name>` — the starting set:
+  - `full` — every tool. The default.
+  - `dev` — what a coding agent uses to edit, check, deploy and verify: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-start`, `deploy-status`, `deploy-wait`, `unit-tests-run`, `tests-run-async`, `tests-run-async-result`. Its definitions are about a third of the size of `full`'s.
+  - `none` — no tools; name them with `--include-tools`.
+- `--include-tools <names>` adds tools to the profile. This is not an allowlist, unlike Gemini CLI's `includeTools` setting; for an allowlist, use `--profile none --include-tools …`.
+- `--exclude-tools <names>` removes tools.
+
+Names are comma-separated, and each option can be repeated. Tools disabled in the tool configuration (see [Viewing Tool Configuration](#viewing-tool-configuration)) stay hidden. The selection is fixed for the life of the process and is the same on both transports for every client, and a tool that is not exposed cannot be called either.
+
+The server refuses to start — with a message, before either transport opens — when a selection is not exactly what it looks like: an unknown profile or tool name, the same tool in both lists, `--include-tools` naming a tool the tool configuration disables, or a selection that leaves no tools. Any argument other than these three, `--help` and `--version` is refused too, including `pos-cli mcp config`; the tool configuration is shown by `pos-cli mcp-config`.
+
+`pos-cli-mcp` with no options exposes every tool, as before; the default is planned to become `dev` in the next major release. `pos-cli ai init` writes `--profile dev`. A project configuration that passes these options to pos-cli 6.5.1 or earlier gets the full set there, because those releases ignore their arguments.
 
 The HTTP server has **no authentication**: anything that can send it a request can run every enabled tool with the platformOS credentials the server resolves (`.pos`, `MPKIT_*`). It is therefore reachable from this machine only, and answers `403` to any request whose `Host` — or `Origin`, when present — does not name `localhost`, `127.0.0.1` or `[::1]`, which keeps web pages from driving it. Two environment variables widen this, deliberately:
 
@@ -1028,7 +1048,8 @@ Run `pos-cli ai init --tool claude` to generate this automatically, or add the f
 {
   "mcpServers": {
     "platformos": {
-      "command": "pos-cli-mcp"
+      "command": "pos-cli-mcp",
+      "args": ["--profile", "dev"]
     },
     "platformos-supervisor": {
       "command": "pos-cli-supervisor"
@@ -1049,7 +1070,7 @@ The project directory is resolved from `--project`, then the `POS_SUPERVISOR_PRO
 
 #### Available Tools
 
-The MCP server exposes 30+ tools across these categories:
+The MCP server has 30+ tools across these categories; `--profile dev` exposes the ones listed under [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed):
 
 - **Environments**: `envs-list`, `env-add`
 - **Deploy**: `deploy-start`, `deploy-status`, `deploy-wait`
@@ -1068,11 +1089,14 @@ The MCP server exposes 30+ tools across these categories:
 
 #### Viewing Tool Configuration
 
-To see which tools are enabled or disabled:
+To see which tools the server exposes, and why each of the others is not exposed:
 
     pos-cli mcp-config
+    pos-cli mcp-config --profile dev --exclude-tools deploy-wait
 
-Use `--json` for raw JSON output. You can override the configuration by setting the `MCP_TOOLS_CONFIG` environment variable to point to a custom `tools.config.json` file.
+It takes the same `--profile`, `--include-tools` and `--exclude-tools` options as the server, reports exactly what the server would expose with them, and refuses the same mistakes with the same messages. `--json` prints that report as JSON — `config`, `profile`, `include`, `exclude`, `exposed` and `hidden` (each with a `reason`: `profile`, `excluded` or `disabled`); it used to print the raw configuration file.
+
+The tool configuration (`mcp-min/tools.config.json`) disables tools and rewrites their descriptions. To use your own, point the `MCP_TOOLS_CONFIG` environment variable at a `tools.config.json`. A file that does not match the schema, or names a tool that does not exist, stops the server at startup. A file that is missing or not valid JSON applies nothing: the server logs a warning, and `pos-cli mcp-config` shows which it was.
 
 ### Fetching Logs (Machine-Readable)
 

@@ -3,6 +3,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import startHttp from '../http-server.js';
+import { defaultTools } from './helpers/tools.js';
 import fixtures from '../../test/utils/fixtures';
 
 const PORT = 5930;
@@ -27,7 +28,7 @@ function httpRequest({ method = 'GET', path = '/', body = null, headers = {} }) 
 beforeAll(async () => {
   // ensure .pos exists
   fixtures.writeDotPos({ staging: { url: 'https://staging.example.com' } });
-  server = await startHttp({ port: PORT });
+  server = await startHttp({ port: PORT, tools: defaultTools() });
 });
 
 afterAll(() => {

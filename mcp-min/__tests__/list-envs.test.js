@@ -35,7 +35,8 @@ describe('mcp-min list-envs tool', () => {
     process.env.CONFIG_FILE_PATH = CONFIG_FILE;
 
     const { default: startHttp } = await import('../http-server.js');
-    server = await startHttp({ port: PORT });
+    const { defaultTools } = await import('./helpers/tools.js');
+    server = await startHttp({ port: PORT, tools: defaultTools() });
   });
 
   afterAll(() => {
