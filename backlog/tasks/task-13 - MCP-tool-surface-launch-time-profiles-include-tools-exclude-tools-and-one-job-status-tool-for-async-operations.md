@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-09-17 06:29'
-updated_date: '2026-09-17 13:11'
+updated_date: '2026-09-17 14:38'
 labels:
   - mcp
   - enhancement
@@ -123,15 +123,15 @@ Non-goals: shrinking the shared auth properties, tool annotations (TASK-15), HTT
 - [x] #6 `pos-cli-mcp-config` accepts the same three flags and lists exactly what the server exposes for them, including the same failures
 - [x] #7 No exposed tool description names a tool that is not exposed in the same built-in profile; a test enforces this for every built-in profile
 - [x] #8 `pos-cli ai init` writes the dev profile for Claude Code, Cursor and VS Code, upgrades an entry equal to a previous canonical form, leaves a customised entry untouched and reports it, and remains a no-op on re-run
-- [ ] #9 deploy-start, data-import, data-export, data-clean and tests-run-async return a `job_id` in addition to their current fields, and `job-status` accepts it
-- [ ] #10 `job-status` returns one normalised shape for all five kinds with state running/completed/failed per the documented mapping; tests cover every known remote status of every kind, including deploy `in_progress` as running, and an unknown status
-- [ ] #11 `job-status` returns a tool execution error without contacting the instance when the job_id is malformed or when the resolved instance differs from the one the job was started on
-- [ ] #12 A job_id minted by one server process is accepted by a new process, and credentials and request URL never come from the job_id (a forged origin yields a mismatch error and no outbound request)
-- [ ] #13 `wait_ms` (max 120000) polls until a terminal state or the deadline; the deadline returns done:false rather than an error; progress notifications are sent when the client supplied a progress token; cancellation stops polling
-- [ ] #14 A deploy job is done only when the release is terminal and asset processing started by this server has finished or failed; the asset phase is reported, as `unknown` when it cannot be observed (e.g. after a restart)
-- [ ] #15 deploy-status and deploy-wait reject an `endpoint` argument
-- [ ] #16 The six replaced status tools remain in `full`, are marked deprecated in their descriptions, run on the job-status adapters (deploy-wait no longer returns while `in_progress`), and are absent from `dev`
-- [ ] #17 README MCP section, docs/MCP_TOOLS.md, CLAUDE.md MCP section and CHANGELOG document profiles, flag semantics including the difference from Gemini includeTools, the default-profile decision, job-status, the removed `endpoint` argument and the deprecations
+- [x] #9 deploy-start, data-import, data-export, data-clean and tests-run-async return a `job_id` in addition to their current fields, and `job-status` accepts it
+- [x] #10 `job-status` returns one normalised shape for all five kinds with state running/completed/failed per the documented mapping; tests cover every known remote status of every kind, including deploy `in_progress` as running, and an unknown status
+- [x] #11 `job-status` returns a tool execution error without contacting the instance when the job_id is malformed or when the resolved instance differs from the one the job was started on
+- [x] #12 A job_id minted by one server process is accepted by a new process, and credentials and request URL never come from the job_id (a forged origin yields a mismatch error and no outbound request)
+- [x] #13 `wait_ms` (max 120000) polls until a terminal state or the deadline; the deadline returns done:false rather than an error; progress notifications are sent when the client supplied a progress token; cancellation stops polling
+- [x] #14 A deploy job is done only when the release is terminal and asset processing started by this server has finished or failed; the asset phase is reported, as `unknown` when it cannot be observed (e.g. after a restart)
+- [x] #15 deploy-status and deploy-wait reject an `endpoint` argument
+- [x] #16 The six replaced status tools remain in `full`, are marked deprecated in their descriptions, run on the job-status adapters (deploy-wait no longer returns while `in_progress`), and are absent from `dev`
+- [x] #17 README MCP section, docs/MCP_TOOLS.md, CLAUDE.md MCP section and CHANGELOG document profiles, flag semantics including the difference from Gemini includeTools, the default-profile decision, job-status, the removed `endpoint` argument and the deprecations
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -273,4 +273,32 @@ Repro used when filing:
   - Every mutated file was restored and sha-verified.
 - **Full repo against a clean-HEAD worktree: no new failures.** The one extra, `test/unit/lib/commands.test.js > should run env list`, is a pre-existing race with `mcp-min/__tests__/http.test.js`/`sse.test.js`, which write `.pos` into the repo root; running those three together fails 5/5 on clean HEAD too. The generators tests only fail in the worktree, which lacks fixture installs.
 - **Side effects cleaned up.** `test/fixtures/yeoman/custom/package-lock.json` was rewritten by the generators test (reverted), and a fixture `.pos` was left in the repo root by the race runs (removed).
+
+## TASK-15 landed (2026-09-17): what Part 2 inherits
+- **Cancellation exists.** `mcp-min/cancellation.js` gives `abortableDelay(ms, signal)` and `cancelled()`, and tool handlers receive `ctx.signal` (aborted when the client cancels or the HTTP client disconnects). `job-status`'s `wait_ms` loop must use them, which is AC #13's "cancellation stops polling" — `deploy-wait` and `logs-fetch` already do.
+- **Progress.** `ctx.sendProgress(progress, total, message)` only sends when the client supplied a progress token, and values are forced to increase; a call with a token also gets a 5 s heartbeat. AC #13's progress notifications need nothing further.
+- **Tool failures are results, not protocol errors.** A handler returning `{ ok: false, error: { code, message } }` reaches the client as `isError: true` with that code. So `job-status`'s `INVALID_JOB_ID`, `JOB_NOT_FOUND` and `JOB_INSTANCE_MISMATCH` (AC #11, #12) are ordinary `{ ok: false }` returns — do not throw for them.
+- **Annotations.** `job-status` is read-only: add `annotations: { readOnlyHint: true }` to it and to nothing else in Part 2, and add its name to `READ_ONLY` in `mcp-min/__tests__/tool-annotations.test.js`, which pins the set.
+- **Profiles.** Part 2's profile change (add `job-status`; drop `deploy-status`, `deploy-wait`, `tests-run-async-result` from `dev`) also moves the pinned numbers in `tool-surface.test.js`: `DEV_TOOLS`, `DEV_TOOLS_LIST_BYTE_BUDGET` (8,500 today) and `BARE_TOOLS_LIST_BYTES` (25,188, which includes 36 bytes per annotation). Re-measure and re-pin deliberately.
+- **Schemas are enforced as JSON Schema 2020-12** (`TOOL_SCHEMA_DIALECT`), and every exposed tool's schema must compile under it in strict mode — a schema that does not now stops the server at startup. `job-status`'s closed schema is checked by the existing suite automatically.
+- **AC #15 (the `endpoint` argument) has a third tool.** `logs-fetch` also accepts `endpoint`, which replaces the request URL while the `.pos` token is still sent — the same defect as `deploy-status`/`deploy-wait`. Remove it there too, or record why not.
+- **Deprecated status tools** keep their `readOnlyHint` when they move onto the adapters.
+
+## Part 2 landed (2026-09-17)
+
+**Shape.** `mcp-min/jobs/`: `handle.js` (mint/parse the `pjob1_` job_id), `auth-for-job.js` (which instance answers), `local-phases.js` (asset uploads this process started), `adapters/{deploy,data,data-import,data-export,data-clean,test-run}.js` (`poll(deps, id, flags)` → `{ state, status, result, error?, warnings? }`), `status.js` (the tool). `mcp-min/deploy/assets-task.js` is the background upload. The six deprecated tools call the adapters, so they cannot drift.
+
+**Asset manifest during import: not attempted, and no instance needed.** The plan asked whether `sendManifest(manifest, releaseId)` is accepted while the release is `ready_for_import`/`in_progress`. `lib/push.js` resolves only after `getDeploymentStatus` polls the release to a terminal state, and `directAssetsUploadStrategy` calls `deployAssets` after that — so the CLI has never sent one mid-import, and there is no evidence the API accepts it. `deployAssetsForRelease` therefore waits for the release to settle (5 min cap) and then uploads, which is the CLI's proven order. The cost is that an MCP deploy's assets start going up after the import rather than beside it; `job-status` reports the phase throughout. If the API turns out to accept an early manifest, the wait can be dropped without touching anything else.
+
+**Choices worth knowing.**
+- A failed job is `ok: true` with `state: 'failed'`, not a tool error. `INVALID_JOB_ID`, `JOB_INSTANCE_MISMATCH`, `JOB_NOT_FOUND`, `JOB_STATUS_ERROR` and `CANCELLED` are the `{ok:false}` cases: they mean *the status could not be read*, which is a different thing from the job having failed.
+- `deploy-wait` (deprecated) waits on the release only, not on assets: it has no deadline unless `maxWaitMs` is given, and waiting for a CDN unpack there could hang a client indefinitely. `job-status` is where the asset phase is reported.
+- A `wait_ms` poll that fails transiently (no `statusCode`, or 5xx) is retried until the deadline rather than ending the wait; a 4xx ends it. Matches `lib/push.js`'s `isTransientError`.
+- `deploy-status`'s `data` is still the raw release record, so existing callers see no change beyond the ones documented.
+
+**Also done here.** `logs-fetch` lost its `endpoint` argument too (the note below). `mcp-min/tests/request.js` and `tests/result.js` now hold the shared `/_tests/*` request, headers, URL and result normalisation — three copies before — and a `.pos` URL with a trailing slash no longer produces `//_tests/...`.
+
+**Verification.** mcp-min suite: 53 files, 1,057 tests, all passing (new: `job-handle`, `job-status`, `job-ids`, `deprecated-status-tools`, `deploy.start-job`, `deploy.assets-task`). Mutation run of 38 mutants across `jobs/*`, `deploy/{start,wait,assets-task}.js` and `data/export.js` — all 38 killed, no survivors. Re-pinned deliberately: `BARE_TOOLS_LIST_BYTES` 25,188 → 26,233 (job-status is 1,045 of it; the six deprecated tools cost 4,528 between them), `DEV_TOOLS_LIST_BYTE_BUDGET` 8,500 → 7,500 (measured 7,188, down from 8,414).
+
+**Left for the next major.** Remove the six; drop `flags.assets === undefined` handling in the deploy adapter if every handle by then carries it.
 <!-- SECTION:NOTES:END -->

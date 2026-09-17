@@ -1,6 +1,7 @@
 // platformos.data.export - start data export from platformOS instance
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
+import { mintFor } from '../jobs/handle.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
 
@@ -42,6 +43,9 @@ const dataExportTool = {
         ok: true,
         data: {
           id: exportTask.id,
+          // The zip flag travels in the handle: reading an export's status needs it, and the
+          // agent polling is not the one that chose it.
+          job_id: mintFor({ kind: 'data-export', id: exportTask.id, origin: auth.url, flags: { zip: isZip } }),
           status: exportTask.status || 'pending',
           isZip
         },

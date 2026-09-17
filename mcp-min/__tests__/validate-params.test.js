@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fg from 'fast-glob';
 import registry from '../tools.js';
-import { validateToolParams } from '../validate-params.js';
+import { validateToolParams, TOOL_SCHEMA_DIALECT } from '../validate-params.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -33,6 +33,23 @@ describe('tool input schemas', () => {
     for (const [name, tool] of registry) {
       expect(tool.inputSchema?.type, `${name} inputSchema.type`).toBe('object');
     }
+  });
+});
+
+// MCP 2026-07-28 assigns JSON Schema 2020-12 to a schema without `$schema`, which is how tool
+// schemas are published, so that is the dialect they are enforced in. Draft-07 in strict mode
+// does not know `prefixItems` and would refuse to compile this schema.
+describe('tool schema dialect', () => {
+  const tuple = { inputSchema: { type: 'object', properties: { pair: { type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }], items: false, minItems: 2 } } } };
+
+  test('is JSON Schema 2020-12', () => {
+    expect(TOOL_SCHEMA_DIALECT).toBe('2020-12');
+    expect(validateToolParams('tuple', tuple, { pair: ['a', 1] })).toEqual({ valid: true });
+
+    const wrong = validateToolParams('tuple', tuple, { pair: [1, 'a'] });
+    expect(wrong.valid).toBe(false);
+    expect(wrong.schemaError).toBeUndefined();
+    expect(validateToolParams('tuple', tuple, { pair: ['a', 1, 'extra'] }).valid).toBe(false);
   });
 });
 

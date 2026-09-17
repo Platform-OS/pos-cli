@@ -31,10 +31,11 @@ const refusal = (options, context) => {
 
 const PROTOTYPE_NAMES = ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'];
 
-// Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
+// Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio),
+// plus job-status, added to the bare surface by TASK-13 Part 2.
 const PRE_PROFILES_TOOLS = [
   'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'generators-list', 'generators-help', 'generators-run',
-  'migrations-list', 'migrations-generate', 'migrations-run', 'deploy-start', 'deploy-status', 'deploy-wait',
+  'migrations-list', 'migrations-generate', 'migrations-run', 'job-status', 'deploy-start', 'deploy-status', 'deploy-wait',
   'data-import', 'data-import-status', 'data-export', 'data-export-status', 'data-clean', 'data-clean-status',
   'data-validate', 'unit-tests-run', 'tests-run-async', 'tests-run-async-result', 'check-run', 'sync-file',
   'uploads-push', 'constants-list', 'constants-set', 'constants-unset', 'instance-create', 'partners-list',
@@ -42,8 +43,8 @@ const PRE_PROFILES_TOOLS = [
 ];
 
 const DEV_TOOLS_IN_REGISTRY_ORDER = [
-  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'deploy-start', 'deploy-status', 'deploy-wait',
-  'unit-tests-run', 'tests-run-async', 'tests-run-async-result', 'check-run'
+  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'job-status', 'deploy-start',
+  'unit-tests-run', 'tests-run-async', 'check-run'
 ];
 
 describe('resolveTools', () => {
@@ -60,13 +61,13 @@ describe('resolveTools', () => {
   });
 
   test('--include-tools adds to a profile and --exclude-tools removes from it', () => {
-    const selection = resolve({ profile: 'dev', include: ['sync-file'], exclude: ['deploy-wait'] }, { reg: registry });
+    const selection = resolve({ profile: 'dev', include: ['sync-file'], exclude: ['job-status'] }, { reg: registry });
     const expected = new Set([...DEV_TOOLS_IN_REGISTRY_ORDER, 'sync-file']);
-    expected.delete('deploy-wait');
+    expected.delete('job-status');
 
     expect(names(selection)).toEqual([...registry.keys()].filter(name => expected.has(name)));
     expect(names(selection)).toContain('sync-file');
-    expect(names(selection)).not.toContain('deploy-wait');
+    expect(names(selection)).not.toContain('job-status');
   });
 
   test('including a tool already in the profile, or excluding one that is not, changes nothing and is allowed', () => {
@@ -193,7 +194,7 @@ describe('built-in profiles', () => {
     expect(profileTools('none', registry.keys())).toEqual([]);
   });
 
-  test('bare selection under the bundled config exposes exactly what pos-cli-mcp exposed before profiles', () => {
+  test('bare selection under the bundled config exposes what pos-cli-mcp exposed before profiles, plus job-status', () => {
     const selection = selectTools({ env: {} });
 
     expect(names(selection)).toEqual(PRE_PROFILES_TOOLS);
@@ -265,8 +266,8 @@ describe('findTool', () => {
 });
 
 test('describeSelection names what was exposed and why', () => {
-  expect(describeSelection(selectTools({ profile: 'dev', include: ['sync-file'], exclude: ['deploy-wait'], env: {} })))
-    .toBe(`mcp-min: exposing 11 of ${registry.size} tools (profile dev; --include-tools sync-file; --exclude-tools deploy-wait)`);
+  expect(describeSelection(selectTools({ profile: 'dev', include: ['sync-file'], exclude: ['job-status'], env: {} })))
+    .toBe(`mcp-min: exposing 9 of ${registry.size} tools (profile dev; --include-tools sync-file; --exclude-tools job-status)`);
   expect(describeSelection(selectTools({ env: {} })))
-    .toBe(`mcp-min: exposing 34 of ${registry.size} tools (profile full; --include-tools (none); --exclude-tools (none))`);
+    .toBe(`mcp-min: exposing 35 of ${registry.size} tools (profile full; --include-tools (none); --exclude-tools (none))`);
 });

@@ -7,6 +7,8 @@ import { authProperties } from '../schemas/auth.js';
 
 const constantsListTool = {
   description: 'List all constants configured on a platformOS instance.',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,

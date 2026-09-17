@@ -4,6 +4,8 @@ import { getPortalConfig, portalRequest } from './portal-client.js';
 
 const partnersListTool = {
   description: 'List partners from Partner Portal. Optionally fetch billing plans for a specific partner.',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,

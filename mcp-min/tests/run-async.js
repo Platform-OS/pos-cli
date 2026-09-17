@@ -1,17 +1,12 @@
 // platformos.tests.run-async - trigger tests via /_tests/run_async (returns immediately)
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
+import { mintFor } from '../jobs/handle.js';
 import { authProperties } from '../schemas/auth.js';
-
-async function makeRequest(options) {
-  const { uri, method = 'GET', headers = {} } = options;
-  const response = await fetch(uri, { method, headers });
-  const body = await response.text();
-  return { statusCode: response.status, body };
-}
+import makeRequest, { testAuthHeaders, testsUrl } from './request.js';
 
 const testsRunAsyncTool = {
-  description: 'Trigger a background platformOS test run via /_tests/run_async. Returns immediately with a run ID. Use tests-run-async-result to poll for completion.',
+  description: 'Trigger a background platformOS test run via /_tests/run_async. Returns immediately with a run ID and a job_id to poll with job-status.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -27,12 +22,9 @@ const testsRunAsyncTool = {
     try {
       const auth = await resolveAuth(params, ctx);
       const requestFn = ctx.request || makeRequest;
-      const authHeaders = {
-        'Authorization': `Token ${auth.token}`,
-        'UserTemporaryToken': auth.token
-      };
+      const authHeaders = testAuthHeaders(auth.token);
 
-      const triggerUrl = `${auth.url}/_tests/run_async`;
+      const triggerUrl = testsUrl(auth.url, '/_tests/run_async');
       log.debug('Triggering async test run', { url: triggerUrl });
 
       const triggerResponse = await requestFn({
@@ -103,6 +95,7 @@ const testsRunAsyncTool = {
         ok: true,
         data: {
           id: runId,
+          job_id: mintFor({ kind: 'test-run', id: runId, origin: auth.url }),
           test_name: runInfo.test_name,
           status: runInfo.status || 'pending',
           result_url: runInfo.result_url || `/_tests/results/${runId}`

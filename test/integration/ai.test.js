@@ -27,7 +27,7 @@ describe('pos-cli ai init', () => {
 
     const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.mcp.json'), 'utf8'));
     expect(config.mcpServers).toEqual({
-      platformos: { command: 'pos-cli-mcp', args: ['--profile', 'dev'] },
+      platformos: { command: 'pos-cli-mcp', args: ['--profile', 'dev', '--no-http'] },
       'platformos-supervisor': { command: 'pos-cli-supervisor' }
     });
   });

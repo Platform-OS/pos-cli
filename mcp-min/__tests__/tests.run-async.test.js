@@ -20,7 +20,11 @@ describe('tests-run-async tool', () => {
 
   test('has correct description and inputSchema', () => {
     expect(testsRunAsyncTool.description).toContain('run_async');
-    expect(testsRunAsyncTool.description).toContain('tests-run-async-result');
+    // It points at job-status, not at the deprecated tests-run-async-result, and job-status is
+    // the only one of the two in the dev profile — a description naming a tool the client cannot
+    // see is what `descriptions only name tools exposed alongside them` rejects.
+    expect(testsRunAsyncTool.description).toContain('job-status');
+    expect(testsRunAsyncTool.description).not.toContain('tests-run-async-result');
     expect(testsRunAsyncTool.inputSchema.properties).toHaveProperty('env');
     expect(testsRunAsyncTool.inputSchema.properties).not.toHaveProperty('intervalMs');
     expect(testsRunAsyncTool.inputSchema.properties).not.toHaveProperty('maxWaitMs');

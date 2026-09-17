@@ -4,7 +4,7 @@ title: 'MCP HTTP request logging writes every request header, including Authoriz
 status: To Do
 assignee: []
 created_date: '2026-09-02 10:24'
-updated_date: '2026-09-17 08:37'
+updated_date: '2026-09-17 14:38'
 labels:
   - security
   - mcp
@@ -50,3 +50,9 @@ Redact a denylist of sensitive header names, and mask `token`/`password`/`value`
 - [ ] #3 Non-sensitive request and param detail is still logged, so DEBUG remains useful
 - [ ] #4 A test asserts that a request carrying an Authorization header does not write it to the log
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+TASK-15 (2026-09-17) added `POST /mcp` to the same Express app, so the request logger this task is about now also logs that endpoint's headers. Nothing there carries credentials today (`MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name`), but the SDK's HTTP handler does accept `authInfo` from a caller, so the fix should land before anything wires authentication into `/mcp`. The logger is still `mcp-min/http-server.js`'s first middleware, registered before Host/Origin validation.
+<!-- SECTION:NOTES:END -->

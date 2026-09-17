@@ -39,7 +39,8 @@ ${profileHelp}
 
 Transports:
   stdio  MCP over stdin/stdout, for AI tools (Claude Code, Cursor, VS Code).
-  HTTP   127.0.0.1:5910 by default. Unauthenticated: reachable from this machine only.
+  HTTP   MCP at /mcp on 127.0.0.1:5910 by default. Unauthenticated: reachable from
+         this machine only. --no-http skips it, and MCP_MIN_* is then not read.
 
 The server exits when its MCP client closes stdin, once in-flight tool calls
 finish (at most ${SHUTDOWN_DEADLINE_MS / 1000} seconds). To run only the HTTP transport, start it
@@ -92,7 +93,7 @@ export function selectionFrom(opts) {
  * @param {string} options.version - printed by -v/--version
  * @param {(text: string) => void} [options.writeOut] - help and version
  * @param {(text: string) => void} [options.writeErr] - errors
- * @returns {{ start: true, selection: { profile?: string, include: string[], exclude: string[] } }
+ * @returns {{ start: true, http: boolean, selection: { profile?: string, include: string[], exclude: string[] } }
  *   | { start: false, exitCode: number }}
  */
 export function parseServerArgs(argv, {
@@ -103,6 +104,8 @@ export function parseServerArgs(argv, {
   const command = addToolSelectionOptions(new Command('pos-cli-mcp')
     .description('Start the platformOS MCP server (stdio + HTTP)')
     .version(version, '-v, --version', 'output the version number'))
+    // Not a selection option, so pos-cli-mcp-config does not take it.
+    .option('--no-http', 'serve MCP over stdio only: start no HTTP listener')
     .allowExcessArguments(false)
     .allowUnknownOption(false)
     .addHelpText('after', HELP_AFTER)
@@ -129,5 +132,5 @@ export function parseServerArgs(argv, {
     }
     throw err;
   }
-  return { start: true, selection: selectionFrom(command.opts()) };
+  return { start: true, http: command.opts().http, selection: selectionFrom(command.opts()) };
 }

@@ -17,11 +17,11 @@ const DEV_TOOLS = Object.freeze([
   'graphql-exec',
   'envs-list',
   'deploy-start',
-  'deploy-status',
-  'deploy-wait',
   'unit-tests-run',
   'tests-run-async',
-  'tests-run-async-result'
+  // One tool for every async operation's status, in place of deploy-status, deploy-wait and
+  // tests-run-async-result — which stay in `full`, deprecated, until the next major.
+  'job-status'
 ]);
 
 // A Map so that a profile name from the command line (`constructor`, `__proto__`…) can only

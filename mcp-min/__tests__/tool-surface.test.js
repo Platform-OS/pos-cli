@@ -17,13 +17,15 @@ import {
 } from './helpers/server-process.js';
 
 const DEV_TOOLS = [
-  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'deploy-start', 'deploy-status', 'deploy-wait',
-  'unit-tests-run', 'tests-run-async', 'tests-run-async-result', 'check-run'
+  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'job-status', 'deploy-start',
+  'unit-tests-run', 'tests-run-async', 'check-run'
 ];
 
-// stdio tools/list for --profile dev measured 8,234 bytes when the profile was introduced.
-// Growth past this needs a deliberate bump: the profile exists to keep this payload small.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 8250;
+// stdio tools/list for --profile dev measured 8,234 bytes when the profile was introduced, and
+// 8,414 once read-only tools carried `annotations.readOnlyHint` (TASK-15). One job-status in
+// place of deploy-status, deploy-wait and tests-run-async-result (TASK-13 Part 2) took it to
+// 7,188. Growth past this needs a deliberate bump: the profile exists to keep this payload small.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 7500;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -34,7 +36,21 @@ const PRE_PROFILES_TOOLS = [
   'uploads-push', 'constants-list', 'constants-set', 'constants-unset', 'instance-create', 'partners-list',
   'partner-get', 'endpoints-list', 'env-add'
 ];
-const PRE_PROFILES_TOOLS_LIST_BYTES = 24612;
+// Tools added to the bare surface since, in registry order — each one a deliberate widening of
+// what a bare `pos-cli-mcp` exposes, and the reason the byte count below moves.
+const ADDED_SINCE_PROFILES = ['job-status'];
+
+const BARE_TOOLS = [
+  ...PRE_PROFILES_TOOLS.slice(0, PRE_PROFILES_TOOLS.indexOf('deploy-start')),
+  'job-status',
+  ...PRE_PROFILES_TOOLS.slice(PRE_PROFILES_TOOLS.indexOf('deploy-start'))
+];
+
+// 24,612 bytes before profiles; + 36 bytes for each of the 17 `readOnlyHint` annotations;
+// + 1,045 for job-status (TASK-13 Part 2), which is what the six deprecated status tools cost
+// 4,528 of between them — the saving lands when they are removed at the next major, and now for
+// anyone on --profile dev.
+const BARE_TOOLS_LIST_BYTES = 26233;
 
 const HANG_MS = 15000;
 
@@ -69,12 +85,32 @@ function httpJson(baseUrl, method, path, body) {
   });
 }
 
+// The /mcp endpoint answers a 2025-era request as an SSE message and a 2026-07-28 one as JSON.
+async function mcpPost(baseUrl, message, { modern = false } = {}) {
+  const headers = { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' };
+  let body = message;
+  if (modern) {
+    headers['MCP-Protocol-Version'] = '2026-07-28';
+    headers['Mcp-Method'] = message.method;
+    if (message.params?.name !== undefined) headers['Mcp-Name'] = message.params.name;
+    body = { ...message, params: { ...message.params, _meta: { 'io.modelcontextprotocol/protocolVersion': '2026-07-28', 'io.modelcontextprotocol/clientCapabilities': {} } } };
+  } else {
+    headers['MCP-Protocol-Version'] = '2025-06-18';
+  }
+  const response = await fetch(new URL('/mcp', baseUrl), { method: 'POST', headers, body: JSON.stringify(body) });
+  const text = await response.text();
+  const json = response.headers.get('content-type')?.includes('text/event-stream')
+    ? text.split('\n').filter(line => line.startsWith('data: ')).map(line => JSON.parse(line.slice(6))).find(m => m.id === message.id)
+    : JSON.parse(text);
+  return { status: response.status, body: json };
+}
+
 /** Starts a server with the given arguments and collects what each list path exposes. */
 async function withServer(args, fn, { bin = [MCP_BIN] } = {}) {
   const proc = launch({ workDir, args: [...bin, ...args], env: { MCP_MIN_PORT: '0' } });
   try {
     const baseUrl = await boundUrl(proc);
-    await request(proc, rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {} }));
+    await request(proc, rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'pos-cli-tests', version: '1.0.0' } }));
     return await fn({ proc, baseUrl });
   } finally {
     await stop(proc);
@@ -83,13 +119,17 @@ async function withServer(args, fn, { bin = [MCP_BIN] } = {}) {
 
 async function listedEverywhere({ proc, baseUrl }) {
   const stdio = (await request(proc, rpc('tools/list'))).result.tools;
+  const mcpLegacy = (await mcpPost(baseUrl, rpc('tools/list'))).body.result.tools;
+  const mcpModern = (await mcpPost(baseUrl, rpc('tools/list'), { modern: true })).body.result.tools;
   const jsonRpc = (await httpJson(baseUrl, 'POST', '/call-stream', rpc('tools/list'))).body.result.tools;
   const rest = (await httpJson(baseUrl, 'GET', '/tools')).body.tools;
-  return { stdio, jsonRpc, rest };
+  return { stdio, mcpLegacy, mcpModern, jsonRpc, rest };
 }
 
 function expectSameEverywhere(lists, expectedNames) {
   expect(lists.stdio.map(t => t.name)).toEqual(expectedNames);
+  expect(lists.mcpLegacy).toEqual(lists.stdio);
+  expect(lists.mcpModern).toEqual(lists.stdio);
   expect(lists.jsonRpc).toEqual(lists.stdio);
   expect(lists.rest).toEqual(lists.stdio.map(t => ({ id: t.name, description: t.description })));
 }
@@ -101,10 +141,13 @@ function mcpConfigJson(args) {
 }
 
 describe('which tools are listed', () => {
-  test('bare pos-cli-mcp lists exactly what it listed before profiles, byte for byte, on every path', async () => {
+  test('bare pos-cli-mcp lists what it listed before profiles plus the tools added since, byte for byte, on every path', async () => {
+    // Nothing that was exposed before profiles has quietly stopped being exposed.
+    expect(BARE_TOOLS.filter(name => !ADDED_SINCE_PROFILES.includes(name))).toEqual(PRE_PROFILES_TOOLS);
+
     const bare = await withServer([], listedEverywhere);
-    expectSameEverywhere(bare, PRE_PROFILES_TOOLS);
-    expect(Buffer.byteLength(JSON.stringify(bare.stdio))).toBe(PRE_PROFILES_TOOLS_LIST_BYTES);
+    expectSameEverywhere(bare, BARE_TOOLS);
+    expect(Buffer.byteLength(JSON.stringify(bare.stdio))).toBe(BARE_TOOLS_LIST_BYTES);
 
     const full = await withServer(['--profile', 'full'], listedEverywhere);
     expect(full).toEqual(bare);
@@ -114,7 +157,8 @@ describe('which tools are listed', () => {
     const lists = await withServer(['--profile', 'dev'], listedEverywhere);
 
     expectSameEverywhere(lists, DEV_TOOLS);
-    expect(Buffer.byteLength(JSON.stringify(lists.stdio))).toBeLessThanOrEqual(DEV_TOOLS_LIST_BYTE_BUDGET);
+    const bytes = Buffer.byteLength(JSON.stringify(lists.stdio));
+    expect(bytes, `dev tools/list is ${bytes} bytes`).toBeLessThanOrEqual(DEV_TOOLS_LIST_BYTE_BUDGET);
   }, 60000);
 
   test('`pos-cli mcp` passes the selection through to the same server', async () => {
@@ -126,11 +170,11 @@ describe('which tools are listed', () => {
   test.each([
     ['an allowlist', ['--profile', 'none', '--include-tools', 'graphql-exec,envs-list'], ['envs-list', 'graphql-exec']],
     ['the same allowlist as repeated flags', ['--profile', 'none', '--include-tools', 'graphql-exec', '--include-tools', 'envs-list'], ['envs-list', 'graphql-exec']],
-    ['dev plus one tool minus another', ['--profile', 'dev', '--include-tools', 'sync-file', '--exclude-tools', 'deploy-wait,check-run'],
-      ['envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'deploy-start', 'deploy-status', 'unit-tests-run',
-        'tests-run-async', 'tests-run-async-result', 'sync-file']],
+    ['dev plus one tool minus another', ['--profile', 'dev', '--include-tools', 'sync-file', '--exclude-tools', 'job-status,check-run'],
+      ['envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'deploy-start', 'unit-tests-run',
+        'tests-run-async', 'sync-file']],
     ['full minus a group', ['--exclude-tools', 'data-import,data-export,data-clean'],
-      PRE_PROFILES_TOOLS.filter(name => !['data-import', 'data-export', 'data-clean'].includes(name))]
+      BARE_TOOLS.filter(name => !['data-import', 'data-export', 'data-clean'].includes(name))]
   ])('%s', async (_label, args, expected) => {
     const lists = await withServer(args, listedEverywhere);
 
@@ -195,32 +239,41 @@ describe('a tool that is not exposed cannot be called', () => {
   beforeAll(async () => {
     proc = launch({ workDir, args: [MCP_BIN, '--profile', 'none', '--include-tools', 'envs-list'], env: { MCP_MIN_PORT: '0' } });
     baseUrl = await boundUrl(proc);
-    await request(proc, rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {} }));
+    await request(proc, rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'pos-cli-tests', version: '1.0.0' } }));
   }, 30000);
 
   afterAll(() => stop(proc));
 
   const HIDDEN = ['deploy-start', 'check', 'constructor', 'toString', '__proto__', 'hasOwnProperty'];
 
+  // The SDK paths answer an unknown tool with -32602 "Tool <name> not found". Names inherited
+  // from Object.prototype come back as "Tool <name> disabled" — the SDK keeps its registry in a
+  // plain object — which is still the same refusal: a protocol error, and nothing runs.
+  const PROTOTYPE_NAMES = new Set(['constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf']);
+  const sdkNotFound = (error, name) => expect(error).toEqual({
+    code: -32602,
+    message: `Tool ${name} ${PROTOTYPE_NAMES.has(name) ? 'disabled' : 'not found'}`
+  });
+  const toolText = result => {
+    expect(result.isError).toBeUndefined();
+    return result.content[0].text;
+  };
+
   const PATHS = {
     'stdio tools/call': {
       call: async name => (await request(proc, rpc('tools/call', { name, arguments: {} }))),
-      found: response => expect(response.result.content[0].text).toContain('environments'),
-      notFound: (response, name) => expect(response.error).toEqual({ code: -32601, message: `Unknown tool: ${name}` })
+      found: response => expect(toolText(response.result)).toContain('environments'),
+      notFound: (response, name) => sdkNotFound(response.error, name)
     },
-    'stdio direct method (JSON-RPC)': {
-      call: async name => (await request(proc, rpc(name, {}))),
-      found: response => expect(response.result.data.environments).toBeDefined(),
-      notFound: (response, name) => expect(response.error).toEqual({ code: -32601, message: `Method not found: ${name}` })
+    'HTTP /mcp tools/call, 2025-era client': {
+      call: name => mcpPost(baseUrl, rpc('tools/call', { name, arguments: {} })),
+      found: response => expect(toolText(response.body.result)).toContain('environments'),
+      notFound: (response, name) => sdkNotFound(response.body.error, name)
     },
-    'stdio direct method (legacy)': {
-      call: async (name) => {
-        const id = `legacy-${nextId++}`;
-        send(proc, { id, method: name, params: {} });
-        return waitFor(proc, p => stdoutMessages(p).find(m => m.id === id), `the response to ${id}`);
-      },
-      found: response => expect(response.result.data.environments).toBeDefined(),
-      notFound: (response, name) => expect(response.error).toBe(`unknown_method: ${name}`)
+    'HTTP /mcp tools/call, 2026-07-28 client': {
+      call: name => mcpPost(baseUrl, rpc('tools/call', { name, arguments: {} }), { modern: true }),
+      found: response => expect(toolText(response.body.result)).toContain('environments'),
+      notFound: (response, name) => sdkNotFound(response.body.error, name)
     },
     'HTTP POST /call': {
       call: name => httpJson(baseUrl, 'POST', '/call', { tool: name, params: {} }),
@@ -263,13 +316,14 @@ describe('a tool that is not exposed cannot be called', () => {
   });
 
   // TASK-5: a method named after an Object.prototype function used to run that function and
-  // send nothing back, leaving the client waiting for its id.
-  test.each(['toString', 'constructor', 'valueOf', 'hasOwnProperty', '__proto__'])(
+  // send nothing back, leaving the client waiting for its id. A tool name as the method is not
+  // a way in either: direct method invocation was removed.
+  test.each(['toString', 'constructor', 'valueOf', 'hasOwnProperty', '__proto__', 'envs-list', 'deploy-start'])(
     'the stdio protocol dispatcher answers the method %s as not found',
     async (method) => {
       const response = await request(proc, rpc(method, {}), 5000);
 
-      expect(response.error).toEqual({ code: -32601, message: `Method not found: ${method}` });
+      expect(response.error).toEqual({ code: -32601, message: 'Method not found' });
     }
   );
 });

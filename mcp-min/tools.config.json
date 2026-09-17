@@ -42,17 +42,21 @@
       "enabled": true,
       "description": "Run a specific migration identified by timestamp or full name."
     },
+    "job-status": {
+      "enabled": true,
+      "description": "Status of an operation started earlier: a deploy, a data import, export or clean, or an async test run. Returns state: running, completed (it finished; tests that failed still count as completed) or failed (the operation itself failed)."
+    },
     "deploy-start": {
       "enabled": true,
-      "description": "Deploy to platformOS instance. Creates archive from app/ and modules/ directories, uploads it, and deploys assets directly to S3."
+      "description": "Deploy to platformOS instance. Creates archive from app/ and modules/ directories, uploads it, and deploys assets directly to S3. Returns a job_id: the deploy is still running when this answers, and job-status reports when its release and assets are both in."
     },
     "deploy-status": {
       "enabled": true,
-      "description": "Get current deployment status using Gateway.getStatus(id)."
+      "description": "Deprecated: use job-status. Get current deployment status by release id."
     },
     "deploy-wait": {
       "enabled": true,
-      "description": "Wait for deployment to finish. Polls Gateway.getStatus(id) every intervalMs (default 1000ms) and errors on status=error."
+      "description": "Deprecated: use job-status with wait_ms. Wait for a deployment to finish, polling every intervalMs (default 1000ms)."
     },
     "data-import": {
       "enabled": true,
@@ -60,7 +64,7 @@
     },
     "data-import-status": {
       "enabled": true,
-      "description": "Check the status of a data import job. Poll until status is \"done\" or \"failed\"."
+      "description": "Deprecated: use job-status. Check the status of a data import job."
     },
     "data-export": {
       "enabled": true,
@@ -68,7 +72,7 @@
     },
     "data-export-status": {
       "enabled": true,
-      "description": "Check the status of a data export job. When done, returns data (JSON) or zip_file_url (ZIP)."
+      "description": "Deprecated: use job-status. Check the status of a data export job; when done, returns the exported data or a ZIP link."
     },
     "data-clean": {
       "enabled": true,
@@ -76,7 +80,7 @@
     },
     "data-clean-status": {
       "enabled": true,
-      "description": "Check the status of a data clean job. Poll until status is \"done\" or \"failed\"."
+      "description": "Deprecated: use job-status. Check the status of a data clean job."
     },
     "data-validate": {
       "enabled": true,
@@ -88,11 +92,11 @@
     },
     "tests-run-async": {
       "enabled": true,
-      "description": "Trigger a background platformOS test run via /_tests/run_async. Returns immediately with a run ID. Use tests-run-async-result to poll for completion."
+      "description": "Trigger a background platformOS test run via /_tests/run_async. Returns immediately with a run ID and a job_id to poll with job-status."
     },
     "tests-run-async-result": {
       "enabled": true,
-      "description": "Check the result of an async test run by ID via /_tests/results/:id. Returns status: pending, success, failed, or error. Poll until done=true."
+      "description": "Deprecated: use job-status. Check the results of an async test run by ID: pending, success, failed (assertion failures) or error (runner crashed)."
     },
     "check": {
       "enabled": false,

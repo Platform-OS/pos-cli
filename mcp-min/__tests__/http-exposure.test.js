@@ -96,6 +96,10 @@ const connectOutcome = (host, port) => new Promise((resolve) => {
   socket.once('error', (err) => resolve(err.code));
 });
 
+const MCP_ACCEPT = 'application/json, text/event-stream';
+const MODERN_ENVELOPE = { 'io.modelcontextprotocol/protocolVersion': '2026-07-28', 'io.modelcontextprotocol/clientCapabilities': {} };
+const modernMcpHeaders = name => ({ Accept: MCP_ACCEPT, 'MCP-Protocol-Version': '2026-07-28', 'Mcp-Method': 'tools/call', 'Mcp-Name': name });
+
 // Every route, including the long-lived SSE handshake and a path with no route at all: the
 // check is app-level, so a route added later is covered without anyone remembering to.
 const ROUTES = [
@@ -111,7 +115,22 @@ const ROUTES = [
     body: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'envs-list', arguments: {} } }
   },
   { name: 'POST /call-stream (legacy stream)', method: 'POST', path: '/call-stream', body: { tool: 'envs-list', params: {} } },
-  { name: 'GET /no-such-route', path: '/no-such-route' }
+  { name: 'GET /no-such-route', path: '/no-such-route' },
+  {
+    name: 'POST /mcp (2026-07-28)',
+    method: 'POST',
+    path: '/mcp',
+    headers: modernMcpHeaders('envs-list'),
+    body: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'envs-list', arguments: {}, _meta: MODERN_ENVELOPE } }
+  },
+  {
+    name: 'POST /mcp (2025-era)',
+    method: 'POST',
+    path: '/mcp',
+    headers: { Accept: MCP_ACCEPT },
+    body: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'envs-list', arguments: {} } }
+  },
+  { name: 'GET /mcp', path: '/mcp', headers: { Accept: 'text/event-stream' } }
 ];
 
 // Messages are the ones @modelcontextprotocol/express 2.0.0 sends, so TASK-15's switch to
@@ -287,6 +306,35 @@ describe('default server', () => {
       expect(handler).not.toHaveBeenCalled();
       expect(resolveAuth).not.toHaveBeenCalled();
       expectForbidden(res, rejection.message);
+    });
+
+    const CLEAN_MCP = [
+      ['2026-07-28', modernMcpHeaders('data-clean'), { ...CLEAN_RPC, params: { ...CLEAN_RPC.params, _meta: MODERN_ENVELOPE } }],
+      ['2025-era', { Accept: MCP_ACCEPT }, CLEAN_RPC]
+    ];
+
+    describe.each(CLEAN_MCP)('POST /mcp (%s) data-clean', (_era, headers, body) => {
+      test.each(REJECTIONS)('with $name', async (rejection) => {
+        const extra = rejection.request(port);
+        const res = await rawRequest(port, { ...extra, headers: { ...headers, ...extra.headers }, method: 'POST', path: '/mcp', body });
+
+        // The tool is checked first: that nothing ran is the property, the 403 is how it is reported.
+        expect(handler).not.toHaveBeenCalled();
+        expect(resolveAuth).not.toHaveBeenCalled();
+        expectForbidden(res, rejection.message);
+      });
+
+      // The spies are wired to what /mcp actually calls.
+      test('control: from an allowed origin it reaches the handler and resolves credentials', async () => {
+        vi.mocked(resolveAuth).mockRejectedValueOnce(new Error('stopped before any network call'));
+
+        const res = await rawRequest(port, { method: 'POST', path: '/mcp', headers: { ...headers, Origin: 'http://localhost:3000' }, body });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toContain('stopped before any network call');
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(resolveAuth).toHaveBeenCalledTimes(1);
+      });
     });
 
     // Without this, the two assertions above would also pass if the spies were not wired to

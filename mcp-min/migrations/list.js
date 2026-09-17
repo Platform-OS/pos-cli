@@ -5,6 +5,8 @@ import { authProperties } from '../schemas/auth.js';
 
 const listMigrationsTool = {
   description: 'List migrations deployed to the server with their current status.',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,

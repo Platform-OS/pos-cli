@@ -8,24 +8,48 @@ Complete reference guide for all platformOS Model Context Protocol (MCP) tools a
 
 ## Table of Contents
 
-1. [HTTP Transport Security](#http-transport-security)
-2. [Tool Selection](#tool-selection)
-3. [Authentication](#authentication)
-4. [Environment Management](#environment-management)
-5. [Logging & Monitoring](#logging--monitoring)
-6. [GraphQL & Liquid](#graphql--liquid)
-7. [Generators](#generators)
-8. [Migrations](#migrations)
-9. [Deployment](#deployment)
-10. [Data Operations](#data-operations)
-11. [Testing](#testing)
-12. [Linting](#linting)
-13. [File Sync](#file-sync)
-14. [Property Uploads](#property-uploads)
-15. [Constants](#constants)
-16. [Response Patterns](#response-patterns)
+1. [MCP over HTTP](#mcp-over-http)
+2. [HTTP Transport Security](#http-transport-security)
+3. [Tool Selection](#tool-selection)
+4. [Authentication](#authentication)
+5. [Asynchronous Operations](#asynchronous-operations)
+6. [Environment Management](#environment-management)
+7. [Logging & Monitoring](#logging--monitoring)
+8. [GraphQL & Liquid](#graphql--liquid)
+9. [Generators](#generators)
+10. [Migrations](#migrations)
+11. [Deployment](#deployment)
+12. [Data Operations](#data-operations)
+13. [Testing](#testing)
+14. [Linting](#linting)
+15. [File Sync](#file-sync)
+16. [Property Uploads](#property-uploads)
+17. [Constants](#constants)
+18. [Response Patterns](#response-patterns)
 
 ---
+
+## MCP over HTTP
+
+The MCP endpoint is `POST /mcp` (MCP Streamable HTTP). It serves protocol revision 2026-07-28 and, statelessly, clients on the 2025 revisions; `GET` and `DELETE` answer `405`, since a stateless endpoint has no session to resume.
+
+```bash
+curl -s http://localhost:5910/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'MCP-Protocol-Version: 2026-07-28' -H 'Mcp-Method: tools/list' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}'
+```
+
+On 2026-07-28 every request carries the `_meta` envelope and the `Mcp-Method` (and, for `tools/call`, `Mcp-Name`) header; the server answers `400` with `-32020` when the headers and body disagree, and `-32022` for a revision it does not serve. A request body over 1 MB is refused with `413`, one that is not `application/json` with `415`.
+
+A call that fails is a tool result with `isError: true` whose text is a JSON body — `{"ok":false,"error":{"code":"INVALID_PARAMS","message":…}}` for arguments that do not match the schema, the tool's own code when it reports a failure, `INTERNAL_ERROR` when it throws. Unknown or unexposed tools stay protocol errors (`-32602`).
+
+Tools that only read are published with `annotations.readOnlyHint: true`: `envs-list`, `logs-fetch`, the deploy/data/test status tools, `data-validate`, `constants-list`, `generators-list`, `generators-help`, `migrations-list` and the Partner Portal lookups. Everything else carries no annotation, which clients read as "may change things".
+
+**The endpoints used in the examples below — `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` — are deprecated.** They are the pre-SDK HTTP API, kept working through 6.x and removed at the next major; new clients should speak MCP at `/mcp`.
+
+`--no-http` starts the server without any HTTP listener (stdio only), which is what `pos-cli ai init` writes into client configurations.
 
 ## HTTP Transport Security
 
@@ -68,7 +92,7 @@ exposed = (tools of --profile  ∪  --include-tools)  −  --exclude-tools  − 
 
 | Option | Effect |
 | --- | --- |
-| `--profile <name>` | Starting set. `full` (default): every tool. `dev`: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-start`, `deploy-status`, `deploy-wait`, `unit-tests-run`, `tests-run-async`, `tests-run-async-result`. `none`: no tools. |
+| `--profile <name>` | Starting set. `full` (default): every tool. `dev`: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-start`, `job-status`, `unit-tests-run`, `tests-run-async`. `none`: no tools. |
 | `--include-tools <names>` | Adds tools to the profile — not an allowlist, unlike Gemini CLI's `includeTools`. For an allowlist: `--profile none --include-tools a,b`. |
 | `--exclude-tools <names>` | Removes tools. Excluding a tool the profile does not contain is allowed, so one exclude list works with any profile. |
 
@@ -126,6 +150,78 @@ All tools (except `envs-list` and generator tools) support multiple authenticati
 
 ---
 
+## Asynchronous Operations
+
+### job-status
+
+The status of anything `deploy-start`, `data-import`, `data-export`, `data-clean` or `tests-run-async` started. Each of those returns a `job_id` beside its own fields; this reads it back.
+
+Replaces `deploy-status`, `deploy-wait`, `data-import-status`, `data-export-status`, `data-clean-status` and `tests-run-async-result`, which are deprecated and removed in the next major release.
+
+**Tool Name**: `job-status`
+
+**Input Parameters**:
+- `job_id` *(string, required)*: the value a starter returned. Opaque — pass it back unchanged.
+- `wait_ms` *(integer, optional, 0–120000)*: poll until the job is done or this long has passed, whichever comes first.
+- `env` *(string, optional)*: environment name. Must be the instance the job was started on.
+- `url` / `email` / `token` *(string, optional)*: explicit credentials.
+
+**Response Format**:
+```javascript
+{
+  ok: true,
+  data: {
+    job_id: "pjob1_…",
+    kind: "deploy",            // deploy | data-import | data-export | data-clean | test-run
+    state: "running",          // running | completed | failed
+    done: false,               // state != running
+    status: "in_progress",     // the instance's own word for it
+    error: "…",                // only when state is failed
+    result: { … }              // kind-specific: the release and asset phase, the export, the test run
+  },
+  meta: { startedAt, finishedAt, auth: { url, email, token, source } }
+}
+```
+
+`completed` means the operation finished, even if what it produced reports failures: a test run with failing assertions is `completed`, because the run did its work. `failed` means the operation itself failed.
+
+**Deploy jobs report two phases.** The release import and the asset upload finish separately, and a deploy that had assets is `completed` only when both are in. `data.result.assets.phase` is one of:
+
+| Phase | Meaning |
+|---|---|
+| `uploading` | this server is still sending the assets; the instance does not know about them yet |
+| `processing` | the manifest arrived and the instance is unpacking them |
+| `done` | the instance reported on them (`result.assets.report` when it sent one) |
+| `failed` | the upload failed here, or the instance rejected it |
+| `none` | the deploy had no assets |
+| `unknown` | nobody can say: the server that started the upload is gone, and the instance reports nothing about assets |
+
+**Errors** (all as `{ ok: false, error: { code, message } }`):
+
+| Code | Meaning |
+|---|---|
+| `INVALID_JOB_ID` | not a `job_id`, or one that has been edited. No request is made. |
+| `JOB_INSTANCE_MISMATCH` | the resolved credentials are for a different instance than the job was started on. No request is made. |
+| `JOB_NOT_FOUND` | the instance has no such job (404, or the test runner's `not_found`). |
+| `JOB_STATUS_ERROR` | the status request itself failed. |
+| `CANCELLED` | the client cancelled the call. |
+
+**Example Usage**:
+```bash
+curl -X POST http://localhost:5910/call \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "job-status",
+    "params": { "job_id": "pjob1_…", "wait_ms": 30000 }
+  }'
+```
+
+**Use Case**: poll one operation, whatever kind it is, without learning a status tool per kind.
+
+**On the `job_id`**: it carries the kind, the id the instance gave the job, the instance origin, and the flags that kind needs (a data export's ZIP flag; whether a deploy had assets). It is self-contained rather than a key into this server's memory, because MCP clients restart stdio servers while the agent keeps its conversation — with a table, every restart would answer "unknown job". It is parsed strictly on the way back in, and nothing in it decides which credentials are used or which host is called: the instance it names is only ever compared with the one the credentials resolve to.
+
+---
+
 ## Environment Management
 
 ### envs-list
@@ -165,7 +261,6 @@ Fetch recent logs from a platformOS instance in batches. Pagination supported vi
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
 - `lastId` *(string, optional)*: Starting log ID for pagination (default: `'0'`)
-- `endpoint` *(string, optional)*: Override API base URL
 - `limit` *(integer, optional)*: Maximum logs to fetch (1-10000)
 
 **Response Format**:
@@ -502,7 +597,6 @@ List all migrations deployed to a platformOS instance.
 - `url` *(string, optional)*: Instance URL
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -687,6 +781,8 @@ curl -X POST http://localhost:5910/call \
 
 ### deploy-status
 
+> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status); it answers from the same code, and a `job_id` also reports the asset phase, which a bare release id cannot.
+
 Get the current status of a deployment.
 
 **Tool Name**: `deploy-status`
@@ -736,6 +832,8 @@ curl -X POST http://localhost:5910/call \
 
 ### deploy-wait
 
+> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status) with `wait_ms`, which is bounded; without `maxWaitMs` this one waits with no deadline.
+
 Wait for a deployment to complete. Polls until status is no longer "ready_for_import".
 
 **Tool Name**: `deploy-wait`
@@ -748,7 +846,6 @@ Wait for a deployment to complete. Polls until status is no longer "ready_for_im
 - `token` *(string, optional)*: API token
 - `intervalMs` *(integer, optional, min: 200, default: 1000)*: Poll interval
 - `maxWaitMs` *(integer, optional)*: Maximum wait time before timeout
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -881,6 +978,8 @@ curl -X POST http://localhost:5910/call \
 
 ### data-import-status
 
+> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status); it answers from the same code.
+
 Check the status of a data import job.
 
 **Tool Name**: `data-import-status`
@@ -993,6 +1092,8 @@ curl -X POST http://localhost:5910/call \
 ---
 
 ### data-export-status
+
+> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status); it answers from the same code.
 
 Check the status of a data export job.
 
@@ -1128,6 +1229,8 @@ curl -X POST http://localhost:5910/call \
 ---
 
 ### data-clean-status
+
+> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status); it answers from the same code.
 
 Check the status of a data clean operation.
 
@@ -2075,9 +2178,9 @@ Tools return errors without throwing to prevent server crashes:
 
 ### Async Job Pattern
 
-Long-running operations follow this pattern:
+Every long-running operation follows the same pattern, whatever it started.
 
-**1. Start operation**:
+**1. Start it**:
 ```javascript
 POST /call
 {
@@ -2086,31 +2189,33 @@ POST /call
 }
 ```
 
-**2. Get job ID from response**:
+**2. Take the `job_id` from the response**:
 ```javascript
 {
   "ok": true,
-  "data": {"id": "abc123def456", "status": "processing"}
+  "data": {"id": "abc123def456", "job_id": "pjob1_…", "status": "ready_for_import"}
 }
 ```
 
-**3. Poll for status**:
+**3. Poll it**:
 ```javascript
 POST /call
 {
-  "tool": "deploy-status",
-  "params": {"env": "staging", "id": "abc123def456"}
+  "tool": "job-status",
+  "params": {"job_id": "pjob1_…"}
 }
 ```
 
-**4. Or wait for completion**:
+**4. Or wait for it**:
 ```javascript
 POST /call
 {
-  "tool": "deploy-wait",
-  "params": {"env": "staging", "id": "abc123def456"}
+  "tool": "job-status",
+  "params": {"job_id": "pjob1_…", "wait_ms": 60000}
 }
 ```
+
+Poll until `done` is true. `wait_ms` is bounded (120 s maximum); reaching the deadline returns the current state with `done: false`, so a long job is a few waits rather than one call that never ends.
 
 ---
 
@@ -2120,22 +2225,21 @@ POST /call
 
 ```bash
 # 1. Start deployment
-DEPLOY_ID=$(curl -s -X POST http://localhost:5910/call \
+JOB_ID=$(curl -s -X POST http://localhost:5910/call \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "deploy-start",
     "params": {"env": "staging"}
-  }' | jq -r '.data.id')
+  }' | jq -r '.data.job_id')
 
-# 2. Wait for completion
+# 2. Wait for completion — including its assets
 curl -X POST http://localhost:5910/call \
   -H "Content-Type: application/json" \
   -d "{
-    \"tool\": \"deploy-wait\",
+    \"tool\": \"job-status\",
     \"params\": {
-      \"env\": \"staging\",
-      \"id\": \"$DEPLOY_ID\",
-      \"maxWaitMs\": 600000
+      \"job_id\": \"$JOB_ID\",
+      \"wait_ms\": 120000
     }
   }"
 ```
@@ -2231,6 +2335,7 @@ curl -X POST http://localhost:5910/call \
 
 ### Tool Count by Category
 
+- **Asynchronous Operations**: 1 (job-status)
 - **Environment Management**: 1 (envs-list)
 - **Logging & Monitoring**: 2 (logs-fetch, logs-stream)
 - **GraphQL & Liquid**: 2 (graphql-exec, liquid-exec)
@@ -2244,7 +2349,7 @@ curl -X POST http://localhost:5910/call \
 - **Property Uploads**: 1 (uploads-push)
 - **Constants**: 3 (constants-list, constants-set, constants-unset)
 
-**Total**: 26 active tools
+**Total**: 27 active tools
 
 ### Tool Locations
 

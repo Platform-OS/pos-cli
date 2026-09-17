@@ -2,34 +2,15 @@
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
-
-async function makeRequest(options) {
-  const { uri, method = 'GET', headers = {} } = options;
-  const response = await fetch(uri, { method, headers });
-  const body = await response.text();
-  return { statusCode: response.status, body };
-}
-
-function normalizeResult(result) {
-  const status = result.status;
-  const data = {
-    id: result.id,
-    status,
-    test_name: result.test_name,
-    total_assertions: parseInt(result.total_assertions, 10) || 0,
-    total_errors: parseInt(result.total_errors, 10) || 0,
-    total_duration: parseInt(result.total_duration, 10) || 0,
-    error_message: result.error_message || '',
-    tests: result.tests || [],
-    pending: status === 'pending',
-    passed: status === 'success',
-    done: status !== 'pending'
-  };
-  return data;
-}
+import makeRequest, { testAuthHeaders } from './request.js';
+import { resultsUrl as buildResultsUrl } from './result.js';
+import testRunAdapter from '../jobs/adapters/test-run.js';
+import { JobNotFoundError } from '../jobs/errors.js';
 
 const testsRunAsyncResultTool = {
-  description: 'Check the result of an async test run by ID via /_tests/results/:id. Returns current status: pending (still running), success (all passed), failed (assertion failures), or error (runner crashed). Poll until done=true.',
+  description: 'Deprecated: use job-status. Check the results of an async test run by ID: pending, success, failed (assertion failures) or error (runner crashed).',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -47,71 +28,38 @@ const testsRunAsyncResultTool = {
     try {
       const auth = await resolveAuth(params, ctx);
       const requestFn = ctx.request || makeRequest;
-      const authHeaders = {
-        'Authorization': `Token ${auth.token}`,
-        'UserTemporaryToken': auth.token
-      };
+      const authHeaders = testAuthHeaders(auth.token);
 
       const runId = params.id;
-      const resultsUrl = `${auth.url}/_tests/results/${runId}`;
+      const resultsUrl = buildResultsUrl(auth.url, runId);
 
       log.debug('Fetching test results', { url: resultsUrl });
 
-      const response = await requestFn({
-        method: 'GET',
-        uri: resultsUrl,
-        headers: authHeaders
-      });
-
       const authMeta = { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source };
+      const finished = () => ({ url: resultsUrl, startedAt, finishedAt: new Date().toISOString(), auth: authMeta });
 
-      if (response.statusCode >= 400) {
-        return {
-          ok: false,
-          error: {
-            code: 'HTTP_ERROR',
-            message: `Results request failed with status ${response.statusCode}`,
-            statusCode: response.statusCode,
-            body: response.body
-          },
-          meta: { url: resultsUrl, startedAt, finishedAt: new Date().toISOString(), auth: authMeta }
-        };
-      }
-
-      let result;
+      // Same adapter job-status uses, so the two can never disagree about a run.
+      let polled;
       try {
-        result = JSON.parse(response.body);
-      } catch {
-        return {
-          ok: false,
-          error: {
-            code: 'INVALID_RESPONSE',
-            message: 'Failed to parse results response as JSON',
-            body: response.body
-          },
-          meta: { url: resultsUrl, startedAt, finishedAt: new Date().toISOString(), auth: authMeta }
-        };
+        polled = await testRunAdapter.poll({ auth: { url: auth.url, headers: authHeaders }, request: requestFn }, runId);
+      } catch (e) {
+        if (e instanceof JobNotFoundError) {
+          return { ok: false, error: { code: 'NOT_FOUND', message: `Test result ${runId} not found` }, meta: finished() };
+        }
+        if (e.statusCode) {
+          return {
+            ok: false,
+            error: { code: 'HTTP_ERROR', message: e.message, statusCode: e.statusCode, body: e.body },
+            meta: finished()
+          };
+        }
+        if (e.body !== undefined) {
+          return { ok: false, error: { code: 'INVALID_RESPONSE', message: e.message, body: e.body }, meta: finished() };
+        }
+        throw e;
       }
 
-      if (result.error === 'not_found') {
-        return {
-          ok: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: `Test result ${runId} not found`,
-            data: result
-          },
-          meta: { url: resultsUrl, startedAt, finishedAt: new Date().toISOString(), auth: authMeta }
-        };
-      }
-
-      const data = normalizeResult(result);
-
-      return {
-        ok: true,
-        data,
-        meta: { url: resultsUrl, startedAt, finishedAt: new Date().toISOString(), auth: authMeta }
-      };
+      return { ok: true, data: polled.result, meta: finished() };
     } catch (e) {
       log.error('tool:tests-run-async-result error', { error: String(e) });
       return {

@@ -44,7 +44,7 @@ afterAll(async () => {
   fs.rmSync(workDir, { recursive: true, force: true });
 });
 
-const INITIALIZE = { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {} } };
+const INITIALIZE = { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'pos-cli-tests', version: '1.0.0' } } };
 
 /** Runs a command that is expected to exit by itself; stdin stays open (see file comment). */
 async function runToExit(args, env = {}) {

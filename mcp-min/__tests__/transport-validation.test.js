@@ -3,19 +3,20 @@
  * tools/list, before the params ever reach a handler.
  */
 import http from 'http';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import startHttp from '../http-server.js';
-import { toolsWith } from './helpers/tools.js';
+import registry from '../tools.js';
+import { rejectionFor } from '../validate-params.js';
+import { defaultTools, toolsWith } from './helpers/tools.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..', '..');
 const stdioScript = resolve(__dirname, '..', 'stdio-server.js');
 
-// A schema Ajv cannot compile, registered as a tool so the schemaError branch — which
-// maps to 500 / -32603 rather than the caller-blaming 400 / -32602 — is reachable.
+// A schema Ajv cannot compile: our own defect, which must never be blamed on the caller.
 const BROKEN_SCHEMA_TOOL = {
   description: 'Test-only tool whose schema does not compile',
   inputSchema: { type: 'not-a-real-type' },
@@ -47,7 +48,7 @@ const post = (path, body) =>
 beforeAll(async () => {
   // Port 0 lets the OS assign a free one, which removes the collision this suite previously
   // risked with a hardcoded 5931.
-  server = await startHttp({ port: 0, tools: toolsWith({ 'broken-schema': BROKEN_SCHEMA_TOOL }) });
+  server = await startHttp({ port: 0, tools: defaultTools() });
   PORT = server.address().port;
 });
 
@@ -57,18 +58,9 @@ afterAll(() => {
 
 
 // Drives one request through a freshly spawned stdio server and resolves with the
-// response carrying the same id. `injectBrokenTool` starts the server from an inline
-// module that exposes the default tools plus the uncompilable-schema tool.
-const runStdio = (message, { injectBrokenTool = false } = {}) => new Promise((done, reject) => {
-  const inline = [
-    `import { toolsWith } from ${JSON.stringify(pathToFileURL(resolve(__dirname, 'helpers', 'tools.js')).href)};`,
-    `import startStdio from ${JSON.stringify(pathToFileURL(stdioScript).href)};`,
-    "startStdio({ tools: toolsWith({ 'broken-schema': { inputSchema: { type: 'not-a-real-type' }, handler: async () => ({ ok: true }) } }) });"
-  ].join('\n');
-
-  const child = injectBrokenTool
-    ? spawn(process.execPath, ['--input-type=module', '-e', inline], { cwd: repoRoot, stdio: 'pipe' })
-    : spawn(process.execPath, [stdioScript], { cwd: repoRoot, stdio: 'pipe' });
+// response carrying the same id.
+const runStdio = message => new Promise((done, reject) => {
+  const child = spawn(process.execPath, [stdioScript], { cwd: repoRoot, stdio: 'pipe' });
 
   let buffered = '';
   let sent = false;
@@ -108,7 +100,7 @@ const runStdio = (message, { injectBrokenTool = false } = {}) => new Promise((do
     jsonrpc: '2.0',
     id: 'init',
     method: 'initialize',
-    params: { protocolVersion: '2024-11-05', capabilities: {} }
+    params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'pos-cli-tests', version: '1.0.0' } }
   })}\n`);
 });
 
@@ -172,8 +164,16 @@ describe('HTTP JSON-RPC tools/call', () => {
   });
 });
 
+// A tool call the protocol layer accepted and the tool layer refused: a tool execution error,
+// which the model can read and correct, not a JSON-RPC error.
+const toolError = response => {
+  expect(response.error).toBeUndefined();
+  expect(response.result.isError).toBe(true);
+  return JSON.parse(response.result.content[0].text).error;
+};
+
 describe('stdio tools/call', () => {
-  test('rejects invalid params with -32602', async () => {
+  test('rejects invalid params as an INVALID_PARAMS tool error, before the handler', async () => {
     const response = await runStdio({
       jsonrpc: '2.0',
       id: 2,
@@ -181,8 +181,22 @@ describe('stdio tools/call', () => {
       params: { name: 'constants-set', arguments: { env: 'staging' } }
     });
 
-    expect(response.error.code).toBe(-32602);
-    expect(response.error.message).toContain("missing required property 'name'");
+    const error = toolError(response);
+    expect(error.code).toBe('INVALID_PARAMS');
+    expect(error.message).toContain("missing required property 'name'");
+    expect(error.details).toEqual([{ path: '(root)', message: "(root) is missing required property 'name'" }, { path: '(root)', message: "(root) is missing required property 'value'" }]);
+  }, 20000);
+
+  test('rejects an unknown param the same way', async () => {
+    const error = toolError(await runStdio({
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'tools/call',
+      params: { name: 'constants-list', arguments: { env: 'staging', dropTable: true } }
+    }));
+
+    expect(error.code).toBe('INVALID_PARAMS');
+    expect(error.message).toContain("unknown property 'dropTable'");
   }, 20000);
 
   test('accepts valid params', async () => {
@@ -194,76 +208,60 @@ describe('stdio tools/call', () => {
     });
 
     expect(response.error).toBeUndefined();
-    expect(response.result.content).toBeDefined();
+    expect(response.result.isError).toBeUndefined();
+    expect(JSON.parse(response.result.content[0].text).ok).toBe(true);
   }, 20000);
 });
 
-// A schema that will not compile is our defect, not the caller's, so it must not be
-// reported as 400 / -32602. The mapping lives in one place (rejectionFor); these cover
-// each transport path that consumes it.
-describe('uncompilable schema is reported as a server error', () => {
-  test('HTTP POST /call answers 500, not 400', async () => {
-    const res = await post('/call', { tool: 'broken-schema', params: {} });
+// A schema that will not compile is our defect, never the caller's. The SDK builds tools/list
+// from the schemas, so one it cannot use would fail the list for every tool; both transports
+// therefore refuse to start with one, naming it.
+describe('an uncompilable tool schema', () => {
+  const REFUSAL = /^Tool input schemas that do not compile: broken-schema \(Schema failed to compile: /;
 
-    expect(res.status).toBe(500);
-    expect(res.body.error).toContain('Schema failed to compile');
-    expect(JSON.stringify(res.body)).not.toContain('reached');   // handler never ran
-  });
-
-  test('HTTP JSON-RPC tools/call answers -32603, not -32602', async () => {
-    const res = await post('/call-stream', {
-      jsonrpc: '2.0',
-      id: 21,
-      method: 'tools/call',
-      params: { name: 'broken-schema', arguments: {} }
-    });
-
-    expect(res.body.error.code).toBe(-32603);
-    expect(res.body.error.message).toContain('Schema failed to compile');
-  });
-
-  test('HTTP /call-stream legacy path answers 500 before opening the stream', async () => {
-    const res = await post('/call-stream', { tool: 'broken-schema', params: {} });
-
-    expect(res.status).toBe(500);
-    expect(res.body.error).toContain('Schema failed to compile');
-  });
-
-  test('stdio tools/call answers -32603', async () => {
-    const response = await runStdio(
-      { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'broken-schema', arguments: {} } },
-      { injectBrokenTool: true }
+  test('stops startHttp before it listens', async () => {
+    const outcome = await startHttp({ port: 0, tools: toolsWith({ 'broken-schema': BROKEN_SCHEMA_TOOL }) }).then(
+      started => new Promise(resolveClose => started.close(() => resolveClose('started'))),
+      error => error
     );
 
-    expect(response.error.code).toBe(-32603);
-    expect(response.error.message).toContain('Schema failed to compile');
+    expect(outcome).toBeInstanceOf(Error);
+    expect(outcome.message).toMatch(REFUSAL);
+  });
+
+  test('stops startStdio before it reads stdin', () => {
+    const script = [
+      `import { toolsWith } from ${JSON.stringify(pathToFileURL(resolve(__dirname, 'helpers', 'tools.js')).href)};`,
+      `import startStdio from ${JSON.stringify(pathToFileURL(stdioScript).href)};`,
+      "try { startStdio({ tools: toolsWith({ 'broken-schema': { inputSchema: { type: 'not-a-real-type' }, handler: async () => ({ ok: true }) } }) }); console.log('STARTED'); }",
+      'catch (err) { console.log(`REFUSED ${err.message}`); }'
+    ].join('\n');
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], { cwd: repoRoot, input: '', encoding: 'utf8', timeout: 20000 });
+
+    expect(result.stdout).toMatch(/^REFUSED /);
+    expect(result.stdout.slice('REFUSED '.length)).toMatch(REFUSAL);
+  }, 20000);
+
+  // The legacy HTTP routes still map a rejection themselves; the mapping stays pinned even
+  // though a transport can no longer start with such a schema.
+  test('is mapped by rejectionFor to 500 / -32603, not to the caller-blaming 400 / -32602', () => {
+    const rejection = rejectionFor('broken-schema', BROKEN_SCHEMA_TOOL, {});
+
+    expect(rejection).toMatchObject({ httpStatus: 500, jsonRpcCode: -32603 });
+    expect(rejection.message).toContain('Schema failed to compile');
+    expect(rejectionFor('constants-set', registry.get('constants-set'), {})).toMatchObject({ httpStatus: 400, jsonRpcCode: -32602 });
   });
 });
 
-// The legacy path invokes a tool by naming it as the JSON-RPC method directly, and
-// answers non-JSON-RPC callers with a bare { id, error } instead of an error object.
-describe('stdio legacy direct invocation', () => {
-  test('rejects invalid params with -32602 for a JSON-RPC caller', async () => {
-    const response = await runStdio({ jsonrpc: '2.0', id: 3, method: 'constants-set', params: { env: 'staging' } });
-
-    expect(response.error.code).toBe(-32602);
-    expect(response.error.message).toContain("missing required property 'name'");
-  });
-
-  test('rejects invalid params with a bare error string for a non-JSON-RPC caller', async () => {
-    const response = await runStdio({ id: 4, method: 'constants-set', params: { env: 'staging' } });
-
-    expect(typeof response.error).toBe('string');
-    expect(response.error).toContain('Invalid params');
-    expect(response.result).toBeUndefined();
-  });
-
-  test('accepts valid params on the legacy path', async () => {
+// Invoking a tool by naming it as the method (`{"method":"envs-list"}`) predates MCP and was
+// removed with the move to the SDK: over stdio only MCP methods are served.
+describe('stdio direct method invocation', () => {
+  test('is answered as an unknown method, and the tool does not run', async () => {
     const response = await runStdio({ jsonrpc: '2.0', id: 5, method: 'envs-list', params: {} });
 
-    expect(response.error).toBeUndefined();
-    expect(response.result.ok).toBe(true);
-  });
+    expect(response.result).toBeUndefined();
+    expect(response.error).toEqual({ code: -32601, message: 'Method not found' });
+  }, 20000);
 });
 
 // HTTP /call-stream legacy streaming path: validation runs before the SSE handshake, so

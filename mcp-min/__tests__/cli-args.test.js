@@ -22,8 +22,22 @@ function parse(argv) {
 }
 
 describe('parseServerArgs', () => {
-  test.each([[[]], [['--']]])('%j starts the server with no selection options and prints nothing', (argv) => {
-    expect(parse(argv)).toEqual({ result: { start: true, selection: NO_SELECTION }, stdout: '', stderr: '' });
+  test.each([[[]], [['--']]])('%j starts the server with HTTP and no selection options, and prints nothing', (argv) => {
+    expect(parse(argv)).toEqual({ result: { start: true, http: true, selection: NO_SELECTION }, stdout: '', stderr: '' });
+  });
+
+  test('--no-http starts stdio only, alone or with selection options, in any order', () => {
+    expect(parse(['--no-http'])).toEqual({ result: { start: true, http: false, selection: NO_SELECTION }, stdout: '', stderr: '' });
+    expect(parse(['--profile', 'dev', '--no-http', '--exclude-tools', 'deploy-wait']).result).toEqual({
+      start: true, http: false, selection: { profile: 'dev', include: [], exclude: ['deploy-wait'] }
+    });
+  });
+
+  test('there is no --http to turn it back on', () => {
+    const { result, stderr } = parse(['--http']);
+
+    expect(result).toEqual({ start: false, exitCode: 1 });
+    expect(stderr).toContain("unknown option '--http'");
   });
 
   test.each(['--help', '-h'])('%s prints usage to stdout and exits 0 without starting', (flag) => {
@@ -44,6 +58,8 @@ describe('parseServerArgs', () => {
       expect(stdout).toMatch(new RegExp(`^ {4}${profile} +\\S`, 'm'));
     }
     expect(stdout).toContain('--profile none --include-tools a,b');
+    expect(stdout).toContain('--no-http');
+    expect(stdout).toContain('/mcp');
   });
 
   test('--help wins over an argument that would otherwise be rejected', () => {
@@ -89,7 +105,8 @@ describe('parseServerArgs', () => {
   test('parsing twice gives the same answer: no state leaks between calls', () => {
     expect(parse(['--profle']).result.exitCode).toBe(1);
     expect(parse(['--include-tools', 'a']).result.selection.include).toEqual(['a']);
-    expect(parse([]).result).toEqual({ start: true, selection: NO_SELECTION });
+    expect(parse(['--no-http']).result.http).toBe(false);
+    expect(parse([]).result).toEqual({ start: true, http: true, selection: NO_SELECTION });
   });
 });
 

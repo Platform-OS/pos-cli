@@ -2,9 +2,12 @@
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
+import { cancelled } from '../cancellation.js';
 
 const fetchLogsTool = {
   description: 'Fetch recent logs in batches (NDJSON semantics, returns JSON array here). Mirrors pos-cli fetch-logs.',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -12,7 +15,6 @@ const fetchLogsTool = {
       env: { type: 'string' },
       ...authProperties,
       lastId: { type: 'integer', minimum: 0, description: 'Log row id to resume from (default 0)' },
-      endpoint: { type: 'string', description: 'Override API base url' },
       limit: { type: 'integer', minimum: 1, maximum: 10000 }
     }
   },
@@ -22,8 +24,10 @@ const fetchLogsTool = {
     try {
       const auth = await resolveAuth(params, ctx);
 
-      // Allow endpoint override (CLI option --endpoint)
-      const baseUrl = params?.endpoint ? params.endpoint : auth.url;
+      // The request URL comes from the resolved credentials only: an `endpoint` argument used to
+      // replace it while the .pos token was still sent, so a caller could name any host and be
+      // handed this machine's token.
+      const baseUrl = auth.url;
 
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
@@ -35,6 +39,7 @@ const fetchLogsTool = {
       const maxCount = params?.limit && Number.isFinite(params.limit) ? Number(params.limit) : Infinity;
 
       while (true) {
+        if (ctx.signal?.aborted) return cancelled();
         const prevId = latestId;
         const response = await gateway.logs({ lastId: latestId });
         const logs = response && response.logs;

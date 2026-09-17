@@ -3,9 +3,13 @@ import log from '../log.js';
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
+import importAdapter from '../jobs/adapters/data-import.js';
+import { JobNotFoundError } from '../jobs/errors.js';
 
 const dataImportStatusTool = {
-  description: 'Check the status of a data import job. Poll until status is "done" or "failed".',
+  description: 'Deprecated: use job-status. Check the status of a data import job.',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -31,21 +35,19 @@ const dataImportStatusTool = {
 
       const { jobId } = params;
 
-      // Always use ZIP status endpoint (isZip=true) since we convert JSON to ZIP
-      const response = await gateway.dataImportStatus(jobId, true);
-
-      // Normalize status - it may be an object with .name or a string
-      const status = response.status?.name || response.status;
+      const polled = await importAdapter.poll({ gateway }, jobId);
 
       return {
         ok: true,
         data: {
           id: jobId,
-          status,
-          done: status === 'done',
-          failed: status === 'failed',
-          pending: ['pending', 'processing', 'scheduled'].includes(status),
-          response
+          status: polled.status,
+          done: polled.state === 'completed',
+          failed: polled.state === 'failed',
+          // An unrecognised status now counts as still pending rather than as none of the three:
+          // the job exists, so the only honest answer is that it has not finished.
+          pending: polled.state === 'running',
+          response: polled.result
         },
         meta: {
           startedAt,
@@ -56,7 +58,7 @@ const dataImportStatusTool = {
       log.error('tool:data-import-status error', { error: String(e) });
       return {
         ok: false,
-        error: { code: 'DATA_IMPORT_STATUS_ERROR', message: String(e.message || e) },
+        error: { code: e instanceof JobNotFoundError ? 'NOT_FOUND' : 'DATA_IMPORT_STATUS_ERROR', message: String(e.message || e) },
         meta: {
           startedAt,
           finishedAt: new Date().toISOString()

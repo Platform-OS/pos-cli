@@ -9,6 +9,7 @@ import { validateRecords, validateJsonStructure } from './validate.js';
 import { authProperties } from '../schemas/auth.js';
 import log from '../log.js';
 import { resolveAuth, runWithAuth } from '../auth.js';
+import { mintFor } from '../jobs/handle.js';
 import Gateway from '../../lib/proxy.js';
 import isValidJSON from '../../lib/data/isValidJSON.js';
 import { presignUrl } from '../../lib/presignUrl.js';
@@ -173,6 +174,7 @@ const dataImportTool = {
         ok: true,
         data: {
           id: importTask.id,
+          job_id: mintFor({ kind: 'data-import', id: importTask.id, origin: auth.url }),
           status: importTask.status
         },
         meta: {

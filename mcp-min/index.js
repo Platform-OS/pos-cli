@@ -88,11 +88,14 @@ async function startHttpTransport(config, tools, shutdown) {
  * @param {object} options
  * @param {ReturnType<import('./tool-selection.js').selectTools>} options.selection - the tools to
  *   expose, identical for both transports
- * @throws {import('./http-config.js').HttpConfigError} before any transport starts, when an
- *   MCP_MIN_* variable is malformed
+ * @param {boolean} [options.http] - false for --no-http: stdio only. MCP_MIN_* is then not read
+ *   at all, since there is nothing it could expose, and a stale value in an editor's
+ *   environment must not stop a stdio server
+ * @throws {import('./http-config.js').HttpConfigError} before any transport starts, when HTTP
+ *   is on and an MCP_MIN_* variable is malformed
  */
-export async function start({ selection }) {
-  const httpConfig = readHttpConfig(process.env);
+export async function start({ selection, http = true }) {
+  const httpConfig = http ? readHttpConfig(process.env) : null;
 
   try {
     log.info('mcp-min: starting MCP minimal server...');
@@ -103,7 +106,11 @@ export async function start({ selection }) {
     const shutdown = createShutdown();
 
     startStdio({ tools: selection.tools, shutdown });
-    await startHttpTransport(httpConfig, selection.tools, shutdown);
+    if (httpConfig) {
+      await startHttpTransport(httpConfig, selection.tools, shutdown);
+    } else {
+      log.info('mcp-min: HTTP transport disabled (--no-http); serving MCP over stdio only');
+    }
   } catch (err) {
     log.error('Fatal error during startup', String(err));
     process.exit(1);

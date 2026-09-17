@@ -3,9 +3,13 @@ import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
+import cleanAdapter from '../jobs/adapters/data-clean.js';
+import { JobNotFoundError } from '../jobs/errors.js';
 
 const dataCleanStatusTool = {
-  description: 'Check the status of a data clean job. Poll until status is "done" or "failed".',
+  description: 'Deprecated: use job-status. Check the status of a data clean job.',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -30,20 +34,18 @@ const dataCleanStatusTool = {
         return { ok: false, error: { code: 'VALIDATION_ERROR', message: 'jobId is required' } };
       }
 
-      const response = await gateway.dataCleanStatus(jobId);
-
-      // Normalize status - it may be an object with .name or a string
-      const status = response.status?.name || response.status;
+      const polled = await cleanAdapter.poll({ gateway }, jobId);
 
       return {
         ok: true,
         data: {
           id: jobId,
-          status,
-          done: status === 'done',
-          failed: status === 'failed',
-          pending: ['pending', 'processing', 'scheduled'].includes(status),
-          response
+          status: polled.status,
+          done: polled.state === 'completed',
+          failed: polled.state === 'failed',
+          // An unrecognised status now counts as still pending rather than as none of the three.
+          pending: polled.state === 'running',
+          response: polled.result
         },
         meta: {
           auth: { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source }
@@ -51,7 +53,7 @@ const dataCleanStatusTool = {
       };
     } catch (e) {
       log.error('tool:data-clean-status error', { error: String(e) });
-      return { ok: false, error: { code: 'DATA_CLEAN_STATUS_ERROR', message: String(e.message || e) } };
+      return { ok: false, error: { code: e instanceof JobNotFoundError ? 'NOT_FOUND' : 'DATA_CLEAN_STATUS_ERROR', message: String(e.message || e) } };
     }
   }
 };

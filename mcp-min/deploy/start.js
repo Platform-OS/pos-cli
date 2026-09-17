@@ -12,9 +12,12 @@ const archive = { makeArchive };
 const assets = { deployAssets };
 import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
+import { mintFor, originOf } from '../jobs/handle.js';
+import { trackUpload } from '../jobs/local-phases.js';
+import { deployAssetsForRelease } from './assets-task.js';
 
 const startDeployTool = {
-  description: 'Deploy to platformOS instance. Creates archive from app/ and modules/ directories, uploads it, and deploys assets directly to S3.',
+  description: 'Deploy to platformOS instance. Creates archive from app/ and modules/ directories, uploads it, and deploys assets directly to S3. Returns a job_id: the deploy is still running when this answers, and job-status reports when its release and assets are both in.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -72,13 +75,21 @@ const startDeployTool = {
         };
       }
 
-      // Deploy assets in the background (S3 upload + CDN wait can take 90s+)
+      // Deploy assets in the background (release import + S3 upload + CDN wait can take minutes).
+      // `job-status` is what reports on it: the upload is registered under the release id, so a
+      // deploy whose assets are still going up is not reported as finished.
+      const releaseId = pushResponse.id;
+      const origin = originOf(auth.url);
       let assetsInfo = null;
+      let hasAssets = false;
       try {
         const assetsToDeploy = await files.getAssets();
-        if (assetsToDeploy.length > 0) {
+        hasAssets = assetsToDeploy.length > 0;
+        if (hasAssets) {
           // Fire and forget - don't block the MCP response
-          runWithAuth(auth, () => assets.deployAssets(gateway)).then(() => {
+          const upload = runWithAuth(auth, () => deployAssetsForRelease(gateway, releaseId, { deployAssets: assets.deployAssets }));
+          trackUpload(origin, releaseId, upload);
+          upload.then(() => {
             log.info('Background asset deployment completed');
           }).catch(err => {
             log.error('Background asset deployment failed', { error: String(err) });
@@ -94,7 +105,10 @@ const startDeployTool = {
       return {
         ok: true,
         data: {
-          id: pushResponse.id,
+          id: releaseId,
+          // `assets` says whether there was an upload at all, so a server that did not start this
+          // deploy can still tell "nothing to upload" from "an upload I cannot see".
+          job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: { assets: hasAssets } }),
           status: pushResponse.status
         },
         archive: { path: archivePath, fileCount: numberOfFiles },

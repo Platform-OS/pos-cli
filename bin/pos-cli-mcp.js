@@ -12,10 +12,10 @@ const parsed = parseServerArgs(process.argv.slice(2), { version: pkg.version });
 if (!parsed.start) {
   process.exitCode = parsed.exitCode;
 } else {
-  await startServer(parsed.selection);
+  await startServer(parsed);
 }
 
-async function startServer(options) {
+async function startServer({ selection: requested, http }) {
   // Configuration problems the user can fix: the tool selection and tools.config.json
   // (ToolsConfigError) and the HTTP transport's MCP_MIN_* environment variables
   // (HttpConfigError). Anything else is a defect and keeps its stack trace.
@@ -26,9 +26,9 @@ async function startServer(options) {
   // trace, per the error-handling guidance in CLAUDE.md.
   try {
     const { selectTools } = await import('../mcp-min/tool-selection.js');
-    const selection = selectTools(options);
+    const selection = selectTools(requested);
     const { start } = await import('../mcp-min/index.js');
-    await start({ selection });
+    await start({ selection, http });
   } catch (error) {
     if (CONFIG_ERRORS.has(error?.name)) {
       await logger.Error(error.message, { exit: false, notify: false, hideTimestamp: true });

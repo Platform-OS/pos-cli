@@ -18,7 +18,7 @@ vi.mock('#lib/logger.js', () => ({
 
 const getTmpDir = withTmpDir();
 
-const PLATFORMOS = { command: 'pos-cli-mcp', args: ['--profile', 'dev'] };
+const PLATFORMOS = { command: 'pos-cli-mcp', args: ['--profile', 'dev', '--no-http'] };
 const SUPERVISOR = { command: 'pos-cli-supervisor' };
 
 const writeJson = (contents, ...segments) => {
@@ -72,10 +72,12 @@ describe('ai init', () => {
     expect(logger.Success).toHaveBeenLastCalledWith(expect.stringMatching(/already configured/));
   });
 
-  // `{ command: 'pos-cli-mcp' }` is what earlier releases wrote: nobody chose it, so it moves
-  // to the dev profile.
-  test('claude - upgrades an entry an earlier release wrote, and reports it', async () => {
-    writeJson({ mcpServers: { platformos: { command: 'pos-cli-mcp' }, 'platformos-supervisor': SUPERVISOR } }, '.mcp.json');
+  // Entries earlier releases wrote: nobody chose them, so they move to the current form.
+  test.each([
+    ['with no arguments (6.5 and earlier)', { command: 'pos-cli-mcp' }],
+    ['with the dev profile but still opening an HTTP listener', { command: 'pos-cli-mcp', args: ['--profile', 'dev'] }]
+  ])('claude - upgrades an entry an earlier release wrote %s, and reports it', async (_label, earlier) => {
+    writeJson({ mcpServers: { platformos: earlier, 'platformos-supervisor': SUPERVISOR } }, '.mcp.json');
 
     await init({ tool: 'claude', rootPath: getTmpDir() });
 
@@ -86,7 +88,7 @@ describe('ai init', () => {
   });
 
   test('vscode - upgrades the earlier entry whatever order its keys are in', async () => {
-    writeJson({ servers: { platformos: { command: 'pos-cli-mcp', type: 'stdio' } } }, '.vscode', 'mcp.json');
+    writeJson({ servers: { platformos: { args: ['--profile', 'dev'], command: 'pos-cli-mcp', type: 'stdio' } } }, '.vscode', 'mcp.json');
 
     await init({ tool: 'vscode', rootPath: getTmpDir() });
 
@@ -98,6 +100,7 @@ describe('ai init', () => {
   // reasons someone edits the entry; re-running init must not undo that.
   test.each([
     ['another profile', { command: 'pos-cli-mcp', args: ['--profile', 'full'] }],
+    ['the HTTP listener kept on purpose', { command: 'pos-cli-mcp', args: ['--profile', 'dev', '--exclude-tools', 'deploy-wait'] }],
     ['extra settings', { ...PLATFORMOS, env: { MCP_TOOLS_CONFIG: 'tools.json' } }],
     ['a different command', { command: 'outdated-command' }],
     ['the same args in another order', { command: 'pos-cli-mcp', args: ['dev', '--profile'] }]
@@ -138,7 +141,7 @@ describe('ai init', () => {
   });
 
   test('claude - the current entry with its keys reordered is already configured', async () => {
-    const original = JSON.stringify({ mcpServers: { platformos: { args: ['--profile', 'dev'], command: 'pos-cli-mcp' }, 'platformos-supervisor': SUPERVISOR } });
+    const original = JSON.stringify({ mcpServers: { platformos: { args: ['--profile', 'dev', '--no-http'], command: 'pos-cli-mcp' }, 'platformos-supervisor': SUPERVISOR } });
     writeJson(original, '.mcp.json');
 
     await init({ tool: 'claude', rootPath: getTmpDir() });
@@ -160,7 +163,7 @@ describe('ai init', () => {
 
     const config = readJson('.vscode', 'mcp.json');
     expect(config.mcpServers).toBeUndefined();
-    expect(config.servers.platformos).toEqual({ type: 'stdio', command: 'pos-cli-mcp', args: ['--profile', 'dev'] });
+    expect(config.servers.platformos).toEqual({ type: 'stdio', command: 'pos-cli-mcp', args: ['--profile', 'dev', '--no-http'] });
     expect(config.servers['platformos-supervisor']).toEqual({ type: 'stdio', command: 'pos-cli-supervisor' });
   });
 

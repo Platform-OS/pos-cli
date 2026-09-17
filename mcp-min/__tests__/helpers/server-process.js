@@ -140,7 +140,7 @@ export function initializeOverStdio(proc) {
     jsonrpc: '2.0',
     id: 'init',
     method: 'initialize',
-    params: { protocolVersion: '2024-11-05', capabilities: {} }
+    params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'pos-cli-tests', version: '1.0.0' } }
   });
 }
 

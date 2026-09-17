@@ -3,6 +3,8 @@ import { listGeneratorPathsSync, showHelp } from './utils.js';
 
 const listTool = {
   description: 'List available generators discovered under **/generators/*/index.js with required and optional args',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: { type: 'object', additionalProperties: false, properties: {} },
   handler: async (_params, ctx = {}) => {
     const gens = listGeneratorPathsSync(ctx.globSync);

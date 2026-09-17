@@ -1,6 +1,7 @@
 // platformos.data.clean - start data clean operation (removes data from instance)
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
+import { mintFor } from '../jobs/handle.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
 
@@ -56,6 +57,7 @@ const dataCleanTool = {
         ok: true,
         data: {
           id: response.id,
+          job_id: mintFor({ kind: 'data-clean', id: response.id, origin: auth.url }),
           status: response.status || 'pending',
           includeSchema
         },

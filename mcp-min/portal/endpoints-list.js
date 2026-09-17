@@ -4,6 +4,8 @@ import { getPortalConfig, portalRequest } from './portal-client.js';
 
 const endpointsListTool = {
   description: 'List available regions/endpoints for instance creation from Partner Portal.',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,

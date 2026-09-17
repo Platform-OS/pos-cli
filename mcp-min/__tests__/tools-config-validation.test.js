@@ -221,7 +221,7 @@ describe('the server and pos-cli mcp-config judge a config the same way', () => 
     const configPath = path.join(tmpDir, 'server-nowhere.json');
     const proc = launch({ workDir: tmpDir, env: { MCP_TOOLS_CONFIG: configPath, MCP_MIN_PORT: '0' } });
     try {
-      await request(proc, { jsonrpc: '2.0', id: 'init', method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {} } });
+      await request(proc, { jsonrpc: '2.0', id: 'init', method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'pos-cli-tests', version: '1.0.0' } } });
       const list = await request(proc, { jsonrpc: '2.0', id: 'list', method: 'tools/list', params: {} });
 
       expect(list.result.tools.map(t => t.name)).toEqual([...registry.keys()]);

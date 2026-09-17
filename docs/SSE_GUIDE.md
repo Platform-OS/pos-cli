@@ -1,5 +1,11 @@
 # Server-Sent Events (SSE) Streaming Guide
 
+> **Deprecated.** This guide covers `POST /call-stream` and the `GET /` SSE handshake: the
+> pre-SDK HTTP API, kept working through 6.x and removed at the next major. MCP over HTTP is
+> now `POST /mcp` (MCP Streamable HTTP, protocol revision 2026-07-28 and the 2025 revisions),
+> which streams a call's progress over SSE itself — see
+> [docs/MCP_TOOLS.md](MCP_TOOLS.md#mcp-over-http).
+
 This guide provides comprehensive documentation for using the Server-Sent Events (SSE) streaming capabilities in the pos-cli MCP server for real-time log monitoring.
 
 ## Overview

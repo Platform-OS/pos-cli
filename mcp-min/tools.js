@@ -24,6 +24,9 @@ import migrationsListTool from './migrations/list.js';
 import migrationsGenerateTool from './migrations/generate.js';
 import migrationsRunTool from './migrations/run.js';
 
+// jobs: one status tool for every async operation
+import jobStatusTool from './jobs/status.js';
+
 // deploy tools
 import deployStartTool from './deploy/start.js';
 import deployStatusTool from './deploy/status.js';
@@ -67,6 +70,7 @@ const tools = {
   // list-envs tool based on pos-cli-env list
   'envs-list': {
     description: 'List configured environments from .pos (name and url)',
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -109,6 +113,9 @@ const tools = {
   'migrations-run': migrationsRunTool,
 
   // deploy
+  // job-status: the status of anything deploy-start, data-* or tests-run-async started
+  'job-status': jobStatusTool,
+
   'deploy-start': deployStartTool,
   'deploy-status': deployStatusTool,
   'deploy-wait': deployWaitTool,

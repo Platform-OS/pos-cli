@@ -9,6 +9,7 @@ import { sseHandler, writeSSE } from './sse.js';
 import { DEBUG } from './config.js';
 import { DEFAULT_HOST, DEFAULT_PORT, LOOPBACK_HOSTNAMES } from './http-config.js';
 import hostValidation from './host-validation.js';
+import { createMcpEndpoint } from './protocol/http-endpoint.js';
 import log from './log.js';
 
 // SSE sessions keyed by Mcp-Session-Id. Supports multiple concurrent clients.
@@ -118,6 +119,12 @@ export default async function startHttp({
   // route, so a rejected request is never parsed or dispatched — including routes added later.
   app.use(hostValidation(allowedHostnames));
 
+  // MCP Streamable HTTP (2026-07-28, and 2025-era clients statelessly). After Host/Origin
+  // validation like every route; before the JSON body parser, because the SDK reads the body.
+  app.all('/mcp', createMcpEndpoint({ tools, trackStream }));
+
+  // Everything below is the deprecated pre-SDK HTTP API (/, /tools, /call, /call-stream),
+  // kept working through 6.x and removed at the next major.
   app.use(bodyParser.json({ limit: '1mb' }));
 
   // Root route for basic info and discovery
@@ -251,7 +258,8 @@ export default async function startHttp({
         const list = [...tools].map(([name, tool]) => ({
           name,
           description: tool.description || '',
-          inputSchema: tool.inputSchema || OPEN_OBJECT_SCHEMA
+          inputSchema: tool.inputSchema || OPEN_OBJECT_SCHEMA,
+          ...(tool.annotations && { annotations: tool.annotations })
         }));
         respond({ result: { tools: list } });
         return;

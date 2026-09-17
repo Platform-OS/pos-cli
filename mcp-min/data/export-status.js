@@ -3,9 +3,13 @@ import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
+import exportAdapter from '../jobs/adapters/data-export.js';
+import { JobNotFoundError } from '../jobs/errors.js';
 
 const dataExportStatusTool = {
-  description: 'Check the status of a data export job. When done, returns data (JSON) or zip_file_url (ZIP).',
+  description: 'Deprecated: use job-status. Check the status of a data export job; when done, returns the exported data or a ZIP link.',
+  // Tells MCP clients this tool changes nothing, locally or on the instance.
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -31,43 +35,32 @@ const dataExportStatusTool = {
         return { ok: false, error: { code: 'VALIDATION_ERROR', message: 'jobId is required' } };
       }
 
-      const response = await gateway.dataExportStatus(jobId, isZip);
-
-      // Normalize status
-      const status = response.status?.name || response.status;
+      const polled = await exportAdapter.poll({ gateway }, jobId, { zip: isZip });
 
       const result = {
         ok: true,
         data: {
           id: jobId,
-          status,
-          done: status === 'done',
-          failed: status === 'failed',
-          pending: ['pending', 'processing', 'scheduled'].includes(status)
+          status: polled.status,
+          done: polled.state === 'completed',
+          failed: polled.state === 'failed',
+          // An unrecognised status now counts as still pending rather than as none of the three.
+          pending: polled.state === 'running'
         },
         meta: {
           auth: { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source }
         }
       };
 
-      // Include export data when done
-      if (status === 'done') {
-        if (isZip && response.zip_file_url) {
-          result.data.zipFileUrl = response.zip_file_url;
-        } else if (response.data) {
-          // Transform data to standard format
-          result.data.exportedData = {
-            users: response.data.users?.results || [],
-            transactables: response.data.transactables?.results || [],
-            models: response.data.models?.results || []
-          };
-        }
-      }
+      // Include export data when done. The adapter builds it, so this tool and job-status hand
+      // back the same export.
+      const { zip, ...exported } = polled.result;
+      Object.assign(result.data, exported);
 
       return result;
     } catch (e) {
       log.error('tool:data-export-status error', { error: String(e) });
-      return { ok: false, error: { code: 'DATA_EXPORT_STATUS_ERROR', message: String(e.message || e) } };
+      return { ok: false, error: { code: e instanceof JobNotFoundError ? 'NOT_FOUND' : 'DATA_EXPORT_STATUS_ERROR', message: String(e.message || e) } };
     }
   }
 };

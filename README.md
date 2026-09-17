@@ -991,7 +991,7 @@ It asks which AI tool you use and registers both platformOS MCP servers — `pla
 | VS Code     | `.vscode/mcp.json`  | `servers`    |
 | Other       | prints the JSON snippet for manual setup | — |
 
-Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. `platformos` is registered with `--profile dev` (see [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed)). An entry written by an earlier pos-cli — `"command": "pos-cli-mcp"` with no arguments — is upgraded to that; an entry you have changed in any other way is left exactly as it is, and the command tells you so. To skip the prompt (e.g. in scripts), pass the tool directly:
+Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. `platformos` is registered with `--profile dev --no-http` (see [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed)): the tools a coding agent uses, over stdio only. An entry written by an earlier pos-cli — `"command": "pos-cli-mcp"` with no arguments, or with `--profile dev` alone — is upgraded to that; an entry you have changed in any other way is left exactly as it is, and the command tells you so. To skip the prompt (e.g. in scripts), pass the tool directly:
 
     pos-cli ai init --tool claude
 
@@ -1005,7 +1005,17 @@ Run it from your project root. Existing configuration files are merged, never ov
 
 That form works with every published version. The shorter `npx -y @platformos/pos-cli mcp` needs a release newer than 6.5.0: earlier releases never registered the `mcp` command, so it fails with `unknown command 'mcp'`.
 
-This starts both a **stdio transport** (for editor/AI integrations) and an **HTTP/SSE server** on `127.0.0.1:5910` (port configurable with `MCP_MIN_PORT`).
+This starts both a **stdio transport** (for editor/AI integrations) and an **HTTP server** on `127.0.0.1:5910` (port configurable with `MCP_MIN_PORT`), which serves MCP at `/mcp`. Pass `--no-http` for stdio only — what `pos-cli ai init` writes, since stdio clients never use the listener:
+
+    pos-cli-mcp --no-http
+
+#### Protocol Revisions
+
+The server speaks MCP **2026-07-28** and the 2025 revisions (`2025-11-25`, `2025-06-18`, `2024-11-05`), and answers each client in its own revision — a client that opens with `server/discover` gets the new one, a client that opens with `initialize` gets the version it asks for. The protocol layer is the [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) v2.
+
+A call that fails comes back as a tool result marked `isError`, carrying a code and message the model can act on, rather than as a protocol error: `INVALID_PARAMS` for arguments that do not match the tool's schema, the tool's own code when it reports a failure, and `INTERNAL_ERROR` when it throws. A tool that does not exist, or is not exposed, is still a protocol error.
+
+Tools that only read — `envs-list`, `logs-fetch`, the status tools, the Partner Portal lookups — are marked `readOnlyHint`, which some clients use to run them without asking.
 
 The server runs for as long as its MCP client keeps stdin open. When the client closes stdin — which is how MCP clients stop the servers they start — the server stops taking new work, lets calls already running finish (at most 120 seconds, which covers the asset upload `deploy-start` continues in the background), and exits, releasing its HTTP port. To run the HTTP transport on its own, give it stdin from `/dev/null` (`NUL` on Windows):
 
@@ -1022,16 +1032,16 @@ Every tool definition the server exposes is sent to the AI model with each reque
 
 - `--profile <name>` — the starting set:
   - `full` — every tool. The default.
-  - `dev` — what a coding agent uses to edit, check, deploy and verify: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-start`, `deploy-status`, `deploy-wait`, `unit-tests-run`, `tests-run-async`, `tests-run-async-result`. Its definitions are about a third of the size of `full`'s.
+  - `dev` — what a coding agent uses to edit, check, deploy and verify: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-start`, `job-status`, `unit-tests-run`, `tests-run-async`. Its definitions are about a quarter of the size of `full`'s. The deprecated per-operation status tools are not in it; `job-status` answers for all of them.
   - `none` — no tools; name them with `--include-tools`.
 - `--include-tools <names>` adds tools to the profile. This is not an allowlist, unlike Gemini CLI's `includeTools` setting; for an allowlist, use `--profile none --include-tools …`.
 - `--exclude-tools <names>` removes tools.
 
 Names are comma-separated, and each option can be repeated. Tools disabled in the tool configuration (see [Viewing Tool Configuration](#viewing-tool-configuration)) stay hidden. The selection is fixed for the life of the process and is the same on both transports for every client, and a tool that is not exposed cannot be called either.
 
-The server refuses to start — with a message, before either transport opens — when a selection is not exactly what it looks like: an unknown profile or tool name, the same tool in both lists, `--include-tools` naming a tool the tool configuration disables, or a selection that leaves no tools. Any argument other than these three, `--help` and `--version` is refused too, including `pos-cli mcp config`; the tool configuration is shown by `pos-cli mcp-config`.
+The server refuses to start — with a message, before either transport opens — when a selection is not exactly what it looks like: an unknown profile or tool name, the same tool in both lists, `--include-tools` naming a tool the tool configuration disables, or a selection that leaves no tools. Any argument other than these three, `--no-http`, `--help` and `--version` is refused too, including `pos-cli mcp config`; the tool configuration is shown by `pos-cli mcp-config`.
 
-`pos-cli-mcp` with no options exposes every tool, as before; the default is planned to become `dev` in the next major release. `pos-cli ai init` writes `--profile dev`. A project configuration that passes these options to pos-cli 6.5.1 or earlier gets the full set there, because those releases ignore their arguments.
+`pos-cli-mcp` with no options exposes every tool, as before; the default is planned to become `dev` in the next major release. `pos-cli ai init` writes `--profile dev --no-http`. A project configuration that passes these options to pos-cli 6.5.1 or earlier gets the full set, and an HTTP listener, there: those releases ignore their arguments.
 
 The HTTP server has **no authentication**: anything that can send it a request can run every enabled tool with the platformOS credentials the server resolves (`.pos`, `MPKIT_*`). It is therefore reachable from this machine only, and answers `403` to any request whose `Host` — or `Origin`, when present — does not name `localhost`, `127.0.0.1` or `[::1]`, which keeps web pages from driving it. Two environment variables widen this, deliberately:
 
@@ -1039,6 +1049,16 @@ The HTTP server has **no authentication**: anything that can send it a request c
 - `MCP_MIN_ALLOWED_HOSTS` — comma-separated hostnames or IP addresses (no scheme or port, IPv6 in brackets) to accept in `Host`/`Origin` besides the loopback names.
 
 A malformed value stops the server at startup. If the port is taken, the server logs `HTTP transport not started` and stdio keeps working. MCP servers started by pos-cli 6.5.0 or earlier listen on **all** interfaces without these checks and keep the port until stopped, so restart your MCP clients after upgrading.
+
+#### HTTP Endpoints
+
+| Endpoint | Status |
+| --- | --- |
+| `POST /mcp` | MCP Streamable HTTP. 2026-07-28, and 2025-era clients served statelessly (`GET` and `DELETE` answer `405`: there is no session to resume). |
+| `GET /health` | Unchanged. |
+| `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` | **Deprecated.** The pre-SDK HTTP API, kept working through 6.x and removed at the next major. Use `/mcp`. |
+
+Invoking a tool over stdio by naming it as the JSON-RPC method (`{"method":"envs-list"}`) has been **removed**; it was never part of MCP. Use `tools/call`.
 
 #### Configuring Claude Code
 
@@ -1049,7 +1069,7 @@ Run `pos-cli ai init --tool claude` to generate this automatically, or add the f
   "mcpServers": {
     "platformos": {
       "command": "pos-cli-mcp",
-      "args": ["--profile", "dev"]
+      "args": ["--profile", "dev", "--no-http"]
     },
     "platformos-supervisor": {
       "command": "pos-cli-supervisor"
@@ -1073,26 +1093,41 @@ The project directory is resolved from `--project`, then the `POS_SUPERVISOR_PRO
 The MCP server has 30+ tools across these categories; `--profile dev` exposes the ones listed under [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed):
 
 - **Environments**: `envs-list`, `env-add`
-- **Deploy**: `deploy-start`, `deploy-status`, `deploy-wait`
+- **Jobs**: `job-status`
+- **Deploy**: `deploy-start`, `deploy-status`†, `deploy-wait`†
 - **Sync**: `sync-file`
 - **Logs**: `logs-fetch`
 - **GraphQL**: `graphql-exec`
 - **Liquid**: `liquid-exec`
-- **Data**: `data-import`, `data-import-status`, `data-export`, `data-export-status`, `data-clean`, `data-clean-status`, `data-validate`
+- **Data**: `data-import`, `data-import-status`†, `data-export`, `data-export-status`†, `data-clean`, `data-clean-status`†, `data-validate`
 - **Migrations**: `migrations-list`, `migrations-generate`, `migrations-run`
-- **Tests**: `unit-tests-run`, `tests-run-async`, `tests-run-async-result`
+- **Tests**: `unit-tests-run`, `tests-run-async`, `tests-run-async-result`†
 - **Constants**: `constants-list`, `constants-set`, `constants-unset`
 - **Generators**: `generators-list`, `generators-help`, `generators-run`
 - **Code quality**: `check-run`
 - **Uploads**: `uploads-push`
 - **Partner Portal**: `instance-create`, `partners-list`, `partner-get`, `endpoints-list`
 
+† Deprecated in favour of `job-status`, and removed in the next major release. They still work, and answer from the same code `job-status` does.
+
+#### Asynchronous Operations
+
+Five tools start work that outlives the call: `deploy-start`, `data-import`, `data-export`, `data-clean` and `tests-run-async`. Each returns a `job_id` alongside its own fields, and `job-status` reads it back:
+
+    job-status { "job_id": "pjob1_…" }
+    job-status { "job_id": "pjob1_…", "wait_ms": 30000 }
+
+- `state` is `running`, `completed` or `failed`. `completed` means the operation finished — a test run whose assertions failed is `completed`, because the run did its work; `failed` means the operation itself failed. `done` is `state != running`.
+- `wait_ms` (up to 120,000) polls until the job is done or that long has passed, whichever comes first. Hitting the deadline returns the current state with `done: false`, not an error.
+- A deploy that uploaded assets is not `completed` until those assets are on the CDN, not merely when its release is imported. `result.assets.phase` says where they are: `uploading` (still going up from this machine), `processing` (the instance is unpacking them), `done`, `failed`, `none` (the deploy had no assets), or `unknown` — the honest answer when the server that started the upload is no longer running and the instance reports nothing about assets.
+- The `job_id` is opaque: pass it back unchanged. It names the instance the job was started on, so polling with no `env` cannot ask a different instance about the same numeric id. If the resolved credentials point elsewhere, `job-status` uses the `.pos` environment that does point at that instance, or refuses — without making a request. Nothing in a `job_id` chooses credentials or the host a request goes to.
+
 #### Viewing Tool Configuration
 
 To see which tools the server exposes, and why each of the others is not exposed:
 
     pos-cli mcp-config
-    pos-cli mcp-config --profile dev --exclude-tools deploy-wait
+    pos-cli mcp-config --profile dev --exclude-tools tests-run-async
 
 It takes the same `--profile`, `--include-tools` and `--exclude-tools` options as the server, reports exactly what the server would expose with them, and refuses the same mistakes with the same messages. `--json` prints that report as JSON — `config`, `profile`, `include`, `exclude`, `exposed` and `hidden` (each with a `reason`: `profile`, `excluded` or `disabled`); it used to print the raw configuration file.
 

@@ -2,6 +2,10 @@ import { validate } from '../lib/validation/index.js';
 import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import log from './log.js';
 
+// MCP 2026-07-28 assigns JSON Schema 2020-12 to a schema without `$schema`, and tool schemas
+// are published without one, so that is the dialect they mean and are enforced in.
+const TOOL_SCHEMA_DIALECT = '2020-12';
+
 /**
  * Validate tool params against the tool's advertised `inputSchema`.
  *
@@ -14,7 +18,7 @@ import log from './log.js';
  * @returns {{valid: boolean, errors?: Array, message?: string, schemaError?: boolean}}
  */
 const validateToolParams = (name, tool, params) => {
-  const result = validate(tool.inputSchema || OPEN_OBJECT_SCHEMA, params ?? {});
+  const result = validate(tool.inputSchema || OPEN_OBJECT_SCHEMA, params ?? {}, { dialect: TOOL_SCHEMA_DIALECT });
 
   if (!result.valid) {
     log.debug('tool params rejected', {
@@ -55,5 +59,5 @@ const rejectionFor = (name, tool, params) => {
   };
 };
 
-export { validateToolParams, rejectionFor };
+export { validateToolParams, rejectionFor, TOOL_SCHEMA_DIALECT };
 export default validateToolParams;
