@@ -4,6 +4,7 @@ title: 'modules.test.js: publishVersion single-dir workflow test times out'
 status: To Do
 assignee: []
 created_date: '2026-09-02 10:24'
+updated_date: '2026-09-17 08:37'
 labels:
   - bug
   - tests
@@ -14,7 +15,7 @@ references:
   - lib/modules.js
   - .github/workflows/tests.yaml
 priority: medium
-ordinal: 24000
+ordinal: 38000
 ---
 
 ## Description

@@ -8,24 +8,58 @@ Complete reference guide for all platformOS Model Context Protocol (MCP) tools a
 
 ## Table of Contents
 
-1. [Authentication](#authentication)
-2. [Environment Management](#environment-management)
-3. [Logging & Monitoring](#logging--monitoring)
-4. [GraphQL & Liquid](#graphql--liquid)
-5. [Generators](#generators)
-6. [Migrations](#migrations)
-7. [Deployment](#deployment)
-8. [Data Operations](#data-operations)
-9. [Testing](#testing)
-10. [Linting](#linting)
-11. [File Sync](#file-sync)
-12. [Property Uploads](#property-uploads)
-13. [Constants](#constants)
-14. [Response Patterns](#response-patterns)
+1. [HTTP Transport Security](#http-transport-security)
+2. [Authentication](#authentication)
+3. [Environment Management](#environment-management)
+4. [Logging & Monitoring](#logging--monitoring)
+5. [GraphQL & Liquid](#graphql--liquid)
+6. [Generators](#generators)
+7. [Migrations](#migrations)
+8. [Deployment](#deployment)
+9. [Data Operations](#data-operations)
+10. [Testing](#testing)
+11. [Linting](#linting)
+12. [File Sync](#file-sync)
+13. [Property Uploads](#property-uploads)
+14. [Constants](#constants)
+15. [Response Patterns](#response-patterns)
+
+---
+
+## HTTP Transport Security
+
+To run the server for the `curl` examples below, start it with stdin from `/dev/null`:
+
+```bash
+pos-cli-mcp </dev/null &
+```
+
+A server whose stdin is a pipe treats that pipe closing as its MCP client leaving and exits, so a server started by a script that later closes the pipe would not stay up.
+
+The HTTP transport (the `curl` examples below, port 5910) has **no authentication**. Whoever can send it a request can run every enabled tool — `data-clean`, `deploy-start`, `graphql-exec` — with the platformOS credentials the server resolves (see [Authentication](#authentication)). What stands in for it:
+
+- **Loopback bind.** The server listens on `127.0.0.1` only, so other machines cannot connect.
+- **Host/Origin validation.** On every route, before the request body is read, the hostname in `Host` must be `localhost`, `127.0.0.1` or `[::1]` (any port), and so must the hostname in `Origin` if the request has one. Otherwise — including a missing `Host` or `Origin: null` — the answer is `403`:
+
+  ```json
+  { "jsonrpc": "2.0", "error": { "code": -32000, "message": "Invalid Origin: evil.example" }, "id": null }
+  ```
+
+  This stops web pages from driving the server (DNS rebinding, cross-site requests). It does not stop a program running on the same machine, which can send any headers.
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `MCP_MIN_PORT` | `5910` | Port, `0`–`65535` (`0` picks a free port; the log shows which). |
+| `MCP_MIN_HOST` | `127.0.0.1` | Bind address: an IP address, or `localhost`. A non-loopback value such as `0.0.0.0` makes every enabled tool reachable, **without authentication**, by anyone who can reach the port, and the server logs a warning saying so on every start. Use it only where that is acceptable, e.g. a container whose published port is bound to the host's loopback. |
+| `MCP_MIN_ALLOWED_HOSTS` | *(none)* | Comma-separated hostnames or IP addresses accepted in `Host`/`Origin` in addition to the loopback names, e.g. `devbox.local,10.0.0.5,[fd00::5]`. No scheme, no port; IPv6 in brackets. Clients that address the server by any other name need their name listed here. |
+
+A malformed value in any of the three stops the server at startup with a message naming it. If the port is already taken, the server logs `HTTP transport not started (EADDRINUSE)` and keeps serving MCP over stdio. A `pos-cli-mcp` started by an older pos-cli listens on **all** interfaces with no Host/Origin checks, and keeps answering on that port until it is stopped — restart MCP clients after upgrading.
 
 ---
 
 ## Authentication
+
+This section is about how tools authenticate **to platformOS**. The MCP server does not authenticate its own callers; see [HTTP Transport Security](#http-transport-security).
 
 All tools (except `envs-list` and generator tools) support multiple authentication methods with the following precedence:
 

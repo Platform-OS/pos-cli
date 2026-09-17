@@ -1,3 +1,4 @@
+import http from 'http';
 import express from 'express';
 import bodyParser from 'body-parser';
 import { randomUUID } from 'crypto';
@@ -6,6 +7,8 @@ import { rejectionFor } from './validate-params.js';
 import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import { sseHandler, writeSSE } from './sse.js';
 import { DEBUG } from './config.js';
+import { DEFAULT_HOST, DEFAULT_PORT, LOOPBACK_HOSTNAMES } from './http-config.js';
+import hostValidation from './host-validation.js';
 import log from './log.js';
 
 // SSE sessions keyed by Mcp-Session-Id. Supports multiple concurrent clients.
@@ -19,10 +22,75 @@ function generateSessionId() {
   return `mcpmin-${randomUUID()}`;
 }
 
-export default async function startHttp({ port = 5910 } = {}) {
+// Per-server shutdown state, reached by stopHttp(). A WeakMap so a closed server is not kept alive.
+const shutdownState = new WeakMap();
+
+/**
+ * Stops the HTTP transport without cutting off requests already being answered.
+ *
+ * - No new connections are accepted, and idle keep-alive connections close now.
+ * - SSE streams never finish on their own, so they are ended now.
+ * - A request in flight gets its response, and its connection closes as soon as that response
+ *   is sent: left to itself, a keep-alive connection lingers for the 5 s keep-alive timeout
+ *   and holds the process open with it.
+ *
+ * Resolves once every connection has closed.
+ */
+export function stopHttp(server) {
+  const state = shutdownState.get(server);
+  if (!state) throw new TypeError('stopHttp: not a server started by startHttp');
+  if (state.stopped) return state.stopped;
+
+  state.closing = true;
+  state.stopped = new Promise(resolve => server.close(() => resolve()));
+  for (const res of state.streams) res.destroy();
+  server.closeIdleConnections();
+  return state.stopped;
+}
+
+/**
+ * Starts the HTTP transport.
+ *
+ * Resolves with the listening http.Server once the bind has succeeded, and rejects with the
+ * listen error (EADDRINUSE, EACCES, EADDRNOTAVAIL…) when it has not — the caller decides
+ * what a failed bind means; nothing here reports success before the socket is bound.
+ *
+ * The defaults are the safe ones on purpose: any caller that passes only a port gets a
+ * loopback-only listener that answers loopback Host/Origin names only.
+ *
+ * @param {object} [options]
+ * @param {number} [options.port]
+ * @param {string} [options.host] - bind address
+ * @param {readonly string[]} [options.allowedHostnames] - Host/Origin hostnames to accept
+ * @returns {Promise<http.Server>}
+ */
+export default async function startHttp({
+  port = DEFAULT_PORT,
+  host = DEFAULT_HOST,
+  allowedHostnames = LOOPBACK_HOSTNAMES
+} = {}) {
   const app = express();
+  const server = http.createServer(app);
+  const state = { closing: false, stopped: null, streams: new Set() };
+  shutdownState.set(server, state);
 
   const router = express.Router();
+
+  // First, so it covers every response, including rejected and unknown-route ones.
+  app.use((req, res, next) => {
+    if (state.closing) res.setHeader('Connection', 'close');
+    res.on('finish', () => {
+      // After the response is flushed the connection is idle; close it rather than wait out
+      // the keep-alive timeout.
+      if (state.closing) setImmediate(() => server.closeIdleConnections());
+    });
+    next();
+  });
+
+  const trackStream = (res) => {
+    state.streams.add(res);
+    res.on('close', () => state.streams.delete(res));
+  };
 
   // Request logging middleware (replaces morgan)
   app.use((req, res, next) => {
@@ -40,6 +108,10 @@ export default async function startHttp({ port = 5910 } = {}) {
     next();
   });
 
+  // After logging, so a rejected request is still logged; before body parsing and every
+  // route, so a rejected request is never parsed or dispatched — including routes added later.
+  app.use(hostValidation(allowedHostnames));
+
   app.use(bodyParser.json({ limit: '1mb' }));
 
   // Root route for basic info and discovery
@@ -51,6 +123,7 @@ export default async function startHttp({ port = 5910 } = {}) {
       const sessionId = req.headers['mcp-session-id'] || generateSessionId();
       res.set('Mcp-Session-Id', sessionId); // must be set before writeHead in sseHandler
       sseHandler(req, res);
+      trackStream(res);
       sseSessions.set(sessionId, res);
       req.on('close', () => {
         sseSessions.delete(sessionId);
@@ -242,6 +315,7 @@ export default async function startHttp({ port = 5910 } = {}) {
 
     // Prepare SSE response
     sseHandler(req, res);
+    trackStream(res);
 
     // Emit initial endpoint event required by some clients (legacy pattern)
     try {
@@ -296,10 +370,22 @@ export default async function startHttp({ port = 5910 } = {}) {
 
   app.use('/', router);
 
-  return new Promise((resolve) => {
-    const server = app.listen(port, () => {
-      log.info('HTTP server listening', { port });
+  // Not app.listen(port, cb): Express 5 hands a listen error to that same callback, which is
+  // how a failed bind used to be logged as "listening".
+  return new Promise((resolve, reject) => {
+    const onError = (err) => {
+      server.off('listening', onListening);
+      reject(err);
+    };
+    const onListening = () => {
+      server.off('error', onError);
+      // Errors after a successful bind are rare (e.g. accept failures) and must not become
+      // an uncaught 'error' event.
+      server.on('error', (err) => log.error('HTTP server error', { code: err.code, message: err.message }));
       resolve(server);
-    });
+    };
+    server.once('error', onError);
+    server.once('listening', onListening);
+    server.listen(port, host);
   });
 }

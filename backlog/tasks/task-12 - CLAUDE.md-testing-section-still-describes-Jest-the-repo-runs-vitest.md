@@ -4,6 +4,7 @@ title: CLAUDE.md testing section still describes Jest; the repo runs vitest
 status: To Do
 assignee: []
 created_date: '2026-09-02 10:24'
+updated_date: '2026-09-17 08:37'
 labels:
   - docs
   - tests
@@ -14,7 +15,7 @@ references:
   - vitest.config.js
   - test/global-setup.js
 priority: low
-ordinal: 27000
+ordinal: 43000
 ---
 
 ## Description

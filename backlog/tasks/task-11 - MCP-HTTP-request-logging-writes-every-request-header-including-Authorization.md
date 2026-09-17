@@ -4,6 +4,7 @@ title: 'MCP HTTP request logging writes every request header, including Authoriz
 status: To Do
 assignee: []
 created_date: '2026-09-02 10:24'
+updated_date: '2026-09-17 08:37'
 labels:
   - security
   - mcp
@@ -16,7 +17,7 @@ references:
   - mcp-min/portal/env-add.js
   - mcp-min/log.js
 priority: low
-ordinal: 26000
+ordinal: 42000
 ---
 
 ## Description

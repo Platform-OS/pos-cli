@@ -4,6 +4,7 @@ title: gui/next log search builds SQL by interpolating the user's filter string
 status: To Do
 assignee: []
 created_date: '2026-09-02 10:23'
+updated_date: '2026-09-17 08:37'
 labels:
   - security
   - gui
@@ -16,7 +17,7 @@ references:
   - lib/validation/schemas/gui.js
   - lib/proxy.js
 priority: medium
-ordinal: 22000
+ordinal: 37000
 ---
 
 ## Description

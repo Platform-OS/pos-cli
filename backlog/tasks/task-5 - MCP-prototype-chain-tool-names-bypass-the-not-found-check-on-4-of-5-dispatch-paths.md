@@ -6,6 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-09-02 10:22'
+updated_date: '2026-09-17 08:37'
 labels:
   - bug
   - security
@@ -16,7 +17,7 @@ references:
   - mcp-min/stdio-server.js
   - mcp-min/tools.js
 priority: medium
-ordinal: 20000
+ordinal: 35000
 ---
 
 ## Description

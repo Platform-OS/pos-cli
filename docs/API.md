@@ -5,34 +5,17 @@
 http://localhost:3030
 ```
 
-## Authentication
+## Security
 
-### Admin (Health endpoint)
-```
-x-api-key: $ADMIN_API_KEY
-```
-
-### MCP Clients
-```
-Authorization: Bearer $CLIENT_SECRET
-```
-Clients configured in `clients.json`:
-```json
-{
-  \"default\": {
-    \"token\": \"client-secret\",
-    \"name\": \"Default Client\"
-  }
-}
-```
+There is **no authentication**: no API key, no Bearer token. Whoever can send the server a request can run every enabled tool with the platformOS credentials it resolves (`.pos`, `MPKIT_*`). The server listens on `127.0.0.1` only, and answers `403` unless the hostname in `Host` (and in `Origin`, when present) is `localhost`, `127.0.0.1` or `[::1]`; that blocks web pages, not local programs. `MCP_MIN_HOST` changes the bind address and `MCP_MIN_ALLOWED_HOSTS` adds accepted hostnames — see the Security section of [SSE_GUIDE.md](SSE_GUIDE.md#security) for both and their risk.
 
 ## Endpoints
 
-### `GET /health` (Admin)
+### `GET /health`
 **List server status and available tools**
 
 ```bash
-curl http://localhost:3030/health -H \"x-api-key: $ADMIN_API_KEY\"
+curl http://localhost:3030/health
 ```
 
 **Response**
@@ -44,11 +27,11 @@ curl http://localhost:3030/health -H \"x-api-key: $ADMIN_API_KEY\"
 }
 ```
 
-### `GET /tools` (Client)
+### `GET /tools`
 **List available tools with schemas**
 
 ```bash
-curl http://localhost:3030/tools -H \"Authorization: Bearer client-secret\"
+curl http://localhost:3030/tools
 ```
 
 **Response**
@@ -62,12 +45,11 @@ curl http://localhost:3030/tools -H \"Authorization: Bearer client-secret\"
 }
 ```
 
-### `POST /call` (Client)
+### `POST /call`
 **Execute MCP tool**
 
 ```bash
 curl -X POST http://localhost:3030/call \\
-  -H \"Authorization: Bearer client-secret\" \\
   -H \"Content-Type: application/json\" \\
   -d '{\"tool\":\"platformos.graphql.execute\",\"input\":{\"env\":\"staging\",\"query\":\"query { __schema { types { name } } }\"}}'
 ```
@@ -90,12 +72,11 @@ curl -X POST http://localhost:3030/call \\
 }
 ```
 
-### `POST /call-stream` (Client - SSE Streaming) ⚡ **NEW** ⚡
+### `POST /call-stream` (SSE Streaming) ⚡ **NEW** ⚡
 **Execute MCP tool with Server-Sent Events streaming**
 
 ```bash
 curl -X POST http://localhost:3030/call-stream \\
-  -H \"Authorization: Bearer client-secret\" \\
   -H \"Content-Type: application/json\" \\
   -d '{\"tool\":\"platformos.logs.stream\",\"input\":{\"env\":\"staging\"}}'
 ```
@@ -143,7 +124,7 @@ data: [DONE]
 ## Error Responses
 
 ```json
-{ \"error\": \"Unauthorized\" }  // 401
+{ \"jsonrpc\": \"2.0\", \"error\": { \"code\": -32000, \"message\": \"Invalid Host: evil.example\" }, \"id\": null }  // 403
 { \"error\": \"Tool 'foo' not found\" }  // 404
 { \"error\": \"[ZodError]: Invalid input\" }  // 400
 ```

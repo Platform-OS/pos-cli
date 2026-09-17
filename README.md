@@ -997,9 +997,28 @@ Run it from your project root. Existing configuration files are merged, never ov
 
 #### Starting the MCP Server
 
-    pos-cli mcp
+    pos-cli-mcp
 
-This starts both a **stdio transport** (for editor/AI integrations) and an **HTTP/SSE server** on port 5910 (configurable with `MCP_MIN_PORT`).
+`pos-cli mcp` starts the same server. MCP client configurations should use `pos-cli-mcp`, which skips the `pos-cli` launcher process. Without a global install, use:
+
+    npx -y -p @platformos/pos-cli pos-cli-mcp
+
+That form works with every published version. The shorter `npx -y @platformos/pos-cli mcp` needs a release newer than 6.5.0: earlier releases never registered the `mcp` command, so it fails with `unknown command 'mcp'`.
+
+This starts both a **stdio transport** (for editor/AI integrations) and an **HTTP/SSE server** on `127.0.0.1:5910` (port configurable with `MCP_MIN_PORT`).
+
+The server runs for as long as its MCP client keeps stdin open. When the client closes stdin — which is how MCP clients stop the servers they start — the server stops taking new work, lets calls already running finish (at most 120 seconds, which covers the asset upload `deploy-start` continues in the background), and exits, releasing its HTTP port. To run the HTTP transport on its own, give it stdin from `/dev/null` (`NUL` on Windows):
+
+    pos-cli-mcp </dev/null
+
+The server accepts no arguments besides `--help` and `--version`. Anything else stops it with an error instead of being ignored — including `pos-cli mcp config`; the tool configuration is shown by `pos-cli mcp-config`.
+
+The HTTP server has **no authentication**: anything that can send it a request can run every enabled tool with the platformOS credentials the server resolves (`.pos`, `MPKIT_*`). It is therefore reachable from this machine only, and answers `403` to any request whose `Host` — or `Origin`, when present — does not name `localhost`, `127.0.0.1` or `[::1]`, which keeps web pages from driving it. Two environment variables widen this, deliberately:
+
+- `MCP_MIN_HOST` — bind address (an IP address or `localhost`). A non-loopback value such as `0.0.0.0` exposes every enabled tool, unauthenticated, to anyone who can reach the port; the server logs a warning on every start in that mode.
+- `MCP_MIN_ALLOWED_HOSTS` — comma-separated hostnames or IP addresses (no scheme or port, IPv6 in brackets) to accept in `Host`/`Origin` besides the loopback names.
+
+A malformed value stops the server at startup. If the port is taken, the server logs `HTTP transport not started` and stdio keeps working. MCP servers started by pos-cli 6.5.0 or earlier listen on **all** interfaces without these checks and keep the port until stopped, so restart your MCP clients after upgrading.
 
 #### Configuring Claude Code
 

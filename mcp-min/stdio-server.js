@@ -5,12 +5,11 @@ import tools from './tools.js';
 import { rejectionFor } from './validate-params.js';
 import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import { DEBUG } from './config.js';
+import { createShutdown, stdinEndEndsSession } from './lifecycle.js';
 import log from './log.js';
 
 // MCP stdio server implementing JSON-RPC 2.0 protocol
 // Supports: initialize, notifications/initialized, tools/list, tools/call
-
-const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
 
 const SERVER_INFO = {
   name: 'pos-cli-mcp',
@@ -129,8 +128,27 @@ const mcpHandlers = {
   }
 };
 
-export default function startStdio() {
+/**
+ * @param {object} [options]
+ * @param {ReturnType<typeof createShutdown>} [options.shutdown] - shared with the other
+ *   transports so that the client closing stdin stops all of them; a server started on its
+ *   own gets one that only has stdio to stop
+ */
+export default function startStdio({ shutdown = createShutdown() } = {}) {
   log.info('stdio transport started (MCP protocol)');
+
+  // Created here, not at import: reading stdin before the close listener below is attached
+  // could let a client's early EOF go unnoticed.
+  const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: false });
+
+  let messagesReceived = 0;
+  rl.on('close', () => {
+    if (stdinEndEndsSession(process.stdin, messagesReceived)) {
+      shutdown.begin('stdin closed by the MCP client');
+    } else {
+      log.info('mcp-min: stdin closed before any message and is not a client pipe; other transports keep running');
+    }
+  });
 
   // Exit cleanly when the MCP client disconnects (closes the pipe)
   process.stdout.on('error', (err) => {
@@ -145,6 +163,7 @@ export default function startStdio() {
     const raw = line;
     line = line.trim();
     if (!line) return;
+    messagesReceived++;
 
     let msg;
     try {

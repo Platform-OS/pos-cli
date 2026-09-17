@@ -22,20 +22,20 @@ npm run mcp
 
 The server will start on `http://localhost:3030`.
 
-### 2. Configure Authentication
+### 2. Know Who Can Reach It
 
-Set your client secret token (from `clients.json`):
+The HTTP transport has **no authentication**. Anyone who can send it a request can run every enabled tool with the platformOS credentials the server resolves (`.pos`, `MPKIT_*`). What protects it:
 
-```bash
-export CLIENT_SECRET="your-client-secret-here"
-```
+- It listens on `127.0.0.1` only, so other machines cannot connect.
+- Every request's `Host` and `Origin` headers must name this machine (`localhost`, `127.0.0.1`, `[::1]`); anything else gets `403`. This stops web pages from reaching the server through DNS rebinding, and means a browser client only works when its page is itself served from localhost.
+
+See [Security](#security) for `MCP_MIN_HOST` and `MCP_MIN_ALLOWED_HOSTS`.
 
 ### 3. Start Streaming Logs
 
 **Basic streaming:**
 ```bash
 curl -X POST http://localhost:3030/call-stream \
-  -H "Authorization: Bearer $CLIENT_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"tool":"platformos.logs.stream","input":{"env":"staging"}}'
 ```
@@ -43,7 +43,6 @@ curl -X POST http://localhost:3030/call-stream \
 **Enhanced streaming with filtering:**
 ```bash
 curl -X POST http://localhost:3030/call-stream \
-  -H "Authorization: Bearer $CLIENT_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"tool":"platformos.logs.live","input":{"env":"staging","filter":"error","interval":2000}}'
 ```
@@ -144,9 +143,8 @@ Each log entry is a JSON object with the following structure:
 const EventSource = require('eventsource');
 
 class LogStreamer {
-  constructor(baseUrl, token) {
+  constructor(baseUrl) {
     this.baseUrl = baseUrl;
-    this.token = token;
   }
 
   streamLogs(env, options = {}) {
@@ -162,7 +160,6 @@ class LogStreamer {
     fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${this.token}`,
         'Content-Type': 'application/json'
       },
       body
@@ -218,7 +215,7 @@ class LogStreamer {
 }
 
 // Usage
-const streamer = new LogStreamer('http://localhost:3030', 'your-token');
+const streamer = new LogStreamer('http://localhost:3030');
 streamer.streamLogs('staging', { filter: 'error' });
 ```
 
@@ -230,11 +227,9 @@ import json
 import sseclient  # pip install sseclient-py
 
 class LogStreamer:
-    def __init__(self, base_url, token):
+    def __init__(self, base_url):
         self.base_url = base_url
-        self.token = token
         self.headers = {
-            'Authorization': f'Bearer {token}',
             'Content-Type': 'application/json'
         }
 
@@ -274,17 +269,18 @@ class LogStreamer:
             print(".", end="", flush=True)  # Show heartbeat as dots
 
 # Usage
-streamer = LogStreamer('http://localhost:3030', 'your-token')
+streamer = LogStreamer('http://localhost:3030')
 streamer.stream_logs('staging', filter='error', interval=2000)
 ```
 
 ### JavaScript (Browser) SSE Client
 
+The server answers a browser only when the page itself is served from `localhost`, `127.0.0.1` or `[::1]` (any port); requests from any other origin get `403`.
+
 ```javascript
 class LogStreamer {
-  constructor(baseUrl, token) {
+  constructor(baseUrl) {
     this.baseUrl = baseUrl;
-    this.token = token;
   }
 
   async streamLogs(env, options = {}) {
@@ -294,7 +290,6 @@ class LogStreamer {
       const response = await fetch(`${this.baseUrl}/call-stream`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -381,7 +376,7 @@ class LogStreamer {
 }
 
 // Usage in browser
-const streamer = new LogStreamer('http://localhost:3030', 'your-token');
+const streamer = new LogStreamer('http://localhost:3030');
 streamer.streamLogs('staging', { filter: 'error' });
 ```
 
@@ -508,7 +503,7 @@ class LogAnalyzer {
 
 2. **Missing logs**
    - Verify environment name is correct
-   - Check authentication token
+   - Check the environment's credentials in `.pos`
    - Ensure the environment has logging enabled
 
 3. **High latency**
@@ -525,8 +520,8 @@ class LogAnalyzer {
 
 ```javascript
 class ResilientStreamer extends LogStreamer {
-  constructor(baseUrl, token, maxRetries = 3) {
-    super(baseUrl, token);
+  constructor(baseUrl, maxRetries = 3) {
+    super(baseUrl);
     this.maxRetries = maxRetries;
     this.retryCount = 0;
   }
@@ -567,26 +562,28 @@ class ResilientStreamer extends LogStreamer {
 - `GET /health` - Server health check
 - `GET /tools` - List available tools
 
-### Authentication
+### Security
 
-All requests require Bearer token authentication:
+The HTTP transport has **no authentication and no rate limiting**. Whoever can send it a request can run every enabled tool — including `data-clean` and `deploy-start` — with the platformOS credentials the server resolves (`.pos`, `MPKIT_*`). It is protected in two ways:
 
-```
-Authorization: Bearer <client-secret>
-```
+- **Loopback bind.** It listens on `127.0.0.1` by default, so other machines cannot connect.
+- **Host/Origin validation.** Before any route runs, the hostname in `Host` must be `localhost`, `127.0.0.1` or `[::1]` (the port is ignored), and so must the hostname in `Origin` when that header is present. Anything else, a missing `Host`, and `Origin: null` are answered `403` with a JSON-RPC error body, for example `{"jsonrpc":"2.0","error":{"code":-32000,"message":"Invalid Origin: evil.example"},"id":null}`. This blocks web pages (DNS rebinding, cross-site requests); it does not stop a local program, which can send any headers it likes.
+
+Two environment variables change this:
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `MCP_MIN_HOST` | `127.0.0.1` | Bind address: an IP address or `localhost`. A non-loopback value such as `0.0.0.0` (e.g. inside a container) makes the server reachable from other machines, **without authentication**, and logs a warning on every start. |
+| `MCP_MIN_ALLOWED_HOSTS` | *(none)* | Comma-separated hostnames or IP addresses (IPv6 in brackets, no scheme or port) accepted in `Host`/`Origin` in addition to the loopback names, e.g. `devbox.local,10.0.0.5`. Needed when clients address the server by any other name. |
+
+A malformed value stops the server at startup with a message naming it.
 
 ### Response Codes
 
 - `200` - Success, streaming begins
-- `401` - Unauthorized (invalid token)
-- `404` - Tool not found
 - `400` - Invalid input parameters
-
-### Rate Limiting
-
-- Default: 100 requests per minute per client
-- Streaming connections: 10 concurrent streams per client
-- Burst limit: 20 requests per 10 seconds
+- `403` - `Host` or `Origin` does not name an allowed hostname
+- `404` - Tool not found
 
 ## Best Practices
 
@@ -596,7 +593,7 @@ Authorization: Bearer <client-secret>
 4. **Monitor resource usage**: Watch memory usage and connection counts
 5. **Implement reconnection logic**: Handle network interruptions gracefully
 6. **Log your logging**: Keep track of your streaming client's performance
-7. **Security**: Never expose streaming endpoints publicly without proper authentication
+7. **Security**: The server has no authentication. Keep it on loopback; set `MCP_MIN_HOST` to a non-loopback address only on a network where everyone who can reach the port may run every enabled tool with your credentials
 
 ## Examples in the Repository
 

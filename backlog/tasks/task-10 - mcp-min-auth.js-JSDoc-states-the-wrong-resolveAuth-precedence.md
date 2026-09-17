@@ -4,6 +4,7 @@ title: mcp-min/auth.js JSDoc states the wrong resolveAuth precedence
 status: To Do
 assignee: []
 created_date: '2026-09-02 10:24'
+updated_date: '2026-09-17 08:37'
 labels:
   - docs
   - mcp
@@ -11,7 +12,7 @@ dependencies: []
 references:
   - mcp-min/auth.js
 priority: low
-ordinal: 25000
+ordinal: 41000
 ---
 
 ## Description

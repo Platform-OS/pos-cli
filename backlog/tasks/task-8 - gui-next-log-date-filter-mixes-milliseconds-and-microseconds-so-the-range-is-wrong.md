@@ -6,6 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-09-02 10:23'
+updated_date: '2026-09-17 08:37'
 labels:
   - bug
   - gui
@@ -15,7 +16,7 @@ references:
   - gui/next/src/lib/api/logsv2.js
   - gui/next/src/lib/api/network.js
 priority: low
-ordinal: 23000
+ordinal: 40000
 ---
 
 ## Description

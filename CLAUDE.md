@@ -57,8 +57,8 @@ pos-cli/
 │   ├── pos-cli-check-init.js    # Generate .platformos-check.yml
 │   ├── pos-cli-check-run.js     # Run platformos-check linter
 │   ├── pos-cli-lsp.js           # Language Server Protocol server
-│   ├── pos-cli-mcp.js           # MCP server entry point
-│   ├── pos-cli-mcp-config.js    # Display MCP tool configuration
+│   ├── pos-cli-mcp.js           # MCP server entry point (also `pos-cli mcp`); strict args, parsed before the server loads
+│   ├── pos-cli-mcp-config.js    # Display MCP tool configuration (also `pos-cli mcp-config`)
 │   ├── pos-cli-ai.js            # AI tools command group
 │   ├── pos-cli-ai-init.js       # Wizard: register MCP servers in AI tool config
 │   ├── pos-cli-supervisor.js    # platformos-mcp-supervisor wrapper (validate_code MCP server)
@@ -86,9 +86,13 @@ pos-cli/
 │   ├── validation/              # Ajv schema validation (shared by GUI + MCP)
 │   └── validators/              # CLI argument validators (url, email, paths)
 ├── mcp-min/          # MCP server implementation
-│   ├── index.js                 # Starts stdio + HTTP/SSE transports
+│   ├── index.js                 # Starts stdio + HTTP/SSE transports with one shared shutdown
+│   ├── cli-args.js              # pos-cli-mcp argument parsing (--help/--version only; rejects the rest)
+│   ├── lifecycle.js             # When the process ends: stdin EOF rule, drain, 120 s deadline
 │   ├── stdio-server.js          # MCP over stdio (for editor integrations)
-│   ├── http-server.js           # HTTP/SSE transport (port 5910)
+│   ├── http-server.js           # HTTP/SSE transport (127.0.0.1:5910)
+│   ├── http-config.js           # MCP_MIN_HOST / MCP_MIN_PORT / MCP_MIN_ALLOWED_HOSTS, fails closed
+│   ├── host-validation.js       # Host/Origin check on every HTTP route (DNS rebinding)
 │   ├── tools.js                 # Tool registry
 │   ├── tools.config.json        # Enable/disable tools, customize descriptions
 │   └── <tool-name>/             # One directory per tool group (deploy/, data/, etc.)
@@ -181,14 +185,26 @@ export { run };
 
 The MCP (Model Context Protocol) server exposes platformOS operations as tools for AI clients. It runs two transports simultaneously:
 - **stdio** (`stdio-server.js`): Standard MCP transport for editor/AI integrations
-- **HTTP/SSE** (`http-server.js`): REST + Server-Sent Events on port 5910 (env: `MCP_MIN_PORT`)
+- **HTTP/SSE** (`http-server.js`): REST + Server-Sent Events on `127.0.0.1:5910` (env: `MCP_MIN_PORT`, `MCP_MIN_HOST`)
+
+**The HTTP transport has no authentication** — whoever can reach it runs every enabled tool with this machine's platformOS credentials. Three invariants stand in for auth; keep them when touching `http-server.js` (including the SDK migration):
+- **Loopback bind by default.** `readHttpConfig` (`http-config.js`) defaults `MCP_MIN_HOST` to `127.0.0.1`, and `startHttp` defaults to it too, so a caller passing only a port is still loopback-only. A non-loopback `MCP_MIN_HOST` is an explicit opt-in and logs an unauthenticated-exposure warning on every start.
+- **Host/Origin validation before everything.** `hostValidation` (`host-validation.js`) is registered app-level after the request logger and *before* `bodyParser` and the router, so every route — including ones added later and unknown paths — answers `403` to a Host/Origin hostname outside `localhost`, `127.0.0.1`, `[::1]` plus `MCP_MIN_ALLOWED_HOSTS`, without the body being parsed or a tool resolved. Status, body and messages mirror `@modelcontextprotocol/express` 2.0.0 exactly, so swapping in the SDK middleware is invisible to clients; the allowlist is enforced for non-loopback binds too, where the SDK would skip it.
+- **Fail closed, report honestly.** A malformed `MCP_MIN_*` value throws `HttpConfigError` while `index.js` evaluates, before either transport starts; `bin/pos-cli-mcp.js` reports it like `ToolsConfigError`. `startHttp` resolves only on `listening` and rejects with the listen error; `index.js` logs the address from `server.address()` on success, and on failure logs `HTTP transport not started (<code>)` and keeps serving stdio. Never log "listening" from configuration: an older pos-cli-mcp bound to `*:5910` makes a new `127.0.0.1:5910` bind fail with `EADDRINUSE` while still answering localhost traffic itself.
+
+**Invocation and lifetime.** MCP clients start `pos-cli-mcp` (or `pos-cli mcp`, a commander executable subcommand that spawns the same bin with stdio inherited) and stop it by closing stdin. Keep these when touching the bins, `stdio-server.js` or `index.js`:
+- **Arguments are settled before the server loads.** Importing `mcp-min/index.js` starts both transports, so `bin/pos-cli-mcp.js` calls `parseServerArgs` (`cli-args.js`) first; `--help`/`--version` set `process.exitCode` (not `process.exit()`, which can truncate output on a pipe) and never import the server. Unknown options and positionals are rejected, not ignored: options added later (tool profiles) must fail closed on a typo. `pos-cli mcp -v` is answered by `pos-cli` itself, with the same package version.
+- **stdin EOF ends the session** when stdin is a client pipe/socket, or when stdio carried at least one message (`stdinEndEndsSession`). `</dev/null`, a file or a TTY with no messages keeps HTTP serving — that is how the HTTP transport runs alone.
+- **Shutdown drains; it does not `process.exit()`.** `createShutdown` (`lifecycle.js`) is shared by both transports: on EOF, stdio stops reading and `stopHttp` (`http-server.js`) stops accepting, destroys SSE streams, and closes each keep-alive connection as soon as its in-flight response finishes (otherwise it idles for the 5 s keep-alive timeout and holds the process). The process then exits by itself, so responses are written and background work a tool started (deploy-start's asset upload) completes. An unref'd deadline (`SHUTDOWN_DEADLINE_MS`, 120 s — covers `waitForUnpack`'s 90 s) forces exit 0 if something never finishes. A transport that finishes starting after shutdown began is stopped at once (`onShutdown` runs late closers immediately).
+- A new long-lived handle (interval, stream, socket) in a tool or transport must end when its request does, or it will hold every shutdown until the deadline.
 
 Tools are registered in `tools.js` and can be enabled/disabled via `tools.config.json` (or `MCP_TOOLS_CONFIG` env var). Each tool group lives in its own directory (`deploy/`, `data/`, `logs/`, etc.) and calls the Gateway directly (no CLI subprocess spawning).
 
 ```javascript
 // mcp-min/index.js
-startStdio();                          // stdio transport
-await startHttp({ port: PORT });       // HTTP/SSE transport
+const shutdown = createShutdown();                // shared: stdin EOF stops both transports
+startStdio({ shutdown });                         // stdio transport
+await startHttpTransport(httpConfig, shutdown);   // HTTP/SSE transport; httpConfig = readHttpConfig(process.env)
 ```
 
 Tools include: envs-list, env-add, deploy-start/status/wait, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, tests-run/run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, portal tools (instance-create, partners-list, partner-get, endpoints-list).
