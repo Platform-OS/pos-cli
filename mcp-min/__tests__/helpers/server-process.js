@@ -18,6 +18,8 @@ export const MCP_BIN = path.join(REPO_ROOT, 'bin', 'pos-cli-mcp.js');
 export const MCP_CONFIG_BIN = path.join(REPO_ROOT, 'bin', 'pos-cli-mcp-config.js');
 export const POS_CLI_BIN = path.join(REPO_ROOT, 'bin', 'pos-cli.js');
 export const STDIO_SERVER = path.join(REPO_ROOT, 'mcp-min', 'stdio-server.js');
+export const INDEX = path.join(REPO_ROOT, 'mcp-min', 'index.js');
+export const TOOL_SELECTION = path.join(REPO_ROOT, 'mcp-min', 'tool-selection.js');
 
 export const STARTUP_TIMEOUT = 20000;
 export const LISTENING = /mcp-min: HTTP server listening on (http:\/\/\S+)/;

@@ -12,7 +12,6 @@ import { JobNotFoundError } from '../jobs/errors.js';
 // the release only — a deploy whose assets are still uploading reads as finished here.
 const waitDeployTool = {
   description: 'Deprecated: use job-status with wait_ms. Wait for a deployment to finish, polling every intervalMs (default 1000ms).',
-  // Tells MCP clients this tool changes nothing, locally or on the instance.
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',

@@ -19,6 +19,9 @@ const RELEASE_TIMEOUT_MS = 5 * 60 * 1000;
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+/** The same two failures `lib/push.js` retries: a network failure, or the instance's own 5xx. */
+const isTransient = err => err?.name === 'RequestError' || err?.statusCode >= 500;
+
 /**
  * Waits for the release to leave `ready_for_import`/`in_progress`.
  *
@@ -26,12 +29,25 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
  */
 async function waitForRelease(gateway, releaseId, { pollIntervalMs, timeoutMs, wait, now }) {
   const deadline = now() + timeoutMs;
+  let last;
   for (;;) {
-    const response = await gateway.getStatus(releaseId);
-    const state = releaseState(response?.status);
-    if (state !== 'running') return state;
+    let state;
+    try {
+      const response = await gateway.getStatus(releaseId);
+      last = response?.status;
+      // A response with no status in it says nothing about the release; only an answer does.
+      state = last === undefined ? 'running' : releaseState(last);
+      if (state !== 'running') return state;
+    } catch (err) {
+      // The upload is worth more than one failed poll: `lib/push.js` retries the same two while
+      // it waits for a deploy, and here giving up means the assets are never uploaded at all.
+      if (!isTransient(err)) throw err;
+      log.debug('release status poll failed, still waiting', { releaseId, error: String(err.message || err) });
+      last = `unreadable (${err.message})`;
+    }
+
     if (now() + pollIntervalMs > deadline) {
-      throw new Error(`the release was still ${response?.status} after ${timeoutMs}ms, so the asset manifest was not sent`);
+      throw new Error(`the release was still ${last} after ${timeoutMs}ms, so the asset manifest was not sent`);
     }
     await wait(pollIntervalMs);
   }

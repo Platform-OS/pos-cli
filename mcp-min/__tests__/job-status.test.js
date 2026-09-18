@@ -8,6 +8,7 @@
  */
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import jobStatus from '../jobs/status.js';
+import { rejectionFor } from '../validate-params.js';
 import { mint } from '../jobs/handle.js';
 import { forgetUploads, trackUpload } from '../jobs/local-phases.js';
 import { cancelled } from '../cancellation.js';
@@ -16,14 +17,14 @@ const ORIGIN = 'https://staging.example.com';
 const OTHER = 'https://prod.example.com';
 
 const CONFIG = {
-  staging: { url: `${ORIGIN}/`, email: 'a@b.c', token: 'staging-token' },
+  staging: { url: `${ORIGIN}/api-root/`, email: 'a@b.c', token: 'staging-token' },
   prod: { url: OTHER, email: 'a@b.c', token: 'prod-token' }
 };
 
 const handle = (kind, id = '41', flags) => mint({ kind, id, origin: ORIGIN, flags });
 
 /** ctx with the whole world stubbed: no .pos on disk, no network, no MPKIT_* leaking in. */
-function context({ config = CONFIG, getStatus, dataImportStatus, dataExportStatus, dataCleanStatus, request } = {}) {
+function context({ config = CONFIG, getStatus, dataImportStatus, dataExportStatus, dataCleanStatus, request, pollIntervalMs = 5 } = {}) {
   const calls = { gateway: [], request: [] };
   const record = (name, fn) => async (...args) => {
     calls.gateway.push({ name, args });
@@ -39,9 +40,12 @@ function context({ config = CONFIG, getStatus, dataImportStatus, dataExportStatu
   return {
     calls,
     ctx: {
+      // Milliseconds, not seconds: these tests are about what the loop decides, not how long it
+      // sleeps between decisions.
+      pollIntervalMs,
       Gateway,
       files: { getConfig: () => config },
-      settings: { fetchSettings: async name => config[name] },
+      settings: { settingsFromDotPos: name => config[name] },
       request: async (options) => {
         calls.request.push(options);
         return request ? request(options) : { statusCode: 200, body: '{}' };
@@ -112,8 +116,8 @@ describe('which instance is asked', () => {
     const result = await jobStatus.handler({ job_id: handle('deploy', '41', { assets: false }) }, ctx);
 
     expect(result.ok).toBe(true);
-    expect(result.meta.auth).toMatchObject({ url: `${ORIGIN}/`, source: '.pos(staging)' });
-    expect(calls.gateway[0]).toEqual({ name: 'new', args: [{ url: `${ORIGIN}/`, email: 'a@b.c', token: 'staging-token' }] });
+    expect(result.meta.auth).toMatchObject({ url: `${ORIGIN}/api-root/`, source: '.pos(staging)' });
+    expect(calls.gateway[0]).toEqual({ name: 'new', args: [{ url: `${ORIGIN}/api-root/`, email: 'a@b.c', token: 'staging-token' }] });
   });
 
   test('with no credentials at all, the answer still says which instance the job needs', async () => {
@@ -144,14 +148,14 @@ describe('which instance is asked', () => {
 
     await jobStatus.handler({
       job_id: handle('deploy', '41', { assets: false }),
-      url: `${ORIGIN}/`, email: 'someone@example.com', token: 'explicit'
+      url: `${ORIGIN}/api-root/`, email: 'someone@example.com', token: 'explicit'
     }, ctx);
 
-    expect(calls.gateway[0].args[0]).toEqual({ url: `${ORIGIN}/`, email: 'someone@example.com', token: 'explicit' });
+    expect(calls.gateway[0].args[0]).toEqual({ url: `${ORIGIN}/api-root/`, email: 'someone@example.com', token: 'explicit' });
   });
 
   test('the schema has no endpoint argument to point it elsewhere', () => {
-    expect(Object.keys(jobStatus.inputSchema.properties)).toEqual(['job_id', 'wait_ms', 'env', 'url', 'email', 'token']);
+    expect(Object.keys(jobStatus.inputSchema.properties)).not.toContain('endpoint');
     expect(jobStatus.inputSchema.additionalProperties).toBe(false);
   });
 });
@@ -225,7 +229,7 @@ describe('a deploy is not done while its assets are still going up', () => {
   });
 
   test.each([
-    ['the upload failed here', async () => Promise.reject(new Error('S3 said no')), { status: 'success' }, 'failed before the manifest'],
+    ['the upload failed here', async () => Promise.reject(new Error('S3 said no')), { status: 'success' }, 'S3 said no'],
     ['the instance rejected the assets', async () => Promise.resolve(), { status: 'success', asset_error: { error: 'bad zip' } }, 'bad zip']
   ])('%s: the deploy failed', async (_label, upload, response, expected) => {
     await trackUpload(ORIGIN, '41', upload()).catch(() => {});
@@ -369,7 +373,7 @@ describe('test runs', () => {
     expect(calls.request).toEqual([{
       method: 'GET',
       // The .pos URL ends in a slash; the request must not carry it into the path.
-      uri: `${ORIGIN}/_tests/results/9`,
+      uri: `${ORIGIN}/api-root/_tests/results/9`,
       headers: { Authorization: 'Token staging-token', UserTemporaryToken: 'staging-token' }
     }]);
   });
@@ -381,7 +385,7 @@ describe('wait_ms', () => {
     let poll = 0;
     const { ctx, calls } = context({ getStatus: async () => ({ status: seq[Math.min(poll++, seq.length - 1)] }) });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 10000 }, ctx);
+    const result = await jobStatus.handler({ job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 }, ctx);
 
     expect(result.data).toMatchObject({ state: 'completed', done: true, status: 'success' });
     expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(4);
@@ -390,12 +394,10 @@ describe('wait_ms', () => {
   test('the deadline ends the wait with done:false, not an error', async () => {
     const { ctx, calls } = context({ getStatus: async () => ({ status: 'in_progress' }) });
 
-    const started = Date.now();
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 2500 }, ctx);
+    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 100 }, ctx);
 
     expect(result.ok).toBe(true);
     expect(result.data).toMatchObject({ state: 'running', done: false, status: 'in_progress' });
-    expect(Date.now() - started).toBeLessThan(6000);
     expect(calls.gateway.filter(c => c.name === 'getStatus').length).toBeGreaterThan(1);
   }, 20000);
 
@@ -408,8 +410,15 @@ describe('wait_ms', () => {
     expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(1);
   });
 
-  test('a wait longer than the schema allows is not accepted', () => {
-    expect(jobStatus.inputSchema.properties.wait_ms).toMatchObject({ type: 'integer', minimum: 0, maximum: 120000 });
+  test.each([
+    ['longer than the maximum', 120001],
+    ['negative', -1],
+    ['not a whole number', 1.5]
+  ])('a wait that is %s is rejected', (_label, wait_ms) => {
+    const rejection = rejectionFor('job-status', jobStatus, { job_id: handle('deploy'), wait_ms });
+
+    expect(rejection?.jsonRpcCode).toBe(-32602);
+    expect(rejection.message).toContain('wait_ms');
   });
 
   test('progress goes out while it waits, so a client does not time the call out', async () => {
@@ -418,7 +427,7 @@ describe('wait_ms', () => {
     const sendProgress = vi.fn();
 
     await jobStatus.handler(
-      { job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 10000 },
+      { job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 },
       { ...ctx, sendProgress }
     );
 
@@ -429,15 +438,17 @@ describe('wait_ms', () => {
   // A wait is minutes long on a degraded network; a single refused connection ending it early
   // would report "could not read the status" about a job that is running perfectly well.
   test('a blip does not end the wait', async () => {
+    // What the Gateway actually throws: `lib/apiRequest.js` names a network failure RequestError
+    // and a 5xx StatusCodeError with the code on it.
     const answers = [
-      () => { throw new TypeError('fetch failed'); },
-      () => { throw Object.assign(new Error('Request failed with status 502'), { statusCode: 502 }); },
+      () => { throw Object.assign(new TypeError('fetch failed'), { name: 'RequestError' }); },
+      () => { throw Object.assign(new Error('Request failed with status 502'), { name: 'StatusCodeError', statusCode: 502 }); },
       () => ({ status: 'success' })
     ];
     let poll = 0;
     const { ctx } = context({ getStatus: async () => answers[Math.min(poll++, answers.length - 1)]() });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 10000 }, ctx);
+    const result = await jobStatus.handler({ job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 }, ctx);
 
     expect(result.ok).toBe(true);
     expect(result.data).toMatchObject({ state: 'completed', status: 'success' });
@@ -447,14 +458,39 @@ describe('wait_ms', () => {
   test('a rejection the instance means is an answer, and ends the wait', async () => {
     const { ctx, calls } = context({ getStatus: async () => { throw Object.assign(new Error('Forbidden'), { statusCode: 403 }); } });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 10000 }, ctx);
+    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 5000 }, ctx);
 
     expect(result).toMatchObject({ ok: false, error: { code: 'JOB_STATUS_ERROR' } });
     expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(1);
   }, 20000);
 
+  // A defect in our own code is not a blip: retrying it would hide it for the whole wait and then
+  // report it as if the instance were at fault.
+  test('a programming error is reported at once, however long the wait', async () => {
+    const { ctx, calls } = context({ getStatus: async () => { throw new TypeError('polled is not a function'); } });
+
+    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 60000 }, ctx);
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'JOB_STATUS_ERROR' } });
+    expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(1);
+  }, 20000);
+
+  // What the instance said is the part worth reading: a 422 explains itself in its body.
+  test('a rejection carries the status code and the body the instance answered with', async () => {
+    const refusal = Object.assign(new Error('Request failed with status 422'), {
+      name: 'StatusCodeError',
+      statusCode: 422,
+      response: { body: { error: 'release is locked' } }
+    });
+    const { ctx } = context({ getStatus: async () => { throw refusal; } });
+
+    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging' }, ctx);
+
+    expect(result.error.details).toEqual({ statusCode: 422, body: { error: 'release is locked' } });
+  });
+
   test('without a wait, a blip is reported rather than retried', async () => {
-    const { ctx, calls } = context({ getStatus: async () => { throw new TypeError('fetch failed'); } });
+    const { ctx, calls } = context({ getStatus: async () => { throw Object.assign(new TypeError('fetch failed'), { name: 'RequestError' }); } });
 
     const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging' }, ctx);
 
@@ -463,13 +499,11 @@ describe('wait_ms', () => {
   });
 
   test('an instance that never answers reports the failure when the deadline passes', async () => {
-    const { ctx, calls } = context({ getStatus: async () => { throw new TypeError('fetch failed'); } });
+    const { ctx, calls } = context({ getStatus: async () => { throw Object.assign(new TypeError('fetch failed'), { name: 'RequestError' }); } });
 
-    const started = Date.now();
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 2500 }, ctx);
+    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 100 }, ctx);
 
     expect(result).toMatchObject({ ok: false, error: { code: 'JOB_STATUS_ERROR' } });
-    expect(Date.now() - started).toBeLessThan(6000);
     expect(calls.gateway.filter(c => c.name === 'getStatus').length).toBeGreaterThan(1);
   }, 20000);
 

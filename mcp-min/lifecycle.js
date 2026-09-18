@@ -83,7 +83,9 @@ export function createShutdown({
       // unref: the timer must not itself keep a finished process alive.
       setTimeout(() => {
         logger.warn(`mcp-min: work still running ${Math.round(deadlineMs / 1000)}s after shutdown began; exiting anyway`);
-        exit(0);
+        // Whatever the session already decided: a shutdown that began because of an uncaught
+        // exception must not report success just because the deadline was what ended it.
+        exit(process.exitCode ?? 0);
       }, deadlineMs).unref();
 
       for (const closer of closers.splice(0)) run(closer);

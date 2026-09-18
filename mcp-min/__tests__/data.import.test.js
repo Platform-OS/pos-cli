@@ -7,7 +7,7 @@ import dataImportTool from '../data/import.js';
 import dataImportStatusTool from '../data/import-status.js';
 
 const mockSettings = {
-  fetchSettings: (env) => {
+  settingsFromDotPos: (env) => {
     if (env === 'staging') {
       return { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token' };
     }

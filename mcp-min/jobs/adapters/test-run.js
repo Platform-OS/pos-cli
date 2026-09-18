@@ -7,9 +7,7 @@
  * nothing about the code under test.
  */
 import { JobNotFoundError } from '../errors.js';
-import { normalizeResult, resultsUrl } from '../../tests/result.js';
-
-const STATES = Object.freeze({ pending: 'running', success: 'completed', failed: 'completed', error: 'failed' });
+import { normalizeResult, resultsUrl, runState } from '../../tests/result.js';
 
 export default {
   kind: 'test-run',
@@ -39,7 +37,7 @@ export default {
 
     const result = normalizeResult(body);
     return {
-      state: STATES[result.status] ?? 'running',
+      state: runState(result.status),
       status: result.status,
       ...(result.status === 'error' && { error: result.error_message || 'the test runner failed' }),
       result

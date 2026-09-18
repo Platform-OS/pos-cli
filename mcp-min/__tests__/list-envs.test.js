@@ -1,12 +1,16 @@
 import http from 'http';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = 5920;
-const CONFIG_FILE = path.resolve(`.pos.test-${PORT}`);
+// In a directory of its own: the repository root is every test process's working directory
+// (see test/unit/test-isolation.test.js).
+const CONFIG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), `pos-cli-list-envs-${PORT}-`));
+const CONFIG_FILE = path.join(CONFIG_DIR, '.pos');
 
 function httpRequest({ method = 'GET', path: reqPath = '/', body = null, headers = {} }) {
   return new Promise((resolve, reject) => {

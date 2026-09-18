@@ -2,15 +2,9 @@
 import log from '../log.js';
 import { resolveAuth, maskToken } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
+import makeRequest, { testAuthHeaders, testsUrl } from './request.js';
 
 // Helper to make HTTP requests (replaces request-promise)
-async function makeRequest(options) {
-  const { uri, method = 'GET', headers = {} } = options;
-  const response = await fetch(uri, { method, headers });
-  const body = await response.text();
-  return { statusCode: response.status, body };
-}
-
 /**
  * Parse the text response from /_tests/run?formatter=text
  *
@@ -235,7 +229,9 @@ function extractJsonObjects(str) {
           objects.push(parsed);
         } catch (e) {
           // Invalid JSON, skip
-          log.debug('Failed to parse JSON object', { jsonStr, error: e.message });
+          // The blob is the instance's response body, not ours to publish; its length and the
+          // parser's complaint are what a reader needs.
+          log.debug('Failed to parse JSON object', { bytes: jsonStr.length, error: e.message });
         }
         start = -1;
       }
@@ -268,7 +264,7 @@ const testsRunTool = {
       const auth = await resolveAuth(params, ctx);
 
       // Build the URL with query parameters
-      let testUrl = `${auth.url}/_tests/run?formatter=text`;
+      let testUrl = testsUrl(auth.url, '/_tests/run?formatter=text');
       if (params?.path) {
         testUrl += `&path=${encodeURIComponent(params.path)}`;
       }

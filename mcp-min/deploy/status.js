@@ -8,10 +8,11 @@ import { JobNotFoundError } from '../jobs/errors.js';
 
 // Deprecated in 6.x, removed in the next major: `job-status` answers for every kind of job, and
 // its job_id says which instance the deploy was started on — which a bare release id does not.
-// Kept working, and on the same adapter, so it cannot drift from what job-status reports.
+// It answers through the same adapter, which is what keeps one rule for reading a release and one
+// for a release id the instance does not have; the body it returns is the raw release record, as
+// it always was.
 const statusDeployTool = {
   description: 'Deprecated: use job-status. Get current deployment status by release id.',
-  // Tells MCP clients this tool changes nothing, locally or on the instance.
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
@@ -41,7 +42,7 @@ const statusDeployTool = {
       };
     } catch (e) {
       const code = e instanceof JobNotFoundError ? 'NOT_FOUND' : 'DEPLOY_STATUS_ERROR';
-      return { ok: false, error: { code, message: String(e) } };
+      return { ok: false, error: { code, message: String(e.message || e) } };
     }
   }
 };

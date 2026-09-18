@@ -99,8 +99,8 @@ describe('the configuration pos-cli ai init writes', () => {
   // A project .mcp.json is committed and shared: the release that writes these arguments must
   // be one whose parser accepts all of them.
   test('is accepted by this release\'s argument parser', () => {
-    expect(SERVERS.platformos.command).toBe('pos-cli-mcp');
-    expect(parseServerArgs(SERVERS.platformos.args, { version: '0', writeOut: () => {}, writeErr: () => {} }))
+    expect(SERVERS['platformos-cli'].command).toBe('pos-cli-mcp');
+    expect(parseServerArgs(SERVERS['platformos-cli'].args, { version: '0', writeOut: () => {}, writeErr: () => {} }))
       .toMatchObject({ start: true, http: false, selection: { profile: 'dev' } });
   });
 
@@ -109,7 +109,7 @@ describe('the configuration pos-cli ai init writes', () => {
     const sessions = [1, 2, 3].map((n) => {
       const sessionDir = path.join(workDir, `session-${n}`);
       fs.mkdirSync(sessionDir, { recursive: true });
-      return { sessionDir, proc: launch({ workDir: sessionDir, args: [MCP_BIN, ...SERVERS.platformos.args], env: { MCP_MIN_PORT: String(port) } }) };
+      return { sessionDir, proc: launch({ workDir: sessionDir, args: [MCP_BIN, ...SERVERS['platformos-cli'].args], env: { MCP_MIN_PORT: String(port) } }) };
     });
     try {
       await Promise.all(sessions.map(({ proc }) => initializeOverStdio(proc)));

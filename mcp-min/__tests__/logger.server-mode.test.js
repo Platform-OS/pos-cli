@@ -77,3 +77,43 @@ describe('logger server-mode hardening', () => {
     expect(exitSpy).not.toHaveBeenCalled();
   });
 });
+
+// stdout is the MCP JSON-RPC channel. `logger.Info`, `Success`, `Log`, `News` and `Print` all
+// write there by default — a Partner Portal retry notice (lib/proxy.js) or a two-factor session
+// message (lib/twoFactorSession.js) arrives mid-response and the client sees malformed JSON.
+describe('server mode keeps stdout for the protocol', () => {
+  const write = (stream) => vi.spyOn(process[stream], 'write').mockReturnValue(true);
+
+  test.each(['Info', 'Success', 'Log', 'News'])('%s writes to stderr, not stdout', async (method) => {
+    const stdout = write('stdout');
+    const stderr = write('stderr');
+    setServerMode(true);
+
+    await logger[method]('a message');
+
+    expect(stdout).not.toHaveBeenCalled();
+    expect(stderr.mock.calls.map(([line]) => line).join('')).toContain('a message');
+  });
+
+  test('Print keeps its contract of writing raw text, on stderr', async () => {
+    const stdout = write('stdout');
+    const stderr = write('stderr');
+    setServerMode(true);
+
+    await logger.Print('raw');
+
+    expect(stdout).not.toHaveBeenCalled();
+    expect(stderr).toHaveBeenCalledWith('raw');
+  });
+
+  // Outside the server this is a command-line tool: its output belongs on stdout, which the
+  // backends reach through console.log (vitest intercepts that, so it is what to watch).
+  test('the CLI still writes to stdout', async () => {
+    const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+    setServerMode(false);
+
+    await logger.Info('a message');
+
+    expect(consoleLog.mock.calls.flat().join('')).toContain('a message');
+  });
+});

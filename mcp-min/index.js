@@ -1,8 +1,9 @@
 /**
  * Starts the MCP server's transports for an already-resolved tool selection.
  *
- * Importing this module starts nothing: bin/pos-cli-mcp.js parses its arguments and resolves
+ * Importing this module opens no transport: bin/pos-cli-mcp.js parses its arguments and resolves
  * the selection first, so a bad option or tools config is reported before any transport opens.
+ * (It does put the CLI logger into server mode and install the process handlers below.)
  */
 import net from 'net';
 import startStdio from './stdio-server.js';
@@ -18,17 +19,34 @@ import { setServerMode } from '../lib/logger.js';
 // tool can run.
 setServerMode(true);
 
+// The session's shutdown, so the handlers below can drain rather than abandon the process.
+let sessionShutdown = null;
+
 // Global handlers - exit cleanly on EPIPE (client disconnected)
 process.on('uncaughtException', (err) => {
-  if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
+  if (err?.code === 'EPIPE' || err?.code === 'ERR_STREAM_DESTROYED') {
     log.debug('Pipe closed, exiting');
     process.exit(0);
   }
-  log.error('Uncaught exception', err.message);
+
+  // After an uncaught exception the process's state is undefined, and this one is listening on an
+  // unauthenticated port with credentials resolved: carrying on would keep serving from a server
+  // that is broken in a way nobody has looked at. Drain instead — responses in flight are written,
+  // the port is released, and the exit code says it was not a clean stop.
+  log.error('Uncaught exception, shutting down', err);
+  process.exitCode = 1;
+  if (!sessionShutdown) process.exit(1);
+
+  sessionShutdown.begin('uncaught exception');
+  // The session is over, so stop reading from the client as well: `begin` alone leaves stdin
+  // open, and the process would sit there — broken, still holding its credentials — until the
+  // shutdown deadline. Work already in flight still keeps the loop alive until it finishes.
+  process.stdin.pause();
+  process.stdin.unref?.();
 });
 
 process.on('unhandledRejection', (reason) => {
-  log.error('Unhandled rejection', String(reason));
+  log.error('Unhandled rejection', reason);
 });
 
 const hostPort = (host, port) => `${net.isIPv6(host) ? `[${host}]` : host}:${port}`;
@@ -67,6 +85,10 @@ async function startHttpTransport(config, tools, shutdown) {
   try {
     server = await startHttp({ ...config, tools });
   } catch (err) {
+    // Only a failed bind is the optional-transport case. A tool schema that will not compile, or
+    // a programming error in the middleware, would otherwise be reported as "not started
+    // (unknown error)" and the server would carry on as if a port were busy.
+    if (err?.syscall !== 'listen') throw err;
     log.error(bindFailureMessage(err, config));
     return;
   }
@@ -104,6 +126,7 @@ export async function start({ selection, http = true }) {
     // One shutdown for both transports: the MCP client closing stdin ends the session, and the
     // HTTP listener must not keep the process — and its port — alive after that.
     const shutdown = createShutdown();
+  sessionShutdown = shutdown;
 
     startStdio({ tools: selection.tools, shutdown });
     if (httpConfig) {

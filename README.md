@@ -982,7 +982,7 @@ The fastest way to connect your AI tool is the one-step wizard:
 
     pos-cli ai init
 
-It asks which AI tool you use and registers both platformOS MCP servers — `platformos` (the pos-cli tools listed below) and `platformos-supervisor` (Liquid/GraphQL/YAML code validation via `validate_code`) — in that tool's project-scoped configuration:
+It asks which AI tool you use and registers both platformOS MCP servers — `platformos-cli` (the pos-cli tools listed below) and `platformos-supervisor` (Liquid/GraphQL/YAML code validation via `validate_code`) — in that tool's project-scoped configuration:
 
 | Tool        | Configuration file  | Key          |
 | ----------- | ------------------- | ------------ |
@@ -991,9 +991,11 @@ It asks which AI tool you use and registers both platformOS MCP servers — `pla
 | VS Code     | `.vscode/mcp.json`  | `servers`    |
 | Other       | prints the JSON snippet for manual setup | — |
 
-Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. `platformos` is registered with `--profile dev --no-http` (see [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed)): the tools a coding agent uses, over stdio only. An entry written by an earlier pos-cli — `"command": "pos-cli-mcp"` with no arguments, or with `--profile dev` alone — is upgraded to that; an entry you have changed in any other way is left exactly as it is, and the command tells you so. To skip the prompt (e.g. in scripts), pass the tool directly:
+Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. `platformos-cli` is registered with `--profile dev --no-http` (see [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed)): the tools a coding agent uses, over stdio only. An entry written by an earlier pos-cli — `"command": "pos-cli-mcp"` with no arguments, or with `--profile dev` alone — is upgraded to that; an entry you have changed in any other way is left exactly as it is, and the command tells you so. To skip the prompt (e.g. in scripts), pass the tool directly:
 
     pos-cli ai init --tool claude
+
+**The server used to be called `platformos`** and is now `platformos-cli`, after the command it runs — the old name said nothing about what it was, and the supervisor is platformOS too. `pos-cli ai init` renames an entry it wrote, in place, and removes the old one so the server is not registered twice. An entry you have customised is left under the old name, with a message saying what the new one would be: rename it yourself, or keep it — nothing breaks either way, since the name is only how your AI tool refers to the server.
 
 #### Starting the MCP Server
 
@@ -1067,7 +1069,7 @@ Run `pos-cli ai init --tool claude` to generate this automatically, or add the f
 ```json
 {
   "mcpServers": {
-    "platformos": {
+    "platformos-cli": {
       "command": "pos-cli-mcp",
       "args": ["--profile", "dev", "--no-http"]
     },
@@ -1121,6 +1123,12 @@ Five tools start work that outlives the call: `deploy-start`, `data-import`, `da
 - `wait_ms` (up to 120,000) polls until the job is done or that long has passed, whichever comes first. Hitting the deadline returns the current state with `done: false`, not an error.
 - A deploy that uploaded assets is not `completed` until those assets are on the CDN, not merely when its release is imported. `result.assets.phase` says where they are: `uploading` (still going up from this machine), `processing` (the instance is unpacking them), `done`, `failed`, `none` (the deploy had no assets), or `unknown` — the honest answer when the server that started the upload is no longer running and the instance reports nothing about assets.
 - The `job_id` is opaque: pass it back unchanged. It names the instance the job was started on, so polling with no `env` cannot ask a different instance about the same numeric id. If the resolved credentials point elsewhere, `job-status` uses the `.pos` environment that does point at that instance, or refuses — without making a request. Nothing in a `job_id` chooses credentials or the host a request goes to.
+
+#### Logs and Debugging
+
+The server writes to stderr and to `~/.pos-cli/logs/mcp-min.log` (`MCP_MIN_LOG_FILE` moves it), and `DEBUG=1` (or `MCP_MIN_DEBUG=1`) adds request, parameter and protocol detail. Credentials are redacted before anything is written: credential headers, passwords, session ids and device codes are replaced entirely, API tokens are masked to `abc...xyz`, and `Token …` / `Bearer …` values and sensitive URL query parameters are removed from message text. The file is created owner-only (`0600`), and one written by an earlier release is tightened the next time the server starts.
+
+**A log file from pos-cli 6.5.1 or earlier can contain credentials verbatim** — `Authorization` headers, and the API token passed to `env-add`. Delete `~/.pos-cli/logs/mcp-min.log` after upgrading, and rotate any token it recorded.
 
 #### Viewing Tool Configuration
 

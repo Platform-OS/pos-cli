@@ -6,7 +6,7 @@ import constantsSetTool from '../constants/set.js';
 import constantsUnsetTool from '../constants/unset.js';
 
 const mockSettings = {
-  fetchSettings: (env) => {
+  settingsFromDotPos: (env) => {
     if (env === 'staging') {
       return { url: 'https://staging.example.com', email: 'test@example.com', token: 'secret123' };
     }

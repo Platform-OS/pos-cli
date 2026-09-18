@@ -58,22 +58,22 @@ const startDeployTool = {
 
       // Create archive (without assets - they're uploaded directly)
       const env = { TARGET: archivePath };
-      const { numberOfFiles, pushResponse } = await runWithAuth(auth, async () => {
-        const n = await archive.makeArchive(env, { withoutAssets: true });
-        const fd = {
-          'marketplace_builder[partial_deploy]': String(partial),
-          'marketplace_builder[zip_file]': fs.createReadStream(archivePath)
-        };
-        const pr = await gateway.push(fd);
-        return { numberOfFiles: n, pushResponse: pr };
-      });
+      const numberOfFiles = await archive.makeArchive(env, { withoutAssets: true });
 
+      // Before the upload, not after it: a release that is not partial is the whole intended
+      // state of the instance, so pushing an empty archive asks the instance to delete every
+      // file it has. `pos-cli deploy` skips the upload the same way.
       if (numberOfFiles === 0 || numberOfFiles === false) {
         return {
           ok: false,
           error: { code: 'EMPTY_ARCHIVE', message: 'No files to deploy. Archive would be empty.' }
         };
       }
+
+      const pushResponse = await runWithAuth(auth, () => gateway.push({
+        'marketplace_builder[partial_deploy]': String(partial),
+        'marketplace_builder[zip_file]': fs.createReadStream(archivePath)
+      }));
 
       // Deploy assets in the background (release import + S3 upload + CDN wait can take minutes).
       // `job-status` is what reports on it: the upload is registered under the release id, so a
@@ -86,7 +86,6 @@ const startDeployTool = {
         const assetsToDeploy = await files.getAssets();
         hasAssets = assetsToDeploy.length > 0;
         if (hasAssets) {
-          // Fire and forget - don't block the MCP response
           const upload = runWithAuth(auth, () => deployAssetsForRelease(gateway, releaseId, { deployAssets: assets.deployAssets }));
           trackUpload(origin, releaseId, upload);
           upload.then(() => {

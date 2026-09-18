@@ -10,7 +10,7 @@
  */
 import { McpServer, fromJsonSchema } from '@modelcontextprotocol/server';
 import pkg from '../../package.json' with { type: 'json' };
-import { rejectionFor, validateToolParams } from '../validate-params.js';
+import { rejectionFor, schemaCompileError } from '../validate-params.js';
 import { OPEN_OBJECT_SCHEMA } from '../schemas/default.js';
 import { DEBUG } from '../config.js';
 import log from '../log.js';
@@ -66,8 +66,16 @@ function progressReporter(ctx) {
       .catch(err => log.debug('progress notification not sent', { error: String(err) }));
   };
 
-  const heartbeat = progressToken === undefined ? null : setInterval(() => send(last + 1, undefined, 'working'), HEARTBEAT_MS);
-  return { send, stop: () => heartbeat && clearInterval(heartbeat) };
+  if (progressToken === undefined) return { send, stop: () => {} };
+
+  const heartbeat = setInterval(() => send(last + 1, undefined, 'working'), HEARTBEAT_MS);
+  const stop = () => clearInterval(heartbeat);
+  // Two ways it ends: the call finishes (the handler's finally), or the client goes away — and a
+  // tool that does not watch its signal would otherwise leave this ticking, holding the event loop
+  // open until the shutdown deadline.
+  heartbeat.unref?.();
+  ctx.mcpReq.signal.addEventListener('abort', stop, { once: true });
+  return { send, stop };
 }
 
 function registerTool(server, name, tool, transport) {
@@ -123,9 +131,9 @@ export function createServerFactory(tools, { transport }) {
   if (!(tools instanceof Map)) throw new TypeError('createServerFactory: tools must be the Map of exposed tools');
 
   const uncompilable = [...tools]
-    .map(([name, tool]) => [name, validateToolParams(name, tool, {})])
-    .filter(([, result]) => result.schemaError)
-    .map(([name, result]) => `${name} (${result.message})`);
+    .map(([name, tool]) => [name, schemaCompileError(tool)])
+    .filter(([, error]) => error !== null)
+    .map(([name, error]) => `${name} (${error})`);
   if (uncompilable.length > 0) {
     throw new Error(`Tool input schemas that do not compile: ${uncompilable.join('; ')}`);
   }

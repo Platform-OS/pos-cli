@@ -21,16 +21,42 @@ export const MCP_BODY_LIMIT_BYTES = 1024 * 1024;
 const jsonRpcError = (res, status, message) =>
   res.status(status).json({ jsonrpc: '2.0', error: { code: -32000, message }, id: null });
 
-/** Reads the whole body, or resolves null as soon as it grows past the limit. */
-async function readBody(req, limit) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > limit) return null;
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
+/**
+ * Reads the whole body, or resolves null as soon as it grows past the limit.
+ *
+ * Read with events rather than `for await`, whose early return destroys the request — and with it
+ * the socket the 413 still has to be written to. A body that arrives in chunks (no
+ * `content-length` to pre-check) took that path, so the client saw a reset connection instead of
+ * an answer, and only sometimes, depending on how the body was split.
+ */
+function readBody(req, limit) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    let settled = false;
+
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    req.on('data', (chunk) => {
+      if (settled) return;
+      size += chunk.length;
+      if (size > limit) {
+        // Stop reading, but leave the request intact: the caller answers on it.
+        req.pause();
+        finish(null);
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => finish(Buffer.concat(chunks)));
+    req.on('error', (err) => {
+      if (!settled) { settled = true; reject(err); }
+    });
+  });
 }
 
 // A `subscriptions/listen` stream stays open until the client leaves, so shutdown has to end it;

@@ -4,16 +4,16 @@
  * at any host is gone.
  */
 import { describe, test, expect, vi } from 'vitest';
-import registry from '../tools.js';
-import { rejectionFor } from '../validate-params.js';
+import { selectTools } from '../tool-selection.js';
 import deployStatus from '../deploy/status.js';
 import deployWait from '../deploy/wait.js';
-import logsFetch from '../logs/fetch.js';
 import dataImportStatus from '../data/import-status.js';
 import dataExportStatus from '../data/export-status.js';
 import dataCleanStatus from '../data/clean-status.js';
 import testsRunAsyncResult from '../tests/run-async-result.js';
 
+// Where a request goes — and that none of these takes an `endpoint` argument any more — is
+// pinned by request-target.test.js, which checks every registered tool rather than these six.
 const AUTH = { url: 'https://staging.example.com', email: 'a@b.c', token: 'staging-token' };
 
 const DEPRECATED = [
@@ -26,50 +26,16 @@ const DEPRECATED = [
 ];
 
 describe('the deprecation is visible to a client', () => {
-  test.each(DEPRECATED)('%s says so in the description it publishes', (name) => {
-    // The bundled config is what a client actually sees, and it overrides the module's text.
-    expect(registry.get(name).description).toMatch(/^Deprecated: use job-status/);
+  // What a client receives, not what the module says: `tools.config.json` overrides the
+  // description, and the selection decides whether the tool is there at all.
+  const exposed = selectTools({ env: {} }).tools;
+
+  test.each(DEPRECATED)('%s says so in the description a client receives', (name) => {
+    expect(exposed.get(name)?.description).toMatch(/^Deprecated: use job-status/);
   });
 
   test('they are all still exposed, because removing them would break callers mid-6.x', () => {
-    for (const [name] of DEPRECATED) expect(registry.has(name)).toBe(true);
-  });
-});
-
-describe('no tool takes an endpoint argument any more', () => {
-  // It replaced the request URL while the .pos token was still sent, so a caller could name any
-  // host and be handed this machine's credentials.
-  test.each([
-    ['deploy-status', deployStatus],
-    ['deploy-wait', deployWait],
-    ['logs-fetch', logsFetch]
-  ])('%s does not declare one', (_name, tool) => {
-    expect(tool.inputSchema.properties).not.toHaveProperty('endpoint');
-    expect(tool.inputSchema.additionalProperties).toBe(false);
-  });
-
-  test.each([
-    ['deploy-status', deployStatus],
-    ['deploy-wait', deployWait],
-    ['logs-fetch', logsFetch]
-  ])('%s rejects a call that passes one', (name, tool) => {
-    const rejection = rejectionFor(name, tool, { ...AUTH, id: '1', endpoint: 'https://evil.example.com' });
-
-    expect(rejection?.jsonRpcCode).toBe(-32602);
-    expect(rejection.message).toContain('endpoint');
-  });
-
-  test('a request goes to the credentials\' URL even when the caller tries to name another', async () => {
-    const seen = [];
-    class Gateway {
-      constructor(options) { seen.push(options.url); }
-      async getStatus() { return { status: 'success' }; }
-    }
-
-    // The handler cannot see the argument the schema rejects; this proves it ignores it anyway.
-    await deployStatus.handler({ ...AUTH, id: '1', endpoint: 'https://evil.example.com' }, { Gateway });
-
-    expect(seen).toEqual([AUTH.url]);
+    for (const [name] of DEPRECATED) expect(exposed.has(name), name).toBe(true);
   });
 });
 

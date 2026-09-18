@@ -28,6 +28,38 @@ describe('deployAssetsForRelease', () => {
     expect(deployAssets).toHaveBeenCalledWith(gateway, { releaseId: 41 });
   });
 
+  // One failed poll is not an answer about the release, and giving up here means the assets are
+  // never uploaded at all.
+  test('keeps waiting through a transient failure, and gives up on one that is an answer', async () => {
+    const answers = [
+      () => { throw Object.assign(new Error('socket hang up'), { name: 'RequestError' }); },
+      () => { throw Object.assign(new Error('Request failed with status 503'), { statusCode: 503 }); },
+      () => ({ status: 'success' })
+    ];
+    let poll = 0;
+    const gateway = { getStatus: vi.fn(async () => answers[Math.min(poll++, answers.length - 1)]()) };
+    const deployAssets = vi.fn(async () => 'uploaded');
+
+    expect(await deployAssetsForRelease(gateway, 41, { deployAssets, wait: async () => {} })).toBe('uploaded');
+    expect(gateway.getStatus).toHaveBeenCalledTimes(3);
+
+    const refused = { getStatus: async () => { throw Object.assign(new Error('Forbidden'), { statusCode: 403 }); } };
+    await expect(deployAssetsForRelease(refused, 41, { deployAssets: vi.fn(), wait: async () => {} }))
+      .rejects.toThrow(/Forbidden/);
+  });
+
+  // An answer with no status in it is not a settled release: sending the manifest then is exactly
+  // what waiting is meant to prevent.
+  test('a response with no status in it does not count as settled', async () => {
+    const deployAssets = vi.fn();
+    let clock = 0;
+
+    await expect(deployAssetsForRelease({ getStatus: async () => ({}) }, 41, {
+      deployAssets, wait: async ms => { clock += ms; }, now: () => clock, pollIntervalMs: 1000, timeoutMs: 2000
+    })).rejects.toThrow(/still undefined after 2000ms/);
+    expect(deployAssets).not.toHaveBeenCalled();
+  });
+
   test('uploads nothing for a release that failed', async () => {
     const deployAssets = vi.fn();
 
@@ -73,14 +105,16 @@ describe('the phases this process remembers', () => {
   test('an upload is uploading until it settles, then done or failed', async () => {
     let finish;
     const tracked = trackUpload(ORIGIN, '1', new Promise(resolve => { finish = resolve; }));
-    expect(uploadPhase(ORIGIN, '1')).toBe('uploading');
+    expect(uploadPhase(ORIGIN, '1')).toEqual({ phase: 'uploading' });
 
     finish();
     await tracked;
-    expect(uploadPhase(ORIGIN, '1')).toBe('done');
+    expect(uploadPhase(ORIGIN, '1')).toEqual({ phase: 'done' });
 
+    // With the reason: an upload can fail at packing, at S3, at the manifest or at the CDN wait,
+    // and "it failed" sends the reader to the wrong place.
     await trackUpload(ORIGIN, '2', Promise.reject(new Error('S3 said no')));
-    expect(uploadPhase(ORIGIN, '2')).toBe('failed');
+    expect(uploadPhase(ORIGIN, '2')).toEqual({ phase: 'failed', error: 'S3 said no' });
   });
 
   test('a rejected upload does not become an unhandled rejection', async () => {
@@ -99,17 +133,17 @@ describe('the phases this process remembers', () => {
   test('a job this process never started is unknown, and so is the same id on another instance', async () => {
     await trackUpload(ORIGIN, '1', Promise.resolve());
 
-    expect(uploadPhase(ORIGIN, '99')).toBe('unknown');
-    expect(uploadPhase('https://prod.example.com', '1')).toBe('unknown');
+    expect(uploadPhase(ORIGIN, '99')).toEqual({ phase: 'unknown' });
+    expect(uploadPhase('https://prod.example.com', '1')).toEqual({ phase: 'unknown' });
   });
 
   // An HTTP server lives as long as the editor does; without a bound this map only grows.
   test('the table is bounded, and forgets the oldest first', async () => {
     for (let n = 0; n < MAX_TRACKED + 5; n++) await trackUpload(ORIGIN, String(n), Promise.resolve());
 
-    expect(uploadPhase(ORIGIN, '0')).toBe('unknown');
-    expect(uploadPhase(ORIGIN, '4')).toBe('unknown');
-    expect(uploadPhase(ORIGIN, '5')).toBe('done');
-    expect(uploadPhase(ORIGIN, String(MAX_TRACKED + 4))).toBe('done');
+    expect(uploadPhase(ORIGIN, '0')).toEqual({ phase: 'unknown' });
+    expect(uploadPhase(ORIGIN, '4')).toEqual({ phase: 'unknown' });
+    expect(uploadPhase(ORIGIN, '5')).toEqual({ phase: 'done' });
+    expect(uploadPhase(ORIGIN, String(MAX_TRACKED + 4))).toEqual({ phase: 'done' });
   });
 });

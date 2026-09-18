@@ -6,7 +6,6 @@ import { cancelled } from '../cancellation.js';
 
 const fetchLogsTool = {
   description: 'Fetch recent logs in batches (NDJSON semantics, returns JSON array here). Mirrors pos-cli fetch-logs.',
-  // Tells MCP clients this tool changes nothing, locally or on the instance.
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',

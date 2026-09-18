@@ -15,10 +15,10 @@ import log from './log.js';
 // SSE sessions keyed by Mcp-Session-Id. Supports multiple concurrent clients.
 const sseSessions = new Map();
 
-// A session id is the only thing separating one SSE client's stream from another's, so it
-// has to be unguessable: Math.random() is seeded per process and its output is predictable
-// from a couple of prior samples, which would let a local caller attach to someone else's
-// session by supplying the Mcp-Session-Id it derived.
+// A session id is the only thing separating one SSE client's stream from another's, so it has to
+// be unguessable — Math.random() is seeded per process and predictable from a couple of prior
+// samples — and it has to be ours: an id taken from the request would let a caller register its
+// own stream under a name of its choosing, or over another client's.
 function generateSessionId() {
   return `mcpmin-${randomUUID()}`;
 }
@@ -133,13 +133,15 @@ export default async function startHttp({
     const wantsSSE = /text\/event-stream/i.test(acceptHeader) || (typeof req.accepts === 'function' && !!req.accepts(['text/event-stream']));
     if (wantsSSE) {
       // SSE handshake on base URL for clients that only know base url + transport=sse
-      const sessionId = req.headers['mcp-session-id'] || generateSessionId();
+      const sessionId = generateSessionId();
       res.set('Mcp-Session-Id', sessionId); // must be set before writeHead in sseHandler
       sseHandler(req, res);
       trackStream(res);
       sseSessions.set(sessionId, res);
       req.on('close', () => {
-        sseSessions.delete(sessionId);
+        // Only this stream's entry: two clients cannot share an id now, but a late close must not
+        // unregister whatever is under that key either way.
+        if (sseSessions.get(sessionId) === res) sseSessions.delete(sessionId);
         log.debug('SSE session closed', { sessionId });
       });
       // minimal required event (plain text)
@@ -188,9 +190,12 @@ export default async function startHttp({
     }
 
     try {
-      log.debug('HTTP /call', { tool, params, rawBodyKeys: Object.keys(body) });
+      // Names, not values: `constants-set` carries an instance's API keys under `value`, and a
+      // result carries whatever the tool read. Redaction covers what it can name; a payload whose
+      // shape is the caller's choice is not something to hand it wholesale.
+      log.debug('HTTP /call', { tool, params: Object.keys(params || {}), rawBodyKeys: Object.keys(body) });
       const result = await entry.handler(params || {}, { transport: 'http', debug: DEBUG });
-      log.debug('HTTP /call result', { tool, result });
+      log.debug('HTTP /call result', { tool, ok: result?.ok, error: result?.error?.code });
       res.json({ result });
     } catch (err) {
       log.debug('HTTP /call error', { tool, err: String(err), details: err && err._pos });
@@ -234,7 +239,9 @@ export default async function startHttp({
         }
         try { res.set('Mcp-Protocol-Version', protocolVersion); } catch {}
         try { res.set('Mcp-Session-Id', sessionId); } catch {}
-        log.debug(`JSON-RPC respond 200 JSON`, { method, id, response: responsePayload });
+        // Not the payload: for `tools/call` it carries the tool's result re-encoded as a JSON
+        // string, which redaction cannot see into.
+        log.debug('JSON-RPC respond 200 JSON', { method, id, ok: !responsePayload.error, error: responsePayload.error?.code });
         res.status(200).json(responsePayload);
         return true;
       };
@@ -349,14 +356,15 @@ export default async function startHttp({
     // Provide a simple writer function to the tool
     const writer = (event) => {
       if (closed) return;
-      log.debug('SSE write', { tool, event });
+      // `event.data` is a JSON string built by the tool — redaction cannot see into it.
+      log.debug('SSE write', { tool, event: event?.event, bytes: event?.data?.length });
       writeSSE(res, event);
     };
 
     // Call the tool's stream handler if present
     if (typeof entry.streamHandler === 'function') {
       try {
-        log.debug('HTTP /call-stream start', { tool, params });
+        log.debug('HTTP /call-stream start', { tool, params: Object.keys(params || {}) });
         entry.streamHandler(params || {}, { transport: 'http', writer, debug: DEBUG })
           .then(() => {
             writeSSE(res, { event: 'done', data: '' });

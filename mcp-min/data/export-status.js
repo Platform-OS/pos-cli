@@ -8,7 +8,6 @@ import { JobNotFoundError } from '../jobs/errors.js';
 
 const dataExportStatusTool = {
   description: 'Deprecated: use job-status. Check the status of a data export job; when done, returns the exported data or a ZIP link.',
-  // Tells MCP clients this tool changes nothing, locally or on the instance.
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
@@ -44,7 +43,7 @@ const dataExportStatusTool = {
           status: polled.status,
           done: polled.state === 'completed',
           failed: polled.state === 'failed',
-          // An unrecognised status now counts as still pending rather than as none of the three.
+          // An unrecognised status counts as still pending rather than as none of the three.
           pending: polled.state === 'running'
         },
         meta: {

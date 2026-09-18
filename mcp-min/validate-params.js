@@ -59,5 +59,20 @@ const rejectionFor = (name, tool, params) => {
   };
 };
 
-export { validateToolParams, rejectionFor, TOOL_SCHEMA_DIALECT };
-export default validateToolParams;
+/**
+ * Whether a tool's schema compiles at all — the question `createServerFactory` asks about every
+ * exposed tool at startup.
+ *
+ * It does not go through `validateToolParams`, because that logs a rejection: probing with `{}`
+ * rejects every tool that requires a property, and a server started with DEBUG would open with
+ * thirty "tool params rejected" lines that mean nothing.
+ *
+ * @param {object} tool - tool entry from tools.js
+ * @returns {null|string} the compile error, or null when the schema is usable
+ */
+const schemaCompileError = (tool) => {
+  const result = validate(tool.inputSchema || OPEN_OBJECT_SCHEMA, {}, { dialect: TOOL_SCHEMA_DIALECT });
+  return result.schemaError ? result.message : null;
+};
+
+export { validateToolParams, rejectionFor, schemaCompileError, TOOL_SCHEMA_DIALECT };

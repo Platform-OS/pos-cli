@@ -17,7 +17,7 @@ vi.mock('../auth.js', async (importOriginal) => {
   return { ...actual, resolveAuth: vi.fn(actual.resolveAuth) };
 });
 
-import startHttp from '../http-server.js';
+import startHttp, { stopHttp } from '../http-server.js';
 import hostValidation from '../host-validation.js';
 import { defaultTools } from './helpers/tools.js';
 import { resolveAuth } from '../auth.js';
@@ -407,4 +407,35 @@ describe('startHttp', () => {
     expect(() => hostValidation('localhost,127.0.0.1')).toThrow(notAnArray);
     await expect(startHttp({ port: 0, tools, allowedHostnames: 'localhost,127.0.0.1' })).rejects.toThrow(notAnArray);
   });
+});
+
+// The SSE session id is what separates one client's stream from another's on a port with no
+// authentication, so it is minted here and never taken from the request: a caller supplying one
+// would otherwise register its stream under a name of its choosing, or over someone else's.
+describe('SSE session ids are the server\'s to choose', () => {
+  test('a client-supplied Mcp-Session-Id is ignored', async () => {
+    const server = await startHttp({ port: 0, tools: defaultTools() });
+    try {
+      const { port } = server.address();
+      const chosen = 'mcpmin-chosen-by-the-client';
+
+      const assigned = await new Promise((resolve, reject) => {
+        const req = http.request(
+          { host: '127.0.0.1', port, path: '/', method: 'GET', headers: { Accept: 'text/event-stream', 'Mcp-Session-Id': chosen } },
+          (res) => {
+            const id = res.headers['mcp-session-id'];
+            res.destroy();
+            resolve(id);
+          }
+        );
+        req.on('error', reject);
+        req.end();
+      });
+
+      expect(assigned).not.toBe(chosen);
+      expect(assigned).toMatch(/^mcpmin-[0-9a-f-]{36}$/);
+    } finally {
+      await stopHttp(server);
+    }
+  }, 20000);
 });

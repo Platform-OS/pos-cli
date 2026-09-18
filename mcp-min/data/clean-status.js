@@ -8,7 +8,6 @@ import { JobNotFoundError } from '../jobs/errors.js';
 
 const dataCleanStatusTool = {
   description: 'Deprecated: use job-status. Check the status of a data clean job.',
-  // Tells MCP clients this tool changes nothing, locally or on the instance.
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
@@ -43,7 +42,7 @@ const dataCleanStatusTool = {
           status: polled.status,
           done: polled.state === 'completed',
           failed: polled.state === 'failed',
-          // An unrecognised status now counts as still pending rather than as none of the three.
+          // An unrecognised status counts as still pending rather than as none of the three.
           pending: polled.state === 'running',
           response: polled.result
         },

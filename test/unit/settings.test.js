@@ -204,6 +204,23 @@ describe('settings', () => {
       expect(settings).toBeUndefined();
     });
 
+    // The name reaches here from a command-line argument and, through the MCP server, from a
+    // model. A plain property read would answer `constructor` with a function.
+    test.each(['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'])(
+      'returns undefined for %s, which is on Object.prototype rather than in .pos',
+      (name) => {
+        files.getConfig.mockReturnValue({ staging: { url: 'https://staging.example.com' } });
+
+        expect(settingsFromDotPos(name)).toBeUndefined();
+      }
+    );
+
+    test('an environment genuinely named like a prototype member still resolves', () => {
+      files.getConfig.mockReturnValue({ toString: { url: 'https://odd.example.com', token: 't' } });
+
+      expect(settingsFromDotPos('toString')).toMatchObject({ url: 'https://odd.example.com' });
+    });
+
     test('returns undefined when config is empty', () => {
       files.getConfig.mockReturnValue({});
 

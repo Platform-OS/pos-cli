@@ -51,6 +51,12 @@ Tools that only read are published with `annotations.readOnlyHint: true`: `envs-
 
 `--no-http` starts the server without any HTTP listener (stdio only), which is what `pos-cli ai init` writes into client configurations.
 
+### Streaming
+
+A `/mcp` request whose `Accept` includes `text/event-stream` is answered as SSE, and that is where a long call's progress notifications arrive: a tool that reports progress (`job-status` while it waits, `deploy-start`, `logs-fetch`) sends `notifications/progress` for the call's progress token, and a call with a token also gets a heartbeat every five seconds so an idle-timeout does not kill it. An MCP client handles this itself; nothing extra is needed to opt in.
+
+The deprecated `POST /call-stream` is the pre-SDK version of the same idea — one SSE stream per call, framed as `event: data` / `event: done` — and goes at the next major along with the other pre-SDK routes.
+
 ## HTTP Transport Security
 
 To run the server for the `curl` examples below, start it with stdin from `/dev/null`:
@@ -122,19 +128,28 @@ All tools (except `envs-list` and generator tools) support multiple authenticati
    { "url": "https://instance.com", "email": "user@example.com", "token": "auth-token" }
    ```
 
-2. **Environment Variables**
+2. **Named Environment from `.pos` File**
+   ```json
+   { "env": "staging" }
+   ```
+
+   Naming an environment settles it: resolution does **not** fall back to the variables below if
+   that name is missing from `.pos`, it fails. The caller said which instance they meant, and
+   quietly using another one — because the process happened to inherit `MPKIT_*` pointing
+   somewhere else — would be worse than the error.
+
+3. **`MPKIT_*` Environment Variables**
    ```bash
    MPKIT_URL=https://instance.com
    MPKIT_EMAIL=user@example.com
    MPKIT_TOKEN=auth-token
    ```
 
-3. **Named Environment from `.pos` File**
-   ```json
-   { "env": "staging" }
-   ```
-
 4. **First Environment in `.pos` File** (lowest priority)
+
+   Reached when a call names no environment and none of the above applies — so on a machine with
+   several environments, omitting `env` picks whichever is first in the file. Name the environment
+   on anything that writes.
 
 ### Error When No Auth Available
 
@@ -324,7 +339,6 @@ Execute GraphQL queries and mutations on a platformOS instance.
 - `url` *(string, optional)*: Instance URL
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `endpoint` *(string, optional)*: Override API base URL
 - `query` *(string, required)*: GraphQL query or mutation string
 - `variables` *(object, optional)*: GraphQL variables
 
@@ -389,7 +403,6 @@ Render Liquid templates on a platformOS instance.
 - `url` *(string, optional)*: Instance URL
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `endpoint` *(string, optional)*: Override API base URL
 - `template` *(string, required)*: Liquid template string
 - `locals` *(object, optional)*: Template variables
 
@@ -639,7 +652,6 @@ Generate a new migration on the server and write local file.
 - `token` *(string, optional)*: API token
 - `name` *(string, required)*: Base name without timestamp (e.g., `add_user_fields`)
 - `skipWrite` *(boolean, optional, default: false)*: Don't create local file
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -683,7 +695,6 @@ Execute a specific migration on the server.
 - `token` *(string, optional)*: API token
 - `timestamp` *(string, optional)*: Migration timestamp
 - `name` *(string, optional)*: Full migration name without `.liquid`
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Note**: Provide either `timestamp` or `name` (not both)
 
@@ -793,7 +804,6 @@ Get the current status of a deployment.
 - `url` *(string, optional)*: Instance URL
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -912,7 +922,6 @@ Start a data import from JSON file, JSON object, or ZIP archive.
 - `jsonData` *(object, optional)*: JSON data to import directly
 - `zipFileUrl` *(string, optional)*: Remote ZIP file URL
 - `rawIds` *(boolean, optional, default: false)*: Keep original IDs
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -991,7 +1000,6 @@ Check the status of a data import job.
 - `url` *(string, optional)*: Instance URL
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -1042,7 +1050,6 @@ Start a data export from a platformOS instance.
 - `token` *(string, optional)*: API token
 - `exportInternalIds` *(boolean, optional, default: false)*: Use internal IDs instead of external_id
 - `zip` *(boolean, optional, default: false)*: Export as ZIP archive
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -1106,7 +1113,6 @@ Check the status of a data export job.
 - `url` *(string, optional)*: Instance URL
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -1164,7 +1170,6 @@ Start a destructive data clean operation. Requires confirmation string.
 - `token` *(string, optional)*: API token
 - `confirmation` *(string, required)*: Must be exactly `"CLEAN DATA"`
 - `includeSchema` *(boolean, optional, default: false)*: Also remove pages, schemas, etc.
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -1242,7 +1247,6 @@ Check the status of a data clean operation.
 - `url` *(string, optional)*: Instance URL
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Response Format**:
 ```javascript
@@ -1571,7 +1575,6 @@ Sync a single file to a platformOS instance (upload or delete).
 - `op` *(string, optional, enum: ["upload", "delete"])*: Operation (auto-detected if not provided)
 - `dryRun` *(boolean, optional, default: false)*: Simulate without performing
 - `confirmDelete` *(boolean, optional, default: false)*: Required to confirm deletion
-- `endpoint` *(string, optional)*: Override API base URL
 
 **Supported Directories**:
 - `app/` - Application files
@@ -2310,15 +2313,16 @@ curl -X POST http://localhost:5910/call \
 Enable verbose logging:
 
 ```bash
-cd mcp-min
-MCP_MIN_DEBUG=1 npm start
+MCP_MIN_DEBUG=1 pos-cli-mcp
 ```
+
+The log file is named on the first line the server writes; `DEBUG=1` does the same thing.
 
 ### Testing Tools Locally
 
 ```bash
-# Start MCP server
-cd mcp-min && npm start
+# Start the MCP server with its HTTP transport (stdin from /dev/null keeps it running)
+pos-cli-mcp </dev/null &
 
 # In another terminal, test a tool
 curl -X POST http://localhost:5910/call \
@@ -2333,49 +2337,43 @@ curl -X POST http://localhost:5910/call \
 
 ## Summary
 
-### Tool Count by Category
+### The Tools, in the Order Clients See Them
 
-- **Asynchronous Operations**: 1 (job-status)
-- **Environment Management**: 1 (envs-list)
-- **Logging & Monitoring**: 2 (logs-fetch, logs-stream)
-- **GraphQL & Liquid**: 2 (graphql-exec, liquid-exec)
-- **Generators**: 3 (generators-list, generators-help, generators-run)
-- **Migrations**: 3 (migrations-list, migrations-generate, migrations-run)
-- **Deployment**: 3 (deploy-start, deploy-status, deploy-wait)
-- **Data Operations**: 6 (data-import, data-import-status, data-export, data-export-status, data-clean, data-clean-status)
-- **Testing**: 1 (unit-tests-run)
-- **Linting**: 1 (check)
-- **File Sync**: 1 (sync-file)
-- **Property Uploads**: 1 (uploads-push)
-- **Constants**: 3 (constants-list, constants-set, constants-unset)
+36 are registered and 35 are exposed by default; `check` is switched off in `mcp-min/tools.config.json`. `--profile dev` exposes the nine marked below.
 
-**Total**: 27 active tools
+| Group | Tools |
+|---|---|
+| Environments | `envs-list` (dev), `env-add` |
+| Logging | `logs-fetch` (dev) |
+| Liquid & GraphQL | `liquid-exec` (dev), `graphql-exec` (dev) |
+| Generators | `generators-list`, `generators-help`, `generators-run` |
+| Migrations | `migrations-list`, `migrations-generate`, `migrations-run` |
+| Jobs | `job-status` (dev) |
+| Deployment | `deploy-start` (dev), `deploy-status`†, `deploy-wait`† |
+| Data | `data-import`, `data-import-status`†, `data-export`, `data-export-status`†, `data-clean`, `data-clean-status`†, `data-validate` |
+| Testing | `unit-tests-run` (dev), `tests-run-async` (dev), `tests-run-async-result`† |
+| Linting | `check-run` (dev), `check` (disabled by default — needs the Ruby gem; `check-run` supersedes it) |
+| File sync | `sync-file` |
+| Property uploads | `uploads-push` |
+| Constants | `constants-list`, `constants-set`, `constants-unset` |
+| Partner Portal | `instance-create`, `partners-list`, `partner-get`, `endpoints-list` |
+
+† Deprecated in favour of `job-status`, and removed in the next major release.
+
+`pos-cli mcp-config` prints this for your own configuration and options, which is the answer to trust if this table ever drifts.
 
 ### Tool Locations
 
-All tools are located in the `/home/godot/projects/pos-cli/mcp-min/` directory, organized by category:
-
-- `mcp-min/logs/` - Logging tools
-- `mcp-min/liquid/` - Liquid template tools
-- `mcp-min/graphql/` - GraphQL tools
-- `mcp-min/generators/` - Generator tools
-- `mcp-min/migrations/` - Migration tools
-- `mcp-min/deploy/` - Deployment tools
-- `mcp-min/data/` - Data operation tools
-- `mcp-min/tests/` - Testing tools
-- `mcp-min/check/` - Linting tools
-- `mcp-min/sync/` - File sync tools
-- `mcp-min/uploads/` - Property upload tools
-- `mcp-min/constants/` - Constants management tools
+Each group lives in its own directory under `mcp-min/`: `logs/`, `liquid/`, `graphql/`, `generators/`, `migrations/`, `jobs/`, `deploy/`, `data/`, `tests/`, `check/`, `sync/`, `uploads/`, `constants/` and `portal/`. Simple tools are defined inline in `mcp-min/tools.js`.
 
 ### Registration
 
-All tools are registered in `mcp-min/tools.js` and exported as a single module for use by both HTTP and stdio MCP servers.
+Every tool is registered in `mcp-min/tools.js`, which is the registry and nothing else: which of them a server exposes is resolved once at startup from `--profile`, `--include-tools`/`--exclude-tools` and `tools.config.json`, and both transports serve that same set.
 
 ---
 
 ## See Also
 
 - [platformOS Documentation](https://documentation.platformos.com)
-- [MCP Server Setup](./SSE_GUIDE.md)
-- [CLI Reference](./API.md)
+- [The MCP section of the README](../README.md#mcp-server-model-context-protocol) — installing, registering the server with an AI tool, and choosing which tools are exposed
+- [mcp-min/README.md](../mcp-min/README.md) — how the server is put together

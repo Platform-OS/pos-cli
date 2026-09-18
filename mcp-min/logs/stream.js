@@ -18,7 +18,6 @@ const streamTool = {
     properties: {
       env: { type: 'string' },
       ...authProperties,
-      endpoint: { type: 'string' },
       interval: { type: 'integer', minimum: 250 },
       filter: { type: 'string' },
       startLastId: { type: 'integer', minimum: 0, description: 'Starting log row id (default 0)' },
@@ -27,7 +26,8 @@ const streamTool = {
   },
   streamHandler: async (params, { writer, Gateway: GatewayOverride, ...ctx } = {}) => {
     const auth = await resolveAuth(params, ctx);
-    const baseUrl = params?.endpoint ? params.endpoint : auth.url;
+    // The request URL comes from the resolved credentials only (see graphql-exec).
+    const baseUrl = auth.url;
     const GatewayCtor = GatewayOverride || Gateway;
     const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
 

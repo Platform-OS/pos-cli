@@ -18,14 +18,16 @@ const runMigrationTool = {
       env: { type: 'string' },
       ...authProperties,
       timestamp: { type: 'string', description: 'Numeric timestamp' },
-      name: { type: 'string', description: 'Alias for timestamp; full migration name without .liquid' },
-      endpoint: { type: 'string', description: 'Override API base URL' }
+      name: { type: 'string', description: 'Alias for timestamp; full migration name without .liquid' }
     }
   },
   handler: async (params = {}, ctx = {}) => {
     try {
       const auth = await resolveAuth(params, ctx);
-      const baseUrl = params?.endpoint ? params.endpoint : auth.url;
+      // The request URL comes from the resolved credentials only: an `endpoint` argument used to
+      // replace it while the .pos token was still sent, so a caller could name any host and be
+      // handed this machine's token.
+      const baseUrl = auth.url;
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
 

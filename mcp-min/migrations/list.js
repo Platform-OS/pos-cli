@@ -5,21 +5,22 @@ import { authProperties } from '../schemas/auth.js';
 
 const listMigrationsTool = {
   description: 'List migrations deployed to the server with their current status.',
-  // Tells MCP clients this tool changes nothing, locally or on the instance.
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
       env: { type: 'string' },
-      ...authProperties,
-      endpoint: { type: 'string', description: 'Override API base URL' }
+      ...authProperties
     }
   },
   handler: async (params = {}, ctx = {}) => {
     try {
       const auth = await resolveAuth(params, ctx);
-      const baseUrl = params?.endpoint ? params.endpoint : auth.url;
+      // The request URL comes from the resolved credentials only: an `endpoint` argument used to
+      // replace it while the .pos token was still sent, so a caller could name any host and be
+      // handed this machine's token.
+      const baseUrl = auth.url;
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
 

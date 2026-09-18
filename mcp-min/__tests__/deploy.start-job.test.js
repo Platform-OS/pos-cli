@@ -22,7 +22,7 @@ vi.mock('../../lib/directories.js', () => ({ default: { available: () => ['app']
 const { default: deployStart } = await import('../deploy/start.js');
 const { default: jobStatus } = await import('../jobs/status.js');
 const { parse } = await import('../jobs/handle.js');
-const { forgetUploads } = await import('../jobs/local-phases.js');
+const { forgetUploads, uploadPhase } = await import('../jobs/local-phases.js');
 
 const ORIGIN = 'https://staging.example.com';
 const AUTH = { url: `${ORIGIN}/`, email: 'a@b.c', token: 'staging-token' };
@@ -57,6 +57,9 @@ beforeEach(() => {
   fs.mkdirSync(path.join(workDir, 'tmp'));
   fs.writeFileSync(path.join(workDir, 'tmp', 'release.zip'), 'zip');
   process.chdir(workDir);
+  // Reset every stub's behaviour, not just its call record: vi.clearAllMocks() keeps
+  // implementations, so a case that makes the archive empty would make every later one empty too.
+  makeArchive.mockResolvedValue(7);
   getAssets.mockResolvedValue([]);
   deployAssets.mockResolvedValue({ added: [] });
 });
@@ -66,6 +69,27 @@ afterEach(() => {
   fs.rmSync(workDir, { recursive: true, force: true });
   forgetUploads();
   vi.clearAllMocks();
+});
+
+describe('an empty archive', () => {
+  // A release that is not partial is the whole intended state of the instance: uploading an empty
+  // archive asks it to delete every file it has. The check used to run after the upload.
+  test.each([
+    ['nothing to archive', 0],
+    ['an archive that was not built', false]
+  ])('is refused before it is uploaded (%s)', async (_label, archived) => {
+    makeArchive.mockResolvedValue(archived);
+    const pushed = vi.fn();
+    class Gateway {
+      push = pushed;
+      async getStatus() { return { status: 'success' }; }
+    }
+
+    const result = await deployStart.handler(AUTH, { Gateway });
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'EMPTY_ARCHIVE' } });
+    expect(pushed).not.toHaveBeenCalled();
+  });
 });
 
 describe('the job_id deploy-start returns', () => {
@@ -132,14 +156,14 @@ describe('the background asset upload', () => {
     const { Gateway } = gatewayWith(['error']);
 
     const started = await deployStart.handler(AUTH, { Gateway });
-    const status = await vi.waitFor(async () => {
-      const current = await jobStatus.handler({ job_id: started.data.job_id, ...AUTH }, { Gateway });
-      expect(current.data.state).toBe('failed');
-      return current;
-    }, { timeout: 10000 });
+
+    // Wait for the background task itself to finish, not for a status that answers from the
+    // release alone — otherwise "nothing was uploaded" would hold before it had even tried.
+    await vi.waitFor(() => expect(uploadPhase(ORIGIN, 4141).phase).toBe('failed'), { timeout: 10000 });
+    const status = await jobStatus.handler({ job_id: started.data.job_id, ...AUTH }, { Gateway });
 
     expect(deployAssets).not.toHaveBeenCalled();
-    expect(status.data.status).toBe('error');
+    expect(status.data).toMatchObject({ state: 'failed', status: 'error' });
   }, 30000);
 
   test('a deploy with no assets is finished as soon as its release is in', async () => {

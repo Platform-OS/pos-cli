@@ -49,8 +49,9 @@ const BARE_TOOLS = [
 // 24,612 bytes before profiles; + 36 bytes for each of the 17 `readOnlyHint` annotations;
 // + 1,045 for job-status (TASK-13 Part 2), which is what the six deprecated status tools cost
 // 4,528 of between them — the saving lands when they are removed at the next major, and now for
-// anyone on --profile dev.
-const BARE_TOOLS_LIST_BYTES = 26233;
+// anyone on --profile dev; − 469 for the `endpoint` parameter removed from five more tools
+// (TASK-18), which no tool may declare any more (request-target.test.js).
+const BARE_TOOLS_LIST_BYTES = 25764;
 
 const HANG_MS = 15000;
 

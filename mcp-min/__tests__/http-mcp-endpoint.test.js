@@ -256,6 +256,38 @@ describe('the request itself', () => {
     expect(res.status).toBe(413);
     expect(JSON.parse(res.text).error.message).toBe('Request body too large');
   });
+
+  // Still streaming when the limit is reached, which is when reading with `for await` used to
+  // destroy the request — and with it the socket the answer had to be written to. The client saw
+  // a reset connection instead of a 413, depending on how its body happened to be split.
+  test('a body still arriving when it passes the limit is answered, not cut off', async () => {
+    const { port } = server.address();
+    const chunk = 'x'.repeat(256 * 1024);
+
+    const res = await new Promise((resolve, reject) => {
+      const req = http.request({
+        host: '127.0.0.1', port, path: '/mcp', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' }
+      }, (response) => {
+        let text = '';
+        response.on('data', c => (text += c));
+        response.on('end', () => resolve({ status: response.statusCode, text }));
+      });
+      req.on('error', reject);
+
+      // Written slowly enough that the server answers mid-stream, which is the case that broke.
+      let written = 0;
+      const writeNext = () => {
+        if (written >= 8) return req.end();
+        written += 1;
+        req.write(chunk, () => setTimeout(writeNext, 5));
+      };
+      writeNext();
+    });
+
+    expect(res.status).toBe(413);
+    expect(JSON.parse(res.text).error.message).toBe('Request body too large');
+  }, 20000);
 });
 
 // The schema clients receive is the schema arguments are checked against: the same object,

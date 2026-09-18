@@ -1,23 +1,32 @@
 // Shared authentication utilities for mcp-min tools
 import files from '../lib/files.js';
-import { fetchSettings } from '../lib/settings.js';
+import { settingsFromDotPos } from '../lib/settings.js';
+import { mask } from './redact.js';
 
-const settings = { fetchSettings };
+const settings = { settingsFromDotPos };
 
 /**
- * Mask a token for safe logging.
+ * Mask a token for a result returned to the client — `meta.auth.token`, so a caller can tell which
+ * credential was used. The log does its own masking (`redact.js`); this is the same rule, imported
+ * rather than restated, so the two cannot disagree.
  */
 export function maskToken(token) {
   if (!token) return token;
-  return token.slice(0, 3) + '...' + token.slice(-3);
+  return mask(token);
 }
 
 /**
  * Resolve authentication from params, falling back through:
  *   1. Explicit params (url + email + token)
- *   2. MPKIT_* environment variables
- *   3. Named .pos environment (params.env)
+ *   2. Named .pos environment (params.env)
+ *   3. MPKIT_* environment variables
  *   4. First environment in .pos config
+ *
+ * A named environment beats MPKIT_*, and does not fall back to it: the caller said which
+ * instance they meant, so resolving to a different one — silently, because the environment a
+ * process inherited happens to name another — would be worse than the error. The order is the
+ * contract, not an implementation detail: `mcp-min/__tests__/auth.env-resolve.test.js` pins each
+ * step, and checks this list against what the function does.
  *
  * @param {object} params - Tool input params
  * @param {object} [ctx] - Optional context for dependency injection in tests
@@ -34,11 +43,24 @@ export async function resolveAuth(params, ctx = {}) {
     return { url: params.url, email: params.email, token: params.token, source: 'params' };
   }
 
-  // Priority 2: Named .pos environment. When an env name is given we resolve it
-  // directly without falling back to MPKIT_* — the caller is being explicit.
+  // Two of the three is a mistake worth reporting: it names an instance and then resolves a
+  // different one from `.pos`, so the call would quietly go somewhere the caller did not ask for.
+  const explicit = ['url', 'email', 'token'].filter(name => params?.[name]);
+  if (explicit.length > 0) {
+    const missing = ['url', 'email', 'token'].filter(name => !params?.[name]);
+    throw new Error(`Explicit credentials need url, email and token together; missing: ${missing.join(', ')}`);
+  }
+
+  // Priority 2: Named .pos environment, read from `.pos` and nowhere else. `fetchSettings` —
+  // the CLI's resolver — answers from MPKIT_* first, which meant an MCP client naming an
+  // environment got whatever those variables pointed at, reported as the environment it asked
+  // for. The CLI keeps that order deliberately (CI exports MPKIT_* and names an environment on
+  // the command line); here the name is the instruction, so an unknown one is an error rather
+  // than a quiet redirect.
   if (params?.env) {
-    const found = await settingsModule.fetchSettings(params.env, { exit: false });
-    if (found) return { ...found, source: `.pos(${params.env})` };
+    const found = settingsModule.settingsFromDotPos(params.env);
+    if (found?.url && found?.token) return { ...found, source: `.pos(${params.env})` };
+    if (found) throw new Error(`Environment '${params.env}' in .pos has no url and token`);
     throw new Error(`Environment '${params.env}' not found in .pos config`);
   }
 
@@ -51,7 +73,7 @@ export async function resolveAuth(params, ctx = {}) {
   // Priority 4: First environment in .pos config
   const conf = filesModule.getConfig();
   const firstEnv = conf && Object.keys(conf)[0];
-  if (firstEnv && conf[firstEnv]) {
+  if (firstEnv && conf[firstEnv]?.url && conf[firstEnv]?.token) {
     return { ...conf[firstEnv], source: `.pos(${firstEnv})` };
   }
 

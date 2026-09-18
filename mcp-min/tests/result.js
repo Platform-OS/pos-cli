@@ -5,8 +5,21 @@ import { testsUrl } from './request.js';
  * `job-status`'s test-run adapter, so the two can never disagree about whether a run is done.
  */
 
+/**
+ * What a status means, for both readers. A run whose assertions failed is finished — the run did
+ * what it was asked to; only the runner going down is a failure of the job itself.
+ */
+export const RUN_STATES = Object.freeze({ pending: 'running', success: 'completed', failed: 'completed', error: 'failed' });
+
+/** An unfamiliar status is not a finished run: it is one nobody here can read. */
+export const runState = status => RUN_STATES[status] ?? 'running';
+
 /** The run, with its counters as numbers and the three questions a caller actually asks. */
 export function normalizeResult(result) {
+  if (result === null || typeof result !== 'object' || Array.isArray(result)) {
+    throw new TypeError(`the test results endpoint answered with ${result === null ? 'null' : typeof result}, not a run`);
+  }
+
   const status = result.status;
   return {
     id: result.id,
@@ -17,9 +30,9 @@ export function normalizeResult(result) {
     total_duration: parseInt(result.total_duration, 10) || 0,
     error_message: result.error_message || '',
     tests: result.tests || [],
-    pending: status === 'pending',
+    pending: runState(status) === 'running',
     passed: status === 'success',
-    done: status !== 'pending'
+    done: runState(status) !== 'running'
   };
 }
 

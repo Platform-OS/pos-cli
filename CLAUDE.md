@@ -18,18 +18,42 @@ npm run test-watch        # Run tests in watch mode
 ```
 
 ### Testing
-Tests are integration tests that require actual platformOS instances. Configure via environment variables:
+**The runner is vitest** (`vitest.config.js`), not Jest. It collects `test/**/*.{test,spec}.js` and
+`mcp-min/__tests__/**`; a test file anywhere else is never run, however it is named.
+
 ```bash
-# Set in .env file or environment
+npm test                  # every suite
+npm run test:unit         # test/unit
+npm run test:integration  # test/integration — needs a real instance
+npm run test:mcp-min      # the MCP server's own suite, no instance needed
+npm run test:watch
+npm run test:coverage
+DEBUG=1 npm test          # with debug output
+```
+
+`test/unit` and `mcp-min/__tests__` run against fakes and spawned processes; `test/integration`
+talks to an actual platformOS instance and needs credentials, from a `.env` file or the
+environment:
+
+```bash
 MPKIT_URL=https://your-test-instance.example.com
 MPKIT_EMAIL=your-email@example.com
 MPKIT_TOKEN=your-token
-
-npm test                  # Run all tests with Jest
-DEBUG=1 npm test          # Run with debug output
 ```
 
-Tests run with `--runInBand` to prevent race conditions. Fixtures are in `/test/fixtures/`.
+Files run in parallel, each in its own forked process (`pool: 'forks'`), so a test that writes to
+the repository root — a `.pos`, a fixture lockfile — can fail another suite that reads it. Write
+into a temp directory (`withTmpDir`, `makeWorkDir`) instead. Fixtures are in `/test/fixtures/`.
+
+`pretest` (and `pretest:unit`) runs `npm install` in `test/fixtures/yeoman` and
+`test/fixtures/yeoman/custom`. Running vitest directly skips that, and `test/unit/generators.test.js`
+then stops on a yeoman prompt rather than failing outright — if a generators test appears to hang,
+that is why. `npm test` and `npm run test:unit` do the install for you.
+
+Coverage (`npm run test:coverage`) is measured over `lib/**` and `bin/**` with a 60% threshold on
+lines, functions, branches and statements. `mcp-min/**` is deliberately outside it: its suite
+covers the server through spawned processes and real transports, which v8 coverage of this process
+does not see.
 
 ### Local Development Workflow
 ```bash
@@ -216,6 +240,15 @@ The MCP (Model Context Protocol) server exposes platformOS operations as tools f
 - **`--no-http` does not read `MCP_MIN_*` at all.** With no listener there is nothing to expose, and a stale value in an editor's environment must not stop a stdio server. It is what `pos-cli ai init` writes.
 - **`annotations.readOnlyHint`** is a reviewed set (`tool-annotations.test.js`), on tools that change nothing locally or on the instance. Omitting it means "may change things", which is the right default.
 
+**Logging: one sink, redacted centrally** (`mcp-min/log.js`, `mcp-min/redact.js`). Everything the server writes goes to stderr and to `~/.pos-cli/logs/mcp-min.log` (`MCP_MIN_LOG_FILE`), which outlives the session and is shared by every session on the machine; `DEBUG=1` is what people turn on precisely when credentials are moving. Keep these:
+- **stdout belongs to the protocol.** `mcp-min/log.js` writes to stderr and the log file, never stdout, and `lib/logger.js` routes its stdout methods (`Info`, `Success`, `Log`, `News`, `Print`) to stderr while `isServerMode()`. CLI code called from a tool — `Gateway`'s Portal retry, a two-factor session message — would otherwise put non-JSON bytes into a stdio client's channel mid-response.
+- **Redaction happens in `log.js`, not at call sites.** `write()` passes every data object through `redact()` and every message through `scrubString()`. Masking by hand at one call site is a rule the next one will not know about; centrally, a leak takes a new *kind* of secret rather than a new logging line. Adding one means adding a key to `SECRET_KEYS` or `MASKED_KEYS` in `redact.js` — normalised, so an API-key header, its `SHOUTING_SNAKE` form and its camelCase form are one name.
+- **Two treatments, deliberately.** A secret (`authorization`, `cookie`, `password`, `mcp-session-id`, `device_code`…) is replaced whole: part of a password is still a leak, and one `Cookie` can carry several credentials. A credential *name* (`token`, `access_token`, `jwt`…) is masked to `abc...xyz` — enough to tell which credential, not enough to use, and the same shape `maskToken` (`auth.js`) writes into tool results. Under 12 characters it is redacted instead, because three of eight is most of the secret.
+- **Credentials also travel inside strings**, so `Token …`/`Bearer …` and sensitive URL query values (`access_token`, `device_code`, `user_code`, `password`…) are scrubbed wherever they appear, including in the message.
+- **A log line must never fail a request.** `serialise()` catches everything — a cycle, a bigint, a getter that throws — and writes `[unserialisable]` rather than propagating. Structures are bounded (`MAX_DEPTH`, `MAX_STRING_LENGTH`) so a `data-import` payload cannot become a megabyte of log.
+- **The file is owner-only**: created `0600`, and an existing one (every log written before this) is tightened once per process through `restrictToOwner`.
+- **Do not log a whole `params`, a whole request body or a whole upstream response.** Redaction is the floor, not the plan: name the fields that help (`tokenProvided: true`, `accessTokenReceived: false`, an error code). `mcp-min/portal/env-add.js` is the worked example — it used to log its params object, with the instance token in it, at INFO.
+
 **Invocation and lifetime.** MCP clients start `pos-cli-mcp` (or `pos-cli mcp`, a commander executable subcommand that spawns the same bin with stdio inherited) and stop it by closing stdin. Keep these when touching the bins, `stdio-server.js` or `index.js`:
 - **Arguments and the tool selection are settled before any transport starts.** `bin/pos-cli-mcp.js` calls `parseServerArgs` (`cli-args.js`), then `selectTools`, then `start({ selection })` from `mcp-min/index.js` (importing it starts nothing); `--help`/`--version` set `process.exitCode` (not `process.exit()`, which can truncate output on a pipe) and never load the server. Unknown options and positionals are rejected, not ignored: every option decides what an unauthenticated server exposes, so a typo must fail closed. `pos-cli mcp -v` is answered by `pos-cli` itself, with the same package version.
 - **stdin EOF ends the session** when stdin is a client pipe/socket, or when stdio carried at least one message (`stdinEndEndsSession`). `</dev/null`, a file or a TTY with no messages keeps HTTP serving — that is how the HTTP transport runs alone.
@@ -248,7 +281,7 @@ server.registerTool(name, { description, inputSchema: fromJsonSchema(tool.inputS
   async (args, ctx) => { /* rejectionFor → isError, then tool.handler(args, { signal, sendProgress, … }) */ });
 ```
 
-Tools include: envs-list, env-add, job-status, deploy-start, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, tests-run/run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, portal tools (instance-create, partners-list, partner-get, endpoints-list), plus the six deprecated status tools (deploy-status, deploy-wait, data-import-status, data-export-status, data-clean-status, tests-run-async-result).
+Tools include: envs-list, env-add, job-status, deploy-start, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, unit-tests-run, tests-run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, portal tools (instance-create, partners-list, partner-get, endpoints-list), plus the six deprecated status tools (deploy-status, deploy-wait, data-import-status, data-export-status, data-clean-status, tests-run-async-result).
 
 #### 3a. Asynchronous operations: one `job-status`, and what a `job_id` may decide
 
@@ -258,7 +291,7 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
 - **Nothing in a handle chooses credentials or a URL.** `authForJob` (`jobs/auth-for-job.js`) resolves credentials the way every tool does, then *compares* origins: equal → use them; the caller named an instance that does not match → `JOB_INSTANCE_MISMATCH`; nothing named and exactly one `.pos` environment points at the job's instance → use that one; otherwise refuse. The refusal happens before any request, which is what the mismatch tests assert. A forged origin therefore cannot point this machine's token anywhere.
 - **The adapters are the only place a remote status is interpreted**, and the deprecated status tools run on them too, so the two can never disagree. `state` is `running` | `completed` | `failed`, where `completed` means the operation finished (a test run with failing assertions is `completed`) and `failed` means the operation itself failed. An unrecognised remote status is `running` — the job exists, so "finished" would be a lie — and is logged.
 - **A deploy finishes twice.** The release import and the asset upload are reported independently, so `jobs/adapters/deploy.js` combines them, taking the phase from `local-phases.js` first (only the process that started an upload can see it) and then from the release record. `unknown` is a real answer after a restart; reporting `running` forever would be worse. `deploy/assets-task.js` waits for the release to settle before sending the manifest, as `lib/push.js` + `directAssetsUploadStrategy` do — sending one mid-import is untested against the API.
-- **No tool takes an `endpoint` argument to move the request.** `deploy-status`, `deploy-wait` and `logs-fetch` had one; it replaced the URL while the `.pos` token was still sent. The request URL comes from the resolved credentials. (Other tools still accept `endpoint`; that is tracked separately.)
+- **No tool takes an argument that moves the request.** Eight did (`deploy-status`, `deploy-wait`, `logs-fetch`, `graphql-exec`, `liquid-exec`, `migrations-list/generate/run`): `endpoint` replaced the URL while the `.pos` token was still sent, so a name a model read somewhere could redirect this machine's credentials. The URL comes from the resolved credentials, full stop. `request-target.test.js` checks every registered tool for a redirecting parameter by name and scans the sources for `params.endpoint`, so a new tool inherits the rule. Calling another instance is the explicit-credentials path (`url` + `email` + `token`), where the caller brings the credential with the host.
 
 #### 4. File Watching Pattern - Sync Mode
 
@@ -539,6 +572,14 @@ resolves credentials in this order:
 3. `MPKIT_URL` / `MPKIT_EMAIL` / `MPKIT_TOKEN` env vars
 4. the first entry in `.pos`
 
+**The MCP server and the CLI resolve a named environment differently, on purpose.** `fetchSettings`
+(`lib/settings.js`) answers from `MPKIT_*` first and falls back to `.pos`, because CI exports those
+variables and still names an environment on the command line. `resolveAuth` reads the named
+environment from `.pos` and nowhere else (`settingsFromDotPos`), because here the name comes from a
+model that was told which instance to use: falling back would send a deploy somewhere else while
+reporting the name it was given. Do not "align" the two — `mcp-min/__tests__/auth.env-resolve.test.js`
+pins both orders, with the reason.
+
 Marking `env` as `required` would reject three of those four supported call styles. Tools
 closing their schema with `additionalProperties: false` must also spread in
 `authProperties` from `mcp-min/schemas/auth.js`, or the explicit-credentials path becomes
@@ -563,15 +604,21 @@ that does not exist — a typo like `deploy-strt` would match nothing and otherw
 `logger`, with the same message, so a config mistake never surfaces as a Node stack trace.
 
 ### Testing Philosophy
-Integration tests against real platformOS instances for reliability. Tests cover:
-- Deploy (various strategies, error handling)
-- Sync (file changes, assets, deletion)
-- Modules (download, push, update)
-- Data operations (import/export)
-- Audit rules
-- File validation
+Behaviour is tested where it actually happens. `test/integration` drives the built CLI against a
+real platformOS instance — deploy strategies and their error handling, sync (changes, assets,
+deletion), modules, data import/export, audit rules, file validation — because those are the paths
+where a mocked API would prove nothing. It needs `MPKIT_URL` / `MPKIT_EMAIL` / `MPKIT_TOKEN`;
+`test/global-setup.js` skips its cleanup when no real credentials are present.
 
-Tests require environment variables (MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN) pointing to test instances.
+`test/unit` and `mcp-min/__tests__` need no instance and no credentials: they use fakes, temp
+directories and spawned processes, which is what makes them worth running on every change. The MCP
+suite in particular starts real servers and speaks the protocol to them over stdio and HTTP.
+
+A test is only worth having if it fails when the behaviour it names is broken. For anything
+load-bearing — a security boundary, a protocol rule, a migration that rewrites someone's file —
+check that by breaking the code on purpose and watching the test catch it, and prefer asserting the
+observable outcome (what was written, what was sent, what the client received) over how the code
+got there.
 
 ## Development Practices
 

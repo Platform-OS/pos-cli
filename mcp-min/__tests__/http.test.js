@@ -4,10 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import startHttp from '../http-server.js';
 import { defaultTools } from './helpers/tools.js';
-import fixtures from '../../test/utils/fixtures';
+import { useDotPos } from './helpers/dot-pos.js';
 
 const PORT = 5930;
 let server;
+let dotPos;
 
 function httpRequest({ method = 'GET', path = '/', body = null, headers = {} }) {
   return new Promise((resolve, reject) => {
@@ -26,14 +27,15 @@ function httpRequest({ method = 'GET', path = '/', body = null, headers = {} }) 
 }
 
 beforeAll(async () => {
-  // ensure .pos exists
-  fixtures.writeDotPos({ staging: { url: 'https://staging.example.com' } });
+  // A `.pos` of this test's own, so `envs-list` has something to list without changing what
+  // any other test file sees.
+  dotPos = useDotPos({ staging: { url: 'https://staging.example.com' } });
   server = await startHttp({ port: PORT, tools: defaultTools() });
 });
 
 afterAll(() => {
   if (server) server.close();
-  fixtures.removeDotPos();
+  dotPos.cleanup();
 });
 
 test('GET /health returns ok', async () => {

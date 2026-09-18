@@ -28,20 +28,25 @@ export const MAX_WAIT_MS = 120000;
 const POLL_INTERVAL_MS = 1000;
 const BACKOFF_AFTER = 10;
 const BACKOFF_CAP = 5;
-const intervalFor = poll => POLL_INTERVAL_MS * Math.min(2 ** Math.max(0, poll - BACKOFF_AFTER + 1), BACKOFF_CAP);
+const intervalFor = (poll, base) => base * Math.min(2 ** Math.max(0, poll - BACKOFF_AFTER + 1), BACKOFF_CAP);
 
-const failure = (code, message) => ({ ok: false, error: { code, message } });
+const failure = (code, message, details) => ({ ok: false, error: { code, message, ...(details && { details }) } });
 
 /**
  * Whether a failed status request says anything about the job. A refused connection or a 5xx does
- * not — the job is still there — so while there is still time to wait, it is worth asking again;
- * `lib/push.js` judges the same two transient when it polls a deploy. A 4xx is an answer.
+ * not — the job is still there — so while there is still time to wait, it is worth asking again.
+ * The same two `lib/push.js` retries when it polls a deploy, and no more than those: a defect in
+ * our own code throws a TypeError, and retrying that for the whole wait would hide it.
  */
-const isTransient = err => !err?.statusCode || err.statusCode >= 500;
+const isTransient = err => err?.name === 'RequestError' || err?.statusCode >= 500;
+
+/** What the instance said, when it said anything: the code and the body it answered with. */
+const apiDetails = err => (err?.statusCode
+  ? { statusCode: err.statusCode, body: err.response?.body }
+  : undefined);
 
 const jobStatusTool = {
   description: 'Status of an operation started earlier: a deploy, a data import, export or clean, or an async test run. Returns state: running, completed (it finished; tests that failed still count as completed) or failed (the operation itself failed).',
-  // Tells MCP clients this tool changes nothing, locally or on the instance.
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
@@ -85,6 +90,9 @@ const jobStatusTool = {
     };
 
     const deadline = Date.now() + (Number.isInteger(params?.wait_ms) ? params.wait_ms : 0);
+    // A seam, like ctx.Gateway and ctx.request: the tests drive the interval rather than sleep
+    // through it. Nothing but a test ever sets it.
+    const pollInterval = ctx.pollIntervalMs ?? POLL_INTERVAL_MS;
     const meta = () => ({
       startedAt,
       finishedAt: new Date().toISOString(),
@@ -103,8 +111,10 @@ const jobStatusTool = {
 
         // Outside a wait there is nothing to retry into, so the error is the answer; inside one,
         // a blip that ends a two-minute wait early would be the wrong answer to give.
-        if (!isTransient(e) || Date.now() >= deadline) return failure('JOB_STATUS_ERROR', String(e.message || e));
-        await abortableDelay(Math.min(intervalFor(poll), deadline - Date.now()), ctx.signal);
+        if (!isTransient(e) || Date.now() >= deadline) {
+          return failure('JOB_STATUS_ERROR', String(e.message || e), apiDetails(e));
+        }
+        await abortableDelay(Math.min(intervalFor(poll, pollInterval), deadline - Date.now()), ctx.signal);
         continue;
       }
 
@@ -127,7 +137,7 @@ const jobStatusTool = {
       }
 
       ctx.sendProgress?.(poll + 1, undefined, `${job.kind}: ${polled.status ?? 'running'}`);
-      await abortableDelay(Math.min(intervalFor(poll), deadline - Date.now()), ctx.signal);
+      await abortableDelay(Math.min(intervalFor(poll, pollInterval), deadline - Date.now()), ctx.signal);
     }
   }
 };

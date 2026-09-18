@@ -78,7 +78,14 @@ const envAddTool = {
 
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    log.info('handler:START', { environment: params.environment, url: params.url, params });
+    // Never the whole params object: `token` is an instance API token, and this line is INFO —
+    // it is written whether or not anyone asked for debug output.
+    log.info('handler:START', {
+      environment: params.environment,
+      url: params.url,
+      tokenProvided: Boolean(params.token),
+      email: params.email
+    });
 
     try {
       const portalUrl = ctx.portalUrl || getPortalUrl(params.partner_portal_url);
@@ -194,7 +201,7 @@ const envAddTool = {
 
       // Log waiter completion (success or failure)
       waiterPromise.then(result => {
-        log.info('handler:waiterComplete', { waiterId, result });
+        log.info('handler:waiterComplete', { waiterId, status: result?.status, error: result?.error });
         activeWaiters.delete(waiterId);
       }).catch(err => {
         log.error('handler:waiterError', { waiterId, error: err.message });
@@ -269,7 +276,13 @@ async function spawnBackgroundWaiter({
 
         log.debug('waiter:tokenResponseStatus', { status: tokenResponse.status });
         const tokenData = await tokenResponse.json();
-        log.debug('waiter:tokenData', tokenData);
+        // The body is the access token itself; what a reader needs is whether one arrived and,
+        // if not, why the Portal said no.
+        log.debug('waiter:tokenResponse', {
+          accessTokenReceived: Boolean(tokenData.access_token),
+          error: tokenData.error,
+          errorDescription: tokenData.error_description
+        });
 
         if (tokenData.access_token) {
           log.info('waiter:accessTokenReceived');

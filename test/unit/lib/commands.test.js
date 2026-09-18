@@ -1,4 +1,23 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { afterAll, beforeAll, expect, test } from 'vitest';
 import cli from '#test/utils/exec';
+
+// Every case here asserts what the CLI says when it has not been told enough — a usage error, or
+// "No environment specified". That is only true in a directory with no `.pos` and no project, so
+// the tests run in an empty one instead of in the repository root, where another test file
+// writing a config (or a developer's own `.pos`) changed the answers. MPKIT_* is removed for the
+// same reason: it is credentials enough to change what these commands do.
+let workDir;
+
+beforeAll(() => {
+  workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-commands-'));
+});
+
+afterAll(() => {
+  fs.rmSync(workDir, { recursive: true, force: true });
+});
 
 const getEnvs = () => {
   const env = Object.assign({}, process.env, { CI: true });
@@ -6,9 +25,28 @@ const getEnvs = () => {
   delete env.MPKIT_EMAIL;
   delete env.MPKIT_TOKEN;
   delete env.MPKIT_PASSWORD;
+  delete env.CONFIG_FILE_PATH;
   return env;
 };
-const run = async args => cli(args, { env: getEnvs() });
+const run = async (args, cwd = workDir) => cli(args, { env: getEnvs(), cwd });
+
+// Proof that the directory above is the one the CLI reads, rather than the repository root
+// happening to be empty of `.pos` at the time: given an environment here, `env list` prints it.
+test('the CLI reads the working directory it is given, not the one the tests run from', async () => {
+  const configured = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-commands-configured-'));
+  fs.writeFileSync(
+    path.join(configured, '.pos'),
+    JSON.stringify({ 'only-here': { url: 'https://only-here.example.com', email: 'e@x', token: 't' } })
+  );
+  try {
+    const { stdout, code } = await run('env list', configured);
+
+    expect(stdout).toMatch('only-here');
+    expect(code).toEqual(0);
+  } finally {
+    fs.rmSync(configured, { recursive: true, force: true });
+  }
+});
 
 test('should return error for missing command on stdout', async () => {
   let { stderr, code } = await run('missing');
@@ -129,8 +167,3 @@ test('should run help logsv2 search', async () => {
   expect(code).toEqual(1);
 });
 
-test('should run help logsv2 search', async () => {
-  const { stderr, code } = await run('logsv2 search');
-  expect(stderr).toMatch('No environment specified, please pass environment for a command `pos-cli <command> [environment]`');
-  expect(code).toEqual(1);
-});

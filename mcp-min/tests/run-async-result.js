@@ -9,7 +9,6 @@ import { JobNotFoundError } from '../jobs/errors.js';
 
 const testsRunAsyncResultTool = {
   description: 'Deprecated: use job-status. Check the results of an async test run by ID: pending, success, failed (assertion failures) or error (runner crashed).',
-  // Tells MCP clients this tool changes nothing, locally or on the instance.
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',

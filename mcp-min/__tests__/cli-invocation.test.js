@@ -19,7 +19,7 @@ import pkg from '../../package.json' with { type: 'json' };
 import {
   launch, stop, stopAll, waitFor, exitWithin, boundUrl, request, send, closeStdin, stdoutLines, stdoutMessages,
   initializeOverStdio, get, connectOutcome, listen, close, makeWorkDir,
-  MCP_BIN, MCP_CONFIG_BIN, POS_CLI_BIN, STDIO_SERVER, REPO_ROOT, LISTENING
+  MCP_BIN, MCP_CONFIG_BIN, POS_CLI_BIN, STDIO_SERVER, INDEX, TOOL_SELECTION, REPO_ROOT, LISTENING
 } from './helpers/server-process.js';
 
 // The acceptance bound for "exits promptly" once stdin is closed.
@@ -501,4 +501,35 @@ describe.skipIf(process.platform === 'win32')('when `pos-cli mcp` itself is kill
       if (alive(server)) process.kill(server, 'SIGKILL');
     }
   }, 60000);
+});
+
+// After an uncaught exception the process's state is undefined, and this one holds credentials
+// and (with HTTP on) a port that anything local can reach. It drains instead of carrying on:
+// responses in flight are written, the port is released, and the exit code says it was not clean.
+describe('an uncaught exception', () => {
+  test('shuts the server down rather than leaving it serving', async () => {
+    const script = [
+      `import { start } from ${JSON.stringify(pathToFileURL(INDEX).href)};`,
+      `import { selectTools } from ${JSON.stringify(pathToFileURL(TOOL_SELECTION).href)};`,
+      "await start({ selection: selectTools({ profile: 'none', include: ['envs-list'], env: {} }), http: false });",
+      // Thrown from a timer, which is where an uncaught exception actually comes from: a
+      // background task nobody awaited.
+      "setTimeout(() => { throw new Error('boom from the test'); }, 50);"
+    ].join('\n');
+
+    const proc = launch({ workDir, args: ['--input-type=module', '-e', script] });
+    try {
+      const exit = await exitWithin(proc, 20000);
+
+      expect(exit, `still running\n${proc.stderr}`).not.toBeNull();
+      expect(exit.code).toBe(1);
+      expect(proc.stderr).toContain('Uncaught exception, shutting down');
+      expect(proc.stderr).toContain('boom from the test');
+      // It drains rather than dying: whatever a tool is in the middle of writing still gets to
+      // finish, and the transports are stopped through the same path a client disconnect uses.
+      expect(proc.stderr).toContain('uncaught exception; shutting down once in-flight work finishes');
+    } finally {
+      await stop(proc);
+    }
+  }, 40000);
 });

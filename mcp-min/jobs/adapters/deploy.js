@@ -3,6 +3,7 @@
  * `getStatus` reports the two independently — by the time the manifest is accepted the release
  * already reads `success` — so a deploy that carried assets is only `completed` once both are in.
  */
+import log from '../../log.js';
 import { statusRequest } from '../errors.js';
 import { uploadPhase } from '../local-phases.js';
 
@@ -17,8 +18,18 @@ const RELEASE_RUNNING = new Set(['ready_for_import', 'in_progress']);
  */
 export function releaseState(status) {
   if (RELEASE_RUNNING.has(status)) return 'running';
-  return status === 'error' ? 'failed' : 'done';
+  if (status === 'error') return 'failed';
+
+  // Anything else is a finished release, as `lib/push.js` also reads it — but an unfamiliar one
+  // is worth saying out loud once, because this is the decision the asset upload waits on.
+  if (status !== 'success' && !warned.has(status)) {
+    warned.add(status);
+    log.warn('mcp-min: deploy reported an unfamiliar status, treating it as finished', { status });
+  }
+  return 'done';
 }
+
+const warned = new Set();
 
 /** The release's own error, naming the file the instance blamed when it named one. */
 function releaseError(response) {
@@ -44,14 +55,14 @@ const releaseWarnings = response =>
  */
 function assetPhase(response, { origin, id }) {
   const local = uploadPhase(origin, id);
-  if (local === 'uploading') return { phase: 'uploading' };
-  if (local === 'failed') return { phase: 'failed', error: 'the asset upload failed before the manifest was sent' };
+  if (local.phase === 'uploading') return { phase: 'uploading' };
+  if (local.phase === 'failed') return { phase: 'failed', error: `the asset upload failed: ${local.error}` };
 
   const { asset_error, asset_report, asset_status } = response ?? {};
   if (asset_error) return { phase: 'failed', error: `asset deploy failed: ${asset_error.error ?? asset_error}` };
   if (asset_report) return { phase: 'done', report: asset_report };
   if (asset_status === 'in_progress') return { phase: 'processing' };
-  return local === 'done' ? { phase: 'done' } : { phase: 'unknown' };
+  return local.phase === 'done' ? { phase: 'done' } : { phase: 'unknown' };
 }
 
 // The deploy is done once the release is in and the assets are no longer moving; `unknown` is
@@ -71,15 +82,11 @@ export default {
     const response = await statusRequest(() => gateway.getStatus(id), { kind: 'deploy', id });
     const status = response?.status;
 
-    if (releaseState(status) === 'running') return { state: 'running', status, result: { release: response } };
-    if (releaseState(status) === 'failed') {
-      return {
-        state: 'failed',
-        status,
-        error: releaseError(response),
-        ...(releaseWarnings(response) && { warnings: releaseWarnings(response) }),
-        result: { release: response }
-      };
+    const release = releaseState(status);
+    if (release === 'running') return { state: 'running', status, result: { release: response } };
+    if (release === 'failed') {
+      const warnings = releaseWarnings(response);
+      return { state: 'failed', status, error: releaseError(response), ...(warnings && { warnings }), result: { release: response } };
     }
 
     // The release is in; whether the deploy is done now depends on the assets. A deploy that had

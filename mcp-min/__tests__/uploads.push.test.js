@@ -9,7 +9,7 @@ import uploadsTool from '../uploads/push.js';
 
 // Mock settings that can be injected via context
 const mockSettings = {
-  fetchSettings: (env) => {
+  settingsFromDotPos: (env) => {
     if (env === 'staging') {
       return { url: 'https://staging.example.com', email: 'test@example.com', token: 'secret123' };
     }

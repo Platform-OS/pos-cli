@@ -3,10 +3,10 @@ id: TASK-13
 title: >-
   MCP tool surface: launch-time profiles, --include-tools/--exclude-tools, and
   one job-status tool for async operations
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-09-17 06:29'
-updated_date: '2026-09-17 14:38'
+updated_date: '2026-09-17 18:17'
 labels:
   - mcp
   - enhancement
@@ -302,3 +302,21 @@ Repro used when filing:
 
 **Left for the next major.** Remove the six; drop `flags.assets === undefined` handling in the deploy adapter if every handle by then carries it.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Shipped in two parts on `reduce-mcp-tool-surface`.
+
+**Part 1 (commit 7238913)** — launch-time tool selection. `mcp-min/tools.js` became the registry alone; `profiles.js` (full/dev/none), `tools-config.js` (the only reader of tools.config.json) and `tool-selection.js` (`exposed = (profile ∪ include) − exclude − config-disabled`, fail-closed, registry order) resolve it once at startup. `bin/pos-cli-mcp.js` and `bin/pos-cli-mcp-config.js` share the resolver and the option definitions, so `pos-cli mcp-config` prints and refuses exactly what the server would. `lib/ai.js` writes `--profile dev` and upgrades only entries equal to a form it wrote before. Delivered TASK-6 and TASK-5 with it; bare `tools/list` stayed byte-identical to the 6.5.1 baseline (24,612 bytes, 34 tools).
+
+**Part 2 (commit db76ee4)** — one `job-status` tool. `mcp-min/jobs/`: `handle.js` (the `pjob1_` job_id: kind, remote id, instance origin, per-kind flags, parsed strictly), `auth-for-job.js` (compares origins, never takes a URL from the handle), `local-phases.js` (asset uploads this process started), `adapters/*` (one per kind, `poll(deps, id, flags)` → `{ state, status, result }`), `status.js` (the tool: `running`/`completed`/`failed`, bounded `wait_ms` with progress, cancellation and transient-failure retry). `deploy/assets-task.js` waits for the release to settle, then sends the manifest for it.
+
+Four verified defects fixed: `deploy-wait` returning success on `in_progress`; polling without `env` asking another instance about the same numeric id; the `endpoint` argument sending the `.pos` token to any host it named (removed from `deploy-status`, `deploy-wait` and `logs-fetch`); and MCP deploys never reporting the asset phase. The six replaced status tools stay in `full`, deprecated, running on the same adapters, and are removed at the next major; `dev` gained `job-status` and lost three of them.
+
+**Verification.** mcp-min: 53 files, 1,057 tests, all passing. Repo-wide: the same 29 pre-existing failures as before the branch. 38 mutants across `jobs/*`, `deploy/{start,wait,assets-task}.js` and `data/export.js` — all killed, no survivors. A live stdio MCP session confirmed the published schema, the `isError` mapping and the `endpoint` rejection over the wire. Re-pinned deliberately: `BARE_TOOLS_LIST_BYTES` 25,188 → 26,233, `DEV_TOOLS_LIST_BYTE_BUDGET` 8,500 → 7,500 (measured 7,188, from 8,414).
+
+**Not attempted, and why:** sending an asset manifest while the release is still importing. `lib/push.js` resolves only after the release settles, so the CLI has never done it and nothing shows the API accepts it; the background task therefore mirrors the CLI's order. Dropping that wait is a one-line change if an instance later confirms it.
+
+**Left for the next major:** remove the six deprecated tools; drop `flags.assets === undefined` handling in the deploy adapter once every handle carries it.
+<!-- SECTION:FINAL_SUMMARY:END -->

@@ -7,13 +7,14 @@ Purpose
 - --no-http serves stdio only and does not read MCP_MIN_*
 
 Run
-- cd mcp-min
-- npm install
-- npm start
+- pos-cli-mcp (installed with pos-cli), or `node bin/pos-cli-mcp.js` from a checkout
+- It is a subdirectory of pos-cli, not a package of its own: dependencies come from the root package.json and there is nothing to install here.
+- pos-cli-mcp </dev/null keeps the HTTP transport alive on its own; otherwise stdin EOF ends the session.
 
 Debug mode
-- To enable verbose debug logging, use: npm run start:debug
-- Or set env variable manually: MCP_MIN_DEBUG=1 pos-cli-mcp
+- MCP_MIN_DEBUG=1 pos-cli-mcp (DEBUG=1 works too)
+- Log: stderr and ~/.pos-cli/logs/mcp-min.log (MCP_MIN_LOG_FILE), created owner-only (0600)
+- Every line goes through redact.js: credential headers and passwords are replaced, tokens masked to abc...xyz, and Token/Bearer values and sensitive URL query values scrubbed out of strings
 - Debug logs include: detailed HTTP access logs, request/response tracing, stdio requests/responses, SSE connection status and heartbeats, and tool-level progress
 
 Root configuration (recommended)

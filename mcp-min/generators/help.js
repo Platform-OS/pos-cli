@@ -3,7 +3,6 @@ import { showHelp } from './utils.js';
 
 const helpTool = {
   description: 'Show detailed help for a specific generator',
-  // Tells MCP clients this tool changes nothing, locally or on the instance.
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',

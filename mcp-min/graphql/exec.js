@@ -12,7 +12,6 @@ const execGraphqlTool = {
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config (e.g., staging, production). Used to resolve auth when url/email/token are not provided.' },
       ...authProperties,
-      endpoint: { type: 'string', description: 'Override the base URL for the GraphQL endpoint. Defaults to the resolved instance URL.' },
       query: { type: 'string', description: 'GraphQL query or mutation string (e.g., "{ users { results { id email } } }").' },
       variables: { type: 'object', additionalProperties: true, description: 'Variables to pass to the GraphQL query/mutation. Preferred over string interpolation for dynamic values.' }
     },
@@ -21,7 +20,10 @@ const execGraphqlTool = {
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
     const auth = await resolveAuth(params, ctx);
-    const baseUrl = params?.endpoint ? params.endpoint : auth.url;
+    // The request URL comes from the resolved credentials only: an `endpoint` argument used to
+    // replace it while the .pos token was still sent, so a caller could name any host and be
+    // handed this machine's token.
+    const baseUrl = auth.url;
     const GatewayCtor = ctx.Gateway || Gateway;
     const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
 

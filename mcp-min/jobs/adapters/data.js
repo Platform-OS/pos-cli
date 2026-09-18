@@ -15,12 +15,20 @@ const STATES = Object.freeze({
 /** The status the instance reports, whichever shape it uses. */
 export const statusOf = response => response?.status?.name ?? response?.status;
 
+// A wait polls every second or so; the same unknown status is worth saying once, not thirty times.
+const warned = new Set();
+
 /**
  * An unrecognised status counts as still running: the job exists, so reporting it finished would
  * be a lie, and the raw value travels back with it.
  */
 export function stateOf(status, kind) {
   if (typeof status === 'string' && Object.hasOwn(STATES, status)) return STATES[status];
-  log.warn(`mcp-min: ${kind} reported an unknown status`, { status });
+
+  const seen = `${kind}:${status}`;
+  if (!warned.has(seen)) {
+    warned.add(seen);
+    log.warn(`mcp-min: ${kind} reported an unknown status`, { status });
+  }
   return 'running';
 }

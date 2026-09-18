@@ -1,13 +1,13 @@
 import { vi, describe, test, expect, beforeAll } from 'vitest';
 
 vi.mock('../../lib/files', () => ({
-  default: { getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } }) },
-  getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } })
+  default: { getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token-0123456789', email: 'test@example.com' } }) },
+  getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token-0123456789', email: 'test@example.com' } })
 }));
 
 vi.mock('../../lib/settings', () => ({
-  default: { fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' }) },
-  fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' })
+  default: { settingsFromDotPos: (env) => ({ url: `https://${env}.example.com`, token: 'test-token-0123456789', email: 'test@example.com' }) },
+  settingsFromDotPos: (env) => ({ url: `https://${env}.example.com`, token: 'test-token-0123456789', email: 'test@example.com' })
 }));
 
 describe('tests-run-async tool', () => {
@@ -131,7 +131,7 @@ describe('tests-run-async tool', () => {
     expect(result.ok).toBe(true);
     expect(result.meta.auth).toBeDefined();
     expect(result.meta.auth.url).toContain('staging');
-    expect(result.meta.auth.token).toMatch(/^tes\.\.\.ken$/);
+    expect(result.meta.auth.token).toMatch(/^tes\.\.\.789$/);
     expect(result.meta.startedAt).toBeDefined();
     expect(result.meta.finishedAt).toBeDefined();
   });

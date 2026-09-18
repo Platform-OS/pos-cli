@@ -5,8 +5,6 @@
  * does not parse exactly must not reach an adapter, and nothing in it may decide where a request
  * goes or which credentials are used.
  */
-import path from 'path';
-import { execFileSync } from 'child_process';
 import { describe, test, expect } from 'vitest';
 import { mint, mintFor, parse, originOf, JOB_KINDS } from '../jobs/handle.js';
 import adapters from '../jobs/adapters/index.js';
@@ -23,11 +21,19 @@ describe('mint', () => {
     expect(parsed).toEqual({ valid: true, job: { kind, id: '41', origin: ORIGIN, flags: {} } });
   });
 
-  test('keeps the flags its kind has, and drops the ones it does not', () => {
+  test('carries the flags its kind has', () => {
     expect(decode(mint({ kind: 'data-export', id: '1', origin: ORIGIN, flags: { zip: true } })).flags).toEqual({ zip: true });
     expect(decode(mint({ kind: 'deploy', id: '1', origin: ORIGIN, flags: { assets: false } })).flags).toEqual({ assets: false });
-    // Not this kind's flag: dropped rather than carried, so parse cannot later reject our own handle.
-    expect(decode(mint({ kind: 'data-clean', id: '1', origin: ORIGIN, flags: { zip: true } })).flags).toBeUndefined();
+  });
+
+  // Only our own starters call mint, so a name this kind does not have is a typo in one of them —
+  // and `{ asset: true }` for `{ assets: true }` would mint a handle that reports the wrong thing
+  // rather than one that fails.
+  test('refuses a flag its kind does not have, rather than dropping it', () => {
+    expect(() => mint({ kind: 'data-clean', id: '1', origin: ORIGIN, flags: { zip: true } }))
+      .toThrow(/data-clean has no flag zip/);
+    expect(() => mint({ kind: 'deploy', id: '1', origin: ORIGIN, flags: { asset: true } }))
+      .toThrow(/deploy has no flag asset/);
   });
 
   test('takes the origin of a URL, not the URL', () => {
@@ -105,19 +111,21 @@ describe('originOf', () => {
 });
 
 describe('a handle outlives the process that minted it', () => {
-  // MCP clients restart stdio servers while the agent keeps its conversation. A handle that only
-  // one process could read would turn every restart into "unknown job".
-  test('a job_id minted by one node process parses in another', () => {
-    const repo = path.resolve(import.meta.dirname, '../..');
-    const run = script => execFileSync(process.execPath, ['--input-type=module', '-e', script], { cwd: repo, encoding: 'utf8' }).trim();
+  // MCP clients restart stdio servers while the agent keeps its conversation, so a handle from
+  // one process has to be readable by the next. Pinned as the literal a released server minted:
+  // nothing here may change how one is encoded without this failing.
+  const MINTED_ELSEWHERE = 'pjob1_eyJraW5kIjoiZGF0YS1leHBvcnQiLCJpZCI6Ijc3Iiwib3JpZ2luIjoiaHR0cHM6Ly9pbnN0YW5jZS5leGFtcGxlLmNvbSIsImZsYWdzIjp7InppcCI6dHJ1ZX19';
 
-    const jobId = run("import { mint } from './mcp-min/jobs/handle.js'; process.stdout.write(mint({ kind: 'data-export', id: '77', origin: 'https://instance.example.com', flags: { zip: true } }));");
-    const parsed = run(`import { parse } from './mcp-min/jobs/handle.js'; process.stdout.write(JSON.stringify(parse(${JSON.stringify(jobId)})));`);
-
-    expect(JSON.parse(parsed)).toEqual({
+  test('a job_id minted by another process is read back unchanged', () => {
+    expect(parse(MINTED_ELSEWHERE)).toEqual({
       valid: true,
       job: { kind: 'data-export', id: '77', origin: 'https://instance.example.com', flags: { zip: true } }
     });
+  });
+
+  test('this release mints that same handle, byte for byte', () => {
+    expect(mint({ kind: 'data-export', id: '77', origin: 'https://instance.example.com', flags: { zip: true } }))
+      .toBe(MINTED_ELSEWHERE);
   });
 });
 

@@ -11,7 +11,6 @@ const execLiquidTool = {
     properties: {
       env: { type: 'string', description: 'Environment name from .pos config (e.g., staging, production). Used to resolve auth when url/email/token are not provided.' },
       ...authProperties,
-      endpoint: { type: 'string', description: 'Override the base URL for the Liquid exec endpoint. Defaults to the resolved instance URL.' },
       template: { type: 'string', description: 'Liquid template string to render server-side (e.g., "Hello {{ name }}", "{% graphql g = \'users/search\' %}").' },
       locals: { type: 'object', additionalProperties: true, description: 'Variables available inside the template as top-level Liquid variables (e.g., { "name": "World" } makes {{ name }} render "World").' }
     },
@@ -20,7 +19,10 @@ const execLiquidTool = {
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
     const auth = await resolveAuth(params, ctx);
-    const baseUrl = params?.endpoint ? params.endpoint : auth.url;
+    // The request URL comes from the resolved credentials only: an `endpoint` argument used to
+    // replace it while the .pos token was still sent, so a caller could name any host and be
+    // handed this machine's token.
+    const baseUrl = auth.url;
 
     const GatewayCtor = ctx.Gateway || Gateway;
     const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });

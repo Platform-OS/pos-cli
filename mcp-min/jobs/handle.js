@@ -59,9 +59,13 @@ export function mint({ kind, id, origin, flags }) {
   const remoteId = String(id);
   if (!ID_PATTERN.test(remoteId)) throw new TypeError(`mint: ${remoteId} is not a usable job id`);
 
+  // Both directions are a programmer error here — `mint` is only ever called by our own starters,
+  // and `{ asset: true }` for `{ assets: true }` would mint a handle that reports the wrong thing
+  // rather than one that fails.
   const allowed = FLAGS[kind] ?? {};
-  const kept = Object.entries(flags ?? {}).filter(([name]) => Object.hasOwn(allowed, name));
+  const kept = Object.entries(flags ?? {});
   for (const [name, value] of kept) {
+    if (!Object.hasOwn(allowed, name)) throw new TypeError(`mint: ${kind} has no flag ${name}`);
     if (typeof value !== allowed[name]) throw new TypeError(`mint: flag ${name} must be ${allowed[name]}`);
   }
 

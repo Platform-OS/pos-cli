@@ -2,7 +2,9 @@
  * Every tool the MCP server can expose, in the order clients see them.
  *
  * Only the registry: importing this module reads no configuration and decides nothing about
- * what is exposed. Which of these tools a server actually serves is resolved once at startup
+ * what is exposed. A tool carrying `annotations: { readOnlyHint: true }` changes nothing, locally
+ * or on the instance — clients may run those without asking; the reviewed set is pinned by
+ * `__tests__/tool-annotations.test.js`. Which of these tools a server actually serves is resolved once at startup
  * from the profile, --include-tools/--exclude-tools and the tools config (tool-selection.js),
  * and the transports are handed that result.
  */
@@ -13,7 +15,6 @@ import files from '../lib/files.js';
 import singleFileTool from './sync/single-file.js';
 import fetchLogsTool from './logs/fetch.js';
 import execLiquidTool from './liquid/exec.js';
-import streamLogsTool from './logs/stream.js';
 import execGraphqlTool from './graphql/exec.js';
 import generatorsListTool from './generators/list.js';
 import generatorsHelpTool from './generators/help.js';
@@ -97,7 +98,6 @@ const tools = {
   'liquid-exec': execLiquidTool,
 
   // logs.stream: real-time streaming via polling
-  // 'logs-stream': streamLogsTool,
 
   // graphql.exec: run GraphQL query/mutation via /api/graph
   'graphql-exec': execGraphqlTool,
