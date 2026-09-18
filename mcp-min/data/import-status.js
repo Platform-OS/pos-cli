@@ -43,8 +43,8 @@ const dataImportStatusTool = {
           status: polled.status,
           done: polled.state === 'completed',
           failed: polled.state === 'failed',
-          // An unrecognised status counts as still pending rather than as none of the three: the
-          // job exists, so the only honest answer is that it has not finished.
+          // An unrecognised status counts as still pending: the job exists, so the only honest
+          // answer is that it has not finished.
           pending: polled.state === 'running',
           response: polled.result
         },

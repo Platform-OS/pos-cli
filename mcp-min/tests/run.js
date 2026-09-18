@@ -4,7 +4,6 @@ import { resolveAuth, maskToken } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
 import makeRequest, { testAuthHeaders, testsUrl } from './request.js';
 
-// Helper to make HTTP requests (replaces request-promise)
 /**
  * Parse the text response from /_tests/run?formatter=text
  *
@@ -228,9 +227,7 @@ function extractJsonObjects(str) {
           const parsed = JSON.parse(jsonStr);
           objects.push(parsed);
         } catch (e) {
-          // Invalid JSON, skip
-          // The blob is the instance's response body, not ours to publish; its length and the
-          // parser's complaint are what a reader needs.
+          // Not the blob: it is the instance's response body, not ours to publish.
           log.debug('Failed to parse JSON object', { bytes: jsonStr.length, error: e.message });
         }
         start = -1;

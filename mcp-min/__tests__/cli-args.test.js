@@ -70,8 +70,7 @@ describe('parseServerArgs', () => {
     expect(parse([flag])).toEqual({ result: { start: false, exitCode: 0 }, stdout: '1.2.3\n', stderr: '' });
   });
 
-  // `pos-cli mcp config` is how TASK-6 used to spell `pos-cli mcp-config`; it used to start a
-  // server that never exited.
+  // The old spelling of `pos-cli mcp-config`, which started a server that never exited.
   test('`config` is refused with a pointer to pos-cli mcp-config', () => {
     const { result, stdout, stderr } = parse(['config']);
 

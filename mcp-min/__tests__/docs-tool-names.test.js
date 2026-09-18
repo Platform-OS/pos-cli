@@ -1,11 +1,6 @@
 /**
- * The documentation names tools that exist.
- *
- * Every MCP document in this repo once described a server that was never built — `localhost:3030`,
- * `clients.json`, tools called `platformos.logs.stream` — and the counts in docs/MCP_TOOLS.md kept
- * a `logs-stream` that is commented out in the registry. A reader cannot tell an invented tool from
- * a real one, and neither can a model reading the docs, so this checks the claim rather than
- * trusting the next editor to.
+ * The documentation names tools that exist. A reader cannot tell an invented tool name from a real
+ * one, and neither can a model reading the docs.
  */
 import fs from 'fs';
 import path from 'path';
@@ -15,14 +10,12 @@ import registry from '../tools.js';
 
 const REPO = path.resolve(import.meta.dirname, '../..');
 
-// Every Markdown file a reader might take as current: the repository root and docs/. Listing
-// files by hand is how `TOOLS.md` survived a sweep that deleted the four documents pointing at
-// it — a file nothing links to is exactly the one nobody checks. CHANGELOG.md is excluded because
-// it records what *was* true, including the names of things since removed.
+// Every Markdown file a reader might take as current, discovered rather than listed: a file
+// nothing links to is exactly the one nobody checks. CHANGELOG.md is excluded because it records
+// what *was* true, including the names of things since removed.
 const EXCLUDED = new Set(['CHANGELOG.md']);
 
-// Tracked files only: a scratch note someone has not committed is not documentation, and failing
-// their whole suite over it would teach them to distrust this test.
+// Tracked files only: a scratch note someone has not committed is not documentation.
 const tracked = new Set(
   execFileSync('git', ['ls-files', '*.md'], { cwd: REPO, encoding: 'utf8' }).split('\n').filter(Boolean)
 );
@@ -34,8 +27,8 @@ const markdownIn = (dir) => fs.readdirSync(path.join(REPO, dir), { withFileTypes
 
 const DOCS = [...markdownIn('.'), ...markdownIn('docs'), 'mcp-min/README.md'];
 
-// The prefixes tool names actually use. A hyphenated word starting with one of these reads as a
-// tool name to anyone skimming, which is what makes a wrong one misleading.
+// A hyphenated word starting with one of these reads as a tool name to anyone skimming, which is
+// what makes a wrong one misleading.
 const TOOL_PREFIXES = /^(envs?|logs|liquid|graphql|generators|migrations|job|deploy|data|unit|tests|check|sync|uploads|constants|instance|partners?|endpoints)-/;
 
 // Hyphenated words that start like a tool name but are not one. Each needs a reason: this list is
@@ -84,11 +77,8 @@ describe('tool names in the documentation', () => {
 });
 
 describe('the server the documentation describes is the one that ships', () => {
-  // Every one of these was in docs/API.md, docs/POS-CLI.md or docs/SSE_GUIDE.md, describing a
-  // design that mcp-min never implemented. The ban is on the literals, not on the idea: the
-  // server has no authentication of any kind, so a document naming one of these header or file
-  // names is either wrong or about to be misread. Writing about redaction is possible without
-  // them (see the logging section of CLAUDE.md).
+  // The ban is on the literals, not on the idea: the server has no authentication of any kind, so
+  // a document naming one of these is either wrong or about to be misread.
   test.each([
     ['port 3030', /\b3030\b/],
     ['a clients.json of client secrets', /clients\.json/i],

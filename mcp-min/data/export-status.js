@@ -51,8 +51,7 @@ const dataExportStatusTool = {
         }
       };
 
-      // Include export data when done. The adapter builds it, so this tool and job-status hand
-      // back the same export.
+      // The adapter builds it, so this tool and job-status hand back the same export.
       const { zip, ...exported } = polled.result;
       Object.assign(result.data, exported);
 

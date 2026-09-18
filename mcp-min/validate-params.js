@@ -7,15 +7,8 @@ import log from './log.js';
 const TOOL_SCHEMA_DIALECT = '2020-12';
 
 /**
- * Validate tool params against the tool's advertised `inputSchema`.
- *
- * Both transports call this before handing params to a handler, so the schema shown to
- * clients in tools/list is the schema those params are actually checked against.
- *
- * @param {string} name - tool name, for logging
- * @param {object} tool - tool entry from tools.js
- * @param {*} params - untrusted params from the client
- * @returns {{valid: boolean, errors?: Array, message?: string, schemaError?: boolean}}
+ * Validate tool params against the tool's advertised `inputSchema`, so the schema shown in
+ * tools/list is the schema those params are checked against.
  */
 const validateToolParams = (name, tool, params) => {
   const result = validate(tool.inputSchema || OPEN_OBJECT_SCHEMA, params ?? {}, { dialect: TOOL_SCHEMA_DIALECT });
@@ -32,20 +25,10 @@ const validateToolParams = (name, tool, params) => {
 };
 
 /**
- * Validate tool params and, if they are rejected, describe the rejection in the terms
- * both transports need.
+ * A rejection described in the terms both transports need, or null when the params are valid.
  *
- * The status mapping lives here rather than at each call site so there is exactly one
- * decision about how a rejection is reported. A schema that will not compile is our own
- * defect, so it is a server error (500 / -32603) rather than the caller's fault
- * (400 / -32602) — but either way the call is rejected, because a schema that did not
- * compile checked nothing.
- *
- * @param {string} name - tool name, for logging
- * @param {object} tool - tool entry from tools.js
- * @param {*} params - untrusted params from the client
- * @returns {null|{httpStatus: number, jsonRpcCode: number, message: string, errors: Array}}
- *   null when the params are valid.
+ * A schema that will not compile is our own defect, so it is a server error rather than the
+ * caller's fault — but either way the call is rejected, because nothing was checked.
  */
 const rejectionFor = (name, tool, params) => {
   const result = validateToolParams(name, tool, params);
@@ -60,15 +43,9 @@ const rejectionFor = (name, tool, params) => {
 };
 
 /**
- * Whether a tool's schema compiles at all — the question `createServerFactory` asks about every
- * exposed tool at startup.
- *
- * It does not go through `validateToolParams`, because that logs a rejection: probing with `{}`
- * rejects every tool that requires a property, and a server started with DEBUG would open with
- * thirty "tool params rejected" lines that mean nothing.
- *
- * @param {object} tool - tool entry from tools.js
- * @returns {null|string} the compile error, or null when the schema is usable
+ * The tool schema's compile error, or null when it is usable — what `createServerFactory` probes
+ * every exposed tool with at startup. Not `validateToolParams`, because probing with `{}` rejects
+ * every tool that requires a property and would log thirty meaningless rejections under DEBUG.
  */
 const schemaCompileError = (tool) => {
   const result = validate(tool.inputSchema || OPEN_OBJECT_SCHEMA, {}, { dialect: TOOL_SCHEMA_DIALECT });

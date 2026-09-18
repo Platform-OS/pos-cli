@@ -300,10 +300,9 @@ describe.each([['2026-07-28', true], ['2025-06-18', false]])('tool failures reac
   }, 30000);
 });
 
-// The heartbeat for a call with a progress token is an interval. Left running after the call, it
-// would hold the event loop open and the server would outlive its client — the orphaned server
-// TASK-14 fixed. Only a call that asked for progress has one, which is why the lifecycle tests
-// (whose calls carry no progress token) cannot see this.
+// The heartbeat for a call with a progress token is an interval: left running, it holds the event
+// loop open and the server outlives its client. Only a call that asked for progress has one, which
+// is why the lifecycle tests cannot see this.
 describe('a finished call holds nothing open', () => {
   test.each([['with a progress token', 'held'], ['without one', undefined]])('%s, the server exits when its client leaves', async (_label, progressToken) => {
     const proc = launch({ workDir, args: [testServerScript] });

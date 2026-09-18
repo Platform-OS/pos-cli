@@ -1,10 +1,5 @@
-/**
- * Unit tests for settings module
- * Tests environment settings loading from env vars and .pos config file
- */
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock logger
 vi.mock('#lib/logger.js', () => ({
   default: {
     Debug: vi.fn(),
@@ -15,7 +10,6 @@ vi.mock('#lib/logger.js', () => ({
   }
 }));
 
-// Mock files module
 vi.mock('#lib/files.js', () => ({
   default: {
     readJSON: vi.fn(),
@@ -23,13 +17,11 @@ vi.mock('#lib/files.js', () => ({
   }
 }));
 
-// Mock modules
 vi.mock('#lib/modules.js', () => ({
   moduleConfigFileName: 'template-values.json',
   moduleManifestFileName: 'pos-module.json'
 }));
 
-// Mock fs
 vi.mock('fs', async () => {
   const actual = await vi.importActual('fs');
   return {
@@ -52,14 +44,12 @@ describe('settings', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset environment variables
     delete process.env.MPKIT_URL;
     delete process.env.MPKIT_EMAIL;
     delete process.env.MPKIT_TOKEN;
   });
 
   afterEach(() => {
-    // Restore original env
     process.env = { ...originalEnv };
   });
 
@@ -121,7 +111,6 @@ describe('settings', () => {
     test('logs error when environment not found in config', async () => {
       files.getConfig.mockReturnValue({});
 
-      // fetchSettings should exit the process when no settings found
       await expect(fetchSettings('nonexistent')).rejects.toThrow();
 
       expect(logger.Error).toHaveBeenCalledWith(
@@ -132,7 +121,6 @@ describe('settings', () => {
     test('logs error when no environment specified and no env vars', async () => {
       files.getConfig.mockReturnValue({});
 
-      // fetchSettings should exit the process when no environment specified
       await expect(fetchSettings()).rejects.toThrow();
 
       expect(logger.Error).toHaveBeenCalledWith(
@@ -146,7 +134,6 @@ describe('settings', () => {
 
       files.getConfig.mockReturnValue({});
 
-      // fetchSettings should exit the process when settings incomplete
       await expect(fetchSettings('staging')).rejects.toThrow();
 
       expect(logger.Error).toHaveBeenCalled();
@@ -159,7 +146,6 @@ describe('settings', () => {
 
       files.getConfig.mockReturnValue({});
 
-      // fetchSettings should exit the process when settings incomplete
       await expect(fetchSettings('staging')).rejects.toThrow();
 
       expect(logger.Error).toHaveBeenCalled();

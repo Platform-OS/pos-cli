@@ -17,9 +17,7 @@ const listMigrationsTool = {
   handler: async (params = {}, ctx = {}) => {
     try {
       const auth = await resolveAuth(params, ctx);
-      // The request URL comes from the resolved credentials only: an `endpoint` argument used to
-      // replace it while the .pos token was still sent, so a caller could name any host and be
-      // handed this machine's token.
+      // The request URL comes from the resolved credentials only (see graphql-exec).
       const baseUrl = auth.url;
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });

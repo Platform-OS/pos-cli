@@ -1,12 +1,9 @@
 /**
- * The MCP protocol layer: one McpServer definition (MCP TypeScript SDK v2) that serves the
- * stdio transport and the HTTP `/mcp` endpoint, for 2026-07-28 clients and for clients on the
- * 2025 revisions.
+ * The MCP protocol layer: one McpServer definition (SDK v2) serving both the stdio transport and
+ * the HTTP `/mcp` endpoint, for 2026-07-28 clients and the 2025 revisions.
  *
- * The SDK owns the protocol — version negotiation, `server/discover`, the per-request `_meta`
- * envelope, error codes, cancellation, notifications. The tools stay what they were: plain
- * modules with a JSON Schema and a handler returning `{ ok, ... }`. This module is the one place
- * that adapts one to the other.
+ * The SDK owns the protocol; the tools stay plain modules with a JSON Schema and a handler
+ * returning `{ ok, ... }`. This is the one place that adapts one to the other.
  */
 import { McpServer, fromJsonSchema } from '@modelcontextprotocol/server';
 import pkg from '../../package.json' with { type: 'json' };
@@ -21,11 +18,10 @@ export const SERVER_INFO = Object.freeze({ name: 'pos-cli-mcp', version: pkg.ver
 // client that times out idle calls does not give up on a deploy or a test run.
 export const HEARTBEAT_MS = 5000;
 
-// The SDK checks arguments with the validator it is given before it calls a tool. Enforcement
-// is done in the callback below instead, through rejectionFor — the function every transport
-// uses to decide on a rejection — so that it is enforced against the very schema object
-// published, in one dialect, and reported with an error code. This validator only lets the
-// SDK publish the schema; it must never be the thing that checks arguments.
+// The SDK would check arguments with the validator it is given. Enforcement happens in the
+// callback below instead, through `rejectionFor`, so every transport rejects on the same terms and
+// against the very schema published. This validator only lets the SDK publish the schema; it must
+// never be the thing that checks arguments.
 const PUBLISH_ONLY = Object.freeze({
   getValidator: () => input => ({ valid: true, data: input, errorMessage: undefined })
 });
@@ -48,9 +44,8 @@ function toolResult(result) {
 }
 
 /**
- * Progress for one call. Only when the client asked for it (a progress token), and always
- * increasing, as the protocol requires — the heartbeat and a tool's own reports share one
- * counter.
+ * Progress for one call: only when the client asked for it, and always increasing, as the protocol
+ * requires — the heartbeat and a tool's own reports share one counter.
  */
 function progressReporter(ctx) {
   const progressToken = ctx.mcpReq._meta?.progressToken;
@@ -70,9 +65,8 @@ function progressReporter(ctx) {
 
   const heartbeat = setInterval(() => send(last + 1, undefined, 'working'), HEARTBEAT_MS);
   const stop = () => clearInterval(heartbeat);
-  // Two ways it ends: the call finishes (the handler's finally), or the client goes away — and a
-  // tool that does not watch its signal would otherwise leave this ticking, holding the event loop
-  // open until the shutdown deadline.
+  // The call finishing stops it (the handler's finally); so does the client going away. unref in
+  // case of a tool that watches neither, which would otherwise hold the event loop open.
   heartbeat.unref?.();
   ctx.mcpReq.signal.addEventListener('abort', stop, { once: true });
   return { send, stop };
@@ -101,8 +95,8 @@ function registerTool(server, name, tool, transport) {
         debug: DEBUG,
         log: log.info.bind(log),
         sendProgress: progress.send,
-        // Aborted when the client cancels the call or goes away; a tool that polls or pages
-        // stops there. The SDK sends nothing for a cancelled request, whatever it returns.
+        // Aborted when the client cancels or goes away; the SDK then sends nothing, whatever the
+        // tool returns.
         signal: ctx.mcpReq.signal
       });
       return toolResult(result);
@@ -116,16 +110,12 @@ function registerTool(server, name, tool, transport) {
 }
 
 /**
- * Builds the factory both transports serve from.
- *
- * Checked once, up front: every exposed tool's schema compiles. The SDK builds `tools/list`
- * from the schemas, so a schema it cannot use fails the list for every tool, and the only
- * honest place to report our own defect is at startup.
+ * Builds the factory both transports serve from, checking up front that every exposed tool's
+ * schema compiles: the SDK builds `tools/list` from them, so one it cannot use fails the list for
+ * every tool, and startup is the only honest place to report our own defect.
  *
  * @param {Map<string, object>} tools - the exposed tools, in the order clients see them
- * @param {object} options
  * @param {'stdio'|'http'} options.transport - passed to tool handlers as ctx.transport
- * @returns {() => McpServer}
  */
 export function createServerFactory(tools, { transport }) {
   if (!(tools instanceof Map)) throw new TypeError('createServerFactory: tools must be the Map of exposed tools');

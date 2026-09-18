@@ -1,7 +1,7 @@
 /**
- * A deploy finishes twice: the release is imported, and then the assets are unpacked onto the CDN.
- * `getStatus` reports the two independently — by the time the manifest is accepted the release
- * already reads `success` — so a deploy that carried assets is only `completed` once both are in.
+ * A deploy finishes twice: the release is imported, then the assets are unpacked onto the CDN.
+ * `getStatus` reports the two independently, so a deploy that carried assets is only `completed`
+ * once both are in.
  */
 import log from '../../log.js';
 import { statusRequest } from '../errors.js';
@@ -9,19 +9,13 @@ import { uploadPhase } from '../local-phases.js';
 
 const RELEASE_RUNNING = new Set(['ready_for_import', 'in_progress']);
 
-/**
- * The release itself, ignoring assets: 'running' | 'failed' | 'done'.
- *
- * Also what the background asset upload waits on — the manifest is sent for a release id, and the
- * CLI only ever sends one after the import has settled (`lib/push.js` polls before
- * `deployAssets`), so nothing here sends one earlier.
- */
+/** The release itself, ignoring assets: 'running' | 'failed' | 'done'. */
 export function releaseState(status) {
   if (RELEASE_RUNNING.has(status)) return 'running';
   if (status === 'error') return 'failed';
 
-  // Anything else is a finished release, as `lib/push.js` also reads it — but an unfamiliar one
-  // is worth saying out loud once, because this is the decision the asset upload waits on.
+  // Anything else is a finished release, as `lib/push.js` also reads it — but an unfamiliar one is
+  // worth saying once, because this is the decision the asset upload waits on.
   if (status !== 'success' && !warned.has(status)) {
     warned.add(status);
     log.warn('mcp-min: deploy reported an unfamiliar status, treating it as finished', { status });
@@ -31,7 +25,7 @@ export function releaseState(status) {
 
 const warned = new Set();
 
-/** The release's own error, naming the file the instance blamed when it named one. */
+/** Naming the file the instance blamed, when it named one. */
 function releaseError(response) {
   const body = response?.error ?? {};
   const message = body.error || 'the deploy failed';
@@ -43,15 +37,9 @@ const releaseWarnings = response =>
   Array.isArray(response?.error?.warnings) && response.error.warnings.length > 0 ? response.error.warnings : undefined;
 
 /**
- * Where the assets are.
- *
- * Two observers, in order. This process knows whether the upload it started has reached the
- * instance yet — nothing on the instance does, until the manifest arrives. After that the release
- * record is the only observer, and `asset_status` missing altogether means an instance that does
- * not report on assets (`waitForAssetReport` reads it the same way).
- *
- * `unknown` is a real answer, not a failure: a server restarted mid-deploy, or a job_id handed to
- * a second server, cannot see an upload it never started, and saying so beats both guesses.
+ * Where the assets are, from two observers in order: this process knows about an upload it
+ * started, and nothing on the instance does until the manifest arrives. `unknown` is a real
+ * answer — a restarted server cannot see an upload it never started, and saying so beats a guess.
  */
 function assetPhase(response, { origin, id }) {
   const local = uploadPhase(origin, id);
@@ -65,8 +53,7 @@ function assetPhase(response, { origin, id }) {
   return local.phase === 'done' ? { phase: 'done' } : { phase: 'unknown' };
 }
 
-// The deploy is done once the release is in and the assets are no longer moving; `unknown` is
-// not moving either — nothing here will ever learn more about it.
+// `unknown` counts as settled: nothing here will ever learn more about it.
 const ASSET_STATES = Object.freeze({
   uploading: 'running',
   processing: 'running',
@@ -89,10 +76,8 @@ export default {
       return { state: 'failed', status, error: releaseError(response), ...(warnings && { warnings }), result: { release: response } };
     }
 
-    // The release is in; whether the deploy is done now depends on the assets. A deploy that had
-    // none is finished here — that is what the handle's `assets: false` records, and it is the
-    // only way a process that did not start the deploy can tell "nothing to upload" from
-    // "an upload I cannot see".
+    // A deploy that carried no assets is finished here; the handle's `assets: false` is the only
+    // way a process that did not start it can tell that from "an upload I cannot see".
     const assets = flags.assets === false ? { phase: 'none' } : assetPhase(response, { origin, id });
     return {
       state: ASSET_STATES[assets.phase],

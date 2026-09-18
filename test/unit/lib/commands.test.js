@@ -4,11 +4,9 @@ import path from 'path';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import cli from '#test/utils/exec';
 
-// Every case here asserts what the CLI says when it has not been told enough — a usage error, or
-// "No environment specified". That is only true in a directory with no `.pos` and no project, so
-// the tests run in an empty one instead of in the repository root, where another test file
-// writing a config (or a developer's own `.pos`) changed the answers. MPKIT_* is removed for the
-// same reason: it is credentials enough to change what these commands do.
+// Every case asserts what the CLI says when it has not been told enough, which only holds in a
+// directory with no `.pos` and no project — not the repository root, where another test file's
+// config or a developer's own `.pos` changes the answers. MPKIT_* is removed for the same reason.
 let workDir;
 
 beforeAll(() => {
@@ -30,8 +28,8 @@ const getEnvs = () => {
 };
 const run = async (args, cwd = workDir) => cli(args, { env: getEnvs(), cwd });
 
-// Proof that the directory above is the one the CLI reads, rather than the repository root
-// happening to be empty of `.pos` at the time: given an environment here, `env list` prints it.
+// That the cases above pass because of the temp directory, not because the repository root
+// happened to hold no `.pos` at the time.
 test('the CLI reads the working directory it is given, not the one the tests run from', async () => {
   const configured = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-commands-configured-'));
   fs.writeFileSync(

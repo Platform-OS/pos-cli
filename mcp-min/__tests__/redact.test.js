@@ -1,9 +1,6 @@
 /**
- * What the log is allowed to say.
- *
- * `~/.pos-cli/logs/mcp-min.log` is append-only, shared by every session on the machine, and
- * `DEBUG=1` is the first thing anyone does when an MCP client misbehaves — which is exactly when
- * credentials are moving through the server. These tests pin what may reach it.
+ * What the log is allowed to say. `~/.pos-cli/logs/mcp-min.log` is append-only and shared by every
+ * session on the machine, and DEBUG is turned on exactly when credentials are moving.
  */
 import fs from 'fs';
 import os from 'os';
@@ -28,7 +25,7 @@ describe('keys whose value is a credential', () => {
   });
 
   // Half a password is still a password's worth of clues, and a Cookie header can carry several
-  // credentials at once — there is nothing in either worth keeping.
+  // credentials at once.
   test('nothing of the value survives', () => {
     const line = JSON.stringify(redact({ cookie: `session=${SECRET}; other=1` }));
 
@@ -103,9 +100,8 @@ describe('names nobody has added to the list yet', () => {
     }
   );
 
-  // The deliberate cost of matching anywhere in the name rather than only at its end: a field
-  // that merely mentions a credential is treated as one. Losing a `tokenExpiry` to the log is
-  // cheaper than publishing a `token_value`, so this is the way round to be wrong.
+  // The cost of matching anywhere in the name: a field that merely mentions a credential is
+  // treated as one. Losing a `tokenExpiry` is cheaper than publishing a `token_value`.
   test.each(['tokenExpiry', 'tokenCount', 'secretary'])('%s is caught too, which is the accepted cost', (key) => {
     expect(redact({ [key]: 'plain text' })).not.toEqual({ [key]: 'plain text' });
   });
@@ -260,9 +256,8 @@ describe('the shape of what is logged', () => {
       .toEqual({ err: { error: 'Error: Request failed with status 422', statusCode: 422 } });
   });
 
-  // What a tool's params look like when they arrive: JSON.parse makes `__proto__` an ordinary own
-  // key, and assigning it would set a prototype — the field would vanish from the line, and the
-  // object handed to JSON.stringify would carry whatever was in it.
+  // JSON.parse makes `__proto__` an ordinary own key, which is how a tool's params arrive;
+  // assigning it would set a prototype and drop the field from the line.
   test('a __proto__ key is logged as a field, not applied as a prototype', () => {
     const parsed = JSON.parse('{"__proto__": {"polluted": true}, "env": "staging"}');
 
@@ -367,8 +362,8 @@ describe('the logger writes what redact allows, and nothing else', () => {
     expect(written()).toContain('[circular]');
   });
 
-  // Reading a value can fail — a lazy getter on a request object, for instance — and the caller
-  // was logging, not serialising. It gets a line saying so, and its own work stands.
+  // A lazy getter can throw, and the caller was logging, not serialising: it gets a line saying
+  // so, and its own work stands.
   test('a value that throws when read is reported, not propagated', async () => {
     const log = await loadLog();
     const hostile = { get boom() { throw new Error('do not read me'); } };
@@ -407,7 +402,7 @@ describe('the logger writes what redact allows, and nothing else', () => {
     expect(permissionsOf(logFile)).toBe(0o600);
   });
 
-  // Every log written before this change could hold an Authorization header verbatim.
+  // A log from an earlier version can hold an Authorization header verbatim.
   test.skipIf(!supportsPosixPermissions)('a log left behind by an earlier version is tightened', async () => {
     fs.writeFileSync(logFile, 'old line\n', { mode: 0o644 });
     fs.chmodSync(logFile, 0o644);

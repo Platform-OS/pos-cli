@@ -107,8 +107,8 @@ describe('which instance is asked', () => {
     expect(calls.gateway).toEqual([]);
   });
 
-  // The defect this fixes: env is optional everywhere, so an omitted env used to resolve to the
-  // first .pos entry and ask *it* about a numeric id that belongs to another instance.
+  // `env` is optional everywhere, so an omitted one would otherwise resolve to the first .pos
+  // entry and ask *it* about a numeric id belonging to another instance.
   test('with no env, the environment that points at the job\'s instance is used, not the first one', async () => {
     const config = { prod: CONFIG.prod, staging: CONFIG.staging };
     const { ctx, calls } = context({ config, getStatus: async () => ({ status: 'success' }) });

@@ -5,13 +5,11 @@
  *   selected = (base ∪ --include-tools) − --exclude-tools
  *   exposed  = selected − tools the tools config disables
  *
- * The result is fixed for the life of the process and the same for both transports and every
- * client — MCP requires tools/list not to vary per connection — and `pos-cli mcp-config`
- * prints it from the same code, so what it shows is what the server serves.
+ * Fixed for the life of the process and the same for both transports, as MCP requires; and
+ * `pos-cli mcp-config` prints it from this code, so what it shows is what the server serves.
  *
- * Every mistake in the selection stops startup, like a broken tools config does. These flags
- * decide what an unauthenticated server exposes, and a tool name that silently matches nothing
- * looks exactly like a selection that took effect.
+ * Every mistake in the selection stops startup: a tool name that silently matches nothing looks
+ * exactly like a selection that took effect.
  */
 import defaultRegistry from './tools.js';
 import { DEFAULT_PROFILE, PROFILE_NAMES, profileTools } from './profiles.js';
@@ -19,12 +17,8 @@ import { loadToolsConfig, isDisabledByConfig, configuredTool } from './tools-con
 import { ToolsConfigError } from './tools-config-error.js';
 
 /**
- * The one lookup every dispatch path uses to turn a client-supplied name into a tool. Exposed
- * tools are a Map, so `constructor`, `__proto__` and a tool this server does not expose all
- * come back undefined, and each transport answers them as not found.
- *
- * @param {ReadonlyMap<string, object>} tools - the exposed tools
- * @param {unknown} name - untrusted
+ * The one lookup every dispatch path uses for a client-supplied name. A Map, so `constructor`,
+ * `__proto__` and an unexposed tool all come back undefined.
  */
 export function findTool(tools, name) {
   return typeof name === 'string' ? tools.get(name) : undefined;
@@ -60,13 +54,7 @@ function unknownNamesMessage(flag, names, registeredNames) {
 const listOrNone = names => (names.length ? names.join(', ') : '(none)');
 
 /**
- * @param {object} options
  * @param {ReadonlyMap<string, object>} options.registry - every registered tool, in client order
- * @param {{ tools: object }} options.config - a config returned by loadToolsConfig
- * @param {string} options.configPath - named in messages about the config
- * @param {string} [options.profile]
- * @param {string[]} [options.include]
- * @param {string[]} [options.exclude]
  * @returns {{ tools: Map<string, object>, profile: string, include: string[], exclude: string[],
  *   hidden: Array<{ name: string, reason: 'profile' | 'excluded' | 'disabled' }> }}
  * @throws {ToolsConfigError} for any selection that is not exactly what it looks like
@@ -128,13 +116,6 @@ export function resolveTools({ registry, config, configPath, profile = DEFAULT_P
 
 /**
  * Loads the tools config and resolves the selection against it: what both bins call.
- *
- * @param {object} [options]
- * @param {string} [options.profile]
- * @param {string[]} [options.include]
- * @param {string[]} [options.exclude]
- * @param {Record<string, string|undefined>} [options.env] - where MCP_TOOLS_CONFIG is read from
- * @param {ReadonlyMap<string, object>} [options.registry]
  * @throws {ToolsConfigError}
  */
 export function selectTools({ profile, include, exclude, env = process.env, registry = defaultRegistry } = {}) {
@@ -143,7 +124,7 @@ export function selectTools({ profile, include, exclude, env = process.env, regi
   return { ...selection, registered: registry.size, configFile: { path, source, state } };
 }
 
-/** The startup log line: enough to tell from a log file why a tool was or was not there. */
+/** The startup log line: enough to tell from a log file why a tool was or was not exposed. */
 export function describeSelection({ tools, registered, profile, include, exclude }) {
   return `mcp-min: exposing ${tools.size} of ${registered} tools ` +
     `(profile ${profile}; --include-tools ${listOrNone(include)}; --exclude-tools ${listOrNone(exclude)})`;

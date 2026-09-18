@@ -1,8 +1,7 @@
 /**
- * `--no-http`: MCP over stdio only. It is what `pos-cli ai init` writes, because stdio clients
- * never use the HTTP listener, and one listener per session only races the other sessions for
- * its port — the second session onwards logged `HTTP transport not started (EADDRINUSE)`, and
- * whichever session won served every HTTP caller with its own credentials.
+ * `--no-http`: MCP over stdio only, which is what `pos-cli ai init` writes. Stdio clients never use
+ * the HTTP listener, and one listener per session races the others for the port — whichever wins
+ * then serves every HTTP caller with its own credentials.
  */
 import fs from 'fs';
 import net from 'net';

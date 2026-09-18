@@ -16,9 +16,8 @@ import log from './log.js';
 const sseSessions = new Map();
 
 // A session id is the only thing separating one SSE client's stream from another's, so it has to
-// be unguessable — Math.random() is seeded per process and predictable from a couple of prior
-// samples — and it has to be ours: an id taken from the request would let a caller register its
-// own stream under a name of its choosing, or over another client's.
+// be unguessable (Math.random() is predictable from a few prior samples) and it has to be ours: an
+// id taken from the request lets a caller register its stream over another client's.
 function generateSessionId() {
   return `mcpmin-${randomUUID()}`;
 }
@@ -27,13 +26,10 @@ function generateSessionId() {
 const shutdownState = new WeakMap();
 
 /**
- * Stops the HTTP transport without cutting off requests already being answered.
- *
- * - No new connections are accepted, and idle keep-alive connections close now.
- * - SSE streams never finish on their own, so they are ended now.
- * - A request in flight gets its response, and its connection closes as soon as that response
- *   is sent: left to itself, a keep-alive connection lingers for the 5 s keep-alive timeout
- *   and holds the process open with it.
+ * Stops the HTTP transport without cutting off requests already being answered. New connections
+ * are refused and idle ones closed; SSE streams, which never finish on their own, are ended; a
+ * request in flight gets its response, and its connection closes as soon as that response is sent
+ * rather than lingering for the keep-alive timeout and holding the process open.
  *
  * Resolves once every connection has closed.
  */
@@ -50,22 +46,15 @@ export function stopHttp(server) {
 }
 
 /**
- * Starts the HTTP transport.
+ * Starts the HTTP transport. Resolves with the listening http.Server once the bind has succeeded,
+ * and rejects with the listen error when it has not; nothing here reports success before the
+ * socket is bound.
  *
- * Resolves with the listening http.Server once the bind has succeeded, and rejects with the
- * listen error (EADDRINUSE, EACCES, EADDRNOTAVAIL…) when it has not — the caller decides
- * what a failed bind means; nothing here reports success before the socket is bound.
+ * The defaults are the safe ones: a caller passing only a port gets a loopback-only listener that
+ * answers loopback Host/Origin names. The tools have no default at all, so a caller that leaves
+ * them out fails rather than serving every registered tool over an unauthenticated port.
  *
- * The defaults are the safe ones on purpose: any caller that passes only a port gets a
- * loopback-only listener that answers loopback Host/Origin names only.
- *
- * The tools have no default for the same reason: a caller that leaves them out must fail, not
- * serve every registered tool over an unauthenticated port.
- *
- * @param {object} options
  * @param {Map<string, object>} options.tools - the exposed tools (selectTools().tools)
- * @param {number} [options.port]
- * @param {string} [options.host] - bind address
  * @param {readonly string[]} [options.allowedHostnames] - Host/Origin hostnames to accept
  * @returns {Promise<http.Server>}
  */
@@ -115,12 +104,11 @@ export default async function startHttp({
     next();
   });
 
-  // After logging, so a rejected request is still logged; before body parsing and every
-  // route, so a rejected request is never parsed or dispatched — including routes added later.
+  // After logging, so a rejected request is still logged; before body parsing and every route, so
+  // one is never parsed or dispatched — including routes added later.
   app.use(hostValidation(allowedHostnames));
 
-  // MCP Streamable HTTP (2026-07-28, and 2025-era clients statelessly). After Host/Origin
-  // validation like every route; before the JSON body parser, because the SDK reads the body.
+  // Before the JSON body parser, because the SDK reads the body itself.
   app.all('/mcp', createMcpEndpoint({ tools, trackStream }));
 
   // Everything below is the deprecated pre-SDK HTTP API (/, /tools, /call, /call-stream),
@@ -139,8 +127,7 @@ export default async function startHttp({
       trackStream(res);
       sseSessions.set(sessionId, res);
       req.on('close', () => {
-        // Only this stream's entry: two clients cannot share an id now, but a late close must not
-        // unregister whatever is under that key either way.
+        // Only this stream's entry: a late close must not unregister whatever is under that key.
         if (sseSessions.get(sessionId) === res) sseSessions.delete(sessionId);
         log.debug('SSE session closed', { sessionId });
       });
@@ -190,9 +177,8 @@ export default async function startHttp({
     }
 
     try {
-      // Names, not values: `constants-set` carries an instance's API keys under `value`, and a
-      // result carries whatever the tool read. Redaction covers what it can name; a payload whose
-      // shape is the caller's choice is not something to hand it wholesale.
+      // Names, not values: `constants-set` carries an instance's API keys under `value`, and
+      // redaction can only cover what it can name.
       log.debug('HTTP /call', { tool, params: Object.keys(params || {}), rawBodyKeys: Object.keys(body) });
       const result = await entry.handler(params || {}, { transport: 'http', debug: DEBUG });
       log.debug('HTTP /call result', { tool, ok: result?.ok, error: result?.error?.code });

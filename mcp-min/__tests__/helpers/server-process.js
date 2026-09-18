@@ -1,8 +1,6 @@
 /**
- * Starting the MCP server the way clients do — as a separate process on pipes — and observing
- * it from outside: its stderr log lines, its stdout JSON-RPC, its port, its exit.
- *
- * Not a test file (no .test suffix), so vitest does not collect it.
+ * Starting the MCP server the way clients do — as a separate process on pipes — and observing it
+ * from outside: its stderr log lines, its stdout JSON-RPC, its port, its exit.
  */
 import { spawn } from 'child_process';
 import fs from 'fs';
@@ -46,16 +44,9 @@ export function serverEnv(workDir, overrides = {}) {
   return { ...env, CI: 'true', MCP_MIN_LOG_FILE: path.join(workDir, 'mcp-min.log'), ...overrides };
 }
 
-/**
- * @param {object} options
- * @param {string} options.workDir
- * @param {string[]} [options.args] - node arguments: a script path followed by its arguments
- * @param {object} [options.env] - overrides on top of serverEnv()
- * @param {'pipe'|'ignore'|number|import('net').Socket} [options.stdin] - 'ignore' opens /dev/null (NUL on
- *   Windows); a connected socket becomes the server's stdin, which lets the test keep the client end
- *   open independently of the child (Node destroys child.stdin when the child exits)
- * @param {import('stream').Writable} [options.input] - where send() writes when stdin is a socket
- */
+// `stdin` takes what spawn() takes: 'ignore' opens /dev/null, and a connected socket lets the test
+// keep the client end open independently of the child, which Node otherwise destroys on exit.
+// `input` is where send() writes when stdin is a socket.
 export function launch({ workDir, args = [MCP_BIN], env = {}, stdin = 'pipe', input }) {
   const child = spawn(process.execPath, args, {
     cwd: workDir,

@@ -7,10 +7,8 @@ import { originOf } from '../jobs/handle.js';
 import { JobNotFoundError } from '../jobs/errors.js';
 
 // Deprecated in 6.x, removed in the next major: `job-status` answers for every kind of job, and
-// its job_id says which instance the deploy was started on — which a bare release id does not.
-// It answers through the same adapter, which is what keeps one rule for reading a release and one
-// for a release id the instance does not have; the body it returns is the raw release record, as
-// it always was.
+// its job_id says which instance the deploy was started on, which a bare release id does not.
+// Through the same adapter, so there is one rule for reading a release; the body is unchanged.
 const statusDeployTool = {
   description: 'Deprecated: use job-status. Get current deployment status by release id.',
   annotations: { readOnlyHint: true },
@@ -31,8 +29,8 @@ const statusDeployTool = {
       const GatewayCtor = ctx.Gateway || Gateway;
       const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-      // `assets: false` — this tool reports on the release, as it always has; the asset phase is
-      // job-status's answer, and only a job_id carries what is needed to read it.
+      // `assets: false` — this tool reports on the release, as it always has; only a job_id
+      // carries what is needed to read the asset phase.
       const polled = await deployAdapter.poll({ gateway, origin: originOf(auth.url) }, params.id, { assets: false });
 
       return {

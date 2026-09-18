@@ -1,11 +1,8 @@
 /**
- * How the MCP server is started and how it ends, observed on real processes started the way
- * MCP clients start them: `pos-cli-mcp`, `pos-cli mcp` (commander spawns the former), and
- * `node mcp-min/stdio-server.js`.
- *
- * Every server here is launched with a stdin pipe held open unless a test closes it, so a
- * server that should not have started — `pos-cli mcp --help` used to start one — shows up as
- * a process that never exits rather than slipping past on an early EOF.
+ * How the MCP server is started and how it ends, observed on real processes started the way MCP
+ * clients start them. Every server here is launched with a stdin pipe held open unless a test
+ * closes it, so one that should not have started shows up as a process that never exits rather
+ * than slipping past on an early EOF.
  */
 import fs from 'fs';
 import http from 'http';
@@ -199,8 +196,8 @@ describe.each(SPELLINGS)('%s: a client closing stdin ends the server', (_name, a
 });
 
 describe('stdin that is not a client pipe', () => {
-  // A file is not a client connection, so its end alone would not stop the server — but one
-  // that carried messages was an MCP session, and its end is the end of that session.
+  // A file is not a client connection, so its end alone would not stop the server — but one that
+  // carried messages was an MCP session, and its end is the end of that session.
   test('requests read from a file are answered, then the server exits', async () => {
     const requests = path.join(workDir, 'requests.jsonl');
     fs.writeFileSync(requests, `${JSON.stringify(INITIALIZE)}\n${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} })}\n`);
@@ -503,17 +500,15 @@ describe.skipIf(process.platform === 'win32')('when `pos-cli mcp` itself is kill
   }, 60000);
 });
 
-// After an uncaught exception the process's state is undefined, and this one holds credentials
-// and (with HTTP on) a port that anything local can reach. It drains instead of carrying on:
-// responses in flight are written, the port is released, and the exit code says it was not clean.
+// After an uncaught exception the process's state is undefined, and this one holds credentials and
+// a port anything local can reach. It drains rather than carrying on, and exits non-zero.
 describe('an uncaught exception', () => {
   test('shuts the server down rather than leaving it serving', async () => {
     const script = [
       `import { start } from ${JSON.stringify(pathToFileURL(INDEX).href)};`,
       `import { selectTools } from ${JSON.stringify(pathToFileURL(TOOL_SELECTION).href)};`,
       "await start({ selection: selectTools({ profile: 'none', include: ['envs-list'], env: {} }), http: false });",
-      // Thrown from a timer, which is where an uncaught exception actually comes from: a
-      // background task nobody awaited.
+      // From a timer, which is where an uncaught exception actually comes from.
       "setTimeout(() => { throw new Error('boom from the test'); }, 50);"
     ].join('\n');
 
@@ -525,8 +520,8 @@ describe('an uncaught exception', () => {
       expect(exit.code).toBe(1);
       expect(proc.stderr).toContain('Uncaught exception, shutting down');
       expect(proc.stderr).toContain('boom from the test');
-      // It drains rather than dying: whatever a tool is in the middle of writing still gets to
-      // finish, and the transports are stopped through the same path a client disconnect uses.
+      // The drain, not just the exit: a tool mid-write still finishes, through the same path a
+      // client disconnect uses.
       expect(proc.stderr).toContain('uncaught exception; shutting down once in-flight work finishes');
     } finally {
       await stop(proc);

@@ -21,10 +21,8 @@ const DEV_TOOLS = [
   'unit-tests-run', 'tests-run-async', 'check-run'
 ];
 
-// stdio tools/list for --profile dev measured 8,234 bytes when the profile was introduced, and
-// 8,414 once read-only tools carried `annotations.readOnlyHint` (TASK-15). One job-status in
-// place of deploy-status, deploy-wait and tests-run-async-result (TASK-13 Part 2) took it to
-// 7,188. Growth past this needs a deliberate bump: the profile exists to keep this payload small.
+// The profile exists to keep this payload small, so growth past the budget needs a deliberate
+// bump rather than a quiet one. Currently 7,188 bytes over stdio.
 const DEV_TOOLS_LIST_BYTE_BUDGET = 7500;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
@@ -36,8 +34,8 @@ const PRE_PROFILES_TOOLS = [
   'uploads-push', 'constants-list', 'constants-set', 'constants-unset', 'instance-create', 'partners-list',
   'partner-get', 'endpoints-list', 'env-add'
 ];
-// Tools added to the bare surface since, in registry order — each one a deliberate widening of
-// what a bare `pos-cli-mcp` exposes, and the reason the byte count below moves.
+// Each one a deliberate widening of what a bare `pos-cli-mcp` exposes, and the reason the byte
+// count below moves.
 const ADDED_SINCE_PROFILES = ['job-status'];
 
 const BARE_TOOLS = [
@@ -46,11 +44,8 @@ const BARE_TOOLS = [
   ...PRE_PROFILES_TOOLS.slice(PRE_PROFILES_TOOLS.indexOf('deploy-start'))
 ];
 
-// 24,612 bytes before profiles; + 36 bytes for each of the 17 `readOnlyHint` annotations;
-// + 1,045 for job-status (TASK-13 Part 2), which is what the six deprecated status tools cost
-// 4,528 of between them — the saving lands when they are removed at the next major, and now for
-// anyone on --profile dev; − 469 for the `endpoint` parameter removed from five more tools
-// (TASK-18), which no tool may declare any more (request-target.test.js).
+// The bare surface pays for every tool it lists: the six deprecated status tools cost 4,528 bytes
+// of this, which comes back at the next major, and now for anyone on --profile dev.
 const BARE_TOOLS_LIST_BYTES = 25764;
 
 const HANG_MS = 15000;
@@ -316,9 +311,8 @@ describe('a tool that is not exposed cannot be called', () => {
     });
   });
 
-  // TASK-5: a method named after an Object.prototype function used to run that function and
-  // send nothing back, leaving the client waiting for its id. A tool name as the method is not
-  // a way in either: direct method invocation was removed.
+  // A method named after an Object.prototype function must not reach that function and answer
+  // nothing, leaving the client waiting for its id. A tool name is not a method either.
   test.each(['toString', 'constructor', 'valueOf', 'hasOwnProperty', '__proto__', 'envs-list', 'deploy-start'])(
     'the stdio protocol dispatcher answers the method %s as not found',
     async (method) => {

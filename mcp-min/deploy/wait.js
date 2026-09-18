@@ -8,8 +8,8 @@ import { originOf } from '../jobs/handle.js';
 import { JobNotFoundError } from '../jobs/errors.js';
 
 // Deprecated in 6.x, removed in the next major: `job-status` with `wait_ms` waits for any kind of
-// job, with a bounded deadline. This one keeps waiting forever without maxWaitMs, and reports on
-// the release only — a deploy whose assets are still uploading reads as finished here.
+// job, bounded. This one waits forever without maxWaitMs and reports on the release only, so a
+// deploy whose assets are still uploading reads as finished here.
 const waitDeployTool = {
   description: 'Deprecated: use job-status with wait_ms. Wait for a deployment to finish, polling every intervalMs (default 1000ms).',
   annotations: { readOnlyHint: true },
@@ -40,8 +40,7 @@ const waitDeployTool = {
       for (;;) {
         if (ctx.signal?.aborted) return cancelled();
 
-        // The adapter is what knows a deploy is still running: this tool used to keep polling only
-        // on `ready_for_import` and returned success on `in_progress`, mid-deploy.
+        // Through the adapter: polling here returned success on `in_progress`, mid-deploy.
         const polled = await deployAdapter.poll(deps, params.id, { assets: false });
 
         if (polled.state === 'failed') {

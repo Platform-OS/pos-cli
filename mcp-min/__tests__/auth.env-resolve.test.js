@@ -6,13 +6,8 @@ import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach 
 import { fetchSettings } from '../../lib/settings.js';
 import { resolveAuth } from '../auth.js';
 
-// Regression guard for the "env not found kills the MCP server" crash.
-//
-// The server resolves auth via resolveAuth -> fetchSettings. Historically
-// fetchSettings did process.exit(1) on an unknown environment, which killed
-// the whole in-process server before auth.js could throw its catchable error.
-// The fix: fetchSettings(env, { exit:false }) returns null so resolveAuth can
-// throw a normal Error the per-request handler turns into an MCP error.
+// fetchSettings exits the process on an unknown environment unless told otherwise, which would
+// kill the in-process server before auth.js could throw a catchable error.
 // Not in the repository root: test files run in parallel, and a config there changes what other
 // files see (see mcp-min/__tests__/helpers/dot-pos.js).
 const CONFIG_FILE = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-auth-resolve-')), '.pos');
@@ -77,15 +72,8 @@ describe('env resolution never exits the process', () => {
   });
 });
 
-/**
- * The precedence itself.
- *
- * Every step was documented in the wrong order twice — in `auth.js`'s own JSDoc and in
- * docs/MCP_TOOLS.md — because nothing here distinguished them: the existing tests each offer one
- * source, and any order resolves those the same way. These offer all four at once, which is the
- * only arrangement that can tell the orders apart, and then check the comment against what the
- * function did.
- */
+// Offering one source at a time cannot tell the orders apart — any order resolves it the same
+// way. These offer all four at once, which is the only arrangement that can.
 describe('resolveAuth precedence', () => {
   const PARAMS = { url: 'https://params.example.com', email: 'params@example.com', token: 'params-token' };
   const NAMED = { url: 'https://named.example.com', email: 'named@example.com', token: 'named-token' };
@@ -93,8 +81,8 @@ describe('resolveAuth precedence', () => {
   const FIRST = { url: 'https://first.example.com', email: 'first@example.com', token: 'first-token' };
   const SECOND = { url: 'https://second.example.com', email: 'second@example.com', token: 'second-token' };
 
-  // Every source available at once. A step is removed by dropping its input, never by changing
-  // the others, so each case differs from the one before it by exactly one thing.
+  // A step is removed by dropping its input, never by changing the others, so each case differs
+  // from the one before it by exactly one thing.
   const ctx = {
     settings: {
       settingsFromDotPos: (name) => {
@@ -155,15 +143,14 @@ describe('resolveAuth precedence', () => {
       .rejects.toThrow(/AUTH_MISSING.*url,email,token.*MPKIT/s);
   });
 
-  // The rule the wrong comment hid: naming an environment settles which instance is meant, so a
-  // missing name fails rather than quietly resolving to whatever MPKIT_* happens to point at —
-  // which on a developer machine is often a different instance entirely.
+  // Naming an environment settles which instance is meant, so an unknown name fails rather than
+  // resolving to whatever MPKIT_* points at — often a different instance entirely.
   test('a named environment that is not in .pos fails instead of falling back to MPKIT_*', async () => {
     await expect(resolveAuth({ env: 'missing' }, ctx)).rejects.toThrow(/Environment 'missing' not found/);
   });
 
-  // Two of the three named an instance and would then have resolved a different one from .pos,
-  // so the call would have gone somewhere the caller did not ask for.
+  // Two of the three names an instance and then resolves a different one from .pos, so the call
+  // would go somewhere the caller did not ask for.
   test('explicit params need all three parts, and a partial set is refused rather than ignored', async () => {
     await expect(resolveAuth({ url: PARAMS.url, token: PARAMS.token }, ctx))
       .rejects.toThrow(/need url, email and token together; missing: email/);
@@ -186,13 +173,12 @@ describe('resolveAuth precedence', () => {
 });
 
 describe('the documented precedence is the implemented one', () => {
-  // This is the drift guard, and it covers every place the order is written down: the same
-  // mistake lived in auth.js's JSDoc and docs/MCP_TOOLS.md at once, so asserting behaviour alone
-  // would not have caught it, and correcting one copy has already failed to correct the others.
+  // The order is written down in three places at once, so asserting behaviour alone cannot catch
+  // a copy that drifts.
   const REPO = path.resolve(import.meta.dirname, '../..');
 
-  // Matched on the one word that distinguishes each step, because the three copies word them
-  // differently on purpose — a reference, a JSDoc list and a user-facing section.
+  // Matched on the one word that distinguishes each step: the three copies word them differently
+  // on purpose — a reference, a JSDoc list and a user-facing section.
   const STEP_PATTERNS = [
     [/explicit/i, 'params'],
     [/named/i, '.pos(named)'],
@@ -229,8 +215,8 @@ describe('the documented precedence is the implemented one', () => {
     expect(order, `${file} documents a different order from the one resolveAuth implements`).toEqual(RESOLUTION_ORDER);
   });
 
-  // The order above is not a constant copied from the source: it is what the tests in the
-  // previous block observed the function doing, step by step.
+  // RESOLUTION_ORDER is not a constant copied from the source: it is what the function was
+  // observed doing, step by step.
   test('the order checked against the documents is the observed one', async () => {
     const ctx = {
       settings: { settingsFromDotPos: (name) => (name === 'named' ? { url: 'https://named.example.com', token: 'named-token' } : undefined) },
@@ -256,14 +242,10 @@ describe('the documented precedence is the implemented one', () => {
 });
 
 /**
- * The named environment, against the real `.pos` reader.
- *
- * The block above injects the settings seam, which is how the precedence was documented as
- * working and not how it worked: `resolveAuth` called the CLI's `fetchSettings`, and that answers
- * from `MPKIT_*` before it looks at `.pos`. So an MCP client naming an environment was given
- * whatever those variables pointed at — while `source` still named the environment it asked for —
- * and an environment that did not exist resolved instead of failing. These cases use the real
- * modules, with both sources present, because that is the only way to catch it.
+ * The named environment, against the real `.pos` reader. The block above injects the settings
+ * seam, which cannot catch a `resolveAuth` that reaches the CLI's `fetchSettings` — that answers
+ * from `MPKIT_*` before it looks at `.pos`, so a named environment resolves to the wrong instance
+ * while `source` still names the one that was asked for.
  */
 describe('a named environment is read from .pos, whatever MPKIT_* says', () => {
   const DOT_POS = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-auth-precedence-')), '.pos');
@@ -299,8 +281,8 @@ describe('a named environment is read from .pos, whatever MPKIT_* says', () => {
     expect(auth.source).toBe(`.pos(${name})`);
   });
 
-  // The label is what every tool echoes in `meta.auth`, so a wrong one does not just mislead a
-  // reader — it is the only record of where a deploy or an import actually went.
+  // `source` is what every tool echoes in `meta.auth`: the only record of where a deploy or an
+  // import actually went.
   test('the source names the instance the credentials belong to', async () => {
     const auth = await resolveAuth({ env: 'production' });
 

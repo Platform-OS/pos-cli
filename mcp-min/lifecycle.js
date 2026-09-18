@@ -1,17 +1,12 @@
 /**
- * When the MCP server process ends.
+ * When the MCP server process ends. A closed stdin is the spec's only portable shutdown signal
+ * ("Servers SHOULD exit promptly when their standard input is closed"); without acting on it the
+ * HTTP listener keeps the event loop alive forever, and a server started through a wrapper
+ * (`npx`, `pos-cli mcp`) outlives the client that launched it.
  *
- * MCP clients launch this server with stdin/stdout pipes, and a closed stdin is the
- * spec's primary — and only portable — shutdown signal (MCP stdio transport: "Servers
- * SHOULD exit promptly when their standard input is closed"). The HTTP listener would
- * otherwise keep the event loop alive forever, and a server started through a wrapper
- * (`npx`, `pos-cli mcp`) survives its client being killed.
- *
- * Shutdown is a drain, not an exit: the transports stop taking new work and the process
- * ends on its own once nothing is left running. That lets in-flight tool calls write their
- * responses, and lets work a tool started in the background — deploy-start's asset upload —
- * finish, which an immediate process.exit() would cut off mid-upload. The deadline bounds a
- * call that never ends.
+ * Shutdown is a drain, not an exit: transports stop taking new work and the process ends once
+ * nothing is left running, so in-flight calls write their responses and background work
+ * (deploy-start's asset upload) finishes. The deadline bounds a call that never ends.
  */
 import net from 'net';
 import log from './log.js';
@@ -21,15 +16,10 @@ import log from './log.js';
 export const SHUTDOWN_DEADLINE_MS = 120_000;
 
 /**
- * Does stdin reaching EOF mean the client is gone?
+ * Does stdin reaching EOF mean the client is gone? A pipe or socket is a client connection, so its
+ * end always does, even before any message. `</dev/null`, a file or a terminal is not — that is how
+ * the HTTP transport is run alone — so EOF there ends the session only once stdio has been used.
  *
- * A pipe or socket on stdin is a client connection, so its end always does — even before
- * any message, which is what a client that starts the server and quits at once looks like.
- * `</dev/null`, a file or a terminal is not a client; that is how the HTTP transport is run
- * on its own (`pos-cli-mcp </dev/null &`, a container without -i), so EOF there only ends
- * the session once stdio has actually been used.
- *
- * @param {import('stream').Readable & { isTTY?: boolean }} stdin
  * @param {number} messagesReceived - non-empty lines read from stdin
  */
 export function stdinEndEndsSession(stdin, messagesReceived) {
@@ -37,12 +27,7 @@ export function stdinEndEndsSession(stdin, messagesReceived) {
   return clientPipe || messagesReceived > 0;
 }
 
-/**
- * @param {object} [options]
- * @param {number} [options.deadlineMs]
- * @param {(code: number) => void} [options.exit] - called only if the deadline passes
- * @param {{ info: Function, warn: Function, error: Function }} [options.logger]
- */
+/** @param {(code: number) => void} [options.exit] - called only if the deadline passes */
 export function createShutdown({
   deadlineMs = SHUTDOWN_DEADLINE_MS,
   exit = (code) => process.exit(code),
@@ -65,9 +50,8 @@ export function createShutdown({
     },
 
     /**
-     * Registers something to stop when shutdown begins. A transport that finishes starting
-     * after shutdown has begun — the HTTP bind can complete after a client has already
-     * closed stdin — is stopped at once instead of outliving the session.
+     * Registers something to stop when shutdown begins. A transport that finishes starting after
+     * that — the HTTP bind can complete after the client closed stdin — is stopped at once.
      */
     onShutdown(closer) {
       if (started) run(closer);
@@ -83,8 +67,8 @@ export function createShutdown({
       // unref: the timer must not itself keep a finished process alive.
       setTimeout(() => {
         logger.warn(`mcp-min: work still running ${Math.round(deadlineMs / 1000)}s after shutdown began; exiting anyway`);
-        // Whatever the session already decided: a shutdown that began because of an uncaught
-        // exception must not report success just because the deadline was what ended it.
+        // A shutdown that began from an uncaught exception must not report success just because
+        // the deadline was what ended it.
         exit(process.exitCode ?? 0);
       }, deadlineMs).unref();
 

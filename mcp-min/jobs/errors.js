@@ -7,12 +7,8 @@ export class JobNotFoundError extends Error {
 }
 
 /**
- * Runs one status request. A 404 means the instance has no such job — a job_id minted elsewhere,
- * or one already reaped — which is a bad argument, not a failed job, so it is reported as its own
+ * Runs one status request. A 404 is a bad argument, not a failed job, so it is reported as its own
  * error rather than as "the job failed".
- *
- * @param {() => Promise<unknown>} request
- * @param {{ kind: string, id: string }} job
  */
 export async function statusRequest(request, { kind, id }) {
   try {

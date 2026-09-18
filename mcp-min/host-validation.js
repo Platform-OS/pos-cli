@@ -1,15 +1,11 @@
 /**
- * DNS-rebinding and cross-site protection for the HTTP transport.
+ * DNS-rebinding and cross-site protection for the HTTP transport. Loopback keeps other machines
+ * out but not a web page in the user's own browser, which can resolve its domain to 127.0.0.1 or
+ * post there directly; such requests carry the attacker's hostname in Host or Origin. Not
+ * authentication — a non-browser client sends whatever headers it likes.
  *
- * Binding to loopback keeps other machines out, but not a web page in the user's own
- * browser: a page can resolve its own domain to 127.0.0.1 (DNS rebinding) or simply post to
- * http://127.0.0.1:<port>. Such requests carry the attacker's hostname in Host, or the
- * page's origin in Origin, so both are checked against an allowlist before any route runs.
- * This is not authentication — a non-browser client can send whatever headers it likes.
- *
- * The checks and the 403 response mirror @modelcontextprotocol/express 2.0.0
- * (hostHeaderValidation + originValidation) message for message, so moving to the SDK's
- * middleware later is invisible to clients. Keep them in step.
+ * Mirrors @modelcontextprotocol/express 2.0.0 (hostHeaderValidation + originValidation) message
+ * for message, so adopting the SDK's middleware later is invisible to clients. Keep them in step.
  */
 import log from './log.js';
 
@@ -45,12 +41,11 @@ export function checkOrigin(originHeader, allowedHostnames) {
 }
 
 /**
- * @param {readonly string[]} allowedHostnames - hostnames as URL#hostname reports them
- *   (lowercase, IPv6 in brackets); see LOOPBACK_HOSTNAMES in http-config.js
+ * @param {readonly string[]} allowedHostnames - as URL#hostname reports them (lowercase, IPv6 in
+ *   brackets); see LOOPBACK_HOSTNAMES in http-config.js
  */
 export default function hostValidation(allowedHostnames) {
-  // A string here would turn every check into a substring match ("localhost,10.0.0.5"
-  // includes "host"), so refuse anything but an array outright.
+  // A string would turn every check into a substring match ("localhost,10.0.0.5" includes "host").
   if (!Array.isArray(allowedHostnames)) {
     throw new TypeError('hostValidation: allowedHostnames must be an array of hostnames');
   }

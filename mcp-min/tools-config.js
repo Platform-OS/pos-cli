@@ -1,10 +1,6 @@
 /**
- * The tools config (mcp-min/tools.config.json, or the file MCP_TOOLS_CONFIG names): the one
- * place it is read, validated and interpreted.
- *
- * Both the server and `pos-cli mcp-config` go through this module, so the configuration the
- * one prints is the configuration the other applies — they used to read the file separately,
- * and had already drifted apart on validation.
+ * The tools config (mcp-min/tools.config.json, or the file MCP_TOOLS_CONFIG names): the one place
+ * it is read, validated and interpreted, so `pos-cli mcp-config` prints what the server applies.
  */
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -19,10 +15,6 @@ export const BUNDLED_CONFIG_PATH = join(here, 'tools.config.json');
 
 const configSchema = JSON.parse(readFileSync(join(here, 'tools.config.schema.json'), 'utf-8'));
 
-/**
- * @param {Record<string, string|undefined>} env
- * @returns {{ path: string, source: 'MCP_TOOLS_CONFIG' | 'bundled' }}
- */
 export function toolsConfigLocation(env) {
   return env.MCP_TOOLS_CONFIG
     ? { path: env.MCP_TOOLS_CONFIG, source: 'MCP_TOOLS_CONFIG' }
@@ -30,17 +22,11 @@ export function toolsConfigLocation(env) {
 }
 
 /**
- * Reads and validates the tools config.
+ * Reads and validates the tools config, failing closed: this file decides which tools are exposed,
+ * so a config that is present but wrong stops the server rather than silently re-enabling every
+ * tool the author meant to switch off. Only a file that is missing, unreadable or unparseable is
+ * treated as absent, and `state` says which it was.
  *
- * Fails closed on anything it can detect: this file decides which tools are exposed, so a
- * config that is present but wrong must stop the server rather than be ignored, which would
- * silently re-enable every tool the author meant to switch off. A file that is missing or
- * cannot be read or parsed is the one case treated as absent — defaults apply — and `state`
- * says which it was, so `pos-cli mcp-config` can show it.
- *
- * @param {ReadonlyMap<string, object>} registry - every registered tool; config entries must name one
- * @param {object} [options]
- * @param {Record<string, string|undefined>} [options.env]
  * @returns {{ path: string, source: 'MCP_TOOLS_CONFIG' | 'bundled',
  *   state: 'loaded' | 'missing' | 'unreadable' | 'unparseable', config: { tools: object } }}
  * @throws {ToolsConfigError} when the file is present but does not describe a valid config
@@ -72,11 +58,9 @@ export function loadToolsConfig(registry, { env = process.env } = {}) {
     throw new ToolsConfigError(`Invalid tools config at ${location.path}: ${result.message}`);
   }
 
-  // The schema constrains the shape of each entry but cannot enumerate tool names, so a
-  // typo like "deploy-strt" would otherwise be accepted, match nothing, and leave
-  // "deploy-start" enabled — the exact fail-open the schema check exists to prevent, and the
-  // harder one to notice because the config looks like it took effect. Map#has, not `in`:
-  // `in` walks the prototype chain, so an entry keyed `toString` would pass as a known tool.
+  // The schema cannot enumerate tool names, so a typo like "deploy-strt" would be accepted, match
+  // nothing, and leave "deploy-start" enabled while the config looks like it took effect.
+  // Map#has, not `in`: `in` walks the prototype chain, so `toString` would pass as a known tool.
   const unknown = Object.keys(raw.tools).filter(name => !registry.has(name));
   if (unknown.length > 0) {
     throw new ToolsConfigError(`Invalid tools config at ${location.path}: no such tool: ${unknown.join(', ')}`);
@@ -86,8 +70,8 @@ export function loadToolsConfig(registry, { env = process.env } = {}) {
   return { ...location, state: 'loaded', config: raw };
 }
 
-// Own entries only: every key was checked against the registry, but a lookup by a name that
-// was not (a tool name coming from a flag) must still not land on Object.prototype.
+// Own entries only: a lookup by a name that was never checked against the registry (a tool name
+// from a flag) must not land on Object.prototype.
 const entryFor = (config, name) => (Object.hasOwn(config.tools, name) ? config.tools[name] : undefined);
 
 /** The one definition of "the tools config switches this tool off". */

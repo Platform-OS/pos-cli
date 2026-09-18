@@ -78,8 +78,8 @@ const envAddTool = {
 
   handler: async (params, ctx = {}) => {
     const startedAt = new Date().toISOString();
-    // Never the whole params object: `token` is an instance API token, and this line is INFO —
-    // it is written whether or not anyone asked for debug output.
+    // Never the whole params object: `token` is an instance API token, and INFO is written
+    // whether or not anyone asked for debug output.
     log.info('handler:START', {
       environment: params.environment,
       url: params.url,
@@ -276,8 +276,7 @@ async function spawnBackgroundWaiter({
 
         log.debug('waiter:tokenResponseStatus', { status: tokenResponse.status });
         const tokenData = await tokenResponse.json();
-        // The body is the access token itself; what a reader needs is whether one arrived and,
-        // if not, why the Portal said no.
+        // The body is the access token itself; whether one arrived is what a reader needs.
         log.debug('waiter:tokenResponse', {
           accessTokenReceived: Boolean(tokenData.access_token),
           error: tokenData.error,

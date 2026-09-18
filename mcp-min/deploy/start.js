@@ -60,9 +60,9 @@ const startDeployTool = {
       const env = { TARGET: archivePath };
       const numberOfFiles = await archive.makeArchive(env, { withoutAssets: true });
 
-      // Before the upload, not after it: a release that is not partial is the whole intended
-      // state of the instance, so pushing an empty archive asks the instance to delete every
-      // file it has. `pos-cli deploy` skips the upload the same way.
+      // Before the upload: a release that is not partial is the whole intended state of the
+      // instance, so an empty archive asks it to delete every file it has. `pos-cli deploy` skips
+      // the upload the same way.
       if (numberOfFiles === 0 || numberOfFiles === false) {
         return {
           ok: false,
@@ -75,9 +75,8 @@ const startDeployTool = {
         'marketplace_builder[zip_file]': fs.createReadStream(archivePath)
       }));
 
-      // Deploy assets in the background (release import + S3 upload + CDN wait can take minutes).
-      // `job-status` is what reports on it: the upload is registered under the release id, so a
-      // deploy whose assets are still going up is not reported as finished.
+      // In the background: release import + S3 upload + CDN wait can take minutes. Registered
+      // under the release id, so `job-status` does not report the deploy finished while it runs.
       const releaseId = pushResponse.id;
       const origin = originOf(auth.url);
       let assetsInfo = null;
@@ -105,8 +104,8 @@ const startDeployTool = {
         ok: true,
         data: {
           id: releaseId,
-          // `assets` says whether there was an upload at all, so a server that did not start this
-          // deploy can still tell "nothing to upload" from "an upload I cannot see".
+          // `assets` records whether there was an upload at all, which a server that did not
+          // start this deploy cannot otherwise know.
           job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: { assets: hasAssets } }),
           status: pushResponse.status
         },

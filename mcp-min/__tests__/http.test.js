@@ -73,7 +73,6 @@ test('POST /call envs-list returns ok with data.environments', async () => {
   expect(Array.isArray(parsed.result.data.environments)).toBe(true);
 });
 
-// JSON-RPC initialize path
 test('POST /call-stream initialize returns protocol info', async () => {
   const res = await httpRequest({ method: 'POST', path: '/call-stream', body: { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } } });
   expect(res.status).toBe(200);
@@ -82,7 +81,6 @@ test('POST /call-stream initialize returns protocol info', async () => {
   expect(parsed.result.serverInfo).toBeDefined();
 });
 
-// JSON-RPC tools/list
 test('POST /call-stream tools/list returns tools array', async () => {
   const res = await httpRequest({ method: 'POST', path: '/call-stream', body: { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} } });
   expect(res.status).toBe(200);
@@ -91,7 +89,6 @@ test('POST /call-stream tools/list returns tools array', async () => {
   expect(Array.isArray(parsed.result.tools)).toBe(true);
 });
 
-// JSON-RPC tools/call -> envs-list
 test('POST /call-stream tools/call envs-list returns environments', async () => {
   const res = await httpRequest({ method: 'POST', path: '/call-stream', body: { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'envs-list' } } });
   expect(res.status).toBe(200);
@@ -101,12 +98,8 @@ test('POST /call-stream tools/call envs-list returns environments', async () => 
   expect(Array.isArray(content)).toBe(true);
 });
 
-// JSON-RPC tools/call -> platformos.graphql.exec error should set non-200
-// We simulate by passing bad query that triggers resp.errors handling in tool
-// Note: we inject a dummy environment in .pos via fixtures in beforeAll
-// The tool will try to read auth from .pos and then fail at Gateway.graph if mocked
-// For this HTTP test we rely on real module; we will pass endpoint to a fake URL and expect 500 due to thrown error
-
+// Explicit credentials pointed at a host that does not resolve: the tool's own error path, not
+// the transport's.
 test('POST /call-stream tools/call graphql.exec with GraphQL errors returns 200 with error payload', async () => {
   const body = {
     jsonrpc: '2.0',

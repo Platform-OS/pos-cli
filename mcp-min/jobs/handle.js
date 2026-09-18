@@ -1,14 +1,11 @@
 /**
- * The `job_id` a starter returns and `job-status` takes back.
+ * The `job_id` a starter returns and `job-status` takes back. Self-contained — kind, remote id,
+ * instance origin, kind-specific flags — rather than a key into a table in this process: MCP
+ * clients restart stdio servers while the agent keeps its conversation, so a table would turn
+ * every restart into "unknown job".
  *
- * It is self-contained — kind, remote id, the instance it was started on, and the flags that
- * kind needs to read its status — rather than a key into a table in this process. MCP clients
- * restart stdio servers while the agent keeps its conversation, so a table would turn every
- * restart into "unknown job".
- *
- * It travels through the model and back, so it is treated as untrusted on the way in: it is
- * parsed strictly, and nothing in it chooses credentials or the URL a request goes to. The
- * origin it carries is only ever compared against the one `resolveAuth` resolved.
+ * It travels through the model and back, so it is untrusted on the way in: parsed strictly, and
+ * nothing in it chooses credentials or the URL a request goes to.
  */
 
 import log from '../log.js';
@@ -23,9 +20,8 @@ const ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 // What each kind may carry besides kind/id/origin, and the type it must have.
 const FLAGS = Object.freeze({
   'data-export': Object.freeze({ zip: 'boolean' }),
-  // Whether the deploy had assets to upload at all. Without it, a deploy of code alone could
-  // never be reported finished by a process that did not start it (there is no asset phase to
-  // observe, and "none" and "not seen from here" would be indistinguishable).
+  // Whether the deploy had assets at all: without it, a process that did not start the deploy
+  // cannot tell "nothing to upload" from "an upload I cannot see".
   deploy: Object.freeze({ assets: 'boolean' })
 });
 
@@ -42,14 +38,6 @@ export function originOf(url) {
   return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.origin : null;
 }
 
-/**
- * @param {object} job
- * @param {string} job.kind - one of JOB_KINDS
- * @param {string|number} job.id - the id the instance gave the operation
- * @param {string} job.origin - the instance URL the operation was started on
- * @param {object} [job.flags] - kind-specific, from FLAGS
- * @returns {string}
- */
 export function mint({ kind, id, origin, flags }) {
   if (!JOB_KINDS.includes(kind)) throw new TypeError(`mint: unknown job kind ${kind}`);
 
@@ -59,9 +47,8 @@ export function mint({ kind, id, origin, flags }) {
   const remoteId = String(id);
   if (!ID_PATTERN.test(remoteId)) throw new TypeError(`mint: ${remoteId} is not a usable job id`);
 
-  // Both directions are a programmer error here — `mint` is only ever called by our own starters,
-  // and `{ asset: true }` for `{ assets: true }` would mint a handle that reports the wrong thing
-  // rather than one that fails.
+  // A programmer error, since only our own starters mint: `{ asset: true }` for `{ assets: true }`
+  // would otherwise mint a handle that reports the wrong thing instead of failing.
   const allowed = FLAGS[kind] ?? {};
   const kept = Object.entries(flags ?? {});
   for (const [name, value] of kept) {
@@ -77,13 +64,7 @@ export function mint({ kind, id, origin, flags }) {
   });
 }
 
-/**
- * Reads a job_id back.
- *
- * @param {unknown} jobId
- * @returns {{ valid: true, job: { kind: string, id: string, origin: string, flags: object } }
- *   | { valid: false, message: string }}
- */
+/** @returns {{ valid: true, job: object } | { valid: false, message: string }} */
 export function parse(jobId) {
   const invalid = message => ({ valid: false, message });
 
@@ -119,14 +100,9 @@ export function parse(jobId) {
 }
 
 /**
- * The handle for a job that has just started, or `undefined` if one cannot be minted.
- *
- * A starter that has already started the job must still report what it started: a handle is how
- * the job is polled, not whether it ran, so an id the instance returned in a shape we did not
- * expect costs the caller `job-status`, not the deploy.
- *
- * @param {Parameters<typeof mint>[0]} job
- * @returns {string|undefined}
+ * The handle for a job that has just started, or `undefined` if one cannot be minted. A handle is
+ * how the job is polled, not whether it ran, so an unexpected id costs the caller `job-status`,
+ * not the deploy.
  */
 export function mintFor(job) {
   try {

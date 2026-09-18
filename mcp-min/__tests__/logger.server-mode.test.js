@@ -14,11 +14,9 @@ beforeAll(async () => {
   isServerMode = actual.isServerMode;
 });
 
-// Regression guard for the MCP-server crash: logger.Error is the single
-// process-exit choke point in the CLI. Loaded in-process by the long-lived
-// MCP server, a process.exit(1) there tears down the whole server and every
-// tool it serves. In server mode Error must THROW (catchable per-request)
-// instead; standalone CLI must keep the process.exit(1) contract.
+// logger.Error is the CLI's single process-exit choke point, and the MCP server loads it
+// in-process: a process.exit(1) there tears down every tool the server serves. In server mode it
+// must throw instead, while the standalone CLI keeps the exit contract.
 describe('logger server-mode hardening', () => {
   afterEach(() => {
     setServerMode(false);

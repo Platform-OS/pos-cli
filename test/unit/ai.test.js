@@ -98,8 +98,7 @@ describe('ai init', () => {
     expect(logger.Info).toHaveBeenCalledWith('Updated existing entries in .vscode/mcp.json: platformos-cli');
   });
 
-  // Choosing a profile, adding environment variables or pointing at a local build are all
-  // reasons someone edits the entry; re-running init must not undo that.
+  // Someone had a reason to edit the entry; re-running init must not undo it.
   test.each([
     ['another profile', { command: 'pos-cli-mcp', args: ['--profile', 'full'] }],
     ['the HTTP listener kept on purpose', { command: 'pos-cli-mcp', args: ['--profile', 'dev', '--exclude-tools', 'deploy-wait'] }],
@@ -154,9 +153,7 @@ describe('ai init', () => {
   });
 
   describe('the rename from platformos to platformos-cli', () => {
-    // The old name said nothing about what the server was — the supervisor is platformOS too.
-    // An entry pos-cli wrote moves to the new name; two entries for one server would start it
-    // twice and show the agent every tool twice.
+    // Two entries for one server would start it twice and show the agent every tool twice.
     test.each([
       ['the current form', PLATFORMOS],
       ['a form an earlier release wrote', { command: 'pos-cli-mcp' }],
@@ -171,8 +168,7 @@ describe('ai init', () => {
       expect(logger.Warn).not.toHaveBeenCalled();
     });
 
-    // A config file is committed and read by people: the entry stays where it was rather than
-    // moving to the end.
+    // A config file is committed and read by people, so the entry keeps its place.
     test('renames in place, keeping the order of every other server', async () => {
       writeJson({
         mcpServers: {
@@ -199,8 +195,7 @@ describe('ai init', () => {
       });
     });
 
-    // Someone who edited the old entry gets to keep it. Adding platformos-cli beside it would
-    // run their server and ours at once, which is the duplicate the rename exists to avoid.
+    // Adding platformos-cli beside a customised old entry would run their server and ours at once.
     test('leaves a customised entry under the old name alone, and adds no second one', async () => {
       const customised = { command: 'pos-cli-mcp', args: ['--profile', 'full'], env: { MCP_TOOLS_CONFIG: 'tools.json' } };
       writeJson({ mcpServers: { [OLD_NAME]: customised } }, '.mcp.json');

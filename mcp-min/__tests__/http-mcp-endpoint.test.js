@@ -257,9 +257,8 @@ describe('the request itself', () => {
     expect(JSON.parse(res.text).error.message).toBe('Request body too large');
   });
 
-  // Still streaming when the limit is reached, which is when reading with `for await` used to
-  // destroy the request — and with it the socket the answer had to be written to. The client saw
-  // a reset connection instead of a 413, depending on how its body happened to be split.
+  // Reading with `for await` destroys the request on an early return, and with it the socket the
+  // 413 has to be written to — so the client sees a reset connection instead of the answer.
   test('a body still arriving when it passes the limit is answered, not cut off', async () => {
     const { port } = server.address();
     const chunk = 'x'.repeat(256 * 1024);

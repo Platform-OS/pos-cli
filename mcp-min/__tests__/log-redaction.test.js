@@ -1,10 +1,7 @@
 /**
- * The log a running server actually writes.
- *
- * `redact.test.js` pins the rule; this pins that every path a client can reach goes through it —
- * the HTTP request logger, the deprecated `/call` route, and a tool that is handed a credential
- * as a parameter. Each case asserts the call really happened, so a test cannot pass by the
- * request having failed before anything was logged.
+ * The log a running server actually writes. `redact.test.js` pins the rule; this pins that every
+ * path a client can reach goes through it. Each case asserts the call really happened, so a test
+ * cannot pass by the request having failed before anything was logged.
  */
 import fs from 'fs';
 import http from 'http';
@@ -100,10 +97,9 @@ describe('the HTTP request logger', () => {
 });
 
 describe('tool parameters', () => {
-  // The deprecated pre-SDK route used to log params and results in full. Redaction covers the
-  // names it knows, but a tool's payload is the caller's shape — `constants-set` puts an
-  // instance's API keys under `value` — so the route logs which parameters arrived, not what
-  // was in them.
+  // Redaction covers the names it knows, but a tool's payload is the caller's shape —
+  // `constants-set` puts an instance's API keys under `value` — so the route logs which
+  // parameters arrived, not what was in them.
   test('are logged by name, with no value of any of them', async () => {
     const { dir, proc } = session('http-call-params', { DEBUG: '1' });
     try {
@@ -139,8 +135,8 @@ describe('tool parameters', () => {
 });
 
 describe('a tool handed a credential', () => {
-  // env-add logged its whole params object at INFO — written whether or not anyone asked for
-  // debug output — and that object carries an instance API token.
+  // env-add's params object carries an instance API token, and its INFO line is written whether
+  // or not anyone asked for debug output.
   test('env-add records that a token was given, never the token', async () => {
     const { dir, proc } = session('stdio-env-add');
     try {
@@ -204,7 +200,7 @@ describe('a tool handed a credential', () => {
 
 describe('the device-authorization flow', () => {
   // The Portal's token response *is* the credential, and its verification URL carries a one-time
-  // user code. Both used to be logged whole, the token response at DEBUG and the URL at INFO.
+  // user code.
   const DEVICE_CODE = 'device-code-998877665544332211';
   const ACCESS_TOKEN = 'sk-portal-112233445566778899';
   const USER_CODE = 'WXYZ-1234';
@@ -262,7 +258,7 @@ describe('the device-authorization flow', () => {
 
 describe('startup', () => {
   // The compile check probes every tool with `{}`, which rejects each one that requires a
-  // property. Logging those made DEBUG open with thirty lines that mean nothing.
+  // property; logging those would open DEBUG with thirty meaningless lines.
   test('does not report a rejection for every tool that has required parameters', async () => {
     const { dir, proc } = session('startup-noise', { DEBUG: '1' });
     try {

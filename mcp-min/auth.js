@@ -5,11 +5,8 @@ import { mask } from './redact.js';
 
 const settings = { settingsFromDotPos };
 
-/**
- * Mask a token for a result returned to the client — `meta.auth.token`, so a caller can tell which
- * credential was used. The log does its own masking (`redact.js`); this is the same rule, imported
- * rather than restated, so the two cannot disagree.
- */
+/** For `meta.auth.token`, so a caller can tell which credential was used. The log's rule, imported
+ * rather than restated, so the two cannot disagree. */
 export function maskToken(token) {
   if (!token) return token;
   return mask(token);
@@ -22,16 +19,10 @@ export function maskToken(token) {
  *   3. MPKIT_* environment variables
  *   4. First environment in .pos config
  *
- * A named environment beats MPKIT_*, and does not fall back to it: the caller said which
- * instance they meant, so resolving to a different one — silently, because the environment a
- * process inherited happens to name another — would be worse than the error. The order is the
- * contract, not an implementation detail: `mcp-min/__tests__/auth.env-resolve.test.js` pins each
- * step, and checks this list against what the function does.
+ * A named environment beats MPKIT_* and does not fall back to it: the caller said which instance
+ * they meant. The order is the contract — `__tests__/auth.env-resolve.test.js` pins each step and
+ * checks this list against what the function does.
  *
- * @param {object} params - Tool input params
- * @param {object} [ctx] - Optional context for dependency injection in tests
- * @param {object} [ctx.settings] - Override settings module
- * @param {object} [ctx.files] - Override files module
  * @returns {Promise<{url, email, token, source}>}
  */
 export async function resolveAuth(params, ctx = {}) {
@@ -43,20 +34,17 @@ export async function resolveAuth(params, ctx = {}) {
     return { url: params.url, email: params.email, token: params.token, source: 'params' };
   }
 
-  // Two of the three is a mistake worth reporting: it names an instance and then resolves a
-  // different one from `.pos`, so the call would quietly go somewhere the caller did not ask for.
+  // Two of the three would otherwise name one instance and resolve a different one from `.pos`.
   const explicit = ['url', 'email', 'token'].filter(name => params?.[name]);
   if (explicit.length > 0) {
     const missing = ['url', 'email', 'token'].filter(name => !params?.[name]);
     throw new Error(`Explicit credentials need url, email and token together; missing: ${missing.join(', ')}`);
   }
 
-  // Priority 2: Named .pos environment, read from `.pos` and nowhere else. `fetchSettings` —
-  // the CLI's resolver — answers from MPKIT_* first, which meant an MCP client naming an
-  // environment got whatever those variables pointed at, reported as the environment it asked
-  // for. The CLI keeps that order deliberately (CI exports MPKIT_* and names an environment on
-  // the command line); here the name is the instruction, so an unknown one is an error rather
-  // than a quiet redirect.
+  // Priority 2: read from `.pos` and nowhere else. `fetchSettings`, the CLI's resolver, answers
+  // from MPKIT_* first — deliberately, since CI exports those and names an environment on the
+  // command line — but here the name is the instruction, so an unknown one is an error rather
+  // than a quiet redirect to whatever those variables point at.
   if (params?.env) {
     const found = settingsModule.settingsFromDotPos(params.env);
     if (found?.url && found?.token) return { ...found, source: `.pos(${params.env})` };
@@ -81,16 +69,10 @@ export async function resolveAuth(params, ctx = {}) {
 }
 
 /**
- * Run an async function with MARKETPLACE_* environment variables set from auth,
- * restoring the original values afterwards.
+ * Run an async function with MARKETPLACE_* set from auth, restoring the originals afterwards.
  *
- * NOTE: This is not concurrency-safe. The MCP server is a local development tool
- * and concurrent tool invocations that both mutate env vars can interfere.
- * Prefer passing auth directly to lib functions where possible.
- *
- * @param {{url, email, token}} auth
- * @param {Function} fn - Async function to run with env vars set
- * @returns {Promise<*>}
+ * Not concurrency-safe: two tool calls that both do this can interfere. Prefer passing auth
+ * directly to lib functions where possible.
  */
 export async function runWithAuth(auth, fn) {
   const saved = {

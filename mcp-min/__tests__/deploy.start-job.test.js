@@ -73,7 +73,7 @@ afterEach(() => {
 
 describe('an empty archive', () => {
   // A release that is not partial is the whole intended state of the instance: uploading an empty
-  // archive asks it to delete every file it has. The check used to run after the upload.
+  // archive asks it to delete every file it has, so the check must precede the upload.
   test.each([
     ['nothing to archive', 0],
     ['an archive that was not built', false]

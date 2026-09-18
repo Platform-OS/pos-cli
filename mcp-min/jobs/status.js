@@ -1,10 +1,6 @@
 /**
- * `job-status`: one tool for every asynchronous operation the server starts.
- *
- * The five starters (deploy-start, data-import, data-export, data-clean, tests-run-async) return a
- * `job_id`; this reads it back. What differs per kind lives in `jobs/adapters/`, so the answer has
- * the same shape whatever was started: `state` is running, completed or failed, and `done` is
- * derived from it rather than reported separately by each kind.
+ * `job-status`: one tool for every asynchronous operation the server starts. What differs per kind
+ * lives in `jobs/adapters/`, so the answer has the same shape whatever was started.
  */
 import log from '../log.js';
 import Gateway from '../../lib/proxy.js';
@@ -17,14 +13,10 @@ import { parse } from './handle.js';
 import { authForJob } from './auth-for-job.js';
 import { JobNotFoundError } from './errors.js';
 
-// The upper bound the schema enforces on wait_ms. Shorter than the 120 s shutdown deadline is not
-// required — a wait that outlives the session is stopped by the signal, not by this number — but a
-// call that can never end is not something a client should be able to ask for.
 export const MAX_WAIT_MS = 120000;
 
-// While waiting: 1 s between polls at first, easing off to 5 s, as lib/deploy/waitForAssetReport.js
-// does. getStatus returns the whole release record, so a flat 1 s over two minutes refetches and
-// reparses it 120 times for a job that will not have changed.
+// 1 s between polls at first, easing off to 5 s, as lib/deploy/waitForAssetReport.js does:
+// getStatus returns the whole release record, and a flat 1 s refetches it 120 times per wait.
 const POLL_INTERVAL_MS = 1000;
 const BACKOFF_AFTER = 10;
 const BACKOFF_CAP = 5;
@@ -33,14 +25,12 @@ const intervalFor = (poll, base) => base * Math.min(2 ** Math.max(0, poll - BACK
 const failure = (code, message, details) => ({ ok: false, error: { code, message, ...(details && { details }) } });
 
 /**
- * Whether a failed status request says anything about the job. A refused connection or a 5xx does
- * not — the job is still there — so while there is still time to wait, it is worth asking again.
- * The same two `lib/push.js` retries when it polls a deploy, and no more than those: a defect in
- * our own code throws a TypeError, and retrying that for the whole wait would hide it.
+ * A refused connection or a 5xx says nothing about the job, so while there is time left it is
+ * worth asking again. The same two `lib/push.js` retries, and no more: retrying our own TypeError
+ * for a whole wait would hide it.
  */
 const isTransient = err => err?.name === 'RequestError' || err?.statusCode >= 500;
 
-/** What the instance said, when it said anything: the code and the body it answered with. */
 const apiDetails = err => (err?.statusCode
   ? { statusCode: err.statusCode, body: err.response?.body }
   : undefined);
@@ -69,13 +59,13 @@ const jobStatusTool = {
     let auth;
     try {
       // Before any request: a handle for another instance must not be answered with this one's
-      // status for the same number.
+      // status for the same id.
       const resolution = await authForJob(job, params, ctx);
       if (resolution.mismatch) return failure('JOB_INSTANCE_MISMATCH', `${resolution.mismatch.message}.`);
       auth = resolution.auth;
     } catch (e) {
-      // Name the instance the job needs: "no credentials configured" is not much help when the
-      // question is which environment to add.
+      // Name the instance the job needs: "no credentials configured" does not say which
+      // environment to add.
       return failure('AUTH_ERROR', `${String(e.message || e)}. The job was started on ${job.origin}`);
     }
 
@@ -90,8 +80,7 @@ const jobStatusTool = {
     };
 
     const deadline = Date.now() + (Number.isInteger(params?.wait_ms) ? params.wait_ms : 0);
-    // A seam, like ctx.Gateway and ctx.request: the tests drive the interval rather than sleep
-    // through it. Nothing but a test ever sets it.
+    // A seam, like ctx.Gateway and ctx.request: tests drive the interval rather than sleep it.
     const pollInterval = ctx.pollIntervalMs ?? POLL_INTERVAL_MS;
     const meta = () => ({
       startedAt,
@@ -109,8 +98,8 @@ const jobStatusTool = {
         if (e instanceof JobNotFoundError) return failure('JOB_NOT_FOUND', `${e.message}.`);
         log.debug('tool:job-status poll failed', { kind: job.kind, error: String(e) });
 
-        // Outside a wait there is nothing to retry into, so the error is the answer; inside one,
-        // a blip that ends a two-minute wait early would be the wrong answer to give.
+        // Outside a wait there is nothing to retry into; inside one, a blip should not end a
+        // two-minute wait early.
         if (!isTransient(e) || Date.now() >= deadline) {
           return failure('JOB_STATUS_ERROR', String(e.message || e), apiDetails(e));
         }

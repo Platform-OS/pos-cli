@@ -26,8 +26,8 @@ addToolSelectionOptions(program
   .description('Display which tools the MCP server exposes, and why the others are not exposed')
   .option('--json', 'Output raw JSON'))
   .action(async (opts) => {
-    // The same resolution the server runs at startup, so this prints what `pos-cli-mcp` with
-    // these options would serve — and refuses what it would refuse, with the same message.
+    // The same resolution the server runs at startup, so this prints — and refuses — exactly what
+    // `pos-cli-mcp` with these options would.
     let selection;
     try {
       selection = selectTools(selectionFrom(opts));

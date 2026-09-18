@@ -1,9 +1,6 @@
 /**
- * Built-in tool profiles: named starting sets for `--profile`.
- *
- * Kept free of imports so the argument parser can list them without loading the tool registry.
- * Membership is by name; the order clients see is always registry order, never the order
- * written here.
+ * Named starting sets for `--profile`. Kept free of imports so the argument parser can list them
+ * without loading the tool registry; the order clients see is always registry order.
  */
 
 export const DEFAULT_PROFILE = 'full';
@@ -19,16 +16,15 @@ const DEV_TOOLS = Object.freeze([
   'deploy-start',
   'unit-tests-run',
   'tests-run-async',
-  // One tool for every async operation's status, in place of deploy-status, deploy-wait and
-  // tests-run-async-result — which stay in `full`, deprecated, until the next major.
+  // Replaces deploy-status, deploy-wait and tests-run-async-result, which stay in `full`,
+  // deprecated, until the next major.
   'job-status'
 ]);
 
 // A Map so that a profile name from the command line (`constructor`, `__proto__`…) can only
 // match a profile defined here.
 const PROFILES = new Map([
-  // Every registered tool, computed rather than listed, so a new tool reaches `full` without
-  // an edit here. The default: bare `pos-cli-mcp` exposes what it always has.
+  // Computed, so a new tool reaches `full` without an edit here.
   ['full', { summary: 'every tool (the default)', tools: registered => [...registered] }],
   ['dev', { summary: DEV_TOOLS.join(', '), tools: () => [...DEV_TOOLS] }],
   // Empty, so that `--profile none --include-tools a,b` is a pure allowlist.
@@ -42,13 +38,7 @@ export function describeProfiles() {
   return [...PROFILES].map(([name, { summary }]) => ({ name, summary }));
 }
 
-/**
- * The names a profile starts from, or undefined when there is no such profile.
- *
- * @param {string} name
- * @param {Iterable<string>} registeredNames
- * @returns {string[]|undefined}
- */
+/** The names a profile starts from, or undefined when there is no such profile. */
 export function profileTools(name, registeredNames) {
   return PROFILES.get(name)?.tools(registeredNames);
 }

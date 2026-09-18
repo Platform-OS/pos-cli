@@ -1,10 +1,8 @@
 /**
- * Credentials for the instance a job was started on.
- *
- * A job_id carries the origin it was started on, and `env` is optional on every tool, so polling
+ * Credentials for the instance a job was started on. `env` is optional on every tool, so polling
  * without one lands on the first `.pos` entry — which answers about *its* deploy 41, not the one
- * asked about. The origin in the handle is only ever compared, never used to build a request: it
- * arrives through the model, and a forged one must not be able to point credentials anywhere.
+ * asked about. The origin in the handle is only ever compared, never used to build a request: a
+ * forged one must not be able to point credentials anywhere.
  */
 import files from '../../lib/files.js';
 import { resolveAuth } from '../auth.js';
@@ -18,12 +16,7 @@ function environmentsFor(origin, conf) {
   return Object.entries(Object(conf)).filter(([, settings]) => originOf(settings?.url) === origin);
 }
 
-/**
- * @param {{ origin: string }} job - the parsed handle
- * @param {object} params - the tool's params
- * @param {object} [ctx]
- * @returns {Promise<{ auth: object } | { mismatch: { resolved: string, message: string } }>}
- */
+/** @returns {Promise<{ auth: object } | { mismatch: { resolved: string, message: string } }>} */
 export async function authForJob(job, params, ctx = {}) {
   const auth = await resolveAuth(params, ctx);
   const resolved = originOf(auth.url);

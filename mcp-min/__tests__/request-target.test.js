@@ -1,14 +1,8 @@
 /**
- * Where a tool's request goes.
- *
- * The destination comes from the resolved credentials and from nothing else. An `endpoint`
- * argument used to replace it while the `.pos` token was still sent, so a caller naming any host
- * was handed this machine's platformOS credentials — and on MCP that caller is a model choosing a
- * value from whatever it has just read.
- *
- * The explicit-credentials trio (`url` + `email` + `token`, `mcp-min/schemas/auth.js`) is the one
- * legitimate way to aim a call elsewhere: the caller supplies the credential along with the host,
- * so nothing of this machine's leaves with it.
+ * A tool's request goes where the resolved credentials say and nowhere else — on MCP the caller is
+ * a model choosing a value from whatever it has just read. The explicit-credentials trio
+ * (`mcp-min/schemas/auth.js`) is the one legitimate way to aim a call elsewhere, because there the
+ * caller supplies the credential along with the host.
  */
 import fs from 'fs';
 import path from 'path';
@@ -28,7 +22,7 @@ const REDIRECTING_NAMES = [
 
 const normalise = name => name.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-/** The five that carried `endpoint`, with a call that reaches the Gateway. */
+// A call that reaches the Gateway, for each tool that used to carry `endpoint`.
 const REDIRECTABLE_TOOLS = [
   ['liquid-exec', { template: '{{ 1 }}' }],
   ['graphql-exec', { query: '{ __typename }' }],
@@ -76,8 +70,7 @@ describe('a call that names another host', () => {
     expect(rejection.message).toContain('endpoint');
   });
 
-  // The schema already refuses it; this is the second lock — the handler ignores the argument even
-  // if something ever hands it through.
+  // Second lock: the handler ignores the argument even if something hands it through.
   test.each(REDIRECTABLE_TOOLS)('%s still talks to the resolved instance if one reaches the handler', async (name, params) => {
     const constructedWith = [];
     const gatewayCall = vi.fn(async () => ({}));
@@ -101,8 +94,7 @@ describe('a call that names another host', () => {
 });
 
 describe('the explicit-credentials path still works', () => {
-  // Removing `endpoint` must not have taken the supported way of calling another instance with
-  // it: there the caller brings the credential, so this machine's token stays put.
+  // Removing `endpoint` must not take the supported way of calling another instance with it.
   test('url + email + token sends the caller\'s own credential to the host they named', async () => {
     const constructedWith = [];
     class Gateway {

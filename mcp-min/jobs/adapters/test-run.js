@@ -1,10 +1,6 @@
 /**
  * An async test run. `/_tests/results/:id` is not an app_builder endpoint, so this adapter takes
  * the request function rather than the Gateway.
- *
- * A run whose assertions failed is `completed`, not `failed`: the job did what it was asked to.
- * `failed` is kept for the runner itself going down, which is the one case where the answer says
- * nothing about the code under test.
  */
 import { JobNotFoundError } from '../errors.js';
 import { normalizeResult, resultsUrl, runState } from '../../tests/result.js';

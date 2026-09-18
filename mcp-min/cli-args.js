@@ -1,18 +1,15 @@
 /**
- * Command-line parsing for `pos-cli-mcp` / `pos-cli mcp`, done before the server is started.
+ * Command-line parsing for `pos-cli-mcp` / `pos-cli mcp`, done before the server starts.
  *
- * Strict on purpose. An argument the server does not understand stops it with a message
- * instead of being ignored: `pos-cli mcp --help` and `pos-cli help mcp` used to start a
- * server that never exited, and the tool-selection options decide which tools are exposed, so
- * a mistyped one must not silently expose all of them — the same reasoning as the fail-closed
- * tools config. The names given to those options are checked when they are resolved against
- * the registry (tool-selection.js); this module only settles their syntax.
+ * Strict on purpose: an unknown argument stops the server rather than being ignored (`pos-cli mcp
+ * --help` used to start a server that never exited), and a mistyped selection option must not
+ * silently expose every tool. Only syntax here; the names are resolved in tool-selection.js.
  */
 import { Command, InvalidArgumentError } from 'commander';
 import { SHUTDOWN_DEADLINE_MS } from './lifecycle.js';
 import { DEFAULT_PROFILE, describeProfiles } from './profiles.js';
 
-// Wraps a comma-separated summary under a hanging indent, so a long profile stays readable.
+// Hanging indent, so a long profile summary stays readable.
 const wrap = (text, indent, width = 80) => {
   const lines = [''];
   for (const word of text.split(' ')) {
@@ -69,12 +66,7 @@ const toolNames = (value, previous = []) => {
   return [...previous, ...names];
 };
 
-/**
- * The tool-selection options, shared by `pos-cli-mcp` and `pos-cli-mcp-config` so that both
- * accept exactly the same spellings.
- *
- * @param {import('commander').Command} command
- */
+/** Shared by `pos-cli-mcp` and `pos-cli-mcp-config`, so both accept the same spellings. */
 export function addToolSelectionOptions(command) {
   return command
     .option('--profile <name>', `starting set of tools (default: ${DEFAULT_PROFILE})`, profileName)
@@ -89,12 +81,7 @@ export function selectionFrom(opts) {
 
 /**
  * @param {string[]} argv - arguments after the executable, e.g. process.argv.slice(2)
- * @param {object} options
- * @param {string} options.version - printed by -v/--version
- * @param {(text: string) => void} [options.writeOut] - help and version
- * @param {(text: string) => void} [options.writeErr] - errors
- * @returns {{ start: true, http: boolean, selection: { profile?: string, include: string[], exclude: string[] } }
- *   | { start: false, exitCode: number }}
+ * @returns {{ start: true, http: boolean, selection: object } | { start: false, exitCode: number }}
  */
 export function parseServerArgs(argv, {
   version,

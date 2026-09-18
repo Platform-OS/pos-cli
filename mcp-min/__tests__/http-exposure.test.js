@@ -31,13 +31,7 @@ const lanAddress = Object.values(os.networkInterfaces())
 
 const NO_LAN_REASON = 'skipped: this machine has no non-loopback IPv4 interface';
 
-/**
- * @param {number} port
- * @param {object} req
- * @param {string} [req.host] - Host header value; omitted entirely when null (HTTP/1.0 only)
- * @param {Record<string,string>} [req.headers]
- * @param {string|object} [req.body] - objects are JSON-encoded
- */
+// `host: null` omits the Host header entirely (HTTP/1.0 only); an object `body` is JSON-encoded.
 function rawRequest(port, { method = 'GET', path = '/', host, headers = {}, body, httpVersion = '1.1' } = {}) {
   return new Promise((resolve, reject) => {
     const payload = body === undefined ? '' : typeof body === 'string' ? body : JSON.stringify(body);
@@ -302,7 +296,6 @@ describe('default server', () => {
     test.each(REJECTIONS)('JSON-RPC tools/call data-clean with $name', async (rejection) => {
       const res = await rawRequest(port, { ...rejection.request(port), method: 'POST', path: '/call-stream', body: CLEAN_RPC });
 
-      // The tool is checked first: that nothing ran is the property, the 403 is how it is reported.
       expect(handler).not.toHaveBeenCalled();
       expect(resolveAuth).not.toHaveBeenCalled();
       expectForbidden(res, rejection.message);
@@ -318,13 +311,12 @@ describe('default server', () => {
         const extra = rejection.request(port);
         const res = await rawRequest(port, { ...extra, headers: { ...headers, ...extra.headers }, method: 'POST', path: '/mcp', body });
 
-        // The tool is checked first: that nothing ran is the property, the 403 is how it is reported.
         expect(handler).not.toHaveBeenCalled();
         expect(resolveAuth).not.toHaveBeenCalled();
         expectForbidden(res, rejection.message);
       });
 
-      // The spies are wired to what /mcp actually calls.
+      // Without this, the assertions above would pass with spies wired to nothing.
       test('control: from an allowed origin it reaches the handler and resolves credentials', async () => {
         vi.mocked(resolveAuth).mockRejectedValueOnce(new Error('stopped before any network call'));
 
@@ -337,8 +329,7 @@ describe('default server', () => {
       });
     });
 
-    // Without this, the two assertions above would also pass if the spies were not wired to
-    // what the server actually calls.
+    // Without this, the assertions above would pass with spies wired to nothing.
     test('control: the same request from an allowed origin reaches the handler and resolves credentials', async () => {
       vi.mocked(resolveAuth).mockRejectedValueOnce(new Error('stopped before any network call'));
 
@@ -409,9 +400,8 @@ describe('startHttp', () => {
   });
 });
 
-// The SSE session id is what separates one client's stream from another's on a port with no
-// authentication, so it is minted here and never taken from the request: a caller supplying one
-// would otherwise register its stream under a name of its choosing, or over someone else's.
+// The session id separates one client's stream from another's on a port with no authentication:
+// a caller supplying its own could register a stream under any name, or over someone else's.
 describe('SSE session ids are the server\'s to choose', () => {
   test('a client-supplied Mcp-Session-Id is ignored', async () => {
     const server = await startHttp({ port: 0, tools: defaultTools() });

@@ -40,8 +40,8 @@ describe('the deprecation is visible to a client', () => {
 });
 
 describe('deploy-wait no longer returns in the middle of a deploy', () => {
-  // The defect: it kept polling only on `ready_for_import`, so the API's other running status,
-  // `in_progress`, was read as finished and reported ok:true mid-deploy.
+  // `in_progress` is a running status too: polling only on `ready_for_import` reports ok:true
+  // mid-deploy.
   test('a deploy that goes ready_for_import → in_progress → success is waited out', async () => {
     const seq = ['ready_for_import', 'in_progress', 'in_progress', 'success'];
     const getStatus = vi.fn(async () => ({ status: seq[Math.min(getStatus.mock.calls.length, seq.length) - 1] }));

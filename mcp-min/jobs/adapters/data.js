@@ -1,6 +1,6 @@
 /**
- * The three data jobs (import, export, clean) read their status the same way: one Gateway call,
- * a status that is either a string or `{ name }`, and the same vocabulary.
+ * The three data jobs (import, export, clean) read their status the same way: one Gateway call and
+ * a status that is either a string or `{ name }`.
  */
 import log from '../../log.js';
 
@@ -12,7 +12,7 @@ const STATES = Object.freeze({
   failed: 'failed'
 });
 
-/** The status the instance reports, whichever shape it uses. */
+/** Whichever shape the instance used. */
 export const statusOf = response => response?.status?.name ?? response?.status;
 
 // A wait polls every second or so; the same unknown status is worth saying once, not thirty times.

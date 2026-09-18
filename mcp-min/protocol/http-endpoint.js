@@ -2,13 +2,11 @@
  * `/mcp`: MCP Streamable HTTP, served by the SDK's web-standard handler (`fetch(Request)` →
  * `Response`) for 2026-07-28 clients and, statelessly, for 2025-era clients.
  *
- * The SDK leaves mounting on Node to an adapter package built on Hono. The bridge needs only
- * what is below, so this server keeps one web framework: the Express request becomes a web
- * `Request`, the `Response` is written back, and a client that goes away before the response
- * is complete aborts the request — which is how a tool learns the call was cancelled.
+ * The SDK leaves mounting on Node to a Hono adapter; the bridge needs only what is below, so this
+ * server keeps one web framework. A client that goes away before the response is complete aborts
+ * the request, which is how a tool learns the call was cancelled.
  *
- * Host/Origin validation is not done here: http-server.js runs it for every route, this one
- * included, before any handler.
+ * Host/Origin validation runs in http-server.js, before any handler here.
  */
 import { Readable, pipeline } from 'stream';
 import { createMcpHandler } from '@modelcontextprotocol/server';
@@ -24,10 +22,8 @@ const jsonRpcError = (res, status, message) =>
 /**
  * Reads the whole body, or resolves null as soon as it grows past the limit.
  *
- * Read with events rather than `for await`, whose early return destroys the request — and with it
- * the socket the 413 still has to be written to. A body that arrives in chunks (no
- * `content-length` to pre-check) took that path, so the client saw a reset connection instead of
- * an answer, and only sometimes, depending on how the body was split.
+ * Events rather than `for await`, whose early return destroys the request — and with it the socket
+ * the 413 still has to be written to.
  */
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
@@ -59,8 +55,7 @@ function readBody(req, limit) {
   });
 }
 
-// A `subscriptions/listen` stream stays open until the client leaves, so shutdown has to end it;
-// every other exchange ends with its response and is left to finish.
+// A `subscriptions/listen` stream stays open until the client leaves, so shutdown has to end it.
 function opensSubscription(body) {
   try {
     const parsed = JSON.parse(body.toString('utf8'));
@@ -80,11 +75,8 @@ function toWebHeaders(nodeHeaders) {
 }
 
 /**
- * @param {object} options
- * @param {Map<string, object>} options.tools - the exposed tools
  * @param {(res: import('express').Response) => void} options.trackStream - registers a response
  *   that only shutdown can end
- * @returns {import('express').RequestHandler}
  */
 export function createMcpEndpoint({ tools, trackStream }) {
   const handler = createMcpHandler(createServerFactory(tools, { transport: 'http' }), {

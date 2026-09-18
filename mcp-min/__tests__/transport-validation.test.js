@@ -46,8 +46,7 @@ const post = (path, body) =>
 // No .pos fixture on purpose: every assertion here is about params being rejected before
 // a handler runs, and writing .pos into the working directory races other suites.
 beforeAll(async () => {
-  // Port 0 lets the OS assign a free one, which removes the collision this suite previously
-  // risked with a hardcoded 5931.
+  // Port 0: a hardcoded port collides with whatever else is running, this suite included.
   server = await startHttp({ port: 0, tools: defaultTools() });
   PORT = server.address().port;
 });
@@ -253,8 +252,8 @@ describe('an uncompilable tool schema', () => {
   });
 });
 
-// Invoking a tool by naming it as the method (`{"method":"envs-list"}`) predates MCP and was
-// removed with the move to the SDK: over stdio only MCP methods are served.
+// Invoking a tool by naming it as the method (`{"method":"envs-list"}`) predates MCP: over stdio
+// only MCP methods are served.
 describe('stdio direct method invocation', () => {
   test('is answered as an unknown method, and the tool does not run', async () => {
     const response = await runStdio({ jsonrpc: '2.0', id: 5, method: 'envs-list', params: {} });

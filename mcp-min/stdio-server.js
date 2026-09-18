@@ -10,12 +10,10 @@ import log from './log.js';
 // speaks 2026-07-28, one opening with `initialize` gets the 2025 revision it asks for.
 
 /**
- * @param {object} options
- * @param {Map<string, object>} options.tools - the exposed tools (selectTools().tools); no
- *   default, so a caller cannot end up serving every tool by leaving it out
- * @param {ReturnType<typeof createShutdown>} [options.shutdown] - shared with the other
- *   transports so that the client closing stdin stops all of them; a server started on its
- *   own gets one that only has stdio to stop
+ * @param {Map<string, object>} options.tools - the exposed tools; no default, so a caller cannot
+ *   serve every tool by leaving it out
+ * @param {ReturnType<typeof createShutdown>} [options.shutdown] - shared with the other transports,
+ *   so the client closing stdin stops all of them
  */
 export default function startStdio({ tools, shutdown = createShutdown() } = {}) {
   if (!(tools instanceof Map)) throw new TypeError('startStdio: tools must be the Map of exposed tools');
@@ -24,9 +22,8 @@ export default function startStdio({ tools, shutdown = createShutdown() } = {}) 
 
   const stdin = process.stdin;
 
-  // The SDK does not end the connection when stdin ends: calls already running still write
-  // their responses. When the session is over is decided here, by TASK-14's rule. The SDK
-  // handle is deliberately never closed on shutdown — that would abort those calls.
+  // The SDK does not end the connection when stdin ends, so calls already running still write
+  // their responses; its handle is deliberately never closed on shutdown, which would abort them.
   serveStdio(factory, {
     legacy: 'serve',
     transport: new StdioServerTransport(stdin, process.stdout),
@@ -34,7 +31,7 @@ export default function startStdio({ tools, shutdown = createShutdown() } = {}) 
   });
 
   // Attached in the same tick as the SDK's own reader, before stdin can flow, so no input goes
-  // unseen. Anything but whitespace counts as the client having used stdio.
+  // unseen.
   let receivedInput = false;
   const onData = (chunk) => {
     if (!/\S/.test(chunk)) return;
@@ -56,7 +53,6 @@ export default function startStdio({ tools, shutdown = createShutdown() } = {}) 
   stdin.once('end', onEnd);
   stdin.once('close', onEnd);
 
-  // Exit cleanly when the MCP client disconnects (closes the pipe)
   process.stdout.on('error', (err) => {
     if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
       log.debug('stdout pipe closed, exiting');
@@ -66,7 +62,6 @@ export default function startStdio({ tools, shutdown = createShutdown() } = {}) 
   });
 }
 
-// Parse --cwd or -C argument
 function parseCwd(argv) {
   for (let i = 2; i < argv.length; i++) {
     if ((argv[i] === '--cwd' || argv[i] === '-C') && argv[i + 1]) {
@@ -79,7 +74,7 @@ function parseCwd(argv) {
   return null;
 }
 
-// Auto-start when executed directly (node mcp-min/stdio-server.js)
+// Auto-start when executed directly (node mcp-min/stdio-server.js).
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   const cwd = parseCwd(process.argv);

@@ -91,14 +91,11 @@ describe('validateToolParams', () => {
   });
 });
 
-// resolveAuth (mcp-min/auth.js) resolves credentials in this order: explicit
-// url+email+token params, then the named `.pos` environment, then MPKIT_* env vars, then
-// the first `.pos` entry. A schema that made `env` mandatory would reject three of those
-// four supported call styles.
+// resolveAuth has four supported call styles and only one of them names `env`, so a schema that
+// made it mandatory would reject the other three.
 describe('authentication params stay accepted', () => {
-  // Derived from the source rather than hand-listed: a tool added later is covered the
-  // moment it calls resolveAuth. A hand-written list silently stopped guarding tools it
-  // did not happen to name.
+  // Derived from the source rather than hand-listed, so a tool added later is covered the moment
+  // it calls resolveAuth.
   const authenticatingFiles = authFileList;
 
   test('the scan finds the authenticating tools', () => {
@@ -139,11 +136,9 @@ describe('authentication params stay accepted', () => {
     'sync-file': { filePath: 'app/views/a.liquid' }
   };
 
-  // Registry entries whose schema is the one exported by an authenticating file. Matched
-  // on the inputSchema object rather than the tool object, because an exposed tool is a copy
-  // when the tools config overrides its description, and the copy keeps the same schema.
-  // A name-based heuristic would wrongly sweep in portal tools like env-add, whose
-  // `token` parameter is data it sends rather than credentials it authenticates with.
+  // Matched on the inputSchema object, not the tool object: an exposed tool is a copy when the
+  // tools config overrides its description, and the copy keeps the same schema. A name-based
+  // heuristic would sweep in env-add, whose `token` is data it sends, not credentials.
   const authSchemas = new Set(authTools.map(tool => tool?.inputSchema).filter(Boolean));
   const registeredAuthTools = [...registry].filter(([, tool]) => authSchemas.has(tool.inputSchema)).map(([name]) => name);
 
@@ -164,8 +159,8 @@ describe('authentication params stay accepted', () => {
   });
 });
 
-// The branch relaxed `required` on these two so the schema matches what the handler
-// actually needs; without an assertion the relaxation could be reverted unnoticed.
+// `required` on these two matches what the handler actually needs; without an assertion the
+// relaxation could be reverted unnoticed.
 describe('required relaxations', () => {
   test('data-validate requires nothing: validation runs locally and env is context only', () => {
     expect(registry.get('data-validate').inputSchema.required).toBeUndefined();
@@ -187,9 +182,8 @@ describe('required relaxations', () => {
   });
 });
 
-// logs-fetch documents `lastId` as the cursor to hand back on the next call, so what it
-// returns has to satisfy the schema it accepts. It previously returned a string while the
-// schema demanded an integer, which broke paging with -32602.
+// logs-fetch documents `lastId` as the cursor to hand back on the next call, so what it returns
+// has to satisfy the schema it accepts, or paging fails with -32602.
 describe('logs-fetch cursor round-trips', () => {
   test('the returned cursor is accepted as the next request cursor', async () => {
     const rows = [{ id: 41, message: 'a' }, { id: 42, message: 'b' }];

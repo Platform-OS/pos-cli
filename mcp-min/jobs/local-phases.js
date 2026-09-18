@@ -1,26 +1,17 @@
 /**
  * Asset uploads this process started, so `job-status` can say a deploy is not finished while its
- * assets are still going up.
- *
- * `deploy-start` returns as soon as the release is accepted and finishes the asset upload in the
- * background, which the instance knows nothing about until the manifest arrives. Only the process
- * that started an upload can report it, so a server restarted in between reports `unknown` rather
- * than claiming the deploy is done.
+ * assets are still going up. `deploy-start` returns as soon as the release is accepted, and the
+ * instance knows nothing of the upload until the manifest arrives — so only the process that
+ * started one can report it, and a server restarted in between reports `unknown`.
  */
 
-// origin + release id → { phase: 'uploading' | 'done' | 'failed', error? }. Bounded: a deploy is
-// minutes, and a process serves one developer, but a long-lived HTTP server would otherwise grow
-// forever.
+// origin + release id → { phase: 'uploading' | 'done' | 'failed', error? }, bounded so a
+// long-lived HTTP server does not grow forever.
 export const MAX_TRACKED = 200;
 const phases = new Map();
 
 const key = (origin, releaseId) => `${origin}#${releaseId}`;
 
-/**
- * @param {string} origin
- * @param {string|number} releaseId
- * @param {Promise<unknown>} upload - the background asset upload
- */
 export function trackUpload(origin, releaseId, upload) {
   const id = key(origin, releaseId);
   phases.set(id, { phase: 'uploading' });
@@ -28,8 +19,8 @@ export function trackUpload(origin, releaseId, upload) {
 
   return upload.then(
     () => phases.set(id, { phase: 'done' }),
-    // The reason, not just the fact: `deployAssets` can fail at packing, at S3, at the manifest or
-    // at the CDN wait, and "it failed" sends the agent looking in the wrong place.
+    // The reason, not just the fact: `deployAssets` can fail at packing, at S3, at the manifest
+    // or at the CDN wait.
     err => phases.set(id, { phase: 'failed', error: String(err?.message || err) })
   );
 }
