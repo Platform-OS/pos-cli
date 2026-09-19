@@ -5,7 +5,7 @@
  * model has never seen. These drive whole tools through `runTool`, the way both transports do, so
  * what is checked is the policy the invoker derives and not the helper in isolation.
  */
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import registry from '../tools.js';
 import { runTool } from '../run-tool.js';
 import { resolveAuth } from '../auth.js';
@@ -20,6 +20,27 @@ const Reaches = class {
   constructor() { return new Proxy(this, { get: () => async () => ({}) }); }
 };
 
+/**
+ * MPKIT_* is resolution step 3 and this guard is on step 4, so a machine with those variables set
+ * never reaches the guard at all — which is correct behaviour and useless for testing it. CI sets
+ * them; three tests here were written without clearing them and passed only on a laptop that had
+ * none. Cleared for every test in the file, and restored, rather than at each call site.
+ */
+const MPKIT = ['MPKIT_URL', 'MPKIT_EMAIL', 'MPKIT_TOKEN'];
+let savedMpkit;
+
+beforeEach(() => {
+  savedMpkit = Object.fromEntries(MPKIT.map(name => [name, process.env[name]]));
+  for (const name of MPKIT) delete process.env[name];
+});
+
+afterEach(() => {
+  for (const [name, value] of Object.entries(savedMpkit)) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
+});
+
 const context = (config = TWO_ENVIRONMENTS) => ({
   files: { getConfig: () => config, getAssets: async () => [], getIgnoreList: () => [] },
   settings: { settingsFromDotPos: name => config[name] },
@@ -33,17 +54,8 @@ const context = (config = TWO_ENVIRONMENTS) => ({
  * tool and seeing which ones resolve credentials at all — a source scan would miss `job-status`,
  * which reaches `resolveAuth` through `authForJob`.
  */
-const callWithNothing = async (name, config = TWO_ENVIRONMENTS) => {
-  const env = { ...process.env };
-  delete process.env.MPKIT_URL;
-  delete process.env.MPKIT_EMAIL;
-  delete process.env.MPKIT_TOKEN;
-  try {
-    return await runTool(registry.get(name), {}, context(config));
-  } finally {
-    Object.assign(process.env, env);
-  }
-};
+const callWithNothing = (name, config = TWO_ENVIRONMENTS) =>
+  runTool(registry.get(name), {}, context(config));
 
 // Kept out of the sweep below, which calls each tool and looks at what came back. These would
 // lint, archive or walk the repository if one ever got past the guard, and a test must not depend
@@ -93,17 +105,9 @@ describe('the tools that would do the most damage on the wrong instance', () => 
     ['uploads-push', { filePath: 'uploads.zip' }],
     ['sync-file', { filePath: 'app/views/pages/index.liquid' }]
   ])('%s refuses rather than guessing an instance', async (name, params) => {
-    const env = { ...process.env };
-    delete process.env.MPKIT_URL;
-    delete process.env.MPKIT_EMAIL;
-    delete process.env.MPKIT_TOKEN;
-    try {
-      const result = await runTool(registry.get(name), params, context());
+    const result = await runTool(registry.get(name), params, context());
 
-      expect(result).toMatchObject({ ok: false, error: { kind: 'input', code: 'ENV_REQUIRED' } });
-    } finally {
-      Object.assign(process.env, env);
-    }
+    expect(result).toMatchObject({ ok: false, error: { kind: 'input', code: 'ENV_REQUIRED' } });
   });
 });
 

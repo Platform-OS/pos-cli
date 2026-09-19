@@ -115,3 +115,32 @@ describe('server mode keeps stdout for the protocol', () => {
     expect(consoleLog.mock.calls.flat().join('')).toContain('a message');
   });
 });
+
+/**
+ * Which backend `lib/logger.js` loads depends on NO_COLOR and CI, read once at import. The two
+ * have to be indistinguishable from outside, or a suite passes on a laptop and fails in CI for a
+ * reason that has nothing to do with what it was testing — which is exactly what happened: the
+ * test above spies on `console.log`, and `simple.js` used to bind `console.log` at import time, so
+ * under CI the spy saw nothing while the output still went to stdout.
+ */
+describe('both logger backends are observable the same way', () => {
+  test.each(['../../lib/logger/simple.js', '../../lib/logger/rainbow.js'])(
+    '%s calls through to console when it runs, not at import',
+    async (module) => {
+      const backend = await import(module);
+      const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      try {
+        backend.Info('to stdout');
+        backend.Warn('to stderr');
+
+        expect(consoleLog.mock.calls.flat().join('')).toContain('to stdout');
+        expect(consoleError.mock.calls.flat().join('')).toContain('to stderr');
+      } finally {
+        consoleLog.mockRestore();
+        consoleError.mockRestore();
+      }
+    }
+  );
+});
