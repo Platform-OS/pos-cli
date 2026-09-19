@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 
 import envAddTool from '../portal/env-add.js';
+import { runTool } from '../run-tool.js';
 
 describe('env-add', () => {
   let tempDir;
@@ -22,7 +23,7 @@ describe('env-add', () => {
 
   describe('direct token', () => {
     test('adds environment with provided token', async () => {
-      const res = await envAddTool.handler({
+      const res = await runTool(envAddTool, {
         environment: 'staging',
         url: 'https://my-app.example.com',
         token: 'direct-token-123'
@@ -40,7 +41,7 @@ describe('env-add', () => {
     });
 
     test('adds trailing slash to URL', async () => {
-      const res = await envAddTool.handler({
+      const res = await runTool(envAddTool, {
         environment: 'prod',
         url: 'https://example.com',
         token: 'token123'
@@ -56,7 +57,7 @@ describe('env-add', () => {
         existing: { url: 'https://existing.com/', token: 'old-token' }
       }));
 
-      const res = await envAddTool.handler({
+      const res = await runTool(envAddTool, {
         environment: 'staging',
         url: 'https://new.com',
         token: 'new-token'
@@ -70,7 +71,7 @@ describe('env-add', () => {
     });
 
     test('includes email and partner_portal_url when provided', async () => {
-      const res = await envAddTool.handler({
+      const res = await runTool(envAddTool, {
         environment: 'staging',
         url: 'https://example.com',
         token: 'token123',
@@ -88,7 +89,7 @@ describe('env-add', () => {
 
   describe('URL validation', () => {
     test('rejects invalid URL', async () => {
-      const res = await envAddTool.handler({
+      const res = await runTool(envAddTool, {
         environment: 'staging',
         url: 'not-a-valid-url',
         token: 'token123'
@@ -111,7 +112,7 @@ describe('env-add', () => {
         })
       });
 
-      const res = await envAddTool.handler(
+      const res = await runTool(envAddTool, 
         { environment: 'staging', url: 'https://my-app.example.com' },
         { fetch: mockFetch }
       );
@@ -134,7 +135,7 @@ describe('env-add', () => {
         text: () => Promise.resolve('Not found')
       });
 
-      const res = await envAddTool.handler(
+      const res = await runTool(envAddTool, 
         { environment: 'staging', url: 'https://unregistered.example.com' },
         { fetch: mockFetch }
       );
@@ -161,7 +162,7 @@ describe('env-add', () => {
       // Mock storeEnvironment to verify it's called
       const storeEnvironment = vi.fn();
 
-      const res = await envAddTool.handler(
+      const res = await runTool(envAddTool, 
         { environment: 'staging', url: 'https://my-app.example.com', timeout_seconds: 2 },
         {
           fetch: async (url, opts) => {
@@ -215,7 +216,7 @@ describe('env-add', () => {
 
   describe('meta timestamps', () => {
     test('includes timestamps in response', async () => {
-      const res = await envAddTool.handler({
+      const res = await runTool(envAddTool, {
         environment: 'staging',
         url: 'https://example.com',
         token: 'token123'
@@ -250,7 +251,7 @@ describe('env-add', () => {
         })
       });
 
-      await envAddTool.handler(
+      await runTool(envAddTool, 
         { environment: 'staging', url: 'https://my-app.example.com' },
         { fetch: mockFetch }
       );
@@ -274,7 +275,7 @@ describe('env-add', () => {
         })
       });
 
-      await envAddTool.handler(
+      await runTool(envAddTool, 
         {
           environment: 'staging',
           url: 'https://my-app.example.com',

@@ -2,6 +2,7 @@
 import { pathToFileURL } from 'url';
 import path from 'path';
 import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { runTool } from '../run-tool.js';
 
 // Mock proxy Gateway to control logs()
 vi.mock('../../lib/proxy', () => {
@@ -41,14 +42,14 @@ describe('platformos.logs.fetch', () => {
         return data[String(lastId)] || { logs: [] };
       }
     }
-    const res = await fetchTool.handler({ url: 'https://x', email: 'e', token: 't', lastId: '0' }, { Gateway: LocalGateway });
-    expect(Array.isArray(res.logs)).toBe(true);
-    expect(res.logs.map((r) => r.id)).toEqual(['1', '2', '3']);
+    const res = await runTool(fetchTool, { url: 'https://x', email: 'e', token: 't', lastId: '0' }, { Gateway: LocalGateway });
+    expect(Array.isArray(res.data.logs)).toBe(true);
+    expect(res.data.logs.map((r) => r.id)).toEqual(['1', '2', '3']);
   });
 
   test('respects limit', async () => {
     class LocalGateway { async logs({ lastId }) { return { logs: [{ id: '1' }, { id: '2' }, { id: '3' }] }; } }
-    const res = await fetchTool.handler({ url: 'https://x', email: 'e', token: 't', lastId: '0', limit: 2 }, { Gateway: LocalGateway });
-    expect(res.logs.map((r) => r.id)).toEqual(['1', '2']);
+    const res = await runTool(fetchTool, { url: 'https://x', email: 'e', token: 't', lastId: '0', limit: 2 }, { Gateway: LocalGateway });
+    expect(res.data.logs.map((r) => r.id)).toEqual(['1', '2']);
   });
 });

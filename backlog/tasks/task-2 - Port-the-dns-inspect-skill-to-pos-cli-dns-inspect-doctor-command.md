@@ -4,11 +4,12 @@ title: Port the dns-inspect skill to pos-cli (dns inspect / doctor command)
 status: To Do
 assignee: []
 created_date: '2026-07-23 17:09'
+updated_date: '2026-09-17 08:37'
 labels:
   - dns
 dependencies: []
 priority: medium
-ordinal: 11000
+ordinal: 34000
 ---
 
 ## Description

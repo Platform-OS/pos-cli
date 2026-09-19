@@ -4,63 +4,36 @@ import Gateway from '../../lib/proxy.js';
 import { getConstants } from '../../lib/graph/queries.js';
 import { graphQLErrorMessage } from '../../lib/graph/response.js';
 import { authProperties } from '../schemas/auth.js';
+import { ToolError } from '../tool-error.js';
 
 const constantsListTool = {
-  description: 'List all constants configured on a platformOS instance.',
+  description: 'List the constants set on an instance.',
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      env: { type: 'string', description: 'Environment name from .pos config' },
       ...authProperties
     }
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
+    const auth = await resolveAuth(params, ctx);
 
-    try {
-      const auth = await resolveAuth(params, ctx);
+    const GatewayCtor = ctx.Gateway || Gateway;
+    const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-      const GatewayCtor = ctx.Gateway || Gateway;
-      const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
+    const resp = await gateway.graph(getConstants());
 
-      const resp = await gateway.graph(getConstants());
+    const errorMessage = graphQLErrorMessage(resp);
+    // The instance answered and refused the query: its judgement, not a broken call.
+    if (errorMessage) throw ToolError.instance('GRAPHQL_ERROR', errorMessage);
 
-      const errorMessage = graphQLErrorMessage(resp);
-      if (errorMessage) {
-        return {
-          ok: false,
-          error: { code: 'GRAPHQL_ERROR', message: errorMessage }
-        };
-      }
+    const constants = resp?.data?.constants?.results || [];
 
-      const constants = resp?.data?.constants?.results || [];
-
-      return {
-        ok: true,
-        data: {
-          constants: constants.map(c => ({
-            name: c.name,
-            value: c.value,
-            updatedAt: c.updated_at
-          })),
-          count: constants.length
-        },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        error: { code: 'CONSTANTS_LIST_FAILED', message: String(e.message || e) },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
-    }
+    return {
+      constants: constants.map(c => ({ name: c.name, value: c.value, updatedAt: c.updated_at })),
+      count: constants.length
+    };
   }
 };
 

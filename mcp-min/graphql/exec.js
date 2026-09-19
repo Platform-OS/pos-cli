@@ -1,69 +1,47 @@
 // platformos.graphql.exec tool - execute GraphQL via Gateway.graph
-import { resolveAuth, maskToken } from '../auth.js';
+import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { graphQLErrors, formatGraphQLErrors } from '../../lib/graph/response.js';
 import { authProperties } from '../schemas/auth.js';
+import { ToolError } from '../tool-error.js';
 
 const execGraphqlTool = {
-  description: 'Execute a GraphQL query or mutation on a platformOS instance via /api/graph. Returns JSON data and errors from the instance. Auth resolved from: explicit params > MPKIT_* env vars > .pos config. Use variables to pass dynamic values safely instead of string interpolation.',
+  description: 'Run a GraphQL query or mutation against a live instance. A mutation run to test a document has already written its data. Errors in the document come back as an instance failure carrying them in details.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      env: { type: 'string', description: 'Environment name from .pos config (e.g., staging, production). Used to resolve auth when url/email/token are not provided.' },
       ...authProperties,
-      endpoint: { type: 'string', description: 'Override the base URL for the GraphQL endpoint. Defaults to the resolved instance URL.' },
-      query: { type: 'string', description: 'GraphQL query or mutation string (e.g., "{ users { results { id email } } }").' },
-      variables: { type: 'object', additionalProperties: true, description: 'Variables to pass to the GraphQL query/mutation. Preferred over string interpolation for dynamic values.' }
+      query: { type: 'string', description: 'The GraphQL document to run.' },
+      variables: { type: 'object', additionalProperties: true, description: 'Values for the document variables; safer than interpolating them into the query.' }
     },
     required: ['query']
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
     const auth = await resolveAuth(params, ctx);
-    const baseUrl = params?.endpoint ? params.endpoint : auth.url;
+    // The request URL comes from the resolved credentials only. An `endpoint` argument used to
+    // replace it while the .pos token was still sent, so a caller could name any host and be
+    // handed this machine's token. The other tools that take a URL point here.
+    const baseUrl = auth.url;
     const GatewayCtor = ctx.Gateway || Gateway;
     const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
 
     const body = { query: params.query, variables: params.variables || {} };
 
-    try {
-      const resp = await gateway.graph(body);
+    const resp = await gateway.graph(body);
 
-      const errors = graphQLErrors(resp);
-      if (errors) {
-        // Return error object but do not throw (keep HTTP 200 at MCP layer)
-        return {
-          ok: false,
-          error: {
-            code: 'GRAPHQL_EXEC_ERROR',
-            message: `GraphQLError: ${formatGraphQLErrors(errors) || 'GraphQL execution error'}`,
-            details: { errors, data: resp.data ?? null }
-          },
-          meta: {
-            startedAt,
-            finishedAt: new Date().toISOString(),
-            auth: { url: baseUrl, email: auth.email, token: maskToken(auth.token), source: auth.source }
-          }
-        };
-      }
-
-      return {
-        ok: true,
-        result: resp,
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          auth: { url: baseUrl, email: auth.email, token: maskToken(auth.token), source: auth.source }
-        }
-      };
-    } catch (e) {
-      // Return error instead of throwing
-      return {
-        ok: false,
-        error: { code: 'GRAPHQL_EXEC_ERROR', message: String(e) }
-      };
+    // The instance ran the document and refused it. The errors are what the caller acts on, so
+    // they travel in the details, where this tool's description says they are.
+    const errors = graphQLErrors(resp);
+    if (errors) {
+      throw ToolError.instance(
+        'GRAPHQL_EXEC_ERROR',
+        `GraphQLError: ${formatGraphQLErrors(errors) || 'GraphQL execution error'}`,
+        { errors, data: resp.data ?? null }
+      );
     }
+
+    return resp;
   }
 };
 

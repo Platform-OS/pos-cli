@@ -1,19 +1,21 @@
 
 import http from 'http';
 import startHttp from '../http-server.js';
-import fixtures from '../../test/utils/fixtures';
+import { defaultTools } from './helpers/tools.js';
+import { useDotPos } from './helpers/dot-pos.js';
 
 const PORT = 5940;
 let server;
+let dotPos;
 
 beforeAll(async () => {
-  fixtures.writeDotPos({ staging: { url: 'https://staging.example.com' } });
-  server = await startHttp({ port: PORT });
+  dotPos = useDotPos({ staging: { url: 'https://staging.example.com' } });
+  server = await startHttp({ port: PORT, tools: defaultTools() });
 });
 
 afterAll(() => {
   if (server) server.close();
-  fixtures.removeDotPos();
+  dotPos.cleanup();
 });
 
 function sseRequest(path = '/') {

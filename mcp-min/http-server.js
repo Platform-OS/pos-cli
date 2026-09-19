@@ -1,28 +1,96 @@
+import http from 'http';
 import express from 'express';
 import bodyParser from 'body-parser';
 import { randomUUID } from 'crypto';
-import tools from './tools.js';
+import { findTool } from './tool-selection.js';
 import { rejectionFor } from './validate-params.js';
 import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
 import { sseHandler, writeSSE } from './sse.js';
 import { DEBUG } from './config.js';
+import { DEFAULT_HOST, DEFAULT_PORT, LOOPBACK_HOSTNAMES } from './http-config.js';
+import hostValidation from './host-validation.js';
+import { createMcpEndpoint } from './protocol/http-endpoint.js';
+import { buildInstructions } from './instructions.js';
+import { runTool } from './run-tool.js';
 import log from './log.js';
 
 // SSE sessions keyed by Mcp-Session-Id. Supports multiple concurrent clients.
 const sseSessions = new Map();
 
-// A session id is the only thing separating one SSE client's stream from another's, so it
-// has to be unguessable: Math.random() is seeded per process and its output is predictable
-// from a couple of prior samples, which would let a local caller attach to someone else's
-// session by supplying the Mcp-Session-Id it derived.
+// A session id is the only thing separating one SSE client's stream from another's, so it has to
+// be unguessable (Math.random() is predictable from a few prior samples) and it has to be ours: an
+// id taken from the request lets a caller register its stream over another client's.
 function generateSessionId() {
   return `mcpmin-${randomUUID()}`;
 }
 
-export default async function startHttp({ port = 5910 } = {}) {
+// Per-server shutdown state, reached by stopHttp(). A WeakMap so a closed server is not kept alive.
+const shutdownState = new WeakMap();
+
+/**
+ * Stops the HTTP transport without cutting off requests already being answered. New connections
+ * are refused and idle ones closed; SSE streams, which never finish on their own, are ended; a
+ * request in flight gets its response, and its connection closes as soon as that response is sent
+ * rather than lingering for the keep-alive timeout and holding the process open.
+ *
+ * Resolves once every connection has closed.
+ */
+export function stopHttp(server) {
+  const state = shutdownState.get(server);
+  if (!state) throw new TypeError('stopHttp: not a server started by startHttp');
+  if (state.stopped) return state.stopped;
+
+  state.closing = true;
+  state.stopped = new Promise(resolve => server.close(() => resolve()));
+  for (const res of state.streams) res.destroy();
+  server.closeIdleConnections();
+  return state.stopped;
+}
+
+/**
+ * Starts the HTTP transport. Resolves with the listening http.Server once the bind has succeeded,
+ * and rejects with the listen error when it has not; nothing here reports success before the
+ * socket is bound.
+ *
+ * The defaults are the safe ones: a caller passing only a port gets a loopback-only listener that
+ * answers loopback Host/Origin names. The tools have no default at all, so a caller that leaves
+ * them out fails rather than serving every registered tool over an unauthenticated port.
+ *
+ * @param {Map<string, object>} options.tools - the exposed tools (selectTools().tools)
+ * @param {readonly string[]} [options.allowedHostnames] - Host/Origin hostnames to accept
+ * @returns {Promise<http.Server>}
+ */
+export default async function startHttp({
+  tools,
+  port = DEFAULT_PORT,
+  host = DEFAULT_HOST,
+  allowedHostnames = LOOPBACK_HOSTNAMES
+} = {}) {
+  if (!(tools instanceof Map)) throw new TypeError('startHttp: tools must be the Map of exposed tools');
   const app = express();
+  const server = http.createServer(app);
+  const state = { closing: false, stopped: null, streams: new Set() };
+  shutdownState.set(server, state);
 
   const router = express.Router();
+
+  // First, so it covers every response, including rejected and unknown-route ones.
+  app.use((req, res, next) => {
+    if (state.closing) res.setHeader('Connection', 'close');
+    res.on('finish', () => {
+      // After the response is flushed the connection is idle; close it rather than wait out
+      // the keep-alive timeout.
+      if (state.closing) setImmediate(() => server.closeIdleConnections());
+    });
+    next();
+  });
+
+  const instructions = buildInstructions(tools);
+
+  const trackStream = (res) => {
+    state.streams.add(res);
+    res.on('close', () => state.streams.delete(res));
+  };
 
   // Request logging middleware (replaces morgan)
   app.use((req, res, next) => {
@@ -40,6 +108,15 @@ export default async function startHttp({ port = 5910 } = {}) {
     next();
   });
 
+  // After logging, so a rejected request is still logged; before body parsing and every route, so
+  // one is never parsed or dispatched — including routes added later.
+  app.use(hostValidation(allowedHostnames));
+
+  // Before the JSON body parser, because the SDK reads the body itself.
+  app.all('/mcp', createMcpEndpoint({ tools, trackStream }));
+
+  // Everything below is the deprecated pre-SDK HTTP API (/, /tools, /call, /call-stream),
+  // kept working through 6.x and removed at the next major.
   app.use(bodyParser.json({ limit: '1mb' }));
 
   // Root route for basic info and discovery
@@ -48,12 +125,14 @@ export default async function startHttp({ port = 5910 } = {}) {
     const wantsSSE = /text\/event-stream/i.test(acceptHeader) || (typeof req.accepts === 'function' && !!req.accepts(['text/event-stream']));
     if (wantsSSE) {
       // SSE handshake on base URL for clients that only know base url + transport=sse
-      const sessionId = req.headers['mcp-session-id'] || generateSessionId();
+      const sessionId = generateSessionId();
       res.set('Mcp-Session-Id', sessionId); // must be set before writeHead in sseHandler
       sseHandler(req, res);
+      trackStream(res);
       sseSessions.set(sessionId, res);
       req.on('close', () => {
-        sseSessions.delete(sessionId);
+        // Only this stream's entry: a late close must not unregister whatever is under that key.
+        if (sseSessions.get(sessionId) === res) sseSessions.delete(sessionId);
         log.debug('SSE session closed', { sessionId });
       });
       // minimal required event (plain text)
@@ -82,7 +161,7 @@ export default async function startHttp({ port = 5910 } = {}) {
   router.get('/health', (req, res) => res.json({ status: 'ok' }));
 
   router.get('/tools', (req, res) => {
-    const list = Object.keys(tools).map((k) => ({ id: k, description: tools[k].description || '' }));
+    const list = [...tools].map(([id, tool]) => ({ id, description: tool.description || '' }));
     res.json({ tools: list });
   });
 
@@ -91,7 +170,7 @@ export default async function startHttp({ port = 5910 } = {}) {
     const tool = body.tool || body.name || body.id;
     const params = body.params ?? body.input ?? body.data ?? {};
     if (!tool) return res.status(400).json({ error: 'tool required (expected body.tool/name/id)' });
-    const entry = tools[tool];
+    const entry = findTool(tools, tool);
     if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
 
     const rejection = rejectionFor(tool, entry, params);
@@ -101,17 +180,15 @@ export default async function startHttp({ port = 5910 } = {}) {
         .json({ error: `invalid params: ${rejection.message}`, details: rejection.errors });
     }
 
-    try {
-      log.debug('HTTP /call', { tool, params, rawBodyKeys: Object.keys(body) });
-      const result = await entry.handler(params || {}, { transport: 'http', debug: DEBUG });
-      log.debug('HTTP /call result', { tool, result });
-      res.json({ result });
-    } catch (err) {
-      log.debug('HTTP /call error', { tool, err: String(err), details: err && err._pos });
-      const payload = { error: String(err) };
-      if (err && err._pos) payload.details = err._pos;
-      res.status(500).json(payload);
-    }
+    // Names, not values: `constants-set` carries an instance's API keys under `value`, and
+    // redaction can only cover what it can name.
+    log.debug('HTTP /call', { tool, params: Object.keys(params || {}), rawBodyKeys: Object.keys(body) });
+    // A tool's own failure is that tool's answer, not a server fault: it comes back 200 with
+    // ok:false and the tool's code. This route used to turn one into a 500 with a stringified
+    // error, which lost the code and read as though the server had broken.
+    const result = await runTool(entry, params, { transport: 'http', debug: DEBUG });
+    log.debug('HTTP /call result', { tool, ok: result.ok, kind: result.error?.kind, error: result.error?.code });
+    res.json({ result });
   });
 
   // Streaming call with SSE
@@ -148,13 +225,18 @@ export default async function startHttp({ port = 5910 } = {}) {
         }
         try { res.set('Mcp-Protocol-Version', protocolVersion); } catch {}
         try { res.set('Mcp-Session-Id', sessionId); } catch {}
-        log.debug(`JSON-RPC respond 200 JSON`, { method, id, response: responsePayload });
+        // Not the payload: for `tools/call` it carries the tool's result re-encoded as a JSON
+        // string, which redaction cannot see into.
+        log.debug('JSON-RPC respond 200 JSON', { method, id, ok: !responsePayload.error, error: responsePayload.error?.code });
         res.status(200).json(responsePayload);
         return true;
       };
 
       // Methods
       if (method === 'initialize') {
+        // Deprecated route, but a client on it gets the same guidance as one on /mcp: the rules
+        // are about the tools, which are the same tools, and letting the two answers differ would
+        // be a difference nobody chose. Removed with the rest of these routes at the next major.
         const result = {
           protocolVersion: params.protocolVersion || '2025-06-18',
           capabilities: {
@@ -162,17 +244,19 @@ export default async function startHttp({ port = 5910 } = {}) {
             prompts: {},
             tools: {}
           },
-          serverInfo: { name: 'mcp-min', version: '0.1.0' }
+          serverInfo: { name: 'mcp-min', version: '0.1.0' },
+          ...(instructions && { instructions })
         };
         respond({ result });
         return;
       }
 
       if (method === 'tools/list') {
-        const list = Object.keys(tools).map((name) => ({
+        const list = [...tools].map(([name, tool]) => ({
           name,
-          description: tools[name].description || '',
-          inputSchema: tools[name].inputSchema || OPEN_OBJECT_SCHEMA
+          description: tool.description || '',
+          inputSchema: tool.inputSchema || OPEN_OBJECT_SCHEMA,
+          ...(tool.annotations && { annotations: tool.annotations })
         }));
         respond({ result: { tools: list } });
         return;
@@ -186,7 +270,7 @@ export default async function startHttp({ port = 5910 } = {}) {
             respond({ error: { code: -32602, message: 'Invalid params: name required' } });
             return;
           }
-          const entry = tools[name];
+          const entry = findTool(tools, name);
           if (!entry || typeof entry.handler !== 'function') {
             respond({ error: { code: -32601, message: `Tool not found: ${name}` } });
             return;
@@ -202,7 +286,7 @@ export default async function startHttp({ port = 5910 } = {}) {
             });
             return;
           }
-          const result = await entry.handler(args, { transport: 'jsonrpc', debug: DEBUG });
+          const result = await runTool(entry, args, { transport: 'jsonrpc', debug: DEBUG });
           // Wrap result as text content for broad client compatibility
           const text = (() => { try { return JSON.stringify(result); } catch { return String(result); } })();
           respond({ result: { content: [{ type: 'text', text }] } });
@@ -228,7 +312,7 @@ export default async function startHttp({ port = 5910 } = {}) {
     const tool = body.tool || body.name || body.id;
     const params = body.params ?? body.input ?? body.data ?? {};
     if (!tool) return res.status(400).json({ error: 'tool required (expected body.tool/name/id)' });
-    const entry = tools[tool];
+    const entry = findTool(tools, tool);
     if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
 
     // Validate before the SSE handshake: once the stream is open the status code is
@@ -242,6 +326,7 @@ export default async function startHttp({ port = 5910 } = {}) {
 
     // Prepare SSE response
     sseHandler(req, res);
+    trackStream(res);
 
     // Emit initial endpoint event required by some clients (legacy pattern)
     try {
@@ -261,14 +346,15 @@ export default async function startHttp({ port = 5910 } = {}) {
     // Provide a simple writer function to the tool
     const writer = (event) => {
       if (closed) return;
-      log.debug('SSE write', { tool, event });
+      // `event.data` is a JSON string built by the tool — redaction cannot see into it.
+      log.debug('SSE write', { tool, event: event?.event, bytes: event?.data?.length });
       writeSSE(res, event);
     };
 
     // Call the tool's stream handler if present
     if (typeof entry.streamHandler === 'function') {
       try {
-        log.debug('HTTP /call-stream start', { tool, params });
+        log.debug('HTTP /call-stream start', { tool, params: Object.keys(params || {}) });
         entry.streamHandler(params || {}, { transport: 'http', writer, debug: DEBUG })
           .then(() => {
             writeSSE(res, { event: 'done', data: '' });
@@ -296,10 +382,22 @@ export default async function startHttp({ port = 5910 } = {}) {
 
   app.use('/', router);
 
-  return new Promise((resolve) => {
-    const server = app.listen(port, () => {
-      log.info('HTTP server listening', { port });
+  // Not app.listen(port, cb): Express 5 hands a listen error to that same callback, which is
+  // how a failed bind used to be logged as "listening".
+  return new Promise((resolve, reject) => {
+    const onError = (err) => {
+      server.off('listening', onListening);
+      reject(err);
+    };
+    const onListening = () => {
+      server.off('error', onError);
+      // Errors after a successful bind are rare (e.g. accept failures) and must not become
+      // an uncaught 'error' event.
+      server.on('error', (err) => log.error('HTTP server error', { code: err.code, message: err.message }));
       resolve(server);
-    });
+    };
+    server.once('error', onError);
+    server.once('listening', onListening);
+    server.listen(port, host);
   });
 }

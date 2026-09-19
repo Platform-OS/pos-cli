@@ -5,7 +5,7 @@ import { init } from '../lib/ai.js';
 
 program
   .name('pos-cli ai init')
-  .description('register platformOS MCP servers (platformos, platformos-supervisor) in your AI tool configuration')
+  .description('register platformOS MCP servers (platformos-cli, platformos-supervisor) in your AI tool configuration')
   .addOption(
     new Option('--tool <tool>', 'skip the interactive prompt and configure the given tool').choices([
       'claude',

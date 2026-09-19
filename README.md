@@ -306,18 +306,47 @@ Installing pos-cli globally (`npm install -g @platformos/pos-cli`) automatically
 
 ##### Claude Code
 
-Add the following to your Claude Code MCP/LSP configuration (typically `.claude/settings.json` or your global Claude Code settings):
+Claude Code reads language-server configuration only from a plugin — there is no `lsp` key in
+`settings.json` and no project-level LSP file it picks up on its own. pos-cli ships the plugin, so
+registering it is two commands run from your project:
 
-```json
-{
-  "lsp": {
-    "platformos-liquid": {
-      "command": ["pos-cli-lsp"],
-      "extensions": [".liquid", ".graphql", ".json"]
-    }
-  }
-}
+```bash
+claude plugin marketplace add "$(npm root -g)/@platformos/pos-cli/plugin" --scope local
+claude plugin install platformos-lsp@platformos --scope local
 ```
+
+Both write to `.claude/settings.local.json`; use `--scope user` instead to enable it for every
+project on the machine. Restart Claude Code afterwards, and check it with `claude plugin details
+platformos-lsp@platformos` — it should report one LSP server. A language server runs out of process,
+so it adds nothing to what the model reads on each request.
+
+The server implements hover, go-to-definition, completions, code actions and rename. Of those,
+Claude Code's LSP tool can use **hover** and **go-to-definition**; diagnostics do not come back from
+either call, but arrive separately once one of them has made the server look at the file. The other
+operations that tool offers — find-references, document and workspace symbols, implementations, call
+hierarchy — are not implemented by this server and answer `Unhandled method`. An editor uses the
+full set.
+
+`pos-cli ai init` prints these two commands for you, and says nothing if the plugin is already
+registered.
+
+Diagnostics are pull-only: the server analyses a file when something makes an LSP request against it,
+and publishes the findings asynchronously, so they arrive on a later exchange. Reading or editing a
+file triggers nothing on its own. A second, optional plugin says so after each Liquid or GraphQL
+edit:
+
+```bash
+claude plugin install platformos-lsp-reminders@platformos --scope local
+```
+
+It runs no linter — it prints one line. Linting on each edit is not viable: `pos-cli check run` is
+whole-project only and takes around a minute on a large app, and starting a throwaway language
+server costs about four seconds per edit. Asking the server that is already running costs nothing.
+
+Older Claude Code releases kept the LSP tool behind an undocumented `ENABLE_LSP_TOOL` flag. It is not
+needed on current versions — verified against 2.1.274, where the tool works with the variable unset.
+If the plugin installs cleanly and nothing ever uses it, upgrade Claude Code before reaching for that
+flag.
 
 ##### Open Code (open-vsx / VSCodium-compatible editors)
 
@@ -340,7 +369,10 @@ The language server provides IDE features for:
 
 - `.liquid` — platformOS Liquid templates
 - `.graphql` — GraphQL queries and mutations
-- `.json` — platformOS configuration files
+
+`.json` is deliberately not mapped to the language server. It answers nothing for a JSON file, and
+claiming the extension would make it the language server for every `package.json` and `tsconfig.json`
+in the project as well.
 
 #### Features
 
@@ -982,7 +1014,7 @@ The fastest way to connect your AI tool is the one-step wizard:
 
     pos-cli ai init
 
-It asks which AI tool you use and registers both platformOS MCP servers — `platformos` (the pos-cli tools listed below) and `platformos-supervisor` (Liquid/GraphQL/YAML code validation via `validate_code`) — in that tool's project-scoped configuration:
+It asks which AI tool you use and registers both platformOS MCP servers — `platformos-cli` (the pos-cli tools listed below) and `platformos-supervisor` (Liquid/GraphQL/YAML code validation via `validate_code`) — in that tool's project-scoped configuration:
 
 | Tool        | Configuration file  | Key          |
 | ----------- | ------------------- | ------------ |
@@ -991,15 +1023,76 @@ It asks which AI tool you use and registers both platformOS MCP servers — `pla
 | VS Code     | `.vscode/mcp.json`  | `servers`    |
 | Other       | prints the JSON snippet for manual setup | — |
 
-Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. To skip the prompt (e.g. in scripts), pass the tool directly:
+Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. `platformos-cli` is registered with `--profile dev --no-http` (see [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed)): the tools a coding agent uses, over stdio only. An entry written by an earlier pos-cli — `"command": "pos-cli-mcp"` with no arguments, or with `--profile dev` alone — is upgraded to that; an entry you have changed in any other way is left exactly as it is, and the command tells you so. To skip the prompt (e.g. in scripts), pass the tool directly:
 
     pos-cli ai init --tool claude
 
+**The server used to be called `platformos`** and is now `platformos-cli`, after the command it runs — the old name said nothing about what it was, and the supervisor is platformOS too. `pos-cli ai init` renames an entry it wrote, in place, and removes the old one so the server is not registered twice. An entry you have customised is left under the old name, with a message saying what the new one would be: rename it yourself, or keep it — nothing breaks either way, since the name is only how your AI tool refers to the server.
+
 #### Starting the MCP Server
 
-    pos-cli mcp
+    pos-cli-mcp
 
-This starts both a **stdio transport** (for editor/AI integrations) and an **HTTP/SSE server** on port 5910 (configurable with `MCP_MIN_PORT`).
+`pos-cli mcp` starts the same server. MCP client configurations should use `pos-cli-mcp`, which skips the `pos-cli` launcher process. Without a global install, use:
+
+    npx -y -p @platformos/pos-cli pos-cli-mcp
+
+That form works with every published version. The shorter `npx -y @platformos/pos-cli mcp` needs a release newer than 6.5.0: earlier releases never registered the `mcp` command, so it fails with `unknown command 'mcp'`.
+
+This starts both a **stdio transport** (for editor/AI integrations) and an **HTTP server** on `127.0.0.1:5910` (port configurable with `MCP_MIN_PORT`), which serves MCP at `/mcp`. Pass `--no-http` for stdio only — what `pos-cli ai init` writes, since stdio clients never use the listener:
+
+    pos-cli-mcp --no-http
+
+#### Protocol Revisions
+
+The server speaks MCP **2026-07-28** and the 2025 revisions (`2025-11-25`, `2025-06-18`, `2024-11-05`), and answers each client in its own revision — a client that opens with `server/discover` gets the new one, a client that opens with `initialize` gets the version it asks for. The protocol layer is the [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) v2.
+
+A call that fails comes back as a tool result marked `isError`, carrying a code and message the model can act on, rather than as a protocol error: `INVALID_PARAMS` for arguments that do not match the tool's schema, the tool's own code when it reports a failure, and `INTERNAL_ERROR` when it throws. A tool that does not exist, or is not exposed, is still a protocol error.
+
+Tools that only read — `envs-list`, `logs-fetch`, `job-status`, the Partner Portal lookups — are marked `readOnlyHint`, which some clients use to run them without asking.
+
+The server runs for as long as its MCP client keeps stdin open. When the client closes stdin — which is how MCP clients stop the servers they start — the server stops taking new work, lets calls already running finish (at most 120 seconds, which covers the asset upload `deploy-start` continues in the background), and exits, releasing its HTTP port. To run the HTTP transport on its own, give it stdin from `/dev/null` (`NUL` on Windows):
+
+    pos-cli-mcp </dev/null
+
+#### Choosing Which Tools Are Exposed
+
+Every tool definition the server exposes is sent to the AI model with each request, so a smaller set leaves more room for your code. Three options choose the set when the server starts:
+
+    pos-cli-mcp --profile dev
+    pos-cli-mcp --profile dev --include-tools data-import,data-validate
+    pos-cli-mcp --profile none --include-tools graphql-exec,liquid-exec
+    pos-cli-mcp --exclude-tools data-clean,constants-unset
+
+- `--profile <name>` — the starting set:
+  - `full` — every tool. The default.
+  - `dev` — what a coding agent uses to edit, check, deploy and verify: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-dry-run`, `deploy-start`, `job-status`, `unit-tests-run`, `tests-run-async`. Its definitions are about a third of the size of `full`'s.
+  - `none` — no tools; name them with `--include-tools`.
+- `--include-tools <names>` adds tools to the profile. This is not an allowlist, unlike Gemini CLI's `includeTools` setting; for an allowlist, use `--profile none --include-tools …`.
+- `--exclude-tools <names>` removes tools.
+
+Names are comma-separated, and each option can be repeated. Tools disabled in the tool configuration (see [Viewing Tool Configuration](#viewing-tool-configuration)) stay hidden. The selection is fixed for the life of the process and is the same on both transports for every client, and a tool that is not exposed cannot be called either.
+
+The server refuses to start — with a message, before either transport opens — when a selection is not exactly what it looks like: an unknown profile or tool name, the same tool in both lists, `--include-tools` naming a tool the tool configuration disables, or a selection that leaves no tools. Any argument other than these three, `--no-http`, `--help` and `--version` is refused too, including `pos-cli mcp config`; the tool configuration is shown by `pos-cli mcp-config`.
+
+`pos-cli-mcp` with no options exposes every tool, as before; the default is planned to become `dev` in the next major release. `pos-cli ai init` writes `--profile dev --no-http`. A project configuration that passes these options to pos-cli 6.5.1 or earlier gets the full set, and an HTTP listener, there: those releases ignore their arguments.
+
+The HTTP server has **no authentication**: anything that can send it a request can run every enabled tool with the platformOS credentials the server resolves (`.pos`, `MPKIT_*`). It is therefore reachable from this machine only, and answers `403` to any request whose `Host` — or `Origin`, when present — does not name `localhost`, `127.0.0.1` or `[::1]`, which keeps web pages from driving it. Two environment variables widen this, deliberately:
+
+- `MCP_MIN_HOST` — bind address (an IP address or `localhost`). A non-loopback value such as `0.0.0.0` exposes every enabled tool, unauthenticated, to anyone who can reach the port; the server logs a warning on every start in that mode.
+- `MCP_MIN_ALLOWED_HOSTS` — comma-separated hostnames or IP addresses (no scheme or port, IPv6 in brackets) to accept in `Host`/`Origin` besides the loopback names.
+
+A malformed value stops the server at startup. If the port is taken, the server logs `HTTP transport not started` and stdio keeps working. MCP servers started by pos-cli 6.5.0 or earlier listen on **all** interfaces without these checks and keep the port until stopped, so restart your MCP clients after upgrading.
+
+#### HTTP Endpoints
+
+| Endpoint | Status |
+| --- | --- |
+| `POST /mcp` | MCP Streamable HTTP. 2026-07-28, and 2025-era clients served statelessly (`GET` and `DELETE` answer `405`: there is no session to resume). |
+| `GET /health` | Unchanged. |
+| `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` | **Deprecated.** The pre-SDK HTTP API, still served and removed in a future major. Use `/mcp`. |
+
+Invoking a tool over stdio by naming it as the JSON-RPC method (`{"method":"envs-list"}`) has been **removed**; it was never part of MCP. Use `tools/call`.
 
 #### Configuring Claude Code
 
@@ -1008,8 +1101,9 @@ Run `pos-cli ai init --tool claude` to generate this automatically, or add the f
 ```json
 {
   "mcpServers": {
-    "platformos": {
-      "command": "pos-cli-mcp"
+    "platformos-cli": {
+      "command": "pos-cli-mcp",
+      "args": ["--profile", "dev", "--no-http"]
     },
     "platformos-supervisor": {
       "command": "pos-cli-supervisor"
@@ -1030,30 +1124,52 @@ The project directory is resolved from `--project`, then the `POS_SUPERVISOR_PRO
 
 #### Available Tools
 
-The MCP server exposes 30+ tools across these categories:
+The MCP server has 30+ tools across these categories; `--profile dev` exposes the ones listed under [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed):
 
 - **Environments**: `envs-list`, `env-add`
-- **Deploy**: `deploy-start`, `deploy-status`, `deploy-wait`
+- **Jobs**: `job-status`
+- **Deploy**: `deploy-dry-run`, `deploy-start`
 - **Sync**: `sync-file`
 - **Logs**: `logs-fetch`
 - **GraphQL**: `graphql-exec`
 - **Liquid**: `liquid-exec`
-- **Data**: `data-import`, `data-import-status`, `data-export`, `data-export-status`, `data-clean`, `data-clean-status`, `data-validate`
+- **Data**: `data-import`, `data-export`, `data-clean`, `data-validate`
 - **Migrations**: `migrations-list`, `migrations-generate`, `migrations-run`
-- **Tests**: `unit-tests-run`, `tests-run-async`, `tests-run-async-result`
+- **Tests**: `unit-tests-run`, `tests-run-async`
 - **Constants**: `constants-list`, `constants-set`, `constants-unset`
 - **Generators**: `generators-list`, `generators-help`, `generators-run`
 - **Code quality**: `check-run`
 - **Uploads**: `uploads-push`
 - **Partner Portal**: `instance-create`, `partners-list`, `partner-get`, `endpoints-list`
 
+#### Asynchronous Operations
+
+Five tools start work that outlives the call: `deploy-start`, `data-import`, `data-export`, `data-clean` and `tests-run-async`. Each returns a `job_id` alongside its own fields, and `job-status` reads it back:
+
+    job-status { "job_id": "pjob1_…" }
+    job-status { "job_id": "pjob1_…", "wait_ms": 30000 }
+
+- `state` is `running`, `completed` or `failed`. `completed` means the operation finished — a test run whose assertions failed is `completed`, because the run did its work; `failed` means the operation itself failed. `done` is `state != running`.
+- `wait_ms` (up to 120,000) polls until the job is done or that long has passed, whichever comes first. Hitting the deadline returns the current state with `done: false`, not an error.
+- A deploy that uploaded assets is not `completed` until those assets are on the CDN, not merely when its release is imported. `result.assets.phase` says where they are: `uploading` (still going up from this machine), `processing` (the instance is unpacking them), `done`, `failed`, `none` (the deploy had no assets), or `unknown` — the honest answer when the server that started the upload is no longer running and the instance reports nothing about assets.
+- The `job_id` is opaque: pass it back unchanged. It names the instance the job was started on, so polling with no `env` cannot ask a different instance about the same numeric id. If the resolved credentials point elsewhere, `job-status` uses the `.pos` environment that does point at that instance, or refuses — without making a request. Nothing in a `job_id` chooses credentials or the host a request goes to.
+
+#### Logs and Debugging
+
+The server writes to stderr and to `~/.pos-cli/logs/mcp-min.log` (`MCP_MIN_LOG_FILE` moves it), and `DEBUG=1` (or `MCP_MIN_DEBUG=1`) adds request, parameter and protocol detail. Credentials are redacted before anything is written: credential headers, passwords, session ids and device codes are replaced entirely, API tokens are masked to `abc...xyz`, and `Token …` / `Bearer …` values and sensitive URL query parameters are removed from message text. The file is created owner-only (`0600`), and one written by an earlier release is tightened the next time the server starts.
+
+**A log file from pos-cli 6.5.1 or earlier can contain credentials verbatim** — `Authorization` headers, and the API token passed to `env-add`. Delete `~/.pos-cli/logs/mcp-min.log` after upgrading, and rotate any token it recorded.
+
 #### Viewing Tool Configuration
 
-To see which tools are enabled or disabled:
+To see which tools the server exposes, and why each of the others is not exposed:
 
     pos-cli mcp-config
+    pos-cli mcp-config --profile dev --exclude-tools tests-run-async
 
-Use `--json` for raw JSON output. You can override the configuration by setting the `MCP_TOOLS_CONFIG` environment variable to point to a custom `tools.config.json` file.
+It takes the same `--profile`, `--include-tools` and `--exclude-tools` options as the server, reports exactly what the server would expose with them, and refuses the same mistakes with the same messages. `--json` prints that report as JSON — `config`, `profile`, `include`, `exclude`, `exposed` and `hidden` (each with a `reason`: `profile`, `excluded` or `disabled`); it used to print the raw configuration file.
+
+Each tool's description lives with the tool in `mcp-min/`. The tool configuration (`mcp-min/tools.config.json`) can disable a tool or replace its description, and ships doing neither. To use your own, point the `MCP_TOOLS_CONFIG` environment variable at a `tools.config.json`. A file that does not match the schema, or names a tool that does not exist, stops the server at startup. A file that is missing or not valid JSON applies nothing: the server logs a warning, and `pos-cli mcp-config` shows which it was.
 
 ### Fetching Logs (Machine-Readable)
 

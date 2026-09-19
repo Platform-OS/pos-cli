@@ -2,39 +2,36 @@
 import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
+import { ToolError } from '../tool-error.js';
 
 function buildFormData({ timestamp, name }) {
-  if (!timestamp && !name) throw new Error('INVALID_INPUT: Provide timestamp or name');
+  // The schema cannot express "one of these two", so the check lives here.
+  if (!timestamp && !name) throw ToolError.input('INVALID_INPUT', 'Provide timestamp or name');
   // API expects { timestamp } and supports value being either full name or just numeric timestamp
   return { timestamp: timestamp || name };
 }
 
 const runMigrationTool = {
-  description: 'Run a specific migration identified by timestamp or full name.',
+  description: 'Run one migration on an instance, named by its timestamp or its full name.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      env: { type: 'string' },
       ...authProperties,
-      timestamp: { type: 'string', description: 'Numeric timestamp' },
-      name: { type: 'string', description: 'Alias for timestamp; full migration name without .liquid' },
-      endpoint: { type: 'string', description: 'Override API base URL' }
+      timestamp: { type: 'string', description: 'The migration timestamp on its own.' },
+      name: { type: 'string', description: 'The full migration name, without the extension; an alias for timestamp.' }
     }
   },
   handler: async (params = {}, ctx = {}) => {
-    try {
-      const auth = await resolveAuth(params, ctx);
-      const baseUrl = params?.endpoint ? params.endpoint : auth.url;
-      const GatewayCtor = ctx.Gateway || Gateway;
-      const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
+    const auth = await resolveAuth(params, ctx);
+    // The request URL comes from the resolved credentials only (see graphql-exec).
+    const baseUrl = auth.url;
+    const GatewayCtor = ctx.Gateway || Gateway;
+    const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
 
-      const raw = await gateway.runMigration(buildFormData(params));
-      const data = { name: raw?.name || null, status: 'executed' };
-      return { status: 'ok', data, raw };
-    } catch (e) {
-      return { status: 'error', error: { code: 'MIGRATIONS_RUN_ERROR', message: String(e?.message || e) } };
-    }
+    const raw = await gateway.runMigration(buildFormData(params));
+
+    return { name: raw?.name || null, state: 'executed', raw };
   }
 };
 

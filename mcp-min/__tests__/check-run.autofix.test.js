@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import { describe, test, expect, beforeAll, afterEach, vi } from 'vitest';
+import { runTool } from '../run-tool.js';
 
 /**
  * `autoFix` re-lints the whole project after applying fixes, which is correct but is the
@@ -85,7 +86,7 @@ describe('platformos.check-run autoFix gating', () => {
     if (!available) return;
     const appPath = makeApp(SUGGEST_ONLY.config, SUGGEST_ONLY.files);
 
-    const result = await checkRunTool.handler({ appPath, autoFix: true });
+    const result = await runTool(checkRunTool, { appPath, autoFix: true });
 
     // One offense found, nothing written, and — the point — ONE lint.
     expect(result.ok).toBe(true);
@@ -104,7 +105,7 @@ describe('platformos.check-run autoFix gating', () => {
     if (!available) return;
     const appPath = makeApp(FIXABLE.config, FIXABLE.files);
 
-    const result = await checkRunTool.handler({ appPath, autoFix: true });
+    const result = await runTool(checkRunTool, { appPath, autoFix: true });
 
     expect(result.ok).toBe(true);
     expect(result.data.autoFixed).toBe(true);
@@ -121,7 +122,7 @@ describe('platformos.check-run autoFix gating', () => {
     if (!available) return;
     const appPath = makeApp(FIXABLE.config, FIXABLE.files);
 
-    const result = await checkRunTool.handler({ appPath });
+    const result = await runTool(checkRunTool, { appPath });
 
     expect(result.ok).toBe(true);
     expect(result.data.offenseCount).toBe(1);

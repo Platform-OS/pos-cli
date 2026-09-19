@@ -1,7 +1,9 @@
 // platformos.deploy.start - create archive and deploy to platformOS instance
 import fs from 'fs';
+import path from 'path';
 import log from '../log.js';
-import { resolveAuth, maskToken, runWithAuth } from '../auth.js';
+import { resolveAuth, runWithAuth } from '../auth.js';
+import { ToolError } from '../tool-error.js';
 import files from '../../lib/files.js';
 import Gateway from '../../lib/proxy.js';
 import { makeArchive } from '../../lib/archive.js';
@@ -12,104 +14,107 @@ const archive = { makeArchive };
 const assets = { deployAssets };
 import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
+import { mintFor, originOf } from '../jobs/handle.js';
+import { trackUpload } from '../jobs/local-phases.js';
+import { deployAssetsForRelease } from './assets-task.js';
 
 const startDeployTool = {
-  description: 'Deploy to platformOS instance. Creates archive from app/ and modules/ directories, uploads it, and deploys assets directly to S3.',
+  description: 'Deploy the project to an instance. Everything missing from the build is deleted there unless partial is set; deploy-dry-run reports that list first, changing nothing. Returns a job_id: the deploy is still running when this answers, and job-status reports when its release and its assets are both in.',
+  annotations: { destructiveHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      env: { type: 'string', description: 'Environment name from .pos config' },
       ...authProperties,
-      partial: { type: 'boolean', description: 'Partial deploy - does not remove files missing from build', default: false }
+      partial: { type: 'boolean', description: 'Leave files that are missing from the build in place.', default: false }
     }
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
     log.debug('tool:deploy-start invoked', { env: params?.env, partial: params?.partial });
 
-    try {
-      const auth = await resolveAuth(params, ctx);
-      const GatewayCtor = ctx.Gateway || Gateway;
-      const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
+    const auth = await resolveAuth(params, ctx);
+    const GatewayCtor = ctx.Gateway || Gateway;
+    const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-      const partial = !!params.partial;
-      const archivePath = './tmp/release.zip';
+    const partial = !!params.partial;
+    const archivePath = './tmp/release.zip';
 
-      // Check for deployable directories
-      const availableDirs = dir.available();
-      if (availableDirs.length === 0) {
-        return {
-          ok: false,
-          error: {
-            code: 'NO_DIRECTORIES',
-            message: `No deployable directories found. Need at least one of: ${dir.ALLOWED.join(', ')}`
-          }
-        };
-      }
-
-      // Ensure tmp directory exists
-      if (!fs.existsSync('./tmp')) {
-        fs.mkdirSync('./tmp', { recursive: true });
-      }
-
-      // Create archive (without assets - they're uploaded directly)
-      const env = { TARGET: archivePath };
-      const { numberOfFiles, pushResponse } = await runWithAuth(auth, async () => {
-        const n = await archive.makeArchive(env, { withoutAssets: true });
-        const fd = {
-          'marketplace_builder[partial_deploy]': String(partial),
-          'marketplace_builder[zip_file]': fs.createReadStream(archivePath)
-        };
-        const pr = await gateway.push(fd);
-        return { numberOfFiles: n, pushResponse: pr };
-      });
-
-      if (numberOfFiles === 0 || numberOfFiles === false) {
-        return {
-          ok: false,
-          error: { code: 'EMPTY_ARCHIVE', message: 'No files to deploy. Archive would be empty.' }
-        };
-      }
-
-      // Deploy assets in the background (S3 upload + CDN wait can take 90s+)
-      let assetsInfo = null;
-      try {
-        const assetsToDeploy = await files.getAssets();
-        if (assetsToDeploy.length > 0) {
-          // Fire and forget - don't block the MCP response
-          runWithAuth(auth, () => assets.deployAssets(gateway)).then(() => {
-            log.info('Background asset deployment completed');
-          }).catch(err => {
-            log.error('Background asset deployment failed', { error: String(err) });
-          });
-          assetsInfo = { count: assetsToDeploy.length, status: 'deploying_in_background' };
-        } else {
-          assetsInfo = { count: 0, skipped: true };
-        }
-      } catch (assetErr) {
-        assetsInfo = { error: String(assetErr) };
-      }
-
-      return {
-        ok: true,
-        data: {
-          id: pushResponse.id,
-          status: pushResponse.status
-        },
-        archive: { path: archivePath, fileCount: numberOfFiles },
-        assets: assetsInfo,
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          auth: { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source },
-          params: { partial }
-        }
-      };
-    } catch (e) {
-      log.error('tool:deploy-start error', { error: String(e) });
-      return { ok: false, error: { code: 'DEPLOY_START_ERROR', message: String(e.message || e) } };
+    // Nothing here is deployable, so there is nothing to send: the project is not ready.
+    const availableDirs = dir.available();
+    if (availableDirs.length === 0) {
+      throw ToolError.project('NO_DIRECTORIES', `No deployable directories found. Need at least one of: ${dir.ALLOWED.join(', ')}`);
     }
+
+    // Ensure tmp directory exists
+    if (!fs.existsSync('./tmp')) {
+      fs.mkdirSync('./tmp', { recursive: true });
+    }
+
+    // Create archive (without assets - they're uploaded directly)
+    const env = { TARGET: archivePath };
+    const numberOfFiles = await archive.makeArchive(env, { withoutAssets: true });
+
+    // Before the upload: a release that is not partial is the whole intended state of the
+    // instance, so an empty archive asks it to delete every file it has. `pos-cli deploy` skips
+    // the upload the same way.
+    if (numberOfFiles === 0 || numberOfFiles === false) {
+      throw ToolError.project('EMPTY_ARCHIVE', 'No files to deploy. Archive would be empty.');
+    }
+
+    // Absolute, and resolved now: a read stream opens lazily, so a relative path would be resolved
+    // against whatever the working directory is by the time the request body is read. The `error`
+    // listener is not optional — a read stream without one raises an uncaught exception, which in
+    // a server is the process rather than the call — and an upload that throws never consumes the
+    // stream, which holds its file descriptor until it is collected.
+    const archiveStream = fs.createReadStream(path.resolve(archivePath));
+    archiveStream.on('error', (err) => log.debug('deploy archive stream error', { error: String(err) }));
+    let pushResponse;
+    try {
+      pushResponse = await runWithAuth(auth, () => gateway.push({
+        'marketplace_builder[partial_deploy]': String(partial),
+        'marketplace_builder[zip_file]': archiveStream
+      }));
+    } finally {
+      archiveStream.destroy();
+    }
+
+    // In the background: release import + S3 upload + CDN wait can take minutes. Registered
+    // under the release id, so `job-status` does not report the deploy finished while it runs.
+    const releaseId = pushResponse.id;
+    const origin = originOf(auth.url);
+    let assetsInfo = null;
+    let hasAssets = false;
+    try {
+      const assetsToDeploy = await files.getAssets();
+      hasAssets = assetsToDeploy.length > 0;
+      if (hasAssets) {
+        const upload = runWithAuth(auth, () => deployAssetsForRelease(gateway, releaseId, { deployAssets: assets.deployAssets }));
+        trackUpload(origin, releaseId, upload);
+        upload.then(() => {
+          log.info('Background asset deployment completed');
+        }).catch(err => {
+          log.error('Background asset deployment failed', { error: String(err) });
+        });
+        assetsInfo = { count: assetsToDeploy.length, status: 'deploying_in_background' };
+      } else {
+        assetsInfo = { count: 0, skipped: true };
+      }
+    } catch (assetErr) {
+      // The release is already in. Failing the whole call now would report a deploy that did
+      // happen as one that did not, so this is carried in the answer instead.
+      assetsInfo = { error: String(assetErr) };
+    }
+
+    return {
+      id: releaseId,
+      // `assets` records whether there was an upload at all, which a server that did not
+      // start this deploy cannot otherwise know.
+      job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: { assets: hasAssets } }),
+      status: pushResponse.status,
+      archive: { path: archivePath, fileCount: numberOfFiles },
+      assets: assetsInfo,
+      params: { partial }
+    };
   }
 };
 

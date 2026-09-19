@@ -3,8 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fg from 'fast-glob';
-import tools from '../tools.js';
-import { validateToolParams } from '../validate-params.js';
+import registry from '../tools.js';
+import { validateToolParams, TOOL_SCHEMA_DIALECT } from '../validate-params.js';
+import { runTool } from '../run-tool.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -18,11 +19,11 @@ const authTools = await Promise.all(
   authFileList.map(file => import(pathToFileURL(file).href).then(mod => mod.default))
 );
 
-const check = (name, params) => validateToolParams(name, tools[name], params);
+const check = (name, params) => validateToolParams(name, registry.get(name), params);
 
 describe('tool input schemas', () => {
   test('every registered tool has a schema Ajv can compile', () => {
-    const uncompilable = Object.entries(tools)
+    const uncompilable = [...registry]
       .filter(([name, tool]) => validateToolParams(name, tool, {}).schemaError)
       .map(([name]) => name);
 
@@ -30,9 +31,26 @@ describe('tool input schemas', () => {
   });
 
   test('every registered tool declares an object schema', () => {
-    for (const [name, tool] of Object.entries(tools)) {
+    for (const [name, tool] of registry) {
       expect(tool.inputSchema?.type, `${name} inputSchema.type`).toBe('object');
     }
+  });
+});
+
+// MCP 2026-07-28 assigns JSON Schema 2020-12 to a schema without `$schema`, which is how tool
+// schemas are published, so that is the dialect they are enforced in. Draft-07 in strict mode
+// does not know `prefixItems` and would refuse to compile this schema.
+describe('tool schema dialect', () => {
+  const tuple = { inputSchema: { type: 'object', properties: { pair: { type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }], items: false, minItems: 2 } } } };
+
+  test('is JSON Schema 2020-12', () => {
+    expect(TOOL_SCHEMA_DIALECT).toBe('2020-12');
+    expect(validateToolParams('tuple', tuple, { pair: ['a', 1] })).toEqual({ valid: true });
+
+    const wrong = validateToolParams('tuple', tuple, { pair: [1, 'a'] });
+    expect(wrong.valid).toBe(false);
+    expect(wrong.schemaError).toBeUndefined();
+    expect(validateToolParams('tuple', tuple, { pair: ['a', 1, 'extra'] }).valid).toBe(false);
   });
 });
 
@@ -74,18 +92,17 @@ describe('validateToolParams', () => {
   });
 });
 
-// resolveAuth (mcp-min/auth.js) resolves credentials in this order: explicit
-// url+email+token params, then the named `.pos` environment, then MPKIT_* env vars, then
-// the first `.pos` entry. A schema that made `env` mandatory would reject three of those
-// four supported call styles.
+// resolveAuth has four supported call styles and only one of them names `env`, so a schema that
+// made it mandatory would reject the other three.
 describe('authentication params stay accepted', () => {
-  // Derived from the source rather than hand-listed: a tool added later is covered the
-  // moment it calls resolveAuth. A hand-written list silently stopped guarding tools it
-  // did not happen to name.
+  // Derived from the source rather than hand-listed, so a tool added later is covered the moment
+  // it calls resolveAuth.
   const authenticatingFiles = authFileList;
 
+  // A floor, so the scan cannot pass by finding nothing. Lowered from 20 when the six deprecated
+  // status tools were removed in 7.0.0; five of them authenticated.
   test('the scan finds the authenticating tools', () => {
-    expect(authenticatingFiles.length).toBeGreaterThanOrEqual(20);
+    expect(authenticatingFiles.length).toBeGreaterThanOrEqual(18);
   });
 
   test.each(authenticatingFiles.map((file, i) => [path.relative(repoRoot, file), i]))(
@@ -107,28 +124,23 @@ describe('authentication params stay accepted', () => {
   const requiredExtras = {
     'constants-set': { name: 'A', value: '1' },
     'constants-unset': { name: 'A' },
-    'data-import-status': { jobId: '1' },
+
     'uploads-push': { filePath: 'uploads.zip' },
     'unit-tests-run': { name: 'example_test' },
-    'deploy-status': { id: '1' },
-    'deploy-wait': { id: '1' },
-    'data-export-status': { jobId: '1' },
-    'data-clean-status': { jobId: '1' },
+
     'data-clean': { confirmation: 'yes' },
-    'tests-run-async-result': { id: '1' },
+
     'migrations-generate': { name: 'add_thing' },
     'liquid-exec': { template: '{{ 1 }}' },
     'graphql-exec': { query: '{ a }' },
     'sync-file': { filePath: 'app/views/a.liquid' }
   };
 
-  // Registry entries whose schema is the one exported by an authenticating file. Matched
-  // on the inputSchema object rather than the tool object, because applyConfig copies the
-  // tool when a config overrides its description but keeps the same schema reference.
-  // A name-based heuristic would wrongly sweep in portal tools like env-add, whose
-  // `token` parameter is data it sends rather than credentials it authenticates with.
+  // Matched on the inputSchema object, not the tool object: an exposed tool is a copy when the
+  // tools config overrides its description, and the copy keeps the same schema. A name-based
+  // heuristic would sweep in env-add, whose `token` is data it sends, not credentials.
   const authSchemas = new Set(authTools.map(tool => tool?.inputSchema).filter(Boolean));
-  const registeredAuthTools = Object.keys(tools).filter(name => authSchemas.has(tools[name].inputSchema));
+  const registeredAuthTools = [...registry].filter(([, tool]) => authSchemas.has(tool.inputSchema)).map(([name]) => name);
 
   test.each(registeredAuthTools)('%s accepts explicit url/email/token without env', name => {
     const params = { url: 'https://example.com', email: 'a@b.c', token: 'tok', ...requiredExtras[name] };
@@ -147,15 +159,15 @@ describe('authentication params stay accepted', () => {
   });
 });
 
-// The branch relaxed `required` on these two so the schema matches what the handler
-// actually needs; without an assertion the relaxation could be reverted unnoticed.
+// `required` on these two matches what the handler actually needs; without an assertion the
+// relaxation could be reverted unnoticed.
 describe('required relaxations', () => {
   test('data-validate requires nothing: validation runs locally and env is context only', () => {
-    expect(tools['data-validate'].inputSchema.required).toBeUndefined();
+    expect(registry.get('data-validate').inputSchema.required).toBeUndefined();
   });
 
   test('unit-tests-run requires only name', () => {
-    expect(tools['unit-tests-run'].inputSchema.required).toEqual(['name']);
+    expect(registry.get('unit-tests-run').inputSchema.required).toEqual(['name']);
   });
 
   test.each([
@@ -163,16 +175,14 @@ describe('required relaxations', () => {
     ['constants-set', ['name', 'value']],
     ['constants-unset', ['name']],
     ['data-import', undefined],
-    ['data-import-status', ['jobId']],
     ['uploads-push', ['filePath']]
   ])('%s no longer requires env', (name, expected) => {
-    expect(tools[name].inputSchema.required).toEqual(expected);
+    expect(registry.get(name).inputSchema.required).toEqual(expected);
   });
 });
 
-// logs-fetch documents `lastId` as the cursor to hand back on the next call, so what it
-// returns has to satisfy the schema it accepts. It previously returned a string while the
-// schema demanded an integer, which broke paging with -32602.
+// logs-fetch documents `lastId` as the cursor to hand back on the next call, so what it returns
+// has to satisfy the schema it accepts, or paging fails with -32602.
 describe('logs-fetch cursor round-trips', () => {
   test('the returned cursor is accepted as the next request cursor', async () => {
     const rows = [{ id: 41, message: 'a' }, { id: 42, message: 'b' }];
@@ -184,14 +194,14 @@ describe('logs-fetch cursor round-trips', () => {
       }
     }
 
-    const result = await tools['logs-fetch'].handler(
+    const result = await runTool(registry.get('logs-fetch'), 
       { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
       { Gateway: MockGateway }
     );
 
     expect(result.ok).toBe(true);
-    expect(result.lastId).toBe(42);
-    expect(check('logs-fetch', { lastId: result.lastId }).valid).toBe(true);
+    expect(result.data.lastId).toBe(42);
+    expect(check('logs-fetch', { lastId: result.data.lastId }).valid).toBe(true);
   });
 
   test('the default cursor is also a valid next cursor', async () => {
@@ -199,12 +209,12 @@ describe('logs-fetch cursor round-trips', () => {
       async logs() { return { logs: [] }; }
     }
 
-    const result = await tools['logs-fetch'].handler(
+    const result = await runTool(registry.get('logs-fetch'), 
       { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
       { Gateway: MockGateway }
     );
 
-    expect(result.lastId).toBe(0);
-    expect(check('logs-fetch', { lastId: result.lastId }).valid).toBe(true);
+    expect(result.data.lastId).toBe(0);
+    expect(check('logs-fetch', { lastId: result.data.lastId }).valid).toBe(true);
   });
 });

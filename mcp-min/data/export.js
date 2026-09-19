@@ -1,72 +1,60 @@
 // platformos.data.export - start data export from platformOS instance
 import log from '../log.js';
-import { resolveAuth, maskToken } from '../auth.js';
+import { ToolError } from '../tool-error.js';
+import { resolveAuth } from '../auth.js';
+import { mintFor } from '../jobs/handle.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
 
 const dataExportTool = {
-  description: 'Start data export from platformOS instance. Returns job ID for status polling. When complete, status will include data or zip_file_url.',
+  description: 'Export the records held on an instance. Returns a job_id to poll with job-status; the finished job carries the records, or a download link when zip is set.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      env: { type: 'string', description: 'Environment name from .pos config' },
       ...authProperties,
       exportInternalIds: {
         type: 'boolean',
-        description: 'Use internal object IDs instead of external_id in exported data',
+        description: 'Write internal ids instead of external_id.',
         default: false
       },
       zip: {
         type: 'boolean',
-        description: 'Export as ZIP archive (returns download URL when complete)',
+        description: 'Produce a ZIP and return a download link.',
         default: false
       }
     }
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
     log.debug('tool:data-export invoked', { env: params?.env, zip: params?.zip });
 
+    const auth = await resolveAuth(params, ctx);
+    const GatewayCtor = ctx.Gateway || Gateway;
+    const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
+
+    const exportInternalIds = !!params.exportInternalIds;
+    const isZip = !!params.zip;
+
+    let exportTask;
     try {
-      const auth = await resolveAuth(params, ctx);
-      const GatewayCtor = ctx.Gateway || Gateway;
-      const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
-
-      const exportInternalIds = !!params.exportInternalIds;
-      const isZip = !!params.zip;
-
-      const exportTask = await gateway.dataExportStart(exportInternalIds, isZip);
-
-      return {
-        ok: true,
-        data: {
-          id: exportTask.id,
-          status: exportTask.status || 'pending',
-          isZip
-        },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          auth: { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source }
-        }
-      };
+      exportTask = await gateway.dataExportStart(exportInternalIds, isZip);
     } catch (e) {
-      log.error('tool:data-export error', { error: String(e) });
-
+      // A 404 on the endpoint that starts an export means the instance does not offer exports,
+      // not that something the caller named is missing, which is how it would otherwise read.
       if (e.statusCode === 404) {
-        return {
-          ok: false,
-          error: {
-            code: 'NOT_SUPPORTED',
-            message: 'Data export is not supported by the server.',
-            statusCode: 404
-          }
-        };
+        throw ToolError.instance('NOT_SUPPORTED', 'Data export is not supported by the server.', { statusCode: 404 });
       }
-
-      return { ok: false, error: { code: 'DATA_EXPORT_ERROR', message: String(e.message || e) } };
+      throw e;
     }
+
+    return {
+      id: exportTask.id,
+      // The zip flag travels in the handle: reading an export's status needs it, and the
+      // agent polling is not the one that chose it.
+      job_id: mintFor({ kind: 'data-export', id: exportTask.id, origin: auth.url, flags: { zip: isZip } }),
+      status: exportTask.status || 'pending',
+      isZip
+    };
   }
 };
 

@@ -1,0 +1,160 @@
+/**
+ * One envelope, enforced rather than agreed.
+ *
+ * Every result a client sees is built by `runTool`: `{ ok: true, data, meta }` or
+ * `{ ok: false, error: { kind, code, message, details? }, meta }`, and the protocol layer derives
+ * `isError` from `ok === false` in one place. Before that existed the shape was a convention, and
+ * four tools had drifted off it — `migrations-*` answered `{ status }`, so a failed migration
+ * reached clients as a successful call, and nobody noticed for a release.
+ *
+ * These are the checks that stop a thirty-sixth envelope being invented: a tool returns its data
+ * and throws to fail, and anything else is caught here rather than in production.
+ */
+import fs from 'fs';
+import path from 'path';
+import { describe, test, expect } from 'vitest';
+import registry from '../tools.js';
+import { runTool } from '../run-tool.js';
+import { ToolError, ERROR_KINDS } from '../tool-error.js';
+
+const MCP_MIN = path.resolve(import.meta.dirname, '..');
+
+// Comments are stripped before anything is matched. This repository explains itself at length, and
+// the explanation of a defect quotes the defect: `instructions.js` describes `{ status: 'ok' }` in
+// prose, and a scan over raw source reported it as the thing it was warning about. Whole-line and
+// block comments only, so a string containing `//` — every https URL — is left alone.
+const code = (text) => text
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .split('\n')
+  .filter(line => !/^\s*(\/\/|\*)/.test(line))
+  .join('\n');
+
+// The tool modules, and only those. Derived from what `tools.js` imports rather than by walking
+// the tree: `data/validate.js`, `generators/utils.js` and `host-validation.js` are libraries whose
+// own `{ ok }` return is their callers' business, and scanning everything reported them — and the
+// instructions string, which ships the words `ok:false` to the model — as tools breaking the rule.
+// Deriving the list from the registry's own imports also means a tool added later is covered
+// without anyone remembering to add it here.
+const toolModules = () => {
+  const registrySource = fs.readFileSync(path.join(MCP_MIN, 'tools.js'), 'utf8');
+  // Every tool lives in a directory of its own group; `./log.js` is the registry's own import for
+  // the one tool defined inline.
+  const imported = [...registrySource.matchAll(/^import \w+ from '\.\/(.+?)';$/gm)]
+    .map(match => match[1])
+    .filter(file => file.includes('/'));
+
+  return [['tools.js', code(registrySource)], ...imported.map(file => [file, code(fs.readFileSync(path.join(MCP_MIN, file), 'utf8'))])];
+};
+
+describe('no tool builds a result itself', () => {
+  // If this drifts, everything below is checking the wrong set of files and passing for that
+  // reason. One tool (envs-list) is defined inline in the registry, so the imports are one fewer.
+  test('the modules under test are the registered tools', () => {
+    expect(toolModules().length).toBe(registry.size);
+  });
+
+  // Matched on the envelope's syntax, not the word: `graphql-exec`'s description tells the model
+  // that "errors come back as ok:false", and a looser pattern reported that sentence as the defect
+  // it warns about.
+  //
+  // There is no check for a `status: 'ok' | 'error'` envelope. It cannot do harm any more: a
+  // handler no longer sets `ok`, so `runTool` reads whatever it returns as data and the protocol's
+  // `isError` still comes out right — the old bug was that `status` *replaced* the failure signal.
+  // Meanwhile `status` is ordinary vocabulary here (env-add's background waiter reports
+  // success/timeout/error), so the check cost more in false alarms than it bought.
+  test.each([
+    ['an ok envelope', /\{\s*ok:\s*(true|false)\b/],
+    ['its own timing meta', /\bstartedAt:\s*new Date\(\)/]
+  ])('no module constructs %s', (_label, pattern) => {
+    const offenders = toolModules().filter(([, text]) => pattern.test(text)).map(([file]) => file);
+
+    expect(offenders, 'a handler returns its data and throws to fail; runTool builds the rest').toEqual([]);
+  });
+
+  // meta.auth is the invoker's, built from what resolveAuth recorded. Thirteen tools used to
+  // assemble the same masked block, which is how one of them could quietly differ.
+  test('no tool masks a token for its own result', () => {
+    const offenders = toolModules()
+      .filter(([file, text]) => file !== 'auth.js' && /maskToken/.test(text))
+      .map(([file]) => file);
+
+    expect(offenders).toEqual([]);
+  });
+
+  test('every kind used anywhere is one the closed set defines', () => {
+    const used = new Set();
+    for (const [, text] of toolModules()) for (const [, kind] of text.matchAll(/ToolError\.([a-z_]+)\(/g)) used.add(kind);
+    const unknown = [...used].filter(kind => !Object.hasOwn(ERROR_KINDS, kind));
+
+    expect(unknown, `kinds are ${Object.keys(ERROR_KINDS).join(', ')}`).toEqual([]);
+    expect(used.size, 'no tool classifies anything, which means the conversion did not happen').toBeGreaterThan(3);
+  });
+});
+
+describe('runTool is the only thing that shapes a result', () => {
+  test('a handler that still returns an envelope fails loudly instead of being wrapped twice', async () => {
+    const halfConverted = { handler: async () => ({ ok: true, data: { x: 1 }, meta: {} }) };
+
+    const result = await runTool(halfConverted, {});
+
+    expect(result.ok).toBe(false);
+    expect(result.error.code).toBe('DOUBLE_ENVELOPE');
+  });
+
+  // `status` on its own is ordinary payload — a release record and a job both carry one — so the
+  // guard must not fire on it, or every deploy status becomes an internal error.
+  test('a payload that merely has a status field is left alone', async () => {
+    const result = await runTool({ handler: async () => ({ status: 'success', id: 41 }) }, {});
+
+    expect(result).toMatchObject({ ok: true, data: { status: 'success', id: 41 } });
+  });
+
+  test('a handler that returns nothing still produces a well-formed result', async () => {
+    const result = await runTool({ handler: async () => undefined }, {});
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toBeNull();
+    expect(result.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  test('one call cannot carry its credentials into the next through a shared context', async () => {
+    const ctx = {};
+    await runTool({ handler: async (_p, c) => { c.resolvedAuth = { url: 'https://a.example.com', token: 'secret-value-1' }; } }, {}, ctx);
+    const second = await runTool({ handler: async () => ({}) }, {}, ctx);
+
+    expect(ctx.resolvedAuth).toBeUndefined();
+    expect(second.meta.auth).toBeUndefined();
+  });
+
+  test.each(Object.keys(ERROR_KINDS))('a thrown %s error keeps its kind, code and message', async (kind) => {
+    const result = await runTool({ handler: async () => { throw new ToolError(kind, 'A_CODE', 'what went wrong'); } }, {});
+
+    expect(result).toMatchObject({ ok: false, error: { kind, code: 'A_CODE', message: 'what went wrong' } });
+    expect(result.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe('every registered tool answers in that shape', () => {
+  // Called with nothing, against a gateway that refuses. Whatever each tool makes of that — a
+  // missing argument, no credentials, the refusal itself — the answer has to be well formed.
+  class Refuses {
+    constructor() {
+      return new Proxy(this, { get: () => async () => { const e = new Error('Unauthorized'); e.statusCode = 401; throw e; } });
+    }
+  }
+
+  // Local tools that would read or walk the working tree if called with defaults; they are covered
+  // by their own tests, and running them here would lint the repository.
+  const READS_THE_TREE = new Set(['check-run', 'generators-list', 'generators-help', 'generators-run', 'data-validate', 'data-import']);
+
+  test.each([...registry.keys()].filter(name => !READS_THE_TREE.has(name)))('%s', async (name) => {
+    const result = await runTool(registry.get(name), {}, { Gateway: Refuses, request: async () => { throw new Error('offline'); } });
+
+    expect(Object.keys(result).sort()).toEqual(result.ok ? ['data', 'meta', 'ok'] : ['error', 'meta', 'ok']);
+    if (result.ok === false) {
+      expect(Object.hasOwn(ERROR_KINDS, result.error.kind), `${name} reported kind ${result.error.kind}`).toBe(true);
+      expect(typeof result.error.code).toBe('string');
+      expect(result.error.message.length).toBeGreaterThan(0);
+    }
+  }, 20000);
+});

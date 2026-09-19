@@ -1,4 +1,5 @@
 import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { runTool } from '../run-tool.js';
 
 // Mock the pos-cli libs before importing tools
 vi.mock('../../lib/files', () => ({
@@ -7,8 +8,8 @@ vi.mock('../../lib/files', () => ({
 }));
 
 vi.mock('../../lib/settings', () => ({
-  default: { fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' }) },
-  fetchSettings: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' })
+  default: { settingsFromDotPos: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' }) },
+  settingsFromDotPos: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' })
 }));
 
 vi.mock('request-promise', () => ({
@@ -274,7 +275,7 @@ Assertions: 5. Failed: 5. Time: 123ms`;
 Assertions: 3. Failed: 0. Time: 100ms`
       });
 
-      const result = await testsRunTool.handler(
+      const result = await runTool(testsRunTool, 
         { env: 'staging', name: 'example_test' },
         { request: mockRequest }
       );
@@ -295,7 +296,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
         body: 'Assertions: 0. Failed: 0. Time: 10ms'
       });
 
-      await testsRunTool.handler(
+      await runTool(testsRunTool, 
         { env: 'staging', name: 'users_test', path: 'tests/users' },
         { request: mockRequest }
       );
@@ -311,7 +312,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
         body: 'Assertions: 0. Failed: 0. Time: 10ms'
       });
 
-      await testsRunTool.handler(
+      await runTool(testsRunTool, 
         { env: 'staging', name: 'create_user_test' },
         { request: mockRequest }
       );
@@ -327,7 +328,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
         body: 'Assertions: 0. Failed: 0. Time: 10ms'
       });
 
-      await testsRunTool.handler(
+      await runTool(testsRunTool, 
         { env: 'staging', path: 'tests/users', name: 'create_user_test' },
         { request: mockRequest }
       );
@@ -343,26 +344,26 @@ Assertions: 3. Failed: 0. Time: 100ms`
         body: 'Internal Server Error'
       });
 
-      const result = await testsRunTool.handler(
+      const result = await runTool(testsRunTool, 
         { env: 'staging', name: 'some_test' },
         { request: mockRequest }
       );
 
       expect(result.ok).toBe(false);
       expect(result.error.code).toBe('HTTP_ERROR');
-      expect(result.error.statusCode).toBe(500);
+      expect(result.error.details.statusCode).toBe(500);
     });
 
     test('returns error on network failure', async () => {
       const mockRequest = vi.fn().mockRejectedValue(new Error('Network error'));
 
-      const result = await testsRunTool.handler(
+      const result = await runTool(testsRunTool, 
         { env: 'staging', name: 'some_test' },
         { request: mockRequest }
       );
 
       expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('TESTS_RUN_ERROR');
+      expect(result.error.code).toBe('INTERNAL_ERROR');
       expect(result.error.message).toContain('Network error');
     });
 
@@ -374,7 +375,7 @@ Assertions: 3. Failed: 0. Time: 100ms`
 Assertions: 5. Failed: 2. Time: 150ms`
       });
 
-      const result = await testsRunTool.handler(
+      const result = await runTool(testsRunTool, 
         { env: 'staging', name: 'failing_test' },
         { request: mockRequest }
       );

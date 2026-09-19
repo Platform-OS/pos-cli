@@ -6,6 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-09-02 14:16'
+updated_date: '2026-09-17 08:37'
 labels:
   - tests
   - validation
@@ -18,7 +19,7 @@ references:
   - mcp-min/validate-params.js
 parent_task_id: TASK-3
 priority: low
-ordinal: 28000
+ordinal: 39000
 ---
 
 ## Description

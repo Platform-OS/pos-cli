@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
+import { runTool } from '../run-tool.js';
 
 const checkRunModPath = pathToFileURL(path.resolve(process.cwd(), 'mcp-min', 'check', 'run.js')).href;
 
@@ -30,11 +31,6 @@ describe('platformos.check-run', () => {
     }
   });
 
-  test('has correct description', () => {
-    expect(checkRunTool.description).toContain('platformos-check');
-    expect(checkRunTool.description).toContain('Node.js');
-  });
-
   test('has input schema with expected properties', () => {
     expect(checkRunTool.inputSchema.type).toBe('object');
     expect(checkRunTool.inputSchema.properties.appPath).toBeDefined();
@@ -42,7 +38,7 @@ describe('platformos.check-run', () => {
   });
 
   test('returns PATH_NOT_FOUND for non-existent path', async () => {
-    const result = await checkRunTool.handler({ appPath: '/tmp/does-not-exist-xyz-123' });
+    const result = await runTool(checkRunTool, { appPath: '/tmp/does-not-exist-xyz-123' });
 
     expect(result.ok).toBe(false);
     expect(result.error.code).toBe('PATH_NOT_FOUND');
@@ -55,7 +51,7 @@ describe('platformos.check-run', () => {
     fs.writeFileSync(tmpFile, 'test', 'utf8');
 
     try {
-      const result = await checkRunTool.handler({ appPath: tmpFile });
+      const result = await runTool(checkRunTool, { appPath: tmpFile });
 
       expect(result.ok).toBe(false);
       expect(result.error.code).toBe('NOT_A_DIRECTORY');
@@ -66,13 +62,13 @@ describe('platformos.check-run', () => {
   });
 
   test('includes timing metadata on success or dependency error', async () => {
-    const result = await checkRunTool.handler({ appPath: testAppPath });
+    const result = await runTool(checkRunTool, { appPath: testAppPath });
 
     if (result.ok) {
       // theme-check-node is installed
       expect(result.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
       expect(result.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-      expect(result.meta.appPath).toBeDefined();
+      expect(result.data.appPath).toBeDefined();
       expect(result.data).toBeDefined();
       expect(typeof result.data.offenseCount).toBe('number');
       expect(typeof result.data.filesChecked).toBe('number');
@@ -87,7 +83,7 @@ describe('platformos.check-run', () => {
   });
 
   test('returns structured file data when dependency is available', async () => {
-    const result = await checkRunTool.handler({ appPath: testAppPath });
+    const result = await runTool(checkRunTool, { appPath: testAppPath });
 
     if (!result.ok && result.error.code === 'MISSING_DEPENDENCY') {
       // Skip — dependency not installed

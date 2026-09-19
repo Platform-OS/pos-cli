@@ -1,26 +1,25 @@
 // platformos.liquid.exec tool - execute Liquid on remote instance via Gateway.liquid
-import { resolveAuth, maskToken } from '../auth.js';
+import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
+import { ToolError } from '../tool-error.js';
 
 const execLiquidTool = {
-  description: 'Render a Liquid template on a platformOS instance server-side via /api/app_builder/liquid_exec. Returns the rendered output. Useful for testing Liquid code, running one-off queries via {% graphql %}, or inspecting instance state. Auth resolved from: explicit params > MPKIT_* env vars > .pos config.',
+  description: 'Render a Liquid template on an instance and return the output. To run a query, use graphql-exec: this is for rendering. Rendering is not a deployability check either — the deploy converter rejects source that this accepts.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      env: { type: 'string', description: 'Environment name from .pos config (e.g., staging, production). Used to resolve auth when url/email/token are not provided.' },
       ...authProperties,
-      endpoint: { type: 'string', description: 'Override the base URL for the Liquid exec endpoint. Defaults to the resolved instance URL.' },
-      template: { type: 'string', description: 'Liquid template string to render server-side (e.g., "Hello {{ name }}", "{% graphql g = \'users/search\' %}").' },
-      locals: { type: 'object', additionalProperties: true, description: 'Variables available inside the template as top-level Liquid variables (e.g., { "name": "World" } makes {{ name }} render "World").' }
+      template: { type: 'string', description: 'Template source, e.g. "Hello {{ name }}".' },
+      locals: { type: 'object', additionalProperties: true, description: 'Values the template can read as top-level Liquid variables.' }
     },
     required: ['template']
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
     const auth = await resolveAuth(params, ctx);
-    const baseUrl = params?.endpoint ? params.endpoint : auth.url;
+    // The request URL comes from the resolved credentials only (see graphql-exec).
+    const baseUrl = auth.url;
 
     const GatewayCtor = ctx.Gateway || Gateway;
     const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
@@ -30,43 +29,24 @@ const execLiquidTool = {
       locals: params.locals || {}
     };
 
-    try {
-      const resp = await gateway.liquid(body);
-      const finishedAt = new Date().toISOString();
+    const resp = await gateway.liquid(body);
 
-      // Detect logical errors returned by the endpoint (HTTP 200 but Liquid error payload)
-      const respError = resp && (resp.error || resp.errors);
-      const resultStr = typeof resp?.result === 'string' ? resp.result.toLowerCase() : '';
-      const looksLikeError = resultStr.includes('error');
+    // The endpoint answers 200 with a Liquid error payload, so a failure has to be read out of the
+    // body. The instance rendered it and refused: its judgement, not a broken call.
+    //
+    // The marker, not the word: this looked for `error` anywhere in the output, so a template that
+    // rendered the word — a page about errors, a message saying there was none — came back as a
+    // failed call with its own output as the message. A real failure renders `Liquid error`, and
+    // it is matched anywhere in the output because a template can fail after partly rendering.
+    const respError = resp && (resp.error || resp.errors);
+    const rendered = typeof resp?.result === 'string' ? resp.result : '';
 
-      if (respError || looksLikeError) {
-        const message = String(resp?.error || resp?.errors || resp?.result || 'Liquid execution failed');
-        return {
-          ok: false,
-          error: { code: 'LIQUID_EXEC_ERROR', message, details: resp },
-          meta: {
-            startedAt,
-            finishedAt,
-            auth: { url: baseUrl, email: auth.email, token: maskToken(auth.token), source: auth.source }
-          }
-        };
-      }
-
-      return {
-        ok: true,
-        result: resp,
-        meta: {
-          startedAt,
-          finishedAt,
-          auth: { url: baseUrl, email: auth.email, token: maskToken(auth.token), source: auth.source }
-        }
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        error: { code: 'LIQUID_EXEC_ERROR', message: String(e) }
-      };
+    if (respError || /liquid error/i.test(rendered)) {
+      const message = String(resp?.error || resp?.errors || resp?.result || 'Liquid execution failed');
+      throw ToolError.instance('LIQUID_EXEC_ERROR', message, resp);
     }
+
+    return resp;
   }
 };
 

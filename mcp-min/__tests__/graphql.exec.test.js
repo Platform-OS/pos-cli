@@ -2,6 +2,7 @@
 import { pathToFileURL } from 'url';
 import path from 'path';
 import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { runTool } from '../run-tool.js';
 
 vi.mock('../../lib/proxy', () => {
   class GatewayMock {
@@ -26,21 +27,23 @@ describe('platformos.graphql.exec', () => {
 
   test('success returns data', async () => {
     class LocalGateway { async graph(body) { return { data: { ok: true } }; } }
-    const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', query: 'query { ok }' }, { Gateway: LocalGateway });
+    const res = await runTool(tool, { url: 'https://x', email: 'e', token: 't', query: 'query { ok }' }, { Gateway: LocalGateway });
     expect(res.ok).toBe(true);
-    expect(res.result.data.ok).toBe(true);
+    expect(res.data.data.ok).toBe(true);
   });
 
-  test('returns error object when Gateway throws', async () => {
-    class LocalGateway { async graph() { throw new Error('GQL'); } }
-    const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', query: 'throw' }, { Gateway: LocalGateway });
+  test('an instance that never answered is reported as unavailable, not as our defect', async () => {
+    // A gateway that fails carries a status or a network code. A bare Error would be classified
+    // `internal`, which is right for a pos-cli bug and wrong for an instance that is down.
+    class LocalGateway { async graph() { throw Object.assign(new Error('Bad gateway'), { statusCode: 502 }); } }
+    const res = await runTool(tool, { url: 'https://x', email: 'e', token: 't', query: 'throw' }, { Gateway: LocalGateway });
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('GRAPHQL_EXEC_ERROR');
+    expect(res.error).toMatchObject({ kind: 'unavailable', details: { statusCode: 502 } });
   });
 
   test('returns error object when GraphQL response contains errors', async () => {
     class LocalGateway { async graph() { return { errors: [{ message: 'Bad input' }], data: null }; } }
-    const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', query: 'gql_error' }, { Gateway: LocalGateway });
+    const res = await runTool(tool, { url: 'https://x', email: 'e', token: 't', query: 'gql_error' }, { Gateway: LocalGateway });
     expect(res.ok).toBe(false);
     expect(res.error.code).toBe('GRAPHQL_EXEC_ERROR');
   });

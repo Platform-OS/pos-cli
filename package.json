@@ -23,6 +23,7 @@
   },
   "files": [
     "lib",
+    "plugin",
     "bin",
     "gui/liquid",
     "gui/graphql/public",
@@ -41,6 +42,7 @@
   ],
   "dependencies": {
     "@inquirer/prompts": "^8.7.0",
+    "@modelcontextprotocol/server": "^2.0.0",
     "@platformos/platformos-check-node": "^1.1.0",
     "@platformos/platformos-common": "^0.2.0",
     "@platformos/platformos-language-server-node": "^0.1.1",

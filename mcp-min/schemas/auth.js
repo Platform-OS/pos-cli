@@ -1,34 +1,31 @@
 /**
- * Shared input-schema fragment for the explicit-credentials path.
+ * The parameters every authenticating tool accepts, spread into each tool's schema so that all of
+ * them document and validate credentials identically.
  *
- * `resolveAuth` (mcp-min/auth.js) accepts `url` + `email` + `token` on the params of
- * every tool that authenticates, ahead of the `.pos` environment lookup. Tools that
- * close their schema with `additionalProperties: false` must therefore declare these
- * three, or validation would reject the very callers that path exists to serve.
+ * `resolveAuth` (mcp-min/auth.js) takes `url` + `email` + `token` together, ahead of the `.pos`
+ * lookup, so a tool closing its schema with `additionalProperties: false` has to declare all three
+ * or it would reject the very callers that path exists to serve. The invariant is enforced by
+ * `__tests__/validate-params.test.js`, which derives the tool list from the registry.
  *
- * Spread into every authenticating tool rather than restated inline, so `tools/list`
- * documents the same three parameters identically everywhere. The invariant is enforced
- * by mcp-min/__tests__/validate-params.test.js, which derives the tool list from the
- * registry rather than a hand-written list.
+ * `env` belongs here too. Declaring it per tool is how it ended up in three different wordings
+ * with five tools describing it not at all, and how the fallback that decides which instance a
+ * call without `env` reaches came to be stated on four tools out of twenty-four.
  *
- * `env` is deliberately not included: it is required on some tools and optional on
- * others, and its description varies, so it stays declared per tool.
+ * Only `env` carries a description, and it says what the parameter is rather than what omitting it
+ * does. The precedence in full — the three together, then this, then MPKIT_*, then the first entry
+ * — is in the server instructions (mcp-min/instructions.js), sent once a session rather than with
+ * every tool; and what omitting it costs is no longer a warning anyone has to remember, because
+ * `resolveAuth` refuses the unnamed default for a call that can change an instance (TASK-31). It
+ * used to read "the first entry if omitted", which is now true only of the tools that just read.
  */
 const authProperties = {
-  url: {
+  env: {
     type: 'string',
-    format: 'uri',
-    description: 'Instance URL (with email and token, bypasses .pos)'
+    description: 'Which environment in .pos to use.'
   },
-  email: {
-    type: 'string',
-    format: 'email',
-    description: 'Account email (with url and token, bypasses .pos)'
-  },
-  token: {
-    type: 'string',
-    description: 'API token (with url and email, bypasses .pos)'
-  }
+  url: { type: 'string', format: 'uri' },
+  email: { type: 'string', format: 'email' },
+  token: { type: 'string' }
 };
 
 export { authProperties };

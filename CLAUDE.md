@@ -18,18 +18,42 @@ npm run test-watch        # Run tests in watch mode
 ```
 
 ### Testing
-Tests are integration tests that require actual platformOS instances. Configure via environment variables:
+**The runner is vitest** (`vitest.config.js`), not Jest. It collects `test/**/*.{test,spec}.js` and
+`mcp-min/__tests__/**`; a test file anywhere else is never run, however it is named.
+
 ```bash
-# Set in .env file or environment
+npm test                  # every suite
+npm run test:unit         # test/unit
+npm run test:integration  # test/integration — needs a real instance
+npm run test:mcp-min      # the MCP server's own suite, no instance needed
+npm run test:watch
+npm run test:coverage
+DEBUG=1 npm test          # with debug output
+```
+
+`test/unit` and `mcp-min/__tests__` run against fakes and spawned processes; `test/integration`
+talks to an actual platformOS instance and needs credentials, from a `.env` file or the
+environment:
+
+```bash
 MPKIT_URL=https://your-test-instance.example.com
 MPKIT_EMAIL=your-email@example.com
 MPKIT_TOKEN=your-token
-
-npm test                  # Run all tests with Jest
-DEBUG=1 npm test          # Run with debug output
 ```
 
-Tests run with `--runInBand` to prevent race conditions. Fixtures are in `/test/fixtures/`.
+Files run in parallel, each in its own forked process (`pool: 'forks'`), so a test that writes to
+the repository root — a `.pos`, a fixture lockfile — can fail another suite that reads it. Write
+into a temp directory (`withTmpDir`, `makeWorkDir`) instead. Fixtures are in `/test/fixtures/`.
+
+`pretest` (and `pretest:unit`) runs `npm install` in `test/fixtures/yeoman` and
+`test/fixtures/yeoman/custom`. Running vitest directly skips that, and `test/unit/generators.test.js`
+then stops on a yeoman prompt rather than failing outright — if a generators test appears to hang,
+that is why. `npm test` and `npm run test:unit` do the install for you.
+
+Coverage (`npm run test:coverage`) is measured over `lib/**` and `bin/**` with a 60% threshold on
+lines, functions, branches and statements. `mcp-min/**` is deliberately outside it: its suite
+covers the server through spawned processes and real transports, which v8 coverage of this process
+does not see.
 
 ### Local Development Workflow
 ```bash
@@ -57,8 +81,8 @@ pos-cli/
 │   ├── pos-cli-check-init.js    # Generate .platformos-check.yml
 │   ├── pos-cli-check-run.js     # Run platformos-check linter
 │   ├── pos-cli-lsp.js           # Language Server Protocol server
-│   ├── pos-cli-mcp.js           # MCP server entry point
-│   ├── pos-cli-mcp-config.js    # Display MCP tool configuration
+│   ├── pos-cli-mcp.js           # MCP server entry point (also `pos-cli mcp`); strict args, parsed before the server loads
+│   ├── pos-cli-mcp-config.js    # Display MCP tool configuration (also `pos-cli mcp-config`)
 │   ├── pos-cli-ai.js            # AI tools command group
 │   ├── pos-cli-ai-init.js       # Wizard: register MCP servers in AI tool config
 │   ├── pos-cli-supervisor.js    # platformos-mcp-supervisor wrapper (validate_code MCP server)
@@ -86,11 +110,28 @@ pos-cli/
 │   ├── validation/              # Ajv schema validation (shared by GUI + MCP)
 │   └── validators/              # CLI argument validators (url, email, paths)
 ├── mcp-min/          # MCP server implementation
-│   ├── index.js                 # Starts stdio + HTTP/SSE transports
+│   ├── index.js                 # start({ selection, http }): stdio + HTTP transports, one shared shutdown
+│   ├── cli-args.js              # pos-cli-mcp argument parsing (tool selection, --no-http, --help/--version)
+│   ├── lifecycle.js             # When the process ends: stdin EOF rule, drain, 120 s deadline
+│   ├── cancellation.js          # ctx.signal helpers for tools that wait or page
+│   ├── jobs/                    # job-status: one status tool for every async operation
+│   │   ├── status.js            # The tool: parse the handle, pin the instance, poll, optionally wait
+│   │   ├── handle.js            # The job_id: mint/parse, strictly, with a per-kind flag allowlist
+│   │   ├── auth-for-job.js      # Credentials for the instance a job was started on
+│   │   ├── local-phases.js      # Asset uploads this process started (nothing else can see them)
+│   │   └── adapters/            # One per kind: poll(deps, id, flags) → { state, status, result }
+│   ├── protocol/                # The MCP protocol layer (MCP TypeScript SDK v2)
+│   │   ├── server-factory.js    # One McpServer definition: tools, schemas, errors, progress, cancellation
+│   │   └── http-endpoint.js     # /mcp: Express ⇄ web-standard bridge for the SDK's HTTP handler
 │   ├── stdio-server.js          # MCP over stdio (for editor integrations)
-│   ├── http-server.js           # HTTP/SSE transport (port 5910)
-│   ├── tools.js                 # Tool registry
-│   ├── tools.config.json        # Enable/disable tools, customize descriptions
+│   ├── http-server.js           # HTTP transport: /mcp + the deprecated pre-SDK routes (127.0.0.1:5910)
+│   ├── http-config.js           # MCP_MIN_HOST / MCP_MIN_PORT / MCP_MIN_ALLOWED_HOSTS, fails closed
+│   ├── host-validation.js       # Host/Origin check on every HTTP route (DNS rebinding)
+│   ├── tools.js                 # Tool registry (a Map, client order); reads no configuration
+│   ├── profiles.js              # Built-in tool profiles: full (default), dev, none
+│   ├── tools-config.js          # Reads + validates tools.config.json / MCP_TOOLS_CONFIG (the only reader)
+│   ├── tool-selection.js        # Profile + --include/--exclude-tools + config → exposed tools; findTool
+│   ├── tools.config.json        # Overrides only: disable a tool, or replace its description
 │   └── <tool-name>/             # One directory per tool group (deploy/, data/, etc.)
 ├── gui/              # Web UI applications
 │   ├── graphql/                 # GraphiQL IDE (React, pre-built)
@@ -179,19 +220,81 @@ export { run };
 #### 3. MCP Server Pattern
 **Directory**: `mcp-min/`
 
-The MCP (Model Context Protocol) server exposes platformOS operations as tools for AI clients. It runs two transports simultaneously:
-- **stdio** (`stdio-server.js`): Standard MCP transport for editor/AI integrations
-- **HTTP/SSE** (`http-server.js`): REST + Server-Sent Events on port 5910 (env: `MCP_MIN_PORT`)
+The MCP (Model Context Protocol) server exposes platformOS operations as tools for AI clients. The protocol is spoken by the MCP TypeScript SDK v2 (`@modelcontextprotocol/server`), which serves revision 2026-07-28 and the 2025 revisions from one definition. It runs two transports:
+- **stdio** (`stdio-server.js`): what editors and AI tools launch. `--no-http` makes it the only one.
+- **HTTP** (`http-server.js`) on `127.0.0.1:5910` (env: `MCP_MIN_PORT`, `MCP_MIN_HOST`): MCP Streamable HTTP at `/mcp`, plus the pre-SDK routes (`/`, `/tools`, `/call`, `/call-stream`), which are deprecated and go at the next major.
 
-Tools are registered in `tools.js` and can be enabled/disabled via `tools.config.json` (or `MCP_TOOLS_CONFIG` env var). Each tool group lives in its own directory (`deploy/`, `data/`, `logs/`, etc.) and calls the Gateway directly (no CLI subprocess spawning).
+**The HTTP transport has no authentication** — whoever can reach it runs every enabled tool with this machine's platformOS credentials. Three invariants stand in for auth; keep them when touching `http-server.js` (including the SDK migration):
+- **Loopback bind by default.** `readHttpConfig` (`http-config.js`) defaults `MCP_MIN_HOST` to `127.0.0.1`, and `startHttp` defaults to it too, so a caller passing only a port is still loopback-only. A non-loopback `MCP_MIN_HOST` is an explicit opt-in and logs an unauthenticated-exposure warning on every start.
+- **Host/Origin validation before everything.** `hostValidation` (`host-validation.js`) is registered app-level after the request logger and *before* `bodyParser` and the router, so every route — including ones added later and unknown paths — answers `403` to a Host/Origin hostname outside `localhost`, `127.0.0.1`, `[::1]` plus `MCP_MIN_ALLOWED_HOSTS`, without the body being parsed or a tool resolved. Status, body and messages mirror `@modelcontextprotocol/express` 2.0.0 exactly, so swapping in the SDK middleware is invisible to clients; the allowlist is enforced for non-loopback binds too, where the SDK would skip it.
+- **Fail closed, report honestly.** A malformed `MCP_MIN_*` value throws `HttpConfigError` from `start()` (`index.js`), before either transport starts; `bin/pos-cli-mcp.js` reports it like `ToolsConfigError`. `startHttp` resolves only on `listening` and rejects with the listen error; `index.js` logs the address from `server.address()` on success, and on failure logs `HTTP transport not started (<code>)` and keeps serving stdio. Never log "listening" from configuration: an older pos-cli-mcp bound to `*:5910` makes a new `127.0.0.1:5910` bind fail with `EADDRINUSE` while still answering localhost traffic itself.
+
+**Protocol layer.** `createServerFactory` (`protocol/server-factory.js`) builds the one `McpServer` both transports serve from. Keep these when touching it or either transport:
+- **The SDK owns the protocol; this repo owns the tools.** Version negotiation, `server/discover`, the `_meta` envelope, error codes, notifications and cancellation are the SDK's. Tools stay plain modules with a JSON Schema and a handler returning `{ ok, … }`.
+- **What is published is what is enforced.** A tool's `inputSchema` goes out through `fromJsonSchema` with a publish-only validator, byte-identically; arguments are checked in the tool callback by `rejectionFor` (`validate-params.js`), the same function the deprecated HTTP routes use. Tool schemas are enforced as JSON Schema 2020-12 — the dialect MCP 2026-07-28 assigns to a schema published without `$schema`.
+- **A tool schema that does not compile stops startup**, naming the tool. The SDK builds `tools/list` from the schemas, so one it cannot use would fail the list for *every* tool; a schema is code, so this is our defect to report at startup, not a per-call error.
+- **Tool failures are tool results, not protocol errors.** Invalid arguments (`INVALID_PARAMS`), a handler returning `{ ok: false }` and a handler that throws (`INTERNAL_ERROR`) all come back as `isError: true` with a JSON body carrying a code — that is what a model can act on. An unknown tool or method stays a protocol error (`-32602` / `-32601`).
+- **Handler context**: `{ transport, debug, log, sendProgress, signal }`. `sendProgress` only sends when the client passed a progress token, and only ever increases; a call with a token also gets a heartbeat every `HEARTBEAT_MS`. `signal` aborts when the client cancels or goes away — a tool that waits or pages must check it (`cancellation.js`), or it keeps calling the instance for a client that has stopped listening.
+- **stdio** (`serveStdio`, dual-era): the SDK does not end the connection when stdin closes, which is what lets in-flight calls finish; the session's end is decided by the TASK-14 rule below. Never close the SDK handle on shutdown — that aborts those calls. Direct method invocation (`{"method":"envs-list"}`) is gone; only MCP methods are served.
+- **`/mcp`** (`protocol/http-endpoint.js`): an Express ⇄ web-standard bridge, mounted after Host/Origin validation and *before* `bodyParser` (the SDK reads the body itself). It caps the body at `MCP_BODY_LIMIT_BYTES`, aborts the call when the client disconnects, and registers `subscriptions/listen` streams with `trackStream` so shutdown ends them while ordinary calls drain.
+- **`--no-http` does not read `MCP_MIN_*` at all.** With no listener there is nothing to expose, and a stale value in an editor's environment must not stop a stdio server. It is what `pos-cli ai init` writes.
+- **`annotations.readOnlyHint`** is a reviewed set (`tool-annotations.test.js`), on tools that change nothing locally or on the instance. Omitting it means "may change things", which is the right default.
+
+**Logging: one sink, redacted centrally** (`mcp-min/log.js`, `mcp-min/redact.js`). Everything the server writes goes to stderr and to `~/.pos-cli/logs/mcp-min.log` (`MCP_MIN_LOG_FILE`), which outlives the session and is shared by every session on the machine; `DEBUG=1` is what people turn on precisely when credentials are moving. Keep these:
+- **stdout belongs to the protocol.** `mcp-min/log.js` writes to stderr and the log file, never stdout, and `lib/logger.js` routes its stdout methods (`Info`, `Success`, `Log`, `News`, `Print`) to stderr while `isServerMode()`. CLI code called from a tool — `Gateway`'s Portal retry, a two-factor session message — would otherwise put non-JSON bytes into a stdio client's channel mid-response.
+- **Redaction happens in `log.js`, not at call sites.** `write()` passes every data object through `redact()` and every message through `scrubString()`. Masking by hand at one call site is a rule the next one will not know about; centrally, a leak takes a new *kind* of secret rather than a new logging line. Adding one means adding a key to `SECRET_KEYS` or `MASKED_KEYS` in `redact.js` — normalised, so an API-key header, its `SHOUTING_SNAKE` form and its camelCase form are one name.
+- **Two treatments, deliberately.** A secret (`authorization`, `cookie`, `password`, `mcp-session-id`, `device_code`…) is replaced whole: part of a password is still a leak, and one `Cookie` can carry several credentials. A credential *name* (`token`, `access_token`, `jwt`…) is masked to `abc...xyz` — enough to tell which credential, not enough to use, and the same shape `maskToken` (`auth.js`) writes into tool results. Under 12 characters it is redacted instead, because three of eight is most of the secret.
+- **Credentials also travel inside strings**, so `Token …`/`Bearer …` and sensitive URL query values (`access_token`, `device_code`, `user_code`, `password`…) are scrubbed wherever they appear, including in the message.
+- **A log line must never fail a request.** `serialise()` catches everything — a cycle, a bigint, a getter that throws — and writes `[unserialisable]` rather than propagating. Structures are bounded (`MAX_DEPTH`, `MAX_STRING_LENGTH`) so a `data-import` payload cannot become a megabyte of log.
+- **The file is owner-only**: created `0600`, and an existing one (every log written before this) is tightened once per process through `restrictToOwner`.
+- **Do not log a whole `params`, a whole request body or a whole upstream response.** Redaction is the floor, not the plan: name the fields that help (`tokenProvided: true`, `accessTokenReceived: false`, an error code). `mcp-min/portal/env-add.js` is the worked example — it used to log its params object, with the instance token in it, at INFO.
+
+**Invocation and lifetime.** MCP clients start `pos-cli-mcp` (or `pos-cli mcp`, a commander executable subcommand that spawns the same bin with stdio inherited) and stop it by closing stdin. Keep these when touching the bins, `stdio-server.js` or `index.js`:
+- **Arguments and the tool selection are settled before any transport starts.** `bin/pos-cli-mcp.js` calls `parseServerArgs` (`cli-args.js`), then `selectTools`, then `start({ selection })` from `mcp-min/index.js` (importing it starts nothing); `--help`/`--version` set `process.exitCode` (not `process.exit()`, which can truncate output on a pipe) and never load the server. Unknown options and positionals are rejected, not ignored: every option decides what an unauthenticated server exposes, so a typo must fail closed. `pos-cli mcp -v` is answered by `pos-cli` itself, with the same package version.
+- **stdin EOF ends the session** when stdin is a client pipe/socket, or when stdio carried at least one message (`stdinEndEndsSession`). `</dev/null`, a file or a TTY with no messages keeps HTTP serving — that is how the HTTP transport runs alone.
+- **Shutdown drains; it does not `process.exit()`.** `createShutdown` (`lifecycle.js`) is shared by both transports: on EOF, stdio stops reading and `stopHttp` (`http-server.js`) stops accepting, destroys SSE streams, and closes each keep-alive connection as soon as its in-flight response finishes (otherwise it idles for the 5 s keep-alive timeout and holds the process). The process then exits by itself, so responses are written and background work a tool started (deploy-start's asset upload) completes. An unref'd deadline (`SHUTDOWN_DEADLINE_MS`, 120 s — covers `waitForUnpack`'s 90 s) forces exit 0 if something never finishes. A transport that finishes starting after shutdown began is stopped at once (`onShutdown` runs late closers immediately).
+- A new long-lived handle (interval, stream, socket) in a tool or transport must end when its request does, or it will hold every shutdown until the deadline.
+
+**Tool selection.** Which tools a server exposes is `(tools of --profile ∪ --include-tools) − --exclude-tools − tools disabled in tools.config.json`, resolved once at startup. Keep these when touching tools, profiles, the config or a transport:
+- **`tools.js` is only the registry**: a `Map` of every tool in the order clients see, with no import-time configuration. `full` is computed from it, so a new tool reaches `full` by being registered; it reaches `dev` (`profiles.js`) only when added there on purpose.
+- **One resolution, shared.** `selectTools` (`tool-selection.js`) loads the config through `loadToolsConfig` (`tools-config.js`, the only reader of that file and the only place the enabled/disabled rule lives) and resolves the options. `bin/pos-cli-mcp.js` and `bin/pos-cli-mcp-config.js` both call it, with options defined once (`addToolSelectionOptions`), so `pos-cli mcp-config` prints — and refuses — exactly what the server would.
+- **Transports receive the exposed tools and have no default.** `startStdio({ tools })` and `startHttp({ tools })` throw without a `Map`, so no caller can end up serving every registered tool by leaving it out. The selection is fixed for the process and identical on both transports: MCP forbids `tools/list` varying per connection, and it is always registry order.
+- **Hidden means uncallable.** A tool outside the selection is never registered with the SDK, so `tools/call` over stdio and `/mcp` answers it exactly like a name that matches no tool. The deprecated routes (`POST /call`, `POST /call-stream`, JSON-RPC `tools/call`) look tools up with `findTool`, which only finds exposed tools and never `Object.prototype` names. The HTTP transport has no authentication, so a listed-but-hidden tool that could still be called would make profiles cosmetic.
+- **The selection fails closed**: an unknown profile or tool name (Map lookups, so `constructor` is unknown), a name in both options, `--include-tools` naming a config-disabled tool, or an empty result throws `ToolsConfigError` before any transport starts.
+- **A description must not name a tool its built-in profile hides** — the model would go looking for it. `tool-selection.test.js` checks every built-in profile; a tool whose description points at another tool has to be exposed with it. That check covers the whole registry only while every tool name is hyphenated: a single-word name cannot be told from ordinary prose, so one would silently drop out of it.
+- **The server instructions describe the server that was resolved.** `mcp-min/instructions.js` builds the MCP `instructions` string from the exposed `Map`, so a section about a tool disappears with the tool and `--profile`/`--include-tools`/`--exclude-tools` carry it without a second list to maintain. It holds only what no single tool owns — how credentials resolve, what every result looks like, what a relative path is relative to — because it must not restate a tool description that is already sent with every request. It never names a tool this server does not expose, and never a tool of another MCP server: what else a client has registered is not knowable here. `pos-cli mcp-config` prints the string for any selection.
+- **A tool is described where it is defined.** The `description` in the tool's own module is what clients are shown. `tools.config.json` can replace it — that is what the override is for — but the bundled file ships replacing nothing, and must stay that way: while it carried a description for every tool, editing a module changed nothing anyone saw, and six had drifted apart before it was noticed. It also froze all of them for anyone who edited the file, since an upgrade cannot update a description a user's config restates.
+- **What the server does not expose is a decision, not an oversight.** `docs/MCP_COVERAGE.md` holds one — expose, later or never, with its reason — for every pos-cli capability, and `mcp-min/__tests__/cli-coverage.test.js` derives the capability list from `bin/` the way commander does and fails when one has no row. A new CLI command therefore cannot ship without someone saying what it means for the agent surface. Every tool costs tokens on every request for every agent, so "expose everything" has never been the goal.
+- Bare `pos-cli-mcp` stays `full` in 6.x. `pos-cli ai init` writes `--profile dev`; `lib/ai.js` upgrades only entries equal to a form it wrote before (`PREVIOUS_SERVERS`) and leaves any other differing entry alone. Changing the written args means adding the old form there.
+
+Each tool group lives in its own directory (`deploy/`, `data/`, `logs/`, etc.) and calls the Gateway directly (no CLI subprocess spawning).
 
 ```javascript
-// mcp-min/index.js
-startStdio();                          // stdio transport
-await startHttp({ port: PORT });       // HTTP/SSE transport
+// bin/pos-cli-mcp.js
+const selection = selectTools(parsed.selection);  // profile + options + tools.config.json → exposed tools
+await start({ selection, http: parsed.http });    // mcp-min/index.js; http: false for --no-http
+
+// mcp-min/index.js — start()
+const shutdown = createShutdown();                                  // shared: stdin EOF stops both transports
+startStdio({ tools: selection.tools, shutdown });                   // MCP over stdio (serveStdio, dual-era)
+await startHttpTransport(httpConfig, selection.tools, shutdown);    // /mcp + deprecated routes
+
+// mcp-min/protocol/server-factory.js — the definition both transports serve
+server.registerTool(name, { description, inputSchema: fromJsonSchema(tool.inputSchema, PUBLISH_ONLY), annotations },
+  async (args, ctx) => { /* rejectionFor → isError, then tool.handler(args, { signal, sendProgress, … }) */ });
 ```
 
-Tools include: envs-list, env-add, deploy-start/status/wait, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, tests-run/run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, portal tools (instance-create, partners-list, partner-get, endpoints-list).
+Tools include: envs-list, env-add, job-status, deploy-dry-run, deploy-start, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, unit-tests-run, tests-run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, and the Partner Portal tools (instance-create, partners-list, partner-get, endpoints-list).
+
+#### 3a. Asynchronous operations: one `job-status`, and what a `job_id` may decide
+
+Five tools start work that outlives the call (`deploy-start`, `data-import`, `data-export`, `data-clean`, `tests-run-async`). Each returns a `job_id` and `job-status` (`mcp-min/jobs/`) reads any of them back. Keep these when touching `mcp-min/jobs/` or a starter:
+
+- **The handle is self-contained, and untrusted.** `mint`/`parse` (`jobs/handle.js`) encode the kind, the remote id, the instance origin and a per-kind flag allowlist. It is not a key into a table in this process: MCP clients restart stdio servers while the agent keeps its conversation, and a table would make every restart an "unknown job". Because it travels through the model, `parse` is strict — unknown kind, an id outside `^[A-Za-z0-9_-]{1,128}$`, an origin that is not exactly `new URL(o).origin`, an unexpected field or a flag the kind does not have are all `INVALID_JOB_ID`.
+- **Nothing in a handle chooses credentials or a URL.** `authForJob` (`jobs/auth-for-job.js`) resolves credentials the way every tool does, then *compares* origins: equal → use them; the caller named an instance that does not match → `JOB_INSTANCE_MISMATCH`; nothing named and exactly one `.pos` environment points at the job's instance → use that one; otherwise refuse. The refusal happens before any request, which is what the mismatch tests assert. A forged origin therefore cannot point this machine's token anywhere.
+- **The adapters are the only place a remote status is interpreted.** `state` is `running` | `completed` | `failed`, where `completed` means the operation finished (a test run with failing assertions is `completed`) and `failed` means the operation itself failed. An unrecognised remote status is `running` — the job exists, so "finished" would be a lie — and is logged.
+- **A deploy finishes twice.** The release import and the asset upload are reported independently, so `jobs/adapters/deploy.js` combines them, taking the phase from `local-phases.js` first (only the process that started an upload can see it) and then from the release record. `unknown` is a real answer after a restart; reporting `running` forever would be worse. `deploy/assets-task.js` waits for the release to settle before sending the manifest, as `lib/push.js` + `directAssetsUploadStrategy` do — sending one mid-import is untested against the API.
+- **No tool takes an argument that moves the request.** Eight did (`logs-fetch`, `graphql-exec`, `liquid-exec`, `migrations-list/generate/run` and the two deploy status tools since removed): `endpoint` replaced the URL while the `.pos` token was still sent, so a name a model read somewhere could redirect this machine's credentials. The URL comes from the resolved credentials, full stop. `request-target.test.js` checks every registered tool for a redirecting parameter by name and scans the sources for `params.endpoint`, so a new tool inherits the rule. Calling another instance is the explicit-credentials path (`url` + `email` + `token`), where the caller brings the credential with the host.
 
 #### 4. File Watching Pattern - Sync Mode
 
@@ -441,15 +544,18 @@ auth properties are what use it.
 
 | Where | What is validated |
 |---|---|
-| `mcp-min/http-server.js` — `POST /call`, `/call-stream` | tool params vs `inputSchema` → 400 |
-| `mcp-min/http-server.js` — JSON-RPC `tools/call` | same → `-32602` |
-| `mcp-min/stdio-server.js` — `tools/call` + legacy direct invocation | same → `-32602` |
-| `mcp-min/tools.js` | `tools.config.json` vs `tools.config.schema.json`, plus tool names |
+| `mcp-min/protocol/server-factory.js` — stdio and `/mcp` `tools/call` | tool params vs `inputSchema` → `isError` result, code `INVALID_PARAMS` |
+| `mcp-min/http-server.js` — deprecated `POST /call`, `/call-stream` | same → 400 |
+| `mcp-min/http-server.js` — deprecated JSON-RPC `tools/call` | same → `-32602` |
+| `mcp-min/tools-config.js` | `tools.config.json` vs `tools.config.schema.json`, plus tool names |
 | `lib/server.js` | GUI requests for graph / liquid / logs / logsv2 / sync |
 
-The five MCP dispatch sites (the first three rows) route through `rejectionFor` in
-`mcp-min/validate-params.js`, so the mapping from a rejection to a status code (400/500,
-`-32602`/`-32603`) is made in one place for the transports. The GUI server keeps its own
+Every MCP dispatch site (the first three rows) routes through `rejectionFor` in
+`mcp-min/validate-params.js`, so one place decides what a rejection becomes: a tool result with
+`isError` on the MCP paths, as the 2026-07-28 tools specification asks — the model reads it and
+can correct itself — and the status codes (400/500, `-32602`/`-32603`) the deprecated routes
+still answer with. Tool schemas are validated in the 2020-12 dialect (`TOOL_SCHEMA_DIALECT`);
+the GUI's own schemas stay draft-07. The GUI server keeps its own
 `rejectInvalid` in `lib/server.js` because it answers with a different body shape; the two
 apply the same 400/500 rule and have to be changed together.
 A tool that declares no schema falls back to `OPEN_OBJECT_SCHEMA` in
@@ -469,6 +575,14 @@ resolves credentials in this order:
 3. `MPKIT_URL` / `MPKIT_EMAIL` / `MPKIT_TOKEN` env vars
 4. the first entry in `.pos`
 
+**The MCP server and the CLI resolve a named environment differently, on purpose.** `fetchSettings`
+(`lib/settings.js`) answers from `MPKIT_*` first and falls back to `.pos`, because CI exports those
+variables and still names an environment on the command line. `resolveAuth` reads the named
+environment from `.pos` and nowhere else (`settingsFromDotPos`), because here the name comes from a
+model that was told which instance to use: falling back would send a deploy somewhere else while
+reporting the name it was given. Do not "align" the two — `mcp-min/__tests__/auth.env-resolve.test.js`
+pins both orders, with the reason.
+
 Marking `env` as `required` would reject three of those four supported call styles. Tools
 closing their schema with `additionalProperties: false` must also spread in
 `authProperties` from `mcp-min/schemas/auth.js`, or the explicit-credentials path becomes
@@ -476,30 +590,53 @@ unreachable. That rule is enforced by `mcp-min/__tests__/validate-params.test.js
 derives the tool list by scanning for `resolveAuth` rather than hard-coding names — a
 hand-written list silently stops guarding tools added later.
 
-Because `env` is advertised as optional, an MCP client that omits it lands on step 4 — the
-*first* `.pos` entry — including for mutating tools (`data-import`, `constants-set`,
-`uploads-push`). Runtime behaviour is unchanged, since nothing enforced `required` before,
-but the advertised contract now invites the omission.
+**A call that can change an instance has to name one.** Step 4 is the only step that names no
+instance at all: it takes whichever entry happens to be first in a file the model has never seen.
+`requireNamedInstance` (`auth.js`) refuses it with `ENV_REQUIRED` (`input`) when the tool is not
+`readOnlyHint` and `.pos` holds more than one environment, and the message lists them — a model
+cannot read `.pos`, so a refusal that does not name the choices cannot be acted on. Steps 1 to 3
+all name an instance and are untouched, which is why the guard is here and not `required: env` in
+the schemas: requiring the parameter would reject explicit credentials, `MPKIT_*` and the
+single-environment default alike. One environment is not a guess, so it is allowed.
 
-**The tools config fails closed.** A missing or unparseable config falls back to defaults;
-one that parses but is invalid throws `ToolsConfigError`. That file decides which tools are
-exposed, so ignoring a broken one would silently re-enable every tool the author meant to
-switch off. Two checks, because the schema alone is not enough: it validates the shape, and
-`loadToolsConfig` separately rejects entries naming a tool that does not exist — a typo
-like `deploy-strt` matches nothing in `applyConfig` and would otherwise leave `deploy-start`
-enabled while the config looks like it took effect. `bin/pos-cli-mcp.js` catches the error
-and reports it through `logger`, so a config mistake never surfaces as a Node stack trace.
+`runTool` derives the policy from the tool's own `annotations.readOnlyHint` and puts it on the
+call context, overriding anything a caller passed: which tools may land on an unnamed instance is
+the registry's decision, not a per-call one, and no tool can exempt itself. A tool added later is
+covered by declaring what it is. `resolveAuth` called directly — by `lib/` or the CLI — is
+unguarded, since the rule is about MCP tools. `mcp-min/__tests__/env-required.test.js` derives the
+guarded set from the registry and fails if a tool that may change an instance escapes it.
+
+**The tools config fails closed.** A missing, unreadable or unparseable config falls back to
+defaults (logged as a warning when `MCP_TOOLS_CONFIG` named it, and shown by `pos-cli
+mcp-config`); one that parses but is invalid throws `ToolsConfigError`. That file decides
+which tools are exposed, so ignoring a broken one would silently re-enable every tool the
+author meant to switch off. Two checks, because the schema alone is not enough: it validates
+the shape, and `loadToolsConfig` (`tools-config.js`) separately rejects entries naming a tool
+that does not exist — a typo like `deploy-strt` would match nothing and otherwise leave
+`deploy-start` enabled while the config looks like it took effect. The one exception is a name
+in `REMOVED_TOOLS`, a tool an earlier release registered: that is warned about and ignored, because
+it cannot leave anything enabled and a user could not have edited the line out before upgrading.
+A tool that is ever re-registered has to lose its tombstone, or its config entry would be ignored;
+a test checks that. Both
+`bin/pos-cli-mcp.js` and `bin/pos-cli-mcp-config.js` catch the error and report it through
+`logger`, with the same message, so a config mistake never surfaces as a Node stack trace.
 
 ### Testing Philosophy
-Integration tests against real platformOS instances for reliability. Tests cover:
-- Deploy (various strategies, error handling)
-- Sync (file changes, assets, deletion)
-- Modules (download, push, update)
-- Data operations (import/export)
-- Audit rules
-- File validation
+Behaviour is tested where it actually happens. `test/integration` drives the built CLI against a
+real platformOS instance — deploy strategies and their error handling, sync (changes, assets,
+deletion), modules, data import/export, audit rules, file validation — because those are the paths
+where a mocked API would prove nothing. It needs `MPKIT_URL` / `MPKIT_EMAIL` / `MPKIT_TOKEN`;
+`test/global-setup.js` skips its cleanup when no real credentials are present.
 
-Tests require environment variables (MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN) pointing to test instances.
+`test/unit` and `mcp-min/__tests__` need no instance and no credentials: they use fakes, temp
+directories and spawned processes, which is what makes them worth running on every change. The MCP
+suite in particular starts real servers and speaks the protocol to them over stdio and HTTP.
+
+A test is only worth having if it fails when the behaviour it names is broken. For anything
+load-bearing — a security boundary, a protocol rule, a migration that rewrites someone's file —
+check that by breaking the code on purpose and watching the test catch it, and prefer asserting the
+observable outcome (what was written, what was sent, what the client received) over how the code
+got there.
 
 ## Development Practices
 

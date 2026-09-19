@@ -8,73 +8,54 @@ import { presignUrl } from '../../lib/presignUrl.js';
 import { uploadFile } from '../../lib/s3UploadFile.js';
 import { resolveAuth, runWithAuth } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
+import { ToolError, kindForStatus } from '../tool-error.js';
 
 const uploadsPushTool = {
-  description: 'Upload a ZIP file containing property uploads to platformOS instance. The ZIP should contain files referenced by upload-type properties. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly.',
+  description: 'Upload a ZIP of the files that upload-type properties on an instance refer to.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     required: ['filePath'],
     properties: {
-      env: { type: 'string', description: 'Environment name' },
       ...authProperties,
-      filePath: { type: 'string', description: 'Path to ZIP file with uploads' }
+      filePath: { type: 'string', description: 'ZIP holding the files.' }
     }
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
+    const auth = await resolveAuth(params, ctx);
 
-    try {
-      const auth = await resolveAuth(params, ctx);
-
-      // Resolve file path
-      const filePath = path.resolve(params.filePath);
-
-      if (!fs.existsSync(filePath)) {
-        return {
-          ok: false,
-          error: { code: 'FILE_NOT_FOUND', message: `File not found: ${normalize(filePath)}` }
-        };
-      }
-
-      // Get instance ID
-      const GatewayCtor = ctx.Gateway || Gateway;
-      const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
-      const instance = await gateway.getInstance();
-      const instanceId = instance.id;
-
-      // Build S3 path for property uploads
-      const s3Path = `instances/${instanceId}/property_uploads/data.public_property_upload_import.zip`;
-
-      // Get presigned URL and upload (allow injection for testing)
-      const presignUrlFn = ctx.presignUrl || presignUrl;
-      const uploadFileFn = ctx.uploadFile || uploadFile;
-
-      const { uploadUrl, accessUrl } = await runWithAuth(auth, () => presignUrlFn(s3Path, filePath));
-      await uploadFileFn(filePath, uploadUrl);
-
-      return {
-        ok: true,
-        data: {
-          instanceId,
-          filePath,
-          accessUrl
-        },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        error: { code: 'UPLOAD_FAILED', message: String(e.message || e) },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
+    const filePath = path.resolve(params.filePath);
+    if (!fs.existsSync(filePath)) {
+      throw ToolError.not_found('FILE_NOT_FOUND', `File not found: ${normalize(filePath)}`, { filePath: normalize(filePath) });
     }
+
+    const GatewayCtor = ctx.Gateway || Gateway;
+    const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
+    const instance = await gateway.getInstance();
+    const instanceId = instance.id;
+
+    const s3Path = `instances/${instanceId}/property_uploads/data.public_property_upload_import.zip`;
+
+    // Injectable for tests.
+    const presignUrlFn = ctx.presignUrl || presignUrl;
+    const uploadFileFn = ctx.uploadFile || uploadFile;
+
+    // Which leg failed is something only this tool knows: the invoker sees one thrown error and
+    // cannot tell a refused presign from a refused upload, so the code names the upload. The kind
+    // is not this tool's to decide — a rejected token here is `auth`, and telling the caller to
+    // try again later would send it round a loop that cannot succeed.
+    let uploadUrl, accessUrl;
+    try {
+      ({ uploadUrl, accessUrl } = await runWithAuth(auth, () => presignUrlFn(s3Path, filePath)));
+      await uploadFileFn(filePath, uploadUrl);
+    } catch (e) {
+      if (e instanceof ToolError) throw e;
+      const status = e?.statusCode ?? e?.status;
+      const kind = status >= 400 ? kindForStatus(status) : 'unavailable';
+      throw new ToolError(kind, 'UPLOAD_FAILED', String(e?.message || e), { filePath: normalize(filePath) });
+    }
+
+    return { instanceId, filePath, accessUrl };
   }
 };
 
