@@ -74,6 +74,55 @@ describe('tool names in the documentation', () => {
   test('the allowlist carries no name that is in fact a tool', () => {
     expect([...NOT_TOOLS.keys()].filter(name => registry.has(name))).toEqual([]);
   });
+
+  // A number a reader trusts and nobody recomputes. It said 35 while 36 shipped.
+  test('docs/MCP_TOOLS.md counts the tools correctly', () => {
+    const text = fs.readFileSync(path.join(REPO, 'docs/MCP_TOOLS.md'), 'utf8');
+
+    expect(text).toContain(`**Total Tools**: ${registry.size}`);
+  });
+});
+
+/**
+ * Error codes in the reference are read as a contract: an agent branches on one, and a person
+ * writing a client greps for it. Every code documented in an example has to be a code some tool can
+ * actually produce — the reference carried five that no tool had ever emitted (`LIQUID_ERROR`,
+ * `MISSING_ARGS`, `DEPLOY_FAILED`, `CONFIRMATION_MISMATCH`, `DELETE_REQUIRES_CONFIRMATION`), each
+ * plausible enough that nobody checked.
+ */
+describe('error codes in the reference', () => {
+  // A permissive scan of the sources rather than a parse of the throw sites: several codes are
+  // computed (`ToolError[kind](...)`) or come from the record checks in lib-like modules, and a
+  // scan that missed one would fail a document that is right. Over-collecting only weakens the
+  // check; under-collecting breaks the build on correct documentation.
+  const emittedCodes = () => {
+    const codes = new Set();
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== '__tests__') walk(full);
+        } else if (entry.name.endsWith('.js')) {
+          for (const [, code] of fs.readFileSync(full, 'utf8').matchAll(/'([A-Z][A-Z0-9_]{2,})'/g)) codes.add(code);
+        }
+      }
+    };
+    walk(path.join(REPO, 'mcp-min'));
+    // Assigned by the invoker rather than written as a literal at a throw site.
+    for (const code of ['INVALID_PARAMS', 'SCHEMA_ERROR', 'INTERNAL_ERROR']) codes.add(code);
+    return codes;
+  };
+
+  test('every code an example shows is one a tool can produce', () => {
+    const text = fs.readFileSync(path.join(REPO, 'docs/MCP_TOOLS.md'), 'utf8');
+    const codes = emittedCodes();
+
+    const documented = [...text.matchAll(/\bcode:\s*"([A-Z][A-Z0-9_]{2,})"/g)].map(m => m[1]);
+    const invented = [...new Set(documented)].filter(code => !codes.has(code));
+
+    expect(documented.length, 'the reference should show error codes at all').toBeGreaterThan(4);
+    expect(invented, 'documented codes no tool emits').toEqual([]);
+  });
 });
 
 describe('the server the documentation describes is the one that ships', () => {
@@ -89,5 +138,32 @@ describe('the server the documentation describes is the one that ships', () => {
     const offenders = DOCS.filter(file => pattern.test(fs.readFileSync(path.join(REPO, file), 'utf8')));
 
     expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * The reference lists parameters per tool. Reworded prose there is harmless — the lists are
+ * paraphrases, not copies — but a parameter the tool no longer declares is a caller following the
+ * documentation into an INVALID_PARAMS, which is how `data-validate`'s `env` would have read after
+ * it was removed.
+ */
+describe('docs/MCP_TOOLS.md parameters exist', () => {
+  const text = fs.readFileSync(path.join(REPO, 'docs/MCP_TOOLS.md'), 'utf8');
+  const sections = text.split(/^### /m).slice(1)
+    .map(block => ({ name: block.split('\n', 1)[0].trim(), body: block }))
+    .filter(section => registry.has(section.name));
+
+  test('every tool section documents a tool that is registered', () => {
+    expect(sections.length).toBeGreaterThan(20);
+  });
+
+  test.each(sections.map(s => [s.name, s.body]))('%s documents only parameters it declares', (name, body) => {
+    const block = body.split('**Input Parameters**')[1];
+    if (block === undefined) return;
+
+    const documented = [...block.split(/\n\s*\n/)[0].matchAll(/^- `([A-Za-z0-9_]+)`/gm)].map(m => m[1]);
+    const declared = Object.keys(registry.get(name).inputSchema?.properties ?? {});
+
+    expect(documented.filter(param => !declared.includes(param)), `${name} documents parameters it does not accept`).toEqual([]);
   });
 });

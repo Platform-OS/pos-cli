@@ -3,8 +3,10 @@
  * goes away. Nothing a cancelled tool returns is ever sent, so what matters is that it stops
  * making requests to the instance.
  */
+import { ToolError } from './tool-error.js';
 
-export const cancelled = () => ({ ok: false, error: { code: 'CANCELLED', message: 'The call was cancelled by the client.' } });
+/** Thrown by a tool that notices its call was cancelled; `runTool` turns it into a result. */
+export const cancelled = () => ToolError.cancelled('CANCELLED', 'The call was cancelled by the client.');
 
 /** Waits `ms`, or less if `signal` aborts first. Resolves either way; check `signal.aborted` after. */
 export function abortableDelay(ms, signal) {

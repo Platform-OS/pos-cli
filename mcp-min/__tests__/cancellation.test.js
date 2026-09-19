@@ -1,10 +1,13 @@
 /**
  * A cancelled call must stop asking the instance: tools that wait or page check `ctx.signal`.
+ *
+ * The waiting tool is `job-status` with `wait_ms`, and its own suite covers cancelling mid-wait;
+ * what is left here is the primitive and the paging tool.
  */
 import { describe, test, expect, vi } from 'vitest';
 import { abortableDelay, cancelled } from '../cancellation.js';
-import deployWait from '../deploy/wait.js';
 import logsFetch from '../logs/fetch.js';
+import { runTool } from '../run-tool.js';
 
 const auth = { url: 'https://instance.example.com', email: 'a@b.c', token: 't' };
 
@@ -32,30 +35,6 @@ describe('abortableDelay', () => {
   });
 });
 
-describe('deploy-wait', () => {
-  test('stops polling when the call is cancelled, even mid-interval', async () => {
-    const controller = new AbortController();
-    const getStatus = vi.fn(async () => ({ status: 'ready_for_import' }));
-    const Gateway = class { getStatus = getStatus; };
-
-    const result = deployWait.handler({ ...auth, id: '1', intervalMs: 60000 }, { Gateway, signal: controller.signal });
-    await vi.waitFor(() => expect(getStatus).toHaveBeenCalledTimes(1));
-    const started = Date.now();
-    controller.abort();
-
-    expect(await result).toEqual(cancelled());
-    expect(Date.now() - started).toBeLessThan(1000);
-    expect(getStatus).toHaveBeenCalledTimes(1);
-  });
-
-  test('still waits for the release without a signal', async () => {
-    const statuses = ['ready_for_import', 'success'];
-    const Gateway = class { getStatus = async () => ({ status: statuses.shift() }); };
-
-    expect(await deployWait.handler({ ...auth, id: '1', intervalMs: 200 }, { Gateway })).toMatchObject({ ok: true, data: { status: 'success' } });
-  });
-});
-
 describe('logs-fetch', () => {
   test('stops paging when the call is cancelled', async () => {
     const controller = new AbortController();
@@ -67,7 +46,7 @@ describe('logs-fetch', () => {
     });
     const Gateway = class { logs = logs; };
 
-    expect(await logsFetch.handler({ ...auth }, { Gateway, signal: controller.signal })).toEqual(cancelled());
+    expect(await runTool(logsFetch, { ...auth }, { Gateway, signal: controller.signal })).toMatchObject({ ok: false, error: { kind: 'cancelled', code: 'CANCELLED' } });
     expect(logs).toHaveBeenCalledTimes(3);
   });
 });

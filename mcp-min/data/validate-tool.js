@@ -3,164 +3,90 @@ import fs from 'fs';
 import path from 'path';
 import { validateRecords, validateJsonStructure } from './validate.js';
 import log from '../log.js';
+import { ToolError } from '../tool-error.js';
+import { recordCheckProperties } from '../schemas/record-checks.js';
 
 const dataValidateTool = {
-  description: 'Validate JSON data against platformOS schemas before import. Checks required fields (id, type, properties, created_at, updated_at), verifies types match schema files in app/schema/, and validates property names and types.',
+  description: 'Check records against the schema files in this project before importing them. Answers valid, with the problems when it is false: records that fail are the finding, not a failed call. Local only, nothing is sent to an instance. To lint Liquid and JSON source instead, use check-run.',
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
-    // Nothing is required: validation runs entirely locally, and `env` is context only.
+    // Nothing is required, and nothing authenticates: validation reads the schema files in the
+    // project and sends nothing. It used to accept `env`, which reached one debug line and
+    // otherwise did nothing — a parameter that invites a caller to believe the check is
+    // instance-aware.
     properties: {
-      env: {
-        type: 'string',
-        description: 'Environment name from .pos config (used for context, validation is local)'
-      },
-      filePath: {
-        type: 'string',
-        description: 'Path to JSON file containing records to validate'
-      },
-      jsonData: {
-        type: 'object',
-        description: 'JSON data object to validate (with "records" array)'
-      },
-      appPath: {
-        type: 'string',
-        description: 'Path to the app directory containing schema files (default: ".")'
-      },
-      strictTypes: {
-        type: 'boolean',
-        description: 'Enforce type checking against schema (default: true)'
-      },
-      strictProperties: {
-        type: 'boolean',
-        description: 'Error on properties not defined in schema (default: false)'
-      },
-      maxErrors: {
-        type: 'integer',
-        description: 'Maximum number of errors to report (default: 100)'
-      }
+      filePath: { type: 'string', description: 'JSON file holding the records.' },
+      jsonData: { type: 'object', description: 'Records to check, as an object with a records array.' },
+      ...recordCheckProperties,
+      maxErrors: { type: 'integer', minimum: 1, description: 'Stop reporting after this many errors.', default: 100 }
     }
   },
-  handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
-    log.debug('tool:data-validate invoked', { env: params.env });
+  handler: async (params) => {
+    log.debug('tool:data-validate invoked', { appPath: params.appPath });
 
-    try {
-      const {
-        filePath,
-        jsonData,
-        appPath = '.',
-        strictTypes = true,
-        strictProperties = false,
-        maxErrors = 100
-      } = params;
+    const {
+      filePath,
+      jsonData,
+      appPath = '.',
+      strictTypes = true,
+      strictProperties = false,
+      maxErrors = 100
+    } = params;
 
-      // Validate: exactly one data source must be provided
-      const sources = [filePath, jsonData].filter(Boolean);
-      if (sources.length === 0) {
-        return {
-          ok: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Provide one of: filePath or jsonData'
-          }
-        };
-      }
-      if (sources.length > 1) {
-        return {
-          ok: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Provide only one of: filePath or jsonData'
-          }
-        };
-      }
-
-      let data;
-
-      if (filePath) {
-        const resolved = path.resolve(String(filePath));
-        if (!fs.existsSync(resolved)) {
-          return {
-            ok: false,
-            error: {
-              code: 'FILE_NOT_FOUND',
-              message: `File not found: ${resolved}`
-            }
-          };
-        }
-
-        try {
-          const content = fs.readFileSync(resolved, 'utf8');
-          data = JSON.parse(content);
-        } catch (e) {
-          return {
-            ok: false,
-            error: {
-              code: 'INVALID_JSON',
-              message: `Invalid JSON in file: ${e.message}`
-            }
-          };
-        }
-      } else {
-        data = jsonData;
-      }
-
-      // Validate top-level structure
-      const structureResult = validateJsonStructure(data);
-      if (!structureResult.ok) {
-        return {
-          ...structureResult,
-          meta: {
-            startedAt,
-            finishedAt: new Date().toISOString()
-          }
-        };
-      }
-
-      // Extract records array
-      const records = data.records || [];
-
-      if (!Array.isArray(records)) {
-        return {
-          ok: false,
-          error: {
-            code: 'INVALID_FORMAT',
-            message: 'Expected "records" field to be an array'
-          }
-        };
-      }
-
-      // Run validation
-      const result = await validateRecords(records, {
-        appPath,
-        strictTypes,
-        strictProperties,
-        maxErrors
-      });
-
-      return {
-        ...result,
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
-    } catch (e) {
-      log.error('tool:data-validate error', { error: String(e) });
-      return {
-        ok: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: String(e.message || e)
-        },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
+    // Validate: exactly one data source must be provided
+    const sources = [filePath, jsonData].filter(Boolean);
+    if (sources.length === 0) {
+      throw ToolError.input('VALIDATION_ERROR', 'Provide one of: filePath or jsonData');
     }
+    if (sources.length > 1) {
+      throw ToolError.input('VALIDATION_ERROR', 'Provide only one of: filePath or jsonData');
+    }
+
+    let data;
+
+    if (filePath) {
+      const resolved = path.resolve(String(filePath));
+      if (!fs.existsSync(resolved)) {
+        throw ToolError.not_found('FILE_NOT_FOUND', `File not found: ${resolved}`);
+      }
+
+      try {
+        data = JSON.parse(fs.readFileSync(resolved, 'utf8'));
+      } catch (e) {
+        // The file could not be read as JSON, so there was nothing to check. That is a failure of
+        // the call, unlike records that were checked and found wanting.
+        throw ToolError.input('INVALID_JSON', `Invalid JSON in file: ${e.message}`);
+      }
+    } else {
+      data = jsonData;
+    }
+
+    const structureResult = validateJsonStructure(data);
+    if (!structureResult.ok) {
+      throw ToolError.input(structureResult.error.code, structureResult.error.message, structureResult.error.details);
+    }
+
+    const records = data.records || [];
+    if (!Array.isArray(records)) {
+      throw ToolError.input('INVALID_FORMAT', 'Expected "records" field to be an array');
+    }
+
+    const result = await validateRecords(records, { appPath, strictTypes, strictProperties, maxErrors });
+
+    // Records that fail the check are the answer, not a failure to produce one: this tool was
+    // asked whether they are valid and it found out. It used to report them as `ok: false`, which
+    // reached the client as a failed call and made the finding indistinguishable from the checker
+    // itself breaking — and disagreed with check-run, which reports violations from a run that
+    // worked. `valid` is what a caller branches on.
+    if (result.ok) return { valid: true, ...result.data };
+    return {
+      valid: false,
+      code: result.error.code,
+      message: result.error.message,
+      errors: result.error.details ?? []
+    };
   }
 };
 

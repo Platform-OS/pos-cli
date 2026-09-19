@@ -7,7 +7,9 @@ import os from 'os';
 import { jsonToZipBuffer } from './json-to-csv.js';
 import { validateRecords, validateJsonStructure } from './validate.js';
 import { authProperties } from '../schemas/auth.js';
+import { recordCheckProperties } from '../schemas/record-checks.js';
 import log from '../log.js';
+import { ToolError } from '../tool-error.js';
 import { resolveAuth, runWithAuth } from '../auth.js';
 import { mintFor } from '../jobs/handle.js';
 import Gateway from '../../lib/proxy.js';
@@ -34,165 +36,114 @@ async function uploadZipBuffer(buffer, gateway, presignUrlFn, uploadFileFn) {
   }
 }
 
+/**
+ * The record checks in `validate.js` are shared with `data-validate` and answer with their own
+ * `{ ok, error }` result rather than by throwing, because that tool reports findings instead of
+ * failing on them. Here they are a gate: records the caller has to fix before anything is sent,
+ * so the check's own code and details travel out as an input error.
+ */
+function checked(result) {
+  if (result.ok) return result;
+  throw ToolError.input(result.error.code, result.error.message, result.error.details);
+}
+
 const dataImportTool = {
-  description: 'Import data to platformOS instance. Accepts JSON (converted to CSV internally) or ZIP file with CSV files. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly.',
+  description: 'Import records into an instance from a JSON object, a local JSON or ZIP file, or a remote ZIP URL. Returns a job_id to poll with job-status.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      env: { type: 'string', description: 'Environment name from .pos config' },
       ...authProperties,
-      filePath: { type: 'string', description: 'Path to JSON or ZIP file to import' },
-      jsonData: { type: 'object', description: 'JSON data object to import (records, users)' },
-      zipFileUrl: { type: 'string', description: 'Remote URL of ZIP archive to import' },
-      validate: { type: 'boolean', description: 'Validate records before import (default: true)' },
-      strictTypes: { type: 'boolean', description: 'Enforce type checking against schema (default: true)' },
-      strictProperties: { type: 'boolean', description: 'Error on properties not defined in schema (default: false)' },
-      appPath: { type: 'string', description: 'Path to the app directory containing schema files (default: ".")' }
+      filePath: { type: 'string', description: 'JSON or ZIP file to import.' },
+      jsonData: { type: 'object', description: 'Records to import, as an object with records and users.' },
+      zipFileUrl: { type: 'string', description: 'Remote ZIP to import.' },
+      validate: { type: 'boolean', description: 'Check the records before importing them.', default: true },
+      ...recordCheckProperties
     }
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
     log.debug('tool:data-import invoked', { env: params.env });
 
-    try {
-      const auth = await resolveAuth(params, ctx);
-      const GatewayCtor = ctx.Gateway || Gateway;
-      const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
+    const auth = await resolveAuth(params, ctx);
+    const GatewayCtor = ctx.Gateway || Gateway;
+    const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-      const presignUrlFn = ctx.presignUrl || ((...args) => runWithAuth(auth, () => presignUrl(...args)));
-      const uploadFileFn = ctx.uploadFile || uploadFile;
+    const presignUrlFn = ctx.presignUrl || ((...args) => runWithAuth(auth, () => presignUrl(...args)));
+    const uploadFileFn = ctx.uploadFile || uploadFile;
 
-      const {
-        filePath,
-        jsonData,
-        zipFileUrl,
-        validate = true,
-        strictTypes = true,
-        strictProperties = false,
-        appPath = '.'
-      } = params;
+    const {
+      filePath,
+      jsonData,
+      zipFileUrl,
+      validate = true,
+      strictTypes = true,
+      strictProperties = false,
+      appPath = '.'
+    } = params;
 
-      // Validate: exactly one data source must be provided
-      const sources = [filePath, jsonData, zipFileUrl].filter(Boolean);
-      if (sources.length === 0) {
-        return {
-          ok: false,
-          error: { code: 'VALIDATION_ERROR', message: 'Provide one of: filePath, jsonData, or zipFileUrl' }
-        };
+    // Validate: exactly one data source must be provided
+    const sources = [filePath, jsonData, zipFileUrl].filter(Boolean);
+    if (sources.length === 0) {
+      throw ToolError.input('VALIDATION_ERROR', 'Provide one of: filePath, jsonData, or zipFileUrl');
+    }
+    if (sources.length > 1) {
+      throw ToolError.input('VALIDATION_ERROR', 'Provide only one of: filePath, jsonData, or zipFileUrl');
+    }
+
+    let zipUrl;
+
+    if (zipFileUrl) {
+      // Remote ZIP URL provided directly
+      zipUrl = zipFileUrl;
+    } else if (filePath) {
+      const resolved = path.resolve(String(filePath));
+      if (!fs.existsSync(resolved)) {
+        throw ToolError.not_found('FILE_NOT_FOUND', `File not found: ${resolved}`);
       }
-      if (sources.length > 1) {
-        return {
-          ok: false,
-          error: { code: 'VALIDATION_ERROR', message: 'Provide only one of: filePath, jsonData, or zipFileUrl' }
-        };
-      }
 
-      let zipUrl;
+      const ext = path.extname(resolved).toLowerCase();
+      if (ext === '.zip') {
+        // Upload ZIP directly
+        const instanceId = (await gateway.getInstance()).id;
+        const s3Path = `instances/${instanceId}/data_imports/${crypto.randomBytes(32).toString('hex')}.zip`;
+        const { uploadUrl, accessUrl } = await presignUrlFn(s3Path, resolved);
+        await uploadFileFn(resolved, uploadUrl);
+        zipUrl = accessUrl;
+      } else {
+        // Assume JSON file - convert to ZIP
+        const data = fs.readFileSync(resolved, 'utf8');
+        if (!isValidJSON(data)) {
+          throw ToolError.input('INVALID_JSON', `Invalid JSON in file: ${resolved}`);
+        }
+        const parsed = JSON.parse(data);
 
-      if (zipFileUrl) {
-        // Remote ZIP URL provided directly
-        zipUrl = zipFileUrl;
-      } else if (filePath) {
-        const resolved = path.resolve(String(filePath));
-        if (!fs.existsSync(resolved)) {
-          return { ok: false, error: { code: 'FILE_NOT_FOUND', message: `File not found: ${resolved}` } };
+        if (validate) checked(validateJsonStructure(parsed));
+        if (validate && parsed.records && Array.isArray(parsed.records)) {
+          checked(await validateRecords(parsed.records, { appPath, strictTypes, strictProperties }));
         }
 
-        const ext = path.extname(resolved).toLowerCase();
-        if (ext === '.zip') {
-          // Upload ZIP directly
-          const instanceId = (await gateway.getInstance()).id;
-          const s3Path = `instances/${instanceId}/data_imports/${crypto.randomBytes(32).toString('hex')}.zip`;
-          const { uploadUrl, accessUrl } = await presignUrlFn(s3Path, resolved);
-          await uploadFileFn(resolved, uploadUrl);
-          zipUrl = accessUrl;
-        } else {
-          // Assume JSON file - convert to ZIP
-          const data = fs.readFileSync(resolved, 'utf8');
-          if (!isValidJSON(data)) {
-            return {
-              ok: false,
-              error: { code: 'INVALID_JSON', message: `Invalid JSON in file: ${resolved}` }
-            };
-          }
-          const parsed = JSON.parse(data);
-
-          // Validate top-level structure
-          if (validate) {
-            const structureResult = validateJsonStructure(parsed);
-            if (!structureResult.ok) {
-              return structureResult;
-            }
-          }
-
-          // Validate records before import if enabled
-          if (validate && parsed.records && Array.isArray(parsed.records)) {
-            const validationResult = await validateRecords(parsed.records, {
-              appPath,
-              strictTypes,
-              strictProperties
-            });
-            if (!validationResult.ok) {
-              return validationResult;
-            }
-          }
-
-          const zipBuffer = await jsonToZipBuffer(parsed);
-          zipUrl = await uploadZipBuffer(zipBuffer, gateway, presignUrlFn, uploadFileFn);
-        }
-      } else if (jsonData) {
-        // Validate top-level structure
-        if (validate) {
-          const structureResult = validateJsonStructure(jsonData);
-          if (!structureResult.ok) {
-            return structureResult;
-          }
-        }
-
-        // Validate records before import if enabled
-        if (validate && jsonData.records && Array.isArray(jsonData.records)) {
-          const validationResult = await validateRecords(jsonData.records, {
-            appPath,
-            strictTypes,
-            strictProperties
-          });
-          if (!validationResult.ok) {
-            return validationResult;
-          }
-        }
-
-        // JSON data provided directly - convert to ZIP
-        const zipBuffer = await jsonToZipBuffer(jsonData);
+        const zipBuffer = await jsonToZipBuffer(parsed);
         zipUrl = await uploadZipBuffer(zipBuffer, gateway, presignUrlFn, uploadFileFn);
       }
+    } else if (jsonData) {
+      if (validate) checked(validateJsonStructure(jsonData));
+      if (validate && jsonData.records && Array.isArray(jsonData.records)) {
+        checked(await validateRecords(jsonData.records, { appPath, strictTypes, strictProperties }));
+      }
 
-      const formData = { zip_file_url: zipUrl };
-      const importTask = await gateway.dataImportStart(formData);
-
-      return {
-        ok: true,
-        data: {
-          id: importTask.id,
-          job_id: mintFor({ kind: 'data-import', id: importTask.id, origin: auth.url }),
-          status: importTask.status
-        },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
-    } catch (e) {
-      log.error('tool:data-import error', { error: String(e) });
-      return {
-        ok: false,
-        error: { code: 'DATA_IMPORT_ERROR', message: String(e.message || e) },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
+      // JSON data provided directly - convert to ZIP
+      const zipBuffer = await jsonToZipBuffer(jsonData);
+      zipUrl = await uploadZipBuffer(zipBuffer, gateway, presignUrlFn, uploadFileFn);
     }
+
+    const formData = { zip_file_url: zipUrl };
+    const importTask = await gateway.dataImportStart(formData);
+
+    return {
+      id: importTask.id,
+      job_id: mintFor({ kind: 'data-import', id: importTask.id, origin: auth.url }),
+      status: importTask.status
+    };
   }
 };
 

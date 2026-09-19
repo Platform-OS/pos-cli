@@ -306,18 +306,47 @@ Installing pos-cli globally (`npm install -g @platformos/pos-cli`) automatically
 
 ##### Claude Code
 
-Add the following to your Claude Code MCP/LSP configuration (typically `.claude/settings.json` or your global Claude Code settings):
+Claude Code reads language-server configuration only from a plugin — there is no `lsp` key in
+`settings.json` and no project-level LSP file it picks up on its own. pos-cli ships the plugin, so
+registering it is two commands run from your project:
 
-```json
-{
-  "lsp": {
-    "platformos-liquid": {
-      "command": ["pos-cli-lsp"],
-      "extensions": [".liquid", ".graphql", ".json"]
-    }
-  }
-}
+```bash
+claude plugin marketplace add "$(npm root -g)/@platformos/pos-cli/plugin" --scope local
+claude plugin install platformos-lsp@platformos --scope local
 ```
+
+Both write to `.claude/settings.local.json`; use `--scope user` instead to enable it for every
+project on the machine. Restart Claude Code afterwards, and check it with `claude plugin details
+platformos-lsp@platformos` — it should report one LSP server. A language server runs out of process,
+so it adds nothing to what the model reads on each request.
+
+The server implements hover, go-to-definition, completions, code actions and rename. Of those,
+Claude Code's LSP tool can use **hover** and **go-to-definition**; diagnostics do not come back from
+either call, but arrive separately once one of them has made the server look at the file. The other
+operations that tool offers — find-references, document and workspace symbols, implementations, call
+hierarchy — are not implemented by this server and answer `Unhandled method`. An editor uses the
+full set.
+
+`pos-cli ai init` prints these two commands for you, and says nothing if the plugin is already
+registered.
+
+Diagnostics are pull-only: the server analyses a file when something makes an LSP request against it,
+and publishes the findings asynchronously, so they arrive on a later exchange. Reading or editing a
+file triggers nothing on its own. A second, optional plugin says so after each Liquid or GraphQL
+edit:
+
+```bash
+claude plugin install platformos-lsp-reminders@platformos --scope local
+```
+
+It runs no linter — it prints one line. Linting on each edit is not viable: `pos-cli check run` is
+whole-project only and takes around a minute on a large app, and starting a throwaway language
+server costs about four seconds per edit. Asking the server that is already running costs nothing.
+
+Older Claude Code releases kept the LSP tool behind an undocumented `ENABLE_LSP_TOOL` flag. It is not
+needed on current versions — verified against 2.1.274, where the tool works with the variable unset.
+If the plugin installs cleanly and nothing ever uses it, upgrade Claude Code before reaching for that
+flag.
 
 ##### Open Code (open-vsx / VSCodium-compatible editors)
 
@@ -340,7 +369,10 @@ The language server provides IDE features for:
 
 - `.liquid` — platformOS Liquid templates
 - `.graphql` — GraphQL queries and mutations
-- `.json` — platformOS configuration files
+
+`.json` is deliberately not mapped to the language server. It answers nothing for a JSON file, and
+claiming the extension would make it the language server for every `package.json` and `tsconfig.json`
+in the project as well.
 
 #### Features
 
@@ -1017,7 +1049,7 @@ The server speaks MCP **2026-07-28** and the 2025 revisions (`2025-11-25`, `2025
 
 A call that fails comes back as a tool result marked `isError`, carrying a code and message the model can act on, rather than as a protocol error: `INVALID_PARAMS` for arguments that do not match the tool's schema, the tool's own code when it reports a failure, and `INTERNAL_ERROR` when it throws. A tool that does not exist, or is not exposed, is still a protocol error.
 
-Tools that only read — `envs-list`, `logs-fetch`, the status tools, the Partner Portal lookups — are marked `readOnlyHint`, which some clients use to run them without asking.
+Tools that only read — `envs-list`, `logs-fetch`, `job-status`, the Partner Portal lookups — are marked `readOnlyHint`, which some clients use to run them without asking.
 
 The server runs for as long as its MCP client keeps stdin open. When the client closes stdin — which is how MCP clients stop the servers they start — the server stops taking new work, lets calls already running finish (at most 120 seconds, which covers the asset upload `deploy-start` continues in the background), and exits, releasing its HTTP port. To run the HTTP transport on its own, give it stdin from `/dev/null` (`NUL` on Windows):
 
@@ -1028,13 +1060,13 @@ The server runs for as long as its MCP client keeps stdin open. When the client 
 Every tool definition the server exposes is sent to the AI model with each request, so a smaller set leaves more room for your code. Three options choose the set when the server starts:
 
     pos-cli-mcp --profile dev
-    pos-cli-mcp --profile dev --include-tools data-import,data-import-status
+    pos-cli-mcp --profile dev --include-tools data-import,data-validate
     pos-cli-mcp --profile none --include-tools graphql-exec,liquid-exec
     pos-cli-mcp --exclude-tools data-clean,constants-unset
 
 - `--profile <name>` — the starting set:
   - `full` — every tool. The default.
-  - `dev` — what a coding agent uses to edit, check, deploy and verify: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-start`, `job-status`, `unit-tests-run`, `tests-run-async`. Its definitions are about a quarter of the size of `full`'s. The deprecated per-operation status tools are not in it; `job-status` answers for all of them.
+  - `dev` — what a coding agent uses to edit, check, deploy and verify: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-dry-run`, `deploy-start`, `job-status`, `unit-tests-run`, `tests-run-async`. Its definitions are about a third of the size of `full`'s.
   - `none` — no tools; name them with `--include-tools`.
 - `--include-tools <names>` adds tools to the profile. This is not an allowlist, unlike Gemini CLI's `includeTools` setting; for an allowlist, use `--profile none --include-tools …`.
 - `--exclude-tools <names>` removes tools.
@@ -1058,7 +1090,7 @@ A malformed value stops the server at startup. If the port is taken, the server 
 | --- | --- |
 | `POST /mcp` | MCP Streamable HTTP. 2026-07-28, and 2025-era clients served statelessly (`GET` and `DELETE` answer `405`: there is no session to resume). |
 | `GET /health` | Unchanged. |
-| `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` | **Deprecated.** The pre-SDK HTTP API, kept working through 6.x and removed at the next major. Use `/mcp`. |
+| `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` | **Deprecated.** The pre-SDK HTTP API, still served and removed in a future major. Use `/mcp`. |
 
 Invoking a tool over stdio by naming it as the JSON-RPC method (`{"method":"envs-list"}`) has been **removed**; it was never part of MCP. Use `tools/call`.
 
@@ -1096,21 +1128,19 @@ The MCP server has 30+ tools across these categories; `--profile dev` exposes th
 
 - **Environments**: `envs-list`, `env-add`
 - **Jobs**: `job-status`
-- **Deploy**: `deploy-start`, `deploy-status`†, `deploy-wait`†
+- **Deploy**: `deploy-dry-run`, `deploy-start`
 - **Sync**: `sync-file`
 - **Logs**: `logs-fetch`
 - **GraphQL**: `graphql-exec`
 - **Liquid**: `liquid-exec`
-- **Data**: `data-import`, `data-import-status`†, `data-export`, `data-export-status`†, `data-clean`, `data-clean-status`†, `data-validate`
+- **Data**: `data-import`, `data-export`, `data-clean`, `data-validate`
 - **Migrations**: `migrations-list`, `migrations-generate`, `migrations-run`
-- **Tests**: `unit-tests-run`, `tests-run-async`, `tests-run-async-result`†
+- **Tests**: `unit-tests-run`, `tests-run-async`
 - **Constants**: `constants-list`, `constants-set`, `constants-unset`
 - **Generators**: `generators-list`, `generators-help`, `generators-run`
 - **Code quality**: `check-run`
 - **Uploads**: `uploads-push`
 - **Partner Portal**: `instance-create`, `partners-list`, `partner-get`, `endpoints-list`
-
-† Deprecated in favour of `job-status`, and removed in the next major release. They still work, and answer from the same code `job-status` does.
 
 #### Asynchronous Operations
 
@@ -1139,7 +1169,7 @@ To see which tools the server exposes, and why each of the others is not exposed
 
 It takes the same `--profile`, `--include-tools` and `--exclude-tools` options as the server, reports exactly what the server would expose with them, and refuses the same mistakes with the same messages. `--json` prints that report as JSON — `config`, `profile`, `include`, `exclude`, `exposed` and `hidden` (each with a `reason`: `profile`, `excluded` or `disabled`); it used to print the raw configuration file.
 
-The tool configuration (`mcp-min/tools.config.json`) disables tools and rewrites their descriptions. To use your own, point the `MCP_TOOLS_CONFIG` environment variable at a `tools.config.json`. A file that does not match the schema, or names a tool that does not exist, stops the server at startup. A file that is missing or not valid JSON applies nothing: the server logs a warning, and `pos-cli mcp-config` shows which it was.
+Each tool's description lives with the tool in `mcp-min/`. The tool configuration (`mcp-min/tools.config.json`) can disable a tool or replace its description, and ships doing neither. To use your own, point the `MCP_TOOLS_CONFIG` environment variable at a `tools.config.json`. A file that does not match the schema, or names a tool that does not exist, stops the server at startup. A file that is missing or not valid JSON applies nothing: the server logs a warning, and `pos-cli mcp-config` shows which it was.
 
 ### Fetching Logs (Machine-Readable)
 

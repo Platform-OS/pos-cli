@@ -2,7 +2,7 @@
 
 Complete reference guide for all platformOS Model Context Protocol (MCP) tools available in pos-cli MCP server.
 
-**Total Tools**: 26 active tools
+**Total Tools**: 30
 
 ---
 
@@ -45,9 +45,9 @@ On 2026-07-28 every request carries the `_meta` envelope and the `Mcp-Method` (a
 
 A call that fails is a tool result with `isError: true` whose text is a JSON body — `{"ok":false,"error":{"code":"INVALID_PARAMS","message":…}}` for arguments that do not match the schema, the tool's own code when it reports a failure, `INTERNAL_ERROR` when it throws. Unknown or unexposed tools stay protocol errors (`-32602`).
 
-Tools that only read are published with `annotations.readOnlyHint: true`: `envs-list`, `logs-fetch`, the deploy/data/test status tools, `data-validate`, `constants-list`, `generators-list`, `generators-help`, `migrations-list` and the Partner Portal lookups. Everything else carries no annotation, which clients read as "may change things".
+Tools that only read are published with `annotations.readOnlyHint: true`: `envs-list`, `logs-fetch`, `job-status`, `data-validate`, `constants-list`, `generators-list`, `generators-help`, `migrations-list` and the Partner Portal lookups. `data-clean`, `constants-unset`, `deploy-start` and `sync-file` carry `annotations.destructiveHint: true`, because each can delete something on the instance. `deploy-dry-run` states `annotations.destructiveHint: false`, because it sits beside a tool that is destructive and the specification's default for an absent hint is destructive. Everything else carries no annotation, which clients read as "may change things".
 
-**The endpoints used in the examples below — `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` — are deprecated.** They are the pre-SDK HTTP API, kept working through 6.x and removed at the next major; new clients should speak MCP at `/mcp`.
+**The endpoints used in the examples below — `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` — are deprecated.** They are the pre-SDK HTTP API, still served and removed in a future major; new clients should speak MCP at `/mcp`.
 
 `--no-http` starts the server without any HTTP listener (stdio only), which is what `pos-cli ai init` writes into client configurations.
 
@@ -98,7 +98,7 @@ exposed = (tools of --profile  ∪  --include-tools)  −  --exclude-tools  − 
 
 | Option | Effect |
 | --- | --- |
-| `--profile <name>` | Starting set. `full` (default): every tool. `dev`: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-start`, `job-status`, `unit-tests-run`, `tests-run-async`. `none`: no tools. |
+| `--profile <name>` | Starting set. `full` (default): every tool. `dev`: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-dry-run`, `deploy-start`, `job-status`, `unit-tests-run`, `tests-run-async`. `none`: no tools. |
 | `--include-tools <names>` | Adds tools to the profile — not an allowlist, unlike Gemini CLI's `includeTools`. For an allowlist: `--profile none --include-tools a,b`. |
 | `--exclude-tools <names>` | Removes tools. Excluding a tool the profile does not contain is allowed, so one exclude list works with any profile. |
 
@@ -115,9 +115,38 @@ curl -s http://localhost:5910/tools | jq '.tools[].id'
 
 ---
 
+## Server Instructions
+
+The server returns an `instructions` string on `initialize` and on `server/discover`, which clients generally place in the model's system prompt. It carries the rules that span tools and that no single tool description can state: how credentials resolve, that every tool answers with `ok` and reports failure as `ok:false` in the body rather than as a failed call, that a relative path resolves against the directory the server was started in, and that a call returning a `job_id` is polled with `job-status` and `wait_ms`.
+
+It is built from the tools the server actually exposes, so a section about a tool is absent when that tool is — `--profile dev` is told about `deploy-start` and `tests-run-async`, not about `data-clean`. It names no tool from another MCP server. `pos-cli mcp-config` prints the exact string a given selection produces.
+
+---
+
 ## Authentication
 
 This section is about how tools authenticate **to platformOS**. The MCP server does not authenticate its own callers; see [HTTP Transport Security](#http-transport-security).
+
+**A call that can change an instance has to name one.** `env` stays optional — three of the four
+call styles below do not pass it — but the last of them, "the first entry in `.pos`", names no
+instance at all. When the tool is not `readOnlyHint` and `.pos` holds more than one environment,
+that resolution is refused rather than guessed:
+
+```javascript
+{
+  ok: false,
+  error: {
+    kind: "input",
+    code: "ENV_REQUIRED",
+    message: "This call can change an instance and nothing said which one. Pass env - one of: prod, staging. Without it the call would have gone to prod, only because it is first in .pos.",
+    details: { environments: ["prod", "staging"], wouldHaveUsed: "prod" }
+  }
+}
+```
+
+Passing `env`, or explicit `url` + `email` + `token`, or exporting `MPKIT_*` all satisfy it. A
+single configured environment is not a guess and resolves as before, and tools that only read
+(`logs-fetch`, `migrations-list`, `constants-list`) are never refused.
 
 All tools (except `envs-list` and generator tools) support multiple authentication methods with the following precedence:
 
@@ -171,7 +200,7 @@ All tools (except `envs-list` and generator tools) support multiple authenticati
 
 The status of anything `deploy-start`, `data-import`, `data-export`, `data-clean` or `tests-run-async` started. Each of those returns a `job_id` beside its own fields; this reads it back.
 
-Replaces `deploy-status`, `deploy-wait`, `data-import-status`, `data-export-status`, `data-clean-status` and `tests-run-async-result`, which are deprecated and removed in the next major release.
+The only way to read back anything a starter began. It replaced six per-operation status tools — one each for a deploy, a deploy wait, a data import, export and clean, and an async test run — which were deprecated in 6.6 and removed in 7.0.
 
 **Tool Name**: `job-status`
 
@@ -422,11 +451,12 @@ Render Liquid templates on a platformOS instance.
 **Error Response**:
 ```javascript
 {
-  success: false,
+  ok: false,
   error: {
-    code: "LIQUID_ERROR",
-    message: "Syntax error in template",
-    details: { line: 5, column: 10 }
+    kind: "instance",
+    code: "LIQUID_EXEC_ERROR",
+    message: "Liquid error: undefined variable name",
+    details: { error: "Liquid error: undefined variable name" }
   }
 }
 ```
@@ -569,11 +599,12 @@ Run a yeoman generator with arguments and options.
 **Error Response**:
 ```javascript
 {
-  success: false,
+  ok: false,
   error: {
-    code: "MISSING_ARGS",
-    message: "Missing required arguments",
-    required: ["name"]
+    kind: "input",
+    code: "MISSING_REQUIRED_ARGUMENTS",
+    message: "Missing required args: name",
+    details: { required: ["name"] }
   }
 }
 ```
@@ -614,14 +645,16 @@ List all migrations deployed to a platformOS instance.
 **Response Format**:
 ```javascript
 {
-  status: "ok",
+  ok: true,
   data: {
     migrations: [
-      { id: "1234567890", name: "1234567890_create_users", state: "executed" },
-      { id: "1234567891", name: "1234567891_add_profile", state: "executed" },
+      { id: "1234567890", name: "1234567890_create_users", state: "executed", error_messages: null },
+      { id: "1234567891", name: "1234567891_add_profile", state: "executed", error_messages: null },
       { id: "1234567892", name: "1234567892_add_preferences", state: "pending", error_messages: [] }
-    ]
-  }
+    ],
+    raw: { /* the instance's own response */ }
+  },
+  meta: { ... }
 }
 ```
 
@@ -656,12 +689,14 @@ Generate a new migration on the server and write local file.
 **Response Format**:
 ```javascript
 {
-  status: "ok",
+  ok: true,
   data: {
     name: "1674403200_add_user_fields",
     bodyLength: 156,
-    filePath: "app/migrations/1674403200_add_user_fields.liquid"
-  }
+    filePath: "app/migrations/1674403200_add_user_fields.liquid",
+    raw: { /* the instance's own response */ }
+  },
+  meta: { ... }
 }
 ```
 
@@ -701,11 +736,13 @@ Execute a specific migration on the server.
 **Response Format**:
 ```javascript
 {
-  status: "ok",
+  ok: true,
   data: {
     name: "1234567890_add_user_fields",
-    status: "executed"
-  }
+    state: "executed",
+    raw: { /* the instance's own response */ }
+  },
+  meta: { ... }
 }
 ```
 
@@ -729,6 +766,60 @@ curl -X POST http://localhost:5910/call \
 
 ## Deployment
 
+### deploy-dry-run
+
+What a deploy would change on an instance, applying nothing. A deploy that is not partial is the
+whole intended state of the instance — **every file missing from the build is deleted there** — and
+this is the only way to see that list before causing it.
+
+It is a separate tool rather than a flag on `deploy-start` so that no argument to it can apply a
+deploy: the request always carries `dry_run`. It is annotated `destructiveHint: false` and
+deliberately **not** `readOnlyHint`, because it does have effects — the API records a release, and
+the archive is written to `tmp/release-dry-run.zip` (its own path, so it cannot overwrite the
+archive a concurrent `deploy-start` is streaming).
+
+**Tool Name**: `deploy-dry-run`
+
+**Input Parameters**:
+- `env` *(string, optional)*: Environment name
+- `url` / `email` / `token` *(string, optional)*: Explicit credentials
+- `partial` *(boolean, optional, default: false)*: Report the deploy that leaves missing files in place
+
+**Response Format**:
+```javascript
+{
+  ok: true,
+  data: {
+    applied: false,
+    releaseId: "rel-1",
+    partial: false,
+    deleted:  { count: 2, files: ["views/pages/old.liquid", "graphql/gone.graphql"] },
+    upserted: { count: 12, files: ["views/pages/index.liquid", "..."] },
+    skipped:  { count: 1, files: ["graphql/unchanged.graphql"] },
+    byCategory: {
+      Liquid: { upserted: {...}, deleted: {...}, skipped: {...} },
+      Asset:  { upserted: {...}, deleted: {...}, skipped: {...} }
+    },
+    assets: { state: "validated", count: 42 },
+    archive: { path: "./tmp/release-dry-run.zip", fileCount: 156 }
+  },
+  meta: { ... }
+}
+```
+
+`deleted`, `upserted` and `skipped` are totals across every category, so an agent can branch on
+`data.deleted.count` without walking the report. Each carries `count` and `files` separately
+because the API answers some categories with a count rather than the paths; `count` is right either
+way, and `files` is empty when it was not given them.
+
+`assets.state` is one of `none` (the project has no assets), `validated` (the manifest was checked,
+and its verdict is the `Asset` category), `failed` (the asset phase rejected it, with `error`),
+`not_reported` (nothing was checked — an API that does not report on assets, or a release the
+instance gave no id for) or `still_validating` (the 60-second wait ended first — the file report
+above it is complete regardless). `count` is the number of asset files found locally, so `none`
+and `not_reported` are never confused: `none` always carries `count: 0`. The manifest is sent so the API can
+validate it against the dry-run release; **nothing is uploaded to S3**.
+
 ### deploy-start
 
 Deploy to a platformOS instance. Creates archive from `app/` and `modules/` directories, uploads it, and deploys assets to S3.
@@ -748,15 +839,11 @@ Deploy to a platformOS instance. Creates archive from `app/` and `modules/` dire
   ok: true,
   data: {
     id: "abc123def456",
-    status: "processing"
-  },
-  archive: {
-    path: "./tmp/release.zip",
-    fileCount: 156
-  },
-  assets: {
-    count: 42,
-    skipped: false
+    job_id: "...",
+    status: "processing",
+    archive: { path: "./tmp/release.zip", fileCount: 156 },
+    assets: { count: 42, status: "deploying_in_background" },
+    params: { partial: false }
   },
   meta: {
     startedAt: "2025-01-23T10:30:00Z",
@@ -790,121 +877,6 @@ curl -X POST http://localhost:5910/call \
 
 ---
 
-### deploy-status
-
-> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status); it answers from the same code, and a `job_id` also reports the asset phase, which a bare release id cannot.
-
-Get the current status of a deployment.
-
-**Tool Name**: `deploy-status`
-
-**Input Parameters**:
-- `id` *(string, required)*: Deployment ID from `deploy-start`
-- `env` *(string, optional)*: Environment name
-- `url` *(string, optional)*: Instance URL
-- `email` *(string, optional)*: Account email
-- `token` *(string, optional)*: API token
-
-**Response Format**:
-```javascript
-{
-  ok: true,
-  data: {
-    id: "abc123def456",
-    status: "processing",
-    createdAt: "2025-01-23T10:30:00Z",
-    progress: { current: 42, total: 100 }
-  },
-  meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:01Z",
-    auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
-  }
-}
-```
-
-**Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "deploy-status",
-    "params": {
-      "env": "staging",
-      "id": "abc123def456"
-    }
-  }'
-```
-
-**Use Case**: Check deployment progress without blocking.
-
----
-
-### deploy-wait
-
-> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status) with `wait_ms`, which is bounded; without `maxWaitMs` this one waits with no deadline.
-
-Wait for a deployment to complete. Polls until status is no longer "ready_for_import".
-
-**Tool Name**: `deploy-wait`
-
-**Input Parameters**:
-- `id` *(string, required)*: Deployment ID from `deploy-start`
-- `env` *(string, optional)*: Environment name
-- `url` *(string, optional)*: Instance URL
-- `email` *(string, optional)*: Account email
-- `token` *(string, optional)*: API token
-- `intervalMs` *(integer, optional, min: 200, default: 1000)*: Poll interval
-- `maxWaitMs` *(integer, optional)*: Maximum wait time before timeout
-
-**Response Format**:
-```javascript
-{
-  ok: true,
-  data: {
-    id: "abc123def456",
-    status: "done",
-    completedAt: "2025-01-23T10:30:30Z"
-  },
-  meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:31Z"
-  }
-}
-```
-
-**Error on Failure**:
-```javascript
-{
-  ok: false,
-  error: {
-    code: "DEPLOY_FAILED",
-    message: "Deployment failed",
-    data: { status: "error", errorMessage: "..." }
-  }
-}
-```
-
-**Example Usage**:
-```bash
-# Wait for deploy with 2s polls, max 10 minutes
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "deploy-wait",
-    "params": {
-      "env": "staging",
-      "id": "abc123def456",
-      "intervalMs": 2000,
-      "maxWaitMs": 600000
-    }
-  }'
-```
-
-**Use Case**: Block until deployment completes in automated workflows.
-
----
-
 ## Data Operations
 
 ### data-import
@@ -921,7 +893,10 @@ Start a data import from JSON file, JSON object, or ZIP archive.
 - `filePath` *(string, optional)*: Path to JSON or ZIP file
 - `jsonData` *(object, optional)*: JSON data to import directly
 - `zipFileUrl` *(string, optional)*: Remote ZIP file URL
-- `rawIds` *(boolean, optional, default: false)*: Keep original IDs
+- `validate` *(boolean, optional)*: Check the records against the project schema first
+- `appPath` *(string, optional)*: Project directory holding the schema files
+- `strictTypes` *(boolean, optional)*: Fail when a value does not match its schema type
+- `strictProperties` *(boolean, optional)*: Fail on properties the schema does not define
 
 **Response Format**:
 ```javascript
@@ -982,58 +957,6 @@ curl -X POST http://localhost:5910/call \
 ```
 
 **Use Case**: Bulk import data to a platformOS instance.
-
----
-
-### data-import-status
-
-> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status); it answers from the same code.
-
-Check the status of a data import job.
-
-**Tool Name**: `data-import-status`
-
-**Input Parameters**:
-- `jobId` *(string, required)*: Import job ID from `data-import`
-- `isZip` *(boolean, optional, default: false)*: Set to true if import was ZIP
-- `env` *(string, optional)*: Environment name
-- `url` *(string, optional)*: Instance URL
-- `email` *(string, optional)*: Account email
-- `token` *(string, optional)*: API token
-
-**Response Format**:
-```javascript
-{
-  ok: true,
-  data: {
-    id: "import-123",
-    status: "done",
-    done: 100,
-    pending: 0,
-    failed: 0,
-    response: { created: 2, updated: 0 }
-  },
-  meta: { auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" } }
-}
-```
-
-**Status Values**: `pending`, `processing`, `scheduled`, `done`, `failed`
-
-**Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-import-status",
-    "params": {
-      "env": "staging",
-      "jobId": "import-123",
-      "isZip": false
-    }
-  }'
-```
-
-**Use Case**: Poll until data import completes.
 
 ---
 
@@ -1098,63 +1021,6 @@ curl -X POST http://localhost:5910/call \
 
 ---
 
-### data-export-status
-
-> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status); it answers from the same code.
-
-Check the status of a data export job.
-
-**Tool Name**: `data-export-status`
-
-**Input Parameters**:
-- `jobId` *(string, required)*: Export job ID from `data-export`
-- `isZip` *(boolean, optional, default: false)*: Set to true if export is ZIP
-- `env` *(string, optional)*: Environment name
-- `url` *(string, optional)*: Instance URL
-- `email` *(string, optional)*: Account email
-- `token` *(string, optional)*: API token
-
-**Response Format**:
-```javascript
-{
-  ok: true,
-  data: {
-    id: "export-456",
-    status: "done",
-    done: 100,
-    pending: 0,
-    failed: 0,
-    zipFileUrl: "https://s3.example.com/export.zip",  // if zip: true
-    exportedData: {                                     // if zip: false
-      users: [...],
-      transactables: [...],
-      models: [...]
-    }
-  },
-  meta: { auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" } }
-}
-```
-
-**Status Values**: `pending`, `processing`, `scheduled`, `done`, `failed`
-
-**Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-export-status",
-    "params": {
-      "env": "staging",
-      "jobId": "export-456",
-      "isZip": false
-    }
-  }'
-```
-
-**Use Case**: Poll until data export completes and retrieve results.
-
----
-
 ### data-clean
 
 Start a destructive data clean operation. Requires confirmation string.
@@ -1194,10 +1060,10 @@ Start a destructive data clean operation. Requires confirmation string.
 {
   ok: false,
   error: {
-    code: "CONFIRMATION_MISMATCH",
-    message: "Confirmation string does not match",
-    expected: "CLEAN DATA",
-    received: "CLEAN"
+    kind: "input",
+    code: "CONFIRMATION_REQUIRED",
+    message: "Confirmation text must be exactly \"CLEAN DATA\". This is a destructive operation.",
+    details: { expected: "CLEAN DATA", received: "CLEAN" }
   }
 }
 ```
@@ -1230,56 +1096,6 @@ curl -X POST http://localhost:5910/call \
 ```
 
 **Use Case**: Reset instance for testing or troubleshooting.
-
----
-
-### data-clean-status
-
-> **Deprecated**, and removed in the next major release. Use [`job-status`](#job-status); it answers from the same code.
-
-Check the status of a data clean operation.
-
-**Tool Name**: `data-clean-status`
-
-**Input Parameters**:
-- `jobId` *(string, required)*: Clean job ID from `data-clean`
-- `env` *(string, optional)*: Environment name
-- `url` *(string, optional)*: Instance URL
-- `email` *(string, optional)*: Account email
-- `token` *(string, optional)*: API token
-
-**Response Format**:
-```javascript
-{
-  ok: true,
-  data: {
-    id: "clean-789",
-    status: "done",
-    done: 100,
-    pending: 0,
-    failed: 0,
-    response: { removed: true }
-  },
-  meta: { auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" } }
-}
-```
-
-**Status Values**: `pending`, `processing`, `scheduled`, `done`, `failed`
-
-**Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-clean-status",
-    "params": {
-      "env": "staging",
-      "jobId": "clean-789"
-    }
-  }'
-```
-
-**Use Case**: Poll until data clean completes.
 
 ---
 
@@ -1387,174 +1203,77 @@ curl -X POST http://localhost:5910/call \
 
 ## Linting
 
-### check
+### check-run
 
-Run platformos-check to lint and analyze the app for best practice violations. Checks Liquid, JSON, YAML, and HTML files.
+Run the platformos-check linter over an app directory and report offences grouped by file. Read the `check` code on each offence rather than a pass/fail verdict: severity is reported per offence, and a clean run is not a promise that a deploy will succeed.
 
-**Tool Name**: `check`
+**Tool Name**: `check-run`
 
 **Input Parameters**:
-- `appPath` *(string, optional)*: Path to the platformOS app (default: current directory)
-- `format` *(string, optional, enum: ['text', 'json'], default: 'json')*: Output format
-- `category` *(array of strings, optional)*: Only run checks matching these categories (can specify multiple)
-- `excludeCategory` *(array of strings, optional)*: Exclude checks matching these categories (can specify multiple)
-- `autoCorrect` *(boolean, optional, default: false)*: Automatically fix offenses
-- `failLevel` *(string, optional, enum: ['error', 'suggestion', 'style'])*: Minimum severity level to fail with error code
-- `config` *(string, optional)*: Path to custom `.platformos-check.yml` config file
-- `list` *(boolean, optional, default: false)*: List enabled checks without running them
-- `print` *(boolean, optional, default: false)*: Print active config to STDOUT
+- `appPath` *(string, optional)*: Path to the platformOS app directory to check (default: current directory)
+- `autoFix` *(boolean, optional, default: false)*: Fix what can be fixed, then re-check and return what remains
 
-**Available Check Categories**:
-- `:liquid` - Liquid template checks
-- `:graphql` - GraphQL checks
-- `:yaml` - YAML validation
-- `:html` - HTML checks
-- `:performance` - Performance-related checks
-- `:translation` - Translation key checks
-
-**Response Format** (for normal check run):
-```javascript
+**Response**:
+```json
 {
-  ok: true,
-  data: {
-    result: {
-      offenses: [
-        {
-          file: "app/views/index.liquid",
-          line: 5,
-          column: 2,
-          message: "Space inside braces",
-          severity: "style",
-          check: "SpaceInsideBraces"
-        }
-      ],
-      summary: {
-        total: 5,
-        errors: 2,
-        warnings: 1,
-        suggestions: 2
+  "ok": true,
+  "data": {
+    "offenseCount": 3,
+    "fileCount": 2,
+    "errorCount": 1,
+    "warningCount": 2,
+    "infoCount": 0,
+    "filesChecked": 128,
+    "autoFixed": false,
+    "files": [
+      {
+        "path": "app/views/pages/index.liquid",
+        "offenses": [
+          {
+            "check": "UnknownFilter",
+            "severity": "error",
+            "start_row": 12,
+            "start_column": 4,
+            "end_row": 12,
+            "end_column": 22,
+            "message": "Unknown filter 'md5'"
+          }
+        ],
+        "errorCount": 1,
+        "warningCount": 0,
+        "infoCount": 0
       }
-    },
-    format: "json",
-    appPath: ".",
-    autoCorrect: false
+    ]
   },
-  meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:05Z"
-  }
+  "meta": { "startedAt": "...", "finishedAt": "...", "appPath": "/abs/path" }
 }
 ```
 
-**Response Format** (when list=true):
-```javascript
-{
-  ok: true,
-  data: {
-    result: "ConvertIncludeToRender:\n  severity: suggestion\n  categories: [:liquid]\n  ...",
-    format: "json",
-    listChecks: true
-  },
-  meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:01Z"
-  }
-}
-```
+**Errors**: `PATH_NOT_FOUND` and `NOT_A_DIRECTORY` for an `appPath` that is not a directory on this machine; `MISSING_DEPENDENCY` if the linter cannot be loaded from the installation.
 
 **Example Usage**:
-
 ```bash
-# Run all checks on current directory (JSON format)
+# Lint the current directory
 curl -X POST http://localhost:5910/call \
   -H "Content-Type: application/json" \
   -d '{
-    "tool": "check",
-    "params": {
-      "format": "json"
-    }
+    "tool": "check-run",
+    "params": {}
   }'
 
-# Run only liquid checks
+# Lint a specific app directory and fix what can be fixed
 curl -X POST http://localhost:5910/call \
   -H "Content-Type: application/json" \
   -d '{
-    "tool": "check",
+    "tool": "check-run",
     "params": {
-      "category": ["liquid"]
-    }
-  }'
-
-# Exclude performance checks
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "check",
-    "params": {
-      "excludeCategory": ["performance"]
-    }
-  }'
-
-# Auto-fix offenses
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "check",
-    "params": {
-      "autoCorrect": true
-    }
-  }'
-
-# List all enabled checks
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "check",
-    "params": {
-      "list": true
-    }
-  }'
-
-# Print active configuration
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "check",
-    "params": {
-      "print": true
-    }
-  }'
-
-# Run checks with custom config
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "check",
-    "params": {
-      "config": ".platformos-check.yml",
-      "failLevel": "error"
+      "appPath": ".",
+      "autoFix": true
     }
   }'
 ```
 
-**Available Checks** (examples):
-
-| Check Name | Category | Severity | Description |
-|-----------|----------|----------|-------------|
-| SyntaxError | liquid | error | Detects Liquid syntax errors |
-| MissingTemplate | liquid | suggestion | Detects references to missing templates |
-| UnusedPartial | liquid | suggestion | Detects unused partial templates |
-| UnknownFilter | liquid | error | Detects undefined Liquid filters |
-| UndefinedObject | liquid | error | Detects undefined template objects |
-| SpaceInsideBraces | liquid | style | Ensures consistent spacing in braces |
-| InvalidArgs | liquid, graphql | error | Validates filter/tag arguments |
-| FormAction | html | error | Ensures forms have action attribute |
-| ImgWidthAndHeight | html, performance | error | Requires width/height on images |
-| ParserBlockingJavaScript | html, performance | error | Detects parser-blocking JavaScript |
-| ValidYaml | yaml | error | Validates YAML syntax |
-| TranslationKeyExists | translation, liquid | error | Validates translation keys exist |
-
-**Use Case**: Lint code, find best practice violations, and auto-fix issues.
+**Use Case**: Find violations before deploying, and fix the mechanical ones. `autoFix` writes to the files it fixes, so the positions in a previous result no longer apply afterwards.
 
 ---
 
@@ -1610,8 +1329,10 @@ Sync a single file to a platformOS instance (upload or delete).
 {
   ok: false,
   error: {
-    code: "DELETE_REQUIRES_CONFIRMATION",
-    message: "File deletion requires confirmDelete=true"
+    kind: "input",
+    code: "DELETE_PROTECTED",
+    message: "confirmDelete=true is required to delete",
+    details: { operation: "delete", file: { localPath: "app/views/pages/index.liquid" } }
   }
 }
 ```
@@ -1694,13 +1415,13 @@ Upload a ZIP file containing property uploads (files referenced by upload-type p
 // File not found
 {
   ok: false,
-  error: { code: "FILE_NOT_FOUND", message: "File not found: /path/to/uploads.zip" }
+  error: { kind: "not_found", code: "FILE_NOT_FOUND", message: "File not found: /path/to/uploads.zip" }
 }
 
-// Upload failed
+// Upload refused — the kind follows the status, so an expired token is `auth`, not a retry
 {
   ok: false,
-  error: { code: "UPLOAD_FAILED", message: "Error details..." }
+  error: { kind: "auth", code: "UPLOAD_FAILED", message: "Error details..." }
 }
 ```
 
@@ -2141,9 +1862,11 @@ curl -X POST http://localhost:5910/call \
 
 ## Response Patterns
 
-### Standard Success Response
+Every tool answers in one shape. A tool returns the data it produced or throws; `ok`, the error
+body and `meta` are built in one place (`mcp-min/run-tool.js`) for every transport, and the
+protocol's `isError` is derived from `ok === false`. A tool cannot report a failure any other way.
 
-Most tools follow this pattern for success:
+### Standard Success Response
 
 ```javascript
 {
@@ -2166,18 +1889,40 @@ Most tools follow this pattern for success:
 
 ### Standard Error Response
 
-Tools return errors without throwing to prevent server crashes:
-
 ```javascript
 {
   ok: false,
   error: {
-    code: "ERROR_CODE",           // Machine-readable error type
+    kind: "unavailable",          // What to do next; one of the eight below
+    code: "ECONNREFUSED",         // Specific, stable, what you branch on
     message: "Human-readable message",
-    details?: {...}               // Optional extra details
-  }
+    details: {...}                // Optional: status code, response body, path
+  },
+  meta: { startedAt: "...", finishedAt: "..." }
 }
 ```
+
+`kind` is a closed set, and each member answers one question — what should the caller do next:
+
+| kind | meaning |
+|---|---|
+| `input` | the arguments were wrong; change them and call again |
+| `not_found` | what the arguments named is not there |
+| `auth` | credentials rejected or missing; re-authenticate rather than retry |
+| `project` | the project or machine is not ready for this |
+| `instance` | the instance ran it and refused; the message says why |
+| `unavailable` | nothing was decided; the same call may work later |
+| `internal` | a defect in pos-cli |
+| `cancelled` | the client stopped the call |
+
+An error a tool does not classify itself is classified from what it carries: a refused connection
+or a 5xx is `unavailable`, a 401 or 403 is `auth`, a 404 is `not_found`, another 4xx is `instance`,
+and anything else is `internal`.
+
+**A failure of the work is not a failure of the call.** A test run whose assertions failed answers
+`ok: true` — the run did what was asked, and the failures are in `data`. So does a `job-status` call
+about a job that failed, and a `data-validate` run that found invalid records. `ok: false` means the
+tool did not do what was asked.
 
 ### Async Job Pattern
 
@@ -2278,7 +2023,7 @@ IMPORT_ID=$(curl -s -X POST http://localhost:5910/call \
 curl -X POST http://localhost:5910/call \
   -d "{
     \"tool\": \"data-import-status\",
-    \"params\": {\"env\": \"staging\", \"jobId\": \"$IMPORT_ID\", \"isZip\": true}
+    \"params\": {\"env\": \"staging\", \"jobId\": \"$IMPORT_ID\"}
   }"
 ```
 
@@ -2339,7 +2084,11 @@ curl -X POST http://localhost:5910/call \
 
 ### The Tools, in the Order Clients See Them
 
-36 are registered and 35 are exposed by default; `check` is switched off in `mcp-min/tools.config.json`. `--profile dev` exposes the nine marked below.
+35 are registered, and all of them are exposed by default. `--profile dev` exposes the nine marked below.
+
+What the server deliberately does *not* expose, and why, is recorded in
+[docs/MCP_COVERAGE.md](MCP_COVERAGE.md) — one decision per pos-cli capability, held against `bin/`
+by `mcp-min/__tests__/cli-coverage.test.js`.
 
 | Group | Tools |
 |---|---|
@@ -2349,16 +2098,15 @@ curl -X POST http://localhost:5910/call \
 | Generators | `generators-list`, `generators-help`, `generators-run` |
 | Migrations | `migrations-list`, `migrations-generate`, `migrations-run` |
 | Jobs | `job-status` (dev) |
-| Deployment | `deploy-start` (dev), `deploy-status`†, `deploy-wait`† |
-| Data | `data-import`, `data-import-status`†, `data-export`, `data-export-status`†, `data-clean`, `data-clean-status`†, `data-validate` |
-| Testing | `unit-tests-run` (dev), `tests-run-async` (dev), `tests-run-async-result`† |
-| Linting | `check-run` (dev), `check` (disabled by default — needs the Ruby gem; `check-run` supersedes it) |
+| Deployment | `deploy-dry-run` (dev), `deploy-start` (dev) |
+| Data | `data-import`, `data-export`, `data-clean`, `data-validate` |
+| Testing | `unit-tests-run` (dev), `tests-run-async` (dev) |
+| Linting | `check-run` (dev) |
 | File sync | `sync-file` |
 | Property uploads | `uploads-push` |
 | Constants | `constants-list`, `constants-set`, `constants-unset` |
 | Partner Portal | `instance-create`, `partners-list`, `partner-get`, `endpoints-list` |
 
-† Deprecated in favour of `job-status`, and removed in the next major release.
 
 `pos-cli mcp-config` prints this for your own configuration and options, which is the answer to trust if this table ever drifts.
 

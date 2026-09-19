@@ -20,6 +20,7 @@ vi.mock('../../lib/assets.js', () => ({ deployAssets: (...args) => deployAssets(
 vi.mock('../../lib/directories.js', () => ({ default: { available: () => ['app'], ALLOWED: ['app'] } }));
 
 const { default: deployStart } = await import('../deploy/start.js');
+const { runTool } = await import('../run-tool.js');
 const { default: jobStatus } = await import('../jobs/status.js');
 const { parse } = await import('../jobs/handle.js');
 const { forgetUploads, uploadPhase } = await import('../jobs/local-phases.js');
@@ -85,9 +86,9 @@ describe('an empty archive', () => {
       async getStatus() { return { status: 'success' }; }
     }
 
-    const result = await deployStart.handler(AUTH, { Gateway });
+    const result = await runTool(deployStart, AUTH, { Gateway });
 
-    expect(result).toMatchObject({ ok: false, error: { code: 'EMPTY_ARCHIVE' } });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'project', code: 'EMPTY_ARCHIVE' } });
     expect(pushed).not.toHaveBeenCalled();
   });
 });
@@ -96,7 +97,7 @@ describe('the job_id deploy-start returns', () => {
   test('names the release on the instance it deployed to', async () => {
     const { Gateway } = gatewayWith(['ready_for_import']);
 
-    const result = await deployStart.handler(AUTH, { Gateway });
+    const result = await runTool(deployStart, AUTH, { Gateway });
 
     expect(result.ok).toBe(true);
     expect(parse(result.data.job_id)).toEqual({
@@ -112,7 +113,7 @@ describe('the job_id deploy-start returns', () => {
     deployAssets.mockImplementation(() => new Promise(() => {}));
     const { Gateway } = gatewayWith(['success']);
 
-    const result = await deployStart.handler(AUTH, { Gateway });
+    const result = await runTool(deployStart, AUTH, { Gateway });
 
     expect(parse(result.data.job_id).job.flags).toEqual({ assets: true });
   });
@@ -124,8 +125,8 @@ describe('the background asset upload', () => {
     deployAssets.mockImplementation(() => new Promise(() => {}));
     const { Gateway } = gatewayWith(['success']);
 
-    const started = await deployStart.handler(AUTH, { Gateway });
-    const status = await jobStatus.handler({ job_id: started.data.job_id, ...AUTH }, { Gateway });
+    const started = await runTool(deployStart, AUTH, { Gateway });
+    const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
 
     expect(status.data).toMatchObject({ state: 'running', done: false, status: 'success' });
     expect(status.data.result.assets).toEqual({ phase: 'uploading' });
@@ -138,7 +139,7 @@ describe('the background asset upload', () => {
     getAssets.mockResolvedValue(['app/assets/a.css']);
     const { Gateway, seen } = gatewayWith(['ready_for_import', 'in_progress', 'success']);
 
-    const started = await deployStart.handler(AUTH, { Gateway });
+    const started = await runTool(deployStart, AUTH, { Gateway });
     await vi.waitFor(() => expect(deployAssets).toHaveBeenCalled(), { timeout: 10000 });
 
     expect(seen).toEqual([4141, 4141, 4141]);
@@ -146,7 +147,7 @@ describe('the background asset upload', () => {
 
     // And once it is in, the same job_id reports the deploy as finished.
     await vi.waitFor(async () => {
-      const status = await jobStatus.handler({ job_id: started.data.job_id, ...AUTH }, { Gateway });
+      const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
       expect(status.data).toMatchObject({ state: 'completed', done: true });
     }, { timeout: 10000 });
   }, 30000);
@@ -155,12 +156,12 @@ describe('the background asset upload', () => {
     getAssets.mockResolvedValue(['app/assets/a.css']);
     const { Gateway } = gatewayWith(['error']);
 
-    const started = await deployStart.handler(AUTH, { Gateway });
+    const started = await runTool(deployStart, AUTH, { Gateway });
 
     // Wait for the background task itself to finish, not for a status that answers from the
     // release alone — otherwise "nothing was uploaded" would hold before it had even tried.
     await vi.waitFor(() => expect(uploadPhase(ORIGIN, 4141).phase).toBe('failed'), { timeout: 10000 });
-    const status = await jobStatus.handler({ job_id: started.data.job_id, ...AUTH }, { Gateway });
+    const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
 
     expect(deployAssets).not.toHaveBeenCalled();
     expect(status.data).toMatchObject({ state: 'failed', status: 'error' });
@@ -169,8 +170,8 @@ describe('the background asset upload', () => {
   test('a deploy with no assets is finished as soon as its release is in', async () => {
     const { Gateway } = gatewayWith(['success']);
 
-    const started = await deployStart.handler(AUTH, { Gateway });
-    const status = await jobStatus.handler({ job_id: started.data.job_id, ...AUTH }, { Gateway });
+    const started = await runTool(deployStart, AUTH, { Gateway });
+    const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
 
     expect(deployAssets).not.toHaveBeenCalled();
     expect(status.data).toMatchObject({ state: 'completed', done: true });

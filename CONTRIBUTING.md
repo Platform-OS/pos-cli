@@ -41,7 +41,9 @@ export default thingsListTool;
 
 1. **Register it** in `mcp-min/tools.js` — a `Map`, in the order clients see the tools. That alone
    puts it in the `full` profile; `mcp-min/profiles.js` decides whether it belongs in `dev` too.
-2. **Describe it** in `mcp-min/tools.config.json`, which is the description clients actually see.
+2. **Describe it** in the tool module itself — the `description` there is what clients are shown,
+   and it is the only place it is written. `mcp-min/tools.config.json` can override it, but ships
+   overriding nothing, so a description added there instead would be invisible to the next reader.
 3. **Add tests** in `mcp-min/__tests__/`. `npm run test:mcp-min` needs no instance.
 4. **Document it** in `docs/MCP_TOOLS.md` — a test fails if a registered tool is undocumented, or
    if a document names a tool that is not registered.

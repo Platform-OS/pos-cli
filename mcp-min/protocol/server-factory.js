@@ -10,6 +10,9 @@ import pkg from '../../package.json' with { type: 'json' };
 import { rejectionFor, schemaCompileError } from '../validate-params.js';
 import { OPEN_OBJECT_SCHEMA } from '../schemas/default.js';
 import { DEBUG } from '../config.js';
+import { runTool } from '../run-tool.js';
+import { ToolError } from '../tool-error.js';
+import { buildInstructions } from '../instructions.js';
 import log from '../log.js';
 
 export const SERVER_INFO = Object.freeze({ name: 'pos-cli-mcp', version: pkg.version });
@@ -28,10 +31,14 @@ const PUBLISH_ONLY = Object.freeze({
 
 const text = value => JSON.stringify(value, null, 2);
 
-/** A tool execution error: the call reached the tool layer and failed there. */
-export function toolError(code, message, details) {
+/**
+ * A failure decided before the handler ran. Built through `ToolError` so that it carries a `kind`
+ * like every other failure does: the server instructions promise one on every error, and a
+ * rejection that arrived without it was the one result a client could not read the same way.
+ */
+export function toolError(kind, code, message, details) {
   return {
-    content: [{ type: 'text', text: text({ ok: false, error: { code, message, ...(details && { details }) } }) }],
+    content: [{ type: 'text', text: text({ ok: false, error: new ToolError(kind, code, message, details).toResult() }) }],
     isError: true
   };
 }
@@ -84,13 +91,15 @@ function registerTool(server, name, tool, transport) {
     if (rejection) {
       // Unreachable for a schema error: createServerFactory refuses to start with one.
       return rejection.jsonRpcCode === -32602
-        ? toolError('INVALID_PARAMS', `Invalid params: ${rejection.message}`, rejection.errors)
-        : toolError('SCHEMA_ERROR', rejection.message, rejection.errors);
+        ? toolError('input', 'INVALID_PARAMS', `Invalid params: ${rejection.message}`, rejection.errors)
+        : toolError('internal', 'SCHEMA_ERROR', rejection.message, rejection.errors);
     }
 
     const progress = progressReporter(ctx);
     try {
-      const result = await tool.handler(args ?? {}, {
+      // runTool owns the envelope and turns anything thrown into a classified error, so there is
+      // nothing left to catch here: a handler cannot reach this frame with an exception.
+      const result = await runTool(tool, args, {
         transport,
         debug: DEBUG,
         log: log.info.bind(log),
@@ -99,10 +108,8 @@ function registerTool(server, name, tool, transport) {
         // tool returns.
         signal: ctx.mcpReq.signal
       });
+      if (result.ok === false) log.debug('tool failed', { tool: name, kind: result.error.kind, code: result.error.code });
       return toolResult(result);
-    } catch (err) {
-      log.debug('tool threw', { tool: name, error: String(err) });
-      return toolError('INTERNAL_ERROR', err instanceof Error ? err.message : String(err));
     } finally {
       progress.stop();
     }
@@ -128,8 +135,13 @@ export function createServerFactory(tools, { transport }) {
     throw new Error(`Tool input schemas that do not compile: ${uncompilable.join('; ')}`);
   }
 
+  // Built once: the selection is fixed for the process, so every connection is told the same
+  // thing. The SDK returns it on `initialize` and on `server/discover`, and omits the field for an
+  // empty string — which is the right answer for a selection no section applies to.
+  const instructions = buildInstructions(tools);
+
   return () => {
-    const server = new McpServer({ ...SERVER_INFO }, { capabilities: { tools: {} } });
+    const server = new McpServer({ ...SERVER_INFO }, { capabilities: { tools: {} }, instructions });
     for (const [name, tool] of tools) registerTool(server, name, tool, transport);
     return server;
   };

@@ -8,6 +8,7 @@
  */
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import jobStatus from '../jobs/status.js';
+import { runTool } from '../run-tool.js';
 import { rejectionFor } from '../validate-params.js';
 import { mint } from '../jobs/handle.js';
 import { forgetUploads, trackUpload } from '../jobs/local-phases.js';
@@ -75,7 +76,7 @@ describe('a job_id that cannot be trusted', () => {
   ])('%s: INVALID_JOB_ID, and no request is made', async (_label, jobId) => {
     const { ctx, calls } = context();
 
-    const result = await jobStatus.handler({ job_id: jobId }, ctx);
+    const result = await runTool(jobStatus, { job_id: jobId }, ctx);
 
     expect(result.ok).toBe(false);
     expect(result.error.code).toBe('INVALID_JOB_ID');
@@ -88,7 +89,7 @@ describe('which instance is asked', () => {
   test('a handle for an instance with no .pos entry is refused without a request', async () => {
     const { ctx, calls } = context();
 
-    const result = await jobStatus.handler({ job_id: mint({ kind: 'deploy', id: '41', origin: 'https://evil.example.com' }) }, ctx);
+    const result = await runTool(jobStatus, { job_id: mint({ kind: 'deploy', id: '41', origin: 'https://evil.example.com' }) }, ctx);
 
     expect(result.ok).toBe(false);
     expect(result.error.code).toBe('JOB_INSTANCE_MISMATCH');
@@ -99,7 +100,7 @@ describe('which instance is asked', () => {
   test('an env naming a different instance is refused: the caller sees their own mistake', async () => {
     const { ctx, calls } = context();
 
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'prod' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'prod' }, ctx);
 
     expect(result.error.code).toBe('JOB_INSTANCE_MISMATCH');
     expect(result.error.message).toContain(ORIGIN);
@@ -113,7 +114,7 @@ describe('which instance is asked', () => {
     const config = { prod: CONFIG.prod, staging: CONFIG.staging };
     const { ctx, calls } = context({ config, getStatus: async () => ({ status: 'success' }) });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy', '41', { assets: false }) }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy', '41', { assets: false }) }, ctx);
 
     expect(result.ok).toBe(true);
     expect(result.meta.auth).toMatchObject({ url: `${ORIGIN}/api-root/`, source: '.pos(staging)' });
@@ -123,10 +124,10 @@ describe('which instance is asked', () => {
   test('with no credentials at all, the answer still says which instance the job needs', async () => {
     const { ctx, calls } = context({ config: {} });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy') }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy') }, ctx);
 
     expect(result.ok).toBe(false);
-    expect(result.error.code).toBe('AUTH_ERROR');
+    expect(result.error.code).toBe('AUTH_MISSING');
     expect(result.error.message).toContain(ORIGIN);
     expect(calls.gateway).toEqual([]);
   });
@@ -135,7 +136,7 @@ describe('which instance is asked', () => {
     const config = { prod: CONFIG.prod, staging: CONFIG.staging, 'staging-copy': { ...CONFIG.staging } };
     const { ctx, calls } = context({ config });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy') }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy') }, ctx);
 
     expect(result.error.code).toBe('JOB_INSTANCE_MISMATCH');
     expect(result.error.message).toContain('staging and staging-copy');
@@ -146,7 +147,7 @@ describe('which instance is asked', () => {
   test('the request goes to the resolved credentials\' URL, never to the handle\'s origin', async () => {
     const { ctx, calls } = context({ getStatus: async () => ({ status: 'success' }) });
 
-    await jobStatus.handler({
+    await runTool(jobStatus, {
       job_id: handle('deploy', '41', { assets: false }),
       url: `${ORIGIN}/api-root/`, email: 'someone@example.com', token: 'explicit'
     }, ctx);
@@ -161,7 +162,7 @@ describe('which instance is asked', () => {
 });
 
 describe('deploy', () => {
-  const deploy = (getStatus, flags = { assets: false }) => jobStatus.handler(
+  const deploy = (getStatus, flags = { assets: false }) => runTool(jobStatus, 
     { job_id: handle('deploy', '41', flags), env: 'staging' },
     context({ getStatus }).ctx
   );
@@ -196,7 +197,7 @@ describe('deploy', () => {
 });
 
 describe('a deploy is not done while its assets are still going up', () => {
-  const poll = (getStatus, flags = { assets: true }) => jobStatus.handler(
+  const poll = (getStatus, flags = { assets: true }) => runTool(jobStatus, 
     { job_id: handle('deploy', '41', flags), env: 'staging' },
     context({ getStatus }).ctx
   );
@@ -273,7 +274,7 @@ describe('data jobs', () => {
   ]))('%s reading %s → %s', async (kind, method, status, state) => {
     const { ctx } = context({ [method]: async () => ({ status }) });
 
-    const result = await jobStatus.handler({ job_id: handle(kind), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle(kind), env: 'staging' }, ctx);
 
     expect(result.data).toMatchObject({ kind, state, done: state !== 'running', status });
   });
@@ -281,7 +282,7 @@ describe('data jobs', () => {
   test.each(KINDS)('%s reads a status given as an object', async (kind, method) => {
     const { ctx } = context({ [method]: async () => ({ status: { name: 'done' } }) });
 
-    const result = await jobStatus.handler({ job_id: handle(kind), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle(kind), env: 'staging' }, ctx);
 
     expect(result.data).toMatchObject({ state: 'completed', status: 'done' });
   });
@@ -290,7 +291,7 @@ describe('data jobs', () => {
   test.each(KINDS)('%s reading a status nobody has seen before stays running, and echoes it', async (kind, method) => {
     const { ctx } = context({ [method]: async () => ({ status: 'quarantined' }) });
 
-    const result = await jobStatus.handler({ job_id: handle(kind), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle(kind), env: 'staging' }, ctx);
 
     expect(result.data).toMatchObject({ state: 'running', done: false, status: 'quarantined' });
   });
@@ -298,7 +299,7 @@ describe('data jobs', () => {
   test.each(KINDS)('%s: a 404 is JOB_NOT_FOUND', async (kind, method) => {
     const { ctx } = context({ [method]: async () => { throw Object.assign(new Error('Not Found'), { statusCode: 404 }); } });
 
-    const result = await jobStatus.handler({ job_id: handle(kind), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle(kind), env: 'staging' }, ctx);
 
     expect(result.ok).toBe(false);
     expect(result.error.code).toBe('JOB_NOT_FOUND');
@@ -309,8 +310,8 @@ describe('data jobs', () => {
     const zipped = context({ dataExportStatus: async () => ({ status: 'done', zip_file_url: 'https://cdn.example.com/e.zip' }) });
     const plain = context({ dataExportStatus: async () => ({ status: 'done', data: { users: { results: [{ id: 1 }] } } }) });
 
-    const asZip = await jobStatus.handler({ job_id: handle('data-export', '9', { zip: true }), env: 'staging' }, zipped.ctx);
-    const asJson = await jobStatus.handler({ job_id: handle('data-export', '9'), env: 'staging' }, plain.ctx);
+    const asZip = await runTool(jobStatus, { job_id: handle('data-export', '9', { zip: true }), env: 'staging' }, zipped.ctx);
+    const asJson = await runTool(jobStatus, { job_id: handle('data-export', '9'), env: 'staging' }, plain.ctx);
 
     expect(zipped.calls.gateway.find(c => c.name === 'dataExportStatus').args).toEqual(['9', true]);
     expect(plain.calls.gateway.find(c => c.name === 'dataExportStatus').args).toEqual(['9', false]);
@@ -330,7 +331,7 @@ describe('test runs', () => {
   ])('a run reading %s → %s', async (status, state, done) => {
     const { ctx } = run({ id: 9, status, total_assertions: '4', total_errors: '1' });
 
-    const result = await jobStatus.handler({ job_id: handle('test-run', '9'), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
 
     expect(result.data).toMatchObject({ kind: 'test-run', state, done, status });
   });
@@ -339,7 +340,7 @@ describe('test runs', () => {
   test('failing assertions are a completed run, with its counters', async () => {
     const { ctx } = run({ id: 9, status: 'failed', total_assertions: '12', total_errors: '3', tests: [{ name: 'a' }] });
 
-    const result = await jobStatus.handler({ job_id: handle('test-run', '9'), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
 
     expect(result.data.state).toBe('completed');
     expect(result.data.result).toMatchObject({ total_assertions: 12, total_errors: 3, passed: false, done: true, tests: [{ name: 'a' }] });
@@ -348,7 +349,7 @@ describe('test runs', () => {
   test('a runner that crashed is a failed job, with its message', async () => {
     const { ctx } = run({ id: 9, status: 'error', error_message: 'runner died' });
 
-    const result = await jobStatus.handler({ job_id: handle('test-run', '9'), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
 
     expect(result.data).toMatchObject({ state: 'failed', error: 'runner died' });
   });
@@ -359,7 +360,7 @@ describe('test runs', () => {
   ])('%s is JOB_NOT_FOUND', async (_label, response) => {
     const { ctx } = context({ request: async () => response });
 
-    const result = await jobStatus.handler({ job_id: handle('test-run', '9'), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
 
     expect(result.ok).toBe(false);
     expect(result.error.code).toBe('JOB_NOT_FOUND');
@@ -368,7 +369,7 @@ describe('test runs', () => {
   test('the results request carries the instance token and goes to the resolved instance', async () => {
     const { ctx, calls } = run({ id: 9, status: 'success' });
 
-    await jobStatus.handler({ job_id: handle('test-run', '9'), env: 'staging' }, ctx);
+    await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
 
     expect(calls.request).toEqual([{
       method: 'GET',
@@ -385,7 +386,7 @@ describe('wait_ms', () => {
     let poll = 0;
     const { ctx, calls } = context({ getStatus: async () => ({ status: seq[Math.min(poll++, seq.length - 1)] }) });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 }, ctx);
 
     expect(result.data).toMatchObject({ state: 'completed', done: true, status: 'success' });
     expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(4);
@@ -394,7 +395,7 @@ describe('wait_ms', () => {
   test('the deadline ends the wait with done:false, not an error', async () => {
     const { ctx, calls } = context({ getStatus: async () => ({ status: 'in_progress' }) });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 100 }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging', wait_ms: 100 }, ctx);
 
     expect(result.ok).toBe(true);
     expect(result.data).toMatchObject({ state: 'running', done: false, status: 'in_progress' });
@@ -404,7 +405,7 @@ describe('wait_ms', () => {
   test('without wait_ms it answers after one poll', async () => {
     const { ctx, calls } = context({ getStatus: async () => ({ status: 'in_progress' }) });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging' }, ctx);
 
     expect(result.data.done).toBe(false);
     expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(1);
@@ -426,7 +427,7 @@ describe('wait_ms', () => {
     const { ctx } = context({ getStatus: async () => ({ status: poll++ < 2 ? 'in_progress' : 'success' }) });
     const sendProgress = vi.fn();
 
-    await jobStatus.handler(
+    await runTool(jobStatus, 
       { job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 },
       { ...ctx, sendProgress }
     );
@@ -448,7 +449,7 @@ describe('wait_ms', () => {
     let poll = 0;
     const { ctx } = context({ getStatus: async () => answers[Math.min(poll++, answers.length - 1)]() });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 }, ctx);
 
     expect(result.ok).toBe(true);
     expect(result.data).toMatchObject({ state: 'completed', status: 'success' });
@@ -458,9 +459,9 @@ describe('wait_ms', () => {
   test('a rejection the instance means is an answer, and ends the wait', async () => {
     const { ctx, calls } = context({ getStatus: async () => { throw Object.assign(new Error('Forbidden'), { statusCode: 403 }); } });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 5000 }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging', wait_ms: 5000 }, ctx);
 
-    expect(result).toMatchObject({ ok: false, error: { code: 'JOB_STATUS_ERROR' } });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'auth', code: 'UNAUTHORIZED' } });
     expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(1);
   }, 20000);
 
@@ -469,9 +470,9 @@ describe('wait_ms', () => {
   test('a programming error is reported at once, however long the wait', async () => {
     const { ctx, calls } = context({ getStatus: async () => { throw new TypeError('polled is not a function'); } });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 60000 }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging', wait_ms: 60000 }, ctx);
 
-    expect(result).toMatchObject({ ok: false, error: { code: 'JOB_STATUS_ERROR' } });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'internal', code: 'INTERNAL_ERROR' } });
     expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(1);
   }, 20000);
 
@@ -484,7 +485,7 @@ describe('wait_ms', () => {
     });
     const { ctx } = context({ getStatus: async () => { throw refusal; } });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging' }, ctx);
 
     expect(result.error.details).toEqual({ statusCode: 422, body: { error: 'release is locked' } });
   });
@@ -492,18 +493,18 @@ describe('wait_ms', () => {
   test('without a wait, a blip is reported rather than retried', async () => {
     const { ctx, calls } = context({ getStatus: async () => { throw Object.assign(new TypeError('fetch failed'), { name: 'RequestError' }); } });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging' }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging' }, ctx);
 
-    expect(result).toMatchObject({ ok: false, error: { code: 'JOB_STATUS_ERROR', message: 'fetch failed' } });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'unavailable', code: 'INSTANCE_UNAVAILABLE', message: 'fetch failed' } });
     expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(1);
   });
 
   test('an instance that never answers reports the failure when the deadline passes', async () => {
     const { ctx, calls } = context({ getStatus: async () => { throw Object.assign(new TypeError('fetch failed'), { name: 'RequestError' }); } });
 
-    const result = await jobStatus.handler({ job_id: handle('deploy'), env: 'staging', wait_ms: 100 }, ctx);
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging', wait_ms: 100 }, ctx);
 
-    expect(result).toMatchObject({ ok: false, error: { code: 'JOB_STATUS_ERROR' } });
+    expect(result).toMatchObject({ ok: false, error: { kind: 'unavailable', code: 'INSTANCE_UNAVAILABLE' } });
     expect(calls.gateway.filter(c => c.name === 'getStatus').length).toBeGreaterThan(1);
   }, 20000);
 
@@ -511,7 +512,7 @@ describe('wait_ms', () => {
     const controller = new AbortController();
     const { ctx, calls } = context({ getStatus: async () => ({ status: 'in_progress' }) });
 
-    const result = jobStatus.handler(
+    const result = runTool(jobStatus, 
       { job_id: handle('deploy'), env: 'staging', wait_ms: 120000 },
       { ...ctx, signal: controller.signal }
     );
@@ -519,7 +520,7 @@ describe('wait_ms', () => {
     const polls = calls.gateway.filter(c => c.name === 'getStatus').length;
     controller.abort();
 
-    expect(await result).toEqual(cancelled());
+    expect(await result).toMatchObject({ ok: false, error: { kind: 'cancelled', code: 'CANCELLED' } });
     expect(calls.gateway.filter(c => c.name === 'getStatus').length).toBeLessThanOrEqual(polls + 1);
   }, 20000);
 });

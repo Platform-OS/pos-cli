@@ -103,7 +103,7 @@ describe('stopHttp', () => {
       'test-slow': {
         description: 'answers when released',
         inputSchema: { type: 'object' },
-        handler: async () => { started.resolve(); await release.promise; return { ok: true, answered: 'after stop began' }; }
+        handler: async () => { started.resolve(); await release.promise; return { answered: 'after stop began' }; }
       }
     });
     const server = await startHttp({ port: 0, tools });
@@ -128,7 +128,7 @@ describe('stopHttp', () => {
       release.resolve();
       const { status, body } = await response;
       expect(status).toBe(200);
-      expect(JSON.parse(body).result.answered).toBe('after stop began');
+      expect(JSON.parse(body).result.data.answered).toBe('after stop began');
       expect(await within(stopped, 1000)).toBe(true);
     } finally {
       agent.destroy();
@@ -152,7 +152,7 @@ describe('stopHttp', () => {
         'test-slow': {
           description: 'answers when released',
           inputSchema: { type: 'object' },
-          handler: async () => { started.resolve(); await release.promise; return { ok: true, answered: 'after stop began' }; }
+          handler: async () => { started.resolve(); await release.promise; return { answered: 'after stop began' }; }
         }
       });
       const server = await startHttp({ port: 0, tools });
@@ -171,7 +171,7 @@ describe('stopHttp', () => {
       release.resolve();
       const { status, body } = await response;
       expect(status).toBe(200);
-      expect(JSON.parse(body.result.content[0].text).answered).toBe('after stop began');
+      expect(JSON.parse(body.result.content[0].text).data.answered).toBe('after stop began');
       expect(await within(stopped, 1000)).toBe(true);
     });
 

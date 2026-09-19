@@ -31,20 +31,20 @@ const refusal = (options, context) => {
 
 const PROTOTYPE_NAMES = ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'];
 
-// Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio),
-// plus job-status, added to the bare surface by TASK-13 Part 2.
+// What a bare pos-cli-mcp exposes: 6.5.1's set, plus job-status and deploy-dry-run, minus the six
+// per-operation status tools job-status replaced (removed in 7.0.0).
 const PRE_PROFILES_TOOLS = [
   'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'generators-list', 'generators-help', 'generators-run',
-  'migrations-list', 'migrations-generate', 'migrations-run', 'job-status', 'deploy-start', 'deploy-status', 'deploy-wait',
-  'data-import', 'data-import-status', 'data-export', 'data-export-status', 'data-clean', 'data-clean-status',
-  'data-validate', 'unit-tests-run', 'tests-run-async', 'tests-run-async-result', 'check-run', 'sync-file',
+  'migrations-list', 'migrations-generate', 'migrations-run', 'job-status', 'deploy-dry-run', 'deploy-start',
+  'data-import', 'data-export', 'data-clean',
+  'data-validate', 'unit-tests-run', 'tests-run-async', 'check-run', 'sync-file',
   'uploads-push', 'constants-list', 'constants-set', 'constants-unset', 'instance-create', 'partners-list',
   'partner-get', 'endpoints-list', 'env-add'
 ];
 
 const DEV_TOOLS_IN_REGISTRY_ORDER = [
-  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'job-status', 'deploy-start',
-  'unit-tests-run', 'tests-run-async', 'check-run'
+  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'job-status', 'deploy-dry-run',
+  'deploy-start', 'unit-tests-run', 'tests-run-async', 'check-run'
 ];
 
 describe('resolveTools', () => {
@@ -198,7 +198,8 @@ describe('built-in profiles', () => {
     const selection = selectTools({ env: {} });
 
     expect(names(selection)).toEqual(PRE_PROFILES_TOOLS);
-    expect(selection.hidden).toEqual([{ name: 'check', reason: 'disabled' }]);
+    // The bundled config disables nothing: it records departures from the code, and there are none.
+    expect(selection.hidden).toEqual([]);
     expect(selection.configFile.source).toBe('bundled');
   });
 
@@ -214,20 +215,36 @@ describe('built-in profiles', () => {
 // its schema's text.
 describe('descriptions only name tools exposed alongside them', () => {
   // A hyphenated tool name cannot be an ordinary word, so a match is a reference. A single-word
-  // name can: "the directory to check" is not a reference to the disabled `check` tool.
+  // name could not be told from ordinary prose, which is why the test below requires there to be
+  // none: every registered name is referable, so this examines the whole registry.
   const referable = [...registry.keys()].filter(name => name.includes('-'));
   const mentions = (text, self) => referable.filter(
     name => name !== self && new RegExp(`(?<![\\w-])${name}(?![\\w-])`).test(text)
   );
 
-  test('the only registered tool name that is an ordinary word is check', () => {
-    expect([...registry.keys()].filter(name => !name.includes('-'))).toEqual(['check']);
+  test('every registered tool name is hyphenated, so the check below covers all of them', () => {
+    const unreferable = [...registry.keys()].filter(name => !name.includes('-'));
+
+    expect(unreferable, 'a single-word tool name cannot be told from prose, and would be skipped below').toEqual([]);
   });
 
+  // Against a made-up registry, not the real one: no two registered names contain one another any
+  // more (`data-import` inside `data-import-status` went with the deprecated status tools), so
+  // asking the real list to prove the matcher can tell them apart would prove nothing. The guard
+  // still has to work, because the next tool added could reintroduce the overlap.
   test('the reference finder sees a tool name, but not a longer name that contains it', () => {
-    expect(mentions('Use tests-run-async-result to poll.', 'x')).toEqual(['tests-run-async-result']);
-    expect(mentions('Start with tests-run-async.', 'x')).toEqual(['tests-run-async']);
-    expect(mentions('see data-export-status', 'x')).toEqual(['data-export-status']);
+    const names = ['thing-do', 'thing-do-later'];
+    const find = (text) => names.filter(name => new RegExp(`(?<![\\w-])${name}(?![\\w-])`).test(text));
+
+    expect(find('Use thing-do-later to poll.')).toEqual(['thing-do-later']);
+    expect(find('Start with thing-do.')).toEqual(['thing-do']);
+    expect(find('thing-do, then thing-do-later')).toEqual(['thing-do', 'thing-do-later']);
+  });
+
+  test('no two registered names contain one another, so every mention is unambiguous', () => {
+    const overlapping = referable.flatMap(a => referable.filter(b => b !== a && b.includes(a)).map(b => `${a} inside ${b}`));
+
+    expect(overlapping).toEqual([]);
   });
 
   test.each(PROFILE_NAMES.filter(profile => profileTools(profile, registry.keys()).length > 0))(
@@ -267,7 +284,7 @@ describe('findTool', () => {
 
 test('describeSelection names what was exposed and why', () => {
   expect(describeSelection(selectTools({ profile: 'dev', include: ['sync-file'], exclude: ['job-status'], env: {} })))
-    .toBe(`mcp-min: exposing 9 of ${registry.size} tools (profile dev; --include-tools sync-file; --exclude-tools job-status)`);
+    .toBe(`mcp-min: exposing 10 of ${registry.size} tools (profile dev; --include-tools sync-file; --exclude-tools job-status)`);
   expect(describeSelection(selectTools({ env: {} })))
-    .toBe(`mcp-min: exposing 35 of ${registry.size} tools (profile full; --include-tools (none); --exclude-tools (none))`);
+    .toBe(`mcp-min: exposing ${registry.size} of ${registry.size} tools (profile full; --include-tools (none); --exclude-tools (none))`);
 });

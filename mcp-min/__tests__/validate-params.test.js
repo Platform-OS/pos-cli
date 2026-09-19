@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import fg from 'fast-glob';
 import registry from '../tools.js';
 import { validateToolParams, TOOL_SCHEMA_DIALECT } from '../validate-params.js';
+import { runTool } from '../run-tool.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -98,8 +99,10 @@ describe('authentication params stay accepted', () => {
   // it calls resolveAuth.
   const authenticatingFiles = authFileList;
 
+  // A floor, so the scan cannot pass by finding nothing. Lowered from 20 when the six deprecated
+  // status tools were removed in 7.0.0; five of them authenticated.
   test('the scan finds the authenticating tools', () => {
-    expect(authenticatingFiles.length).toBeGreaterThanOrEqual(20);
+    expect(authenticatingFiles.length).toBeGreaterThanOrEqual(18);
   });
 
   test.each(authenticatingFiles.map((file, i) => [path.relative(repoRoot, file), i]))(
@@ -121,15 +124,12 @@ describe('authentication params stay accepted', () => {
   const requiredExtras = {
     'constants-set': { name: 'A', value: '1' },
     'constants-unset': { name: 'A' },
-    'data-import-status': { jobId: '1' },
+
     'uploads-push': { filePath: 'uploads.zip' },
     'unit-tests-run': { name: 'example_test' },
-    'deploy-status': { id: '1' },
-    'deploy-wait': { id: '1' },
-    'data-export-status': { jobId: '1' },
-    'data-clean-status': { jobId: '1' },
+
     'data-clean': { confirmation: 'yes' },
-    'tests-run-async-result': { id: '1' },
+
     'migrations-generate': { name: 'add_thing' },
     'liquid-exec': { template: '{{ 1 }}' },
     'graphql-exec': { query: '{ a }' },
@@ -175,7 +175,6 @@ describe('required relaxations', () => {
     ['constants-set', ['name', 'value']],
     ['constants-unset', ['name']],
     ['data-import', undefined],
-    ['data-import-status', ['jobId']],
     ['uploads-push', ['filePath']]
   ])('%s no longer requires env', (name, expected) => {
     expect(registry.get(name).inputSchema.required).toEqual(expected);
@@ -195,14 +194,14 @@ describe('logs-fetch cursor round-trips', () => {
       }
     }
 
-    const result = await registry.get('logs-fetch').handler(
+    const result = await runTool(registry.get('logs-fetch'), 
       { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
       { Gateway: MockGateway }
     );
 
     expect(result.ok).toBe(true);
-    expect(result.lastId).toBe(42);
-    expect(check('logs-fetch', { lastId: result.lastId }).valid).toBe(true);
+    expect(result.data.lastId).toBe(42);
+    expect(check('logs-fetch', { lastId: result.data.lastId }).valid).toBe(true);
   });
 
   test('the default cursor is also a valid next cursor', async () => {
@@ -210,12 +209,12 @@ describe('logs-fetch cursor round-trips', () => {
       async logs() { return { logs: [] }; }
     }
 
-    const result = await registry.get('logs-fetch').handler(
+    const result = await runTool(registry.get('logs-fetch'), 
       { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
       { Gateway: MockGateway }
     );
 
-    expect(result.lastId).toBe(0);
-    expect(check('logs-fetch', { lastId: result.lastId }).valid).toBe(true);
+    expect(result.data.lastId).toBe(0);
+    expect(check('logs-fetch', { lastId: result.data.lastId }).valid).toBe(true);
   });
 });

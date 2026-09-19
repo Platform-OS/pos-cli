@@ -9,6 +9,7 @@ import startHttp from '../http-server.js';
 import { MCP_BODY_LIMIT_BYTES } from '../protocol/http-endpoint.js';
 import { abortableDelay, cancelled } from '../cancellation.js';
 import { defaultTools, toolsWith } from './helpers/tools.js';
+import { ToolError } from '../tool-error.js';
 
 const MODERN = '2026-07-28';
 const LEGACY = '2025-06-18';
@@ -21,9 +22,9 @@ const tools = toolsWith({
   'test-echo': {
     description: 'echoes msg',
     inputSchema: { type: 'object', properties: { msg: { type: 'string' } }, required: ['msg'], additionalProperties: false },
-    handler: async ({ msg }, ctx) => ({ ok: true, echo: msg, transport: ctx.transport })
+    handler: async ({ msg }, ctx) => ({ echo: msg, transport: ctx.transport })
   },
-  'test-fails': { description: 'reports a failure', inputSchema: closed, handler: async () => ({ ok: false, error: { code: 'TEST_FAILURE', message: 'it did not work' } }) },
+  'test-fails': { description: 'reports a failure', inputSchema: closed, handler: async () => { throw new ToolError('instance', 'TEST_FAILURE', 'it did not work'); } },
   'test-progress': {
     description: 'reports progress',
     inputSchema: closed,
@@ -32,7 +33,7 @@ const tools = toolsWith({
         ctx.sendProgress(step, 3);
         await new Promise(resolve => setTimeout(resolve, 20));
       }
-      return { ok: true, steps: 3 };
+      return { steps: 3 };
     }
   },
   'test-poll': {
@@ -110,7 +111,7 @@ describe('a 2026-07-28 client', () => {
     const called = await modern(modernRequest('tools/call', { name: 'test-echo', arguments: { msg: 'hi' } }));
     expect(called.type).toContain('application/json');
     expect(called.body.result.isError).toBeUndefined();
-    expect(toolResult(called.body.result)).toEqual({ ok: true, echo: 'hi', transport: 'http' });
+    expect(toolResult(called.body.result)).toMatchObject({ ok: true, data: { echo: 'hi', transport: 'http' } });
   });
 
   test.each([
@@ -147,7 +148,7 @@ describe('a 2026-07-28 client', () => {
     expect(res.type).toContain('text/event-stream');
     const messages = sseMessages(res.text);
     expect(messages.filter(m => m.method === 'notifications/progress').map(m => m.params.progress)).toEqual([1, 2, 3]);
-    expect(toolResult(messages.at(-1).result)).toEqual({ ok: true, steps: 3 });
+    expect(toolResult(messages.at(-1).result)).toMatchObject({ ok: true, data: { steps: 3 } });
   });
 });
 
@@ -158,7 +159,7 @@ describe('a 2025-era client, served statelessly', () => {
     expect(init.body.result.protocolVersion).toBe(LEGACY);
 
     expect((await legacy('tools/list')).body.result.tools.map(t => t.name)).toContain('test-echo');
-    expect(toolResult((await legacy('tools/call', { name: 'test-echo', arguments: { msg: 'old' } })).body.result)).toMatchObject({ echo: 'old' });
+    expect(toolResult((await legacy('tools/call', { name: 'test-echo', arguments: { msg: 'old' } })).body.result)).toMatchObject({ data: { echo: 'old' } });
     expect((await legacy('ping')).body.result).toEqual({});
   });
 
@@ -193,7 +194,7 @@ describe.each([['2026-07-28', true], ['2025-06-18', false]])('tool failures reac
     const { result } = await call('test-fails', {});
 
     expect(result.isError).toBe(true);
-    expect(toolResult(result)).toEqual({ ok: false, error: { code: 'TEST_FAILURE', message: 'it did not work' } });
+    expect(toolResult(result)).toMatchObject({ ok: false, error: { code: 'TEST_FAILURE', message: 'it did not work' } });
   });
 
   test('a client that goes away cancels the call, and the tool stops polling', async () => {

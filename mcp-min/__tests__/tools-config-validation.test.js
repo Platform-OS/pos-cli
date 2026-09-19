@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 import { describe, test, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import registry from '../tools.js';
 import log from '../log.js';
-import { loadToolsConfig, toolsConfigLocation, isDisabledByConfig, BUNDLED_CONFIG_PATH } from '../tools-config.js';
+import { loadToolsConfig, toolsConfigLocation, isDisabledByConfig, BUNDLED_CONFIG_PATH, REMOVED_TOOLS } from '../tools-config.js';
 import { selectTools } from '../tool-selection.js';
 import { MCP_BIN, MCP_CONFIG_BIN, serverEnv, launch, request, stop, stopAll } from './helpers/server-process.js';
 
@@ -122,8 +122,8 @@ describe('tools config validation', () => {
 
     expect(tools.has('envs-list')).toBe(false);
     expect(hidden).toContainEqual({ name: 'envs-list', reason: 'disabled' });
-    // No entry means enabled: the bundled `check: false` no longer applies under this config.
-    expect(tools.has('check')).toBe(true);
+    // No entry means enabled, so naming one tool hides one tool.
+    expect(tools.size).toBe(registry.size - 1);
   });
 
   test.each([
@@ -169,6 +169,86 @@ describe('tools config validation', () => {
     return import('../../lib/validation/index.js').then(({ validate }) => {
       expect(validate(schema, config).errors ?? []).toEqual([]);
     });
+  });
+});
+
+/**
+ * A tool is described where it is defined, and nowhere else.
+ *
+ * The bundled config used to carry a description for every tool, and the loader prefers the
+ * config's, so editing a module changed nothing a client saw — six pairs had drifted apart before
+ * anyone noticed. The override stays, for a config a user writes; what is gone is the shipped file
+ * exercising it by default, which also froze all 36 descriptions for anyone who edited the file.
+ */
+describe('the bundled config asserts only what departs from the code', () => {
+  const bundled = () => JSON.parse(fs.readFileSync(BUNDLED_CONFIG_PATH, 'utf8'));
+
+  test('it redescribes nothing, so a tool is described where it is defined', () => {
+    const redescribed = Object.entries(bundled().tools)
+      .filter(([, entry]) => entry.description !== undefined)
+      .map(([name]) => name);
+
+    expect(redescribed, 'describe a tool in its own module; this file is for departures').toEqual([]);
+  });
+
+  test('what a client is shown is what the tool module wrote, for every tool', () => {
+    const { tools } = selectTools({ env: {} });
+
+    for (const [name, exposed] of tools) {
+      expect(exposed.description, name).toBe(registry.get(name).description);
+    }
+  });
+
+  test('it records no entry that only restates a default', () => {
+    const redundant = Object.entries(bundled().tools)
+      .filter(([, entry]) => Object.keys(entry).length === 0 || entry.enabled === true)
+      .map(([name]) => name);
+
+    expect(redundant, 'an entry that changes nothing is noise the next reader has to check').toEqual([]);
+  });
+});
+
+// Users were told to copy the bundled file and edit it, so one written against an earlier release
+// is still out there with all 36 descriptions in it. It has to keep working.
+describe('a config written for an earlier release still applies', () => {
+  test('naming a tool that has since been removed is a warning, not a refusal to start', () => {
+    const warn = vi.spyOn(log, 'warn').mockImplementation(() => {});
+    const configPath = write('names-removed.json', JSON.stringify({ tools: { check: { enabled: false } } }));
+
+    // The unknown-name rule exists to catch a typo that would silently leave a tool enabled. A
+    // removed tool cannot leave anything enabled, and the user could not have edited the line out
+    // before upgrading, so refusing to start would break the upgrade over nothing.
+    expect(() => load(configPath)).not.toThrow();
+    expect(selectTools({ env: { MCP_TOOLS_CONFIG: configPath } }).tools.size).toBe(registry.size);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('check, which no longer exists'));
+  });
+
+  test('a typo is still refused, even beside a removed tool', () => {
+    const configPath = write('typo-and-removed.json', JSON.stringify({ tools: { check: {}, 'deploy-strt': { enabled: false } } }));
+
+    expect(rejection(configPath).message).toContain('no such tool: deploy-strt');
+    expect(rejection(configPath).message).not.toContain('check');
+  });
+
+  test('no tombstone shadows a tool that is registered today', () => {
+    const shadowed = [...REMOVED_TOOLS.keys()].filter(name => registry.has(name));
+
+    expect(shadowed, 'a re-registered tool must lose its tombstone, or its config entry is ignored').toEqual([]);
+  });
+
+  test('its descriptions still reach clients, and the tools it disabled stay disabled', () => {
+    const asShippedBefore = {
+      tools: Object.fromEntries(
+        [...registry.keys()].map(name => [name, { enabled: name !== 'data-clean', description: `Old text for ${name}` }])
+      )
+    };
+    const configPath = write('old-shape.json', JSON.stringify(asShippedBefore));
+
+    const { tools } = selectTools({ env: { MCP_TOOLS_CONFIG: configPath } });
+
+    expect(tools.has('data-clean')).toBe(false);
+    expect(tools.size).toBe(registry.size - 1);
+    expect(tools.get('envs-list').description).toBe('Old text for envs-list');
   });
 });
 

@@ -24,22 +24,16 @@ import migrationsRunTool from './migrations/run.js';
 import jobStatusTool from './jobs/status.js';
 
 import deployStartTool from './deploy/start.js';
-import deployStatusTool from './deploy/status.js';
-import deployWaitTool from './deploy/wait.js';
+import deployDryRunTool from './deploy/dry-run.js';
 
 import dataImportTool from './data/import.js';
-import dataImportStatusTool from './data/import-status.js';
 import dataExportTool from './data/export.js';
-import dataExportStatusTool from './data/export-status.js';
 import dataCleanTool from './data/clean.js';
-import dataCleanStatusTool from './data/clean-status.js';
 import dataValidateTool from './data/validate-tool.js';
 
 import testsRunTool from './tests/run.js';
 import testsRunAsyncTool from './tests/run-async.js';
-import testsRunAsyncResultTool from './tests/run-async-result.js';
 
-import checkTool from './check/index.js';
 import checkRunTool from './check/run.js';
 
 import uploadsPushTool from './uploads/push.js';
@@ -56,7 +50,7 @@ import envAddTool from './portal/env-add.js';
 
 const tools = {
   'envs-list': {
-    description: 'List configured environments from .pos (name and url)',
+    description: 'List the environments in .pos, with the instance URL of each.',
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: 'object',
@@ -64,16 +58,10 @@ const tools = {
       properties: {}
     },
     handler: async (_params, ctx) => {
-      const startedAt = new Date().toISOString();
       log.debug('tool:list-envs invoked', { transport: ctx?.transport });
       const settingsMap = Object(files.getConfig());
-      const names = Object.keys(settingsMap);
-      const environments = names.map((name) => ({ name, url: settingsMap[name]?.url }));
-      return {
-        ok: true,
-        data: { environments },
-        meta: { startedAt, finishedAt: new Date().toISOString() }
-      };
+      const environments = Object.keys(settingsMap).map((name) => ({ name, url: settingsMap[name]?.url }));
+      return { environments };
     }
   },
 
@@ -92,23 +80,17 @@ const tools = {
   // The status of anything deploy-start, data-* or tests-run-async started.
   'job-status': jobStatusTool,
 
+  'deploy-dry-run': deployDryRunTool,
   'deploy-start': deployStartTool,
-  'deploy-status': deployStatusTool,
-  'deploy-wait': deployWaitTool,
 
   'data-import': dataImportTool,
-  'data-import-status': dataImportStatusTool,
   'data-export': dataExportTool,
-  'data-export-status': dataExportStatusTool,
   'data-clean': dataCleanTool,
-  'data-clean-status': dataCleanStatusTool,
   'data-validate': dataValidateTool,
 
   'unit-tests-run': testsRunTool,
   'tests-run-async': testsRunAsyncTool,
-  'tests-run-async-result': testsRunAsyncResultTool,
 
-  'check': checkTool,
   'check-run': checkRunTool,
 
   'sync-file': singleFileTool,

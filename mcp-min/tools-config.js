@@ -15,6 +15,20 @@ export const BUNDLED_CONFIG_PATH = join(here, 'tools.config.json');
 
 const configSchema = JSON.parse(readFileSync(join(here, 'tools.config.schema.json'), 'utf-8'));
 
+// Tools an earlier release registered. A config naming one was written against a version that had
+// it, which is not the typo the unknown-name rule exists to catch — there is nothing for such an
+// entry to fail to switch off — and refusing to start would break an upgrade over a line the user
+// could not have known to remove. Warned about and ignored instead.
+export const REMOVED_TOOLS = new Map([
+  ['check', 'removed in 7.0.0; use check-run'],
+  ['deploy-status', 'removed in 7.0.0; use job-status with the job_id deploy-start returned'],
+  ['deploy-wait', 'removed in 7.0.0; use job-status with wait_ms'],
+  ['data-import-status', 'removed in 7.0.0; use job-status with the job_id data-import returned'],
+  ['data-export-status', 'removed in 7.0.0; use job-status with the job_id data-export returned'],
+  ['data-clean-status', 'removed in 7.0.0; use job-status with the job_id data-clean returned'],
+  ['tests-run-async-result', 'removed in 7.0.0; use job-status with the job_id tests-run-async returned']
+]);
+
 export function toolsConfigLocation(env) {
   return env.MCP_TOOLS_CONFIG
     ? { path: env.MCP_TOOLS_CONFIG, source: 'MCP_TOOLS_CONFIG' }
@@ -62,8 +76,12 @@ export function loadToolsConfig(registry, { env = process.env } = {}) {
   // nothing, and leave "deploy-start" enabled while the config looks like it took effect.
   // Map#has, not `in`: `in` walks the prototype chain, so `toString` would pass as a known tool.
   const unknown = Object.keys(raw.tools).filter(name => !registry.has(name));
-  if (unknown.length > 0) {
-    throw new ToolsConfigError(`Invalid tools config at ${location.path}: no such tool: ${unknown.join(', ')}`);
+  const misnamed = unknown.filter(name => !REMOVED_TOOLS.has(name));
+  if (misnamed.length > 0) {
+    throw new ToolsConfigError(`Invalid tools config at ${location.path}: no such tool: ${misnamed.join(', ')}`);
+  }
+  for (const name of unknown) {
+    log.warn(`mcp-min: tools config at ${location.path} configures ${name}, which no longer exists (${REMOVED_TOOLS.get(name)}); ignoring it`);
   }
 
   log.debug('tools config loaded', { path: location.path, tools: Object.keys(raw.tools).length });

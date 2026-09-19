@@ -4,8 +4,8 @@
  */
 import log from '../log.js';
 import Gateway from '../../lib/proxy.js';
-import { maskToken } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
+import { ToolError } from '../tool-error.js';
 import { abortableDelay, cancelled } from '../cancellation.js';
 import makeRequest, { testAuthHeaders } from '../tests/request.js';
 import adapters from './adapters/index.js';
@@ -22,8 +22,6 @@ const BACKOFF_AFTER = 10;
 const BACKOFF_CAP = 5;
 const intervalFor = (poll, base) => base * Math.min(2 ** Math.max(0, poll - BACKOFF_AFTER + 1), BACKOFF_CAP);
 
-const failure = (code, message, details) => ({ ok: false, error: { code, message, ...(details && { details }) } });
-
 /**
  * A refused connection or a 5xx says nothing about the job, so while there is time left it is
  * worth asking again. The same two `lib/push.js` retries, and no more: retrying our own TypeError
@@ -31,43 +29,45 @@ const failure = (code, message, details) => ({ ok: false, error: { code, message
  */
 const isTransient = err => err?.name === 'RequestError' || err?.statusCode >= 500;
 
-const apiDetails = err => (err?.statusCode
-  ? { statusCode: err.statusCode, body: err.response?.body }
-  : undefined);
-
 const jobStatusTool = {
-  description: 'Status of an operation started earlier: a deploy, a data import, export or clean, or an async test run. Returns state: running, completed (it finished; tests that failed still count as completed) or failed (the operation itself failed).',
+  description: 'Status of an operation started earlier: a deploy, a data import, export or clean, or an async test run. state is running, completed (it finished; a test run whose assertions failed still counts) or failed (the operation itself failed).',
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      job_id: { type: 'string', description: 'Opaque; pass back the job_id the starter returned, unchanged' },
-      wait_ms: { type: 'integer', minimum: 0, maximum: MAX_WAIT_MS, description: 'Poll until done or this long, whichever comes first' },
-      env: { type: 'string', description: 'Environment from .pos; must be the instance the job was started on' },
-      ...authProperties
+      job_id: { type: 'string', description: 'Opaque: pass back exactly what the starter returned.' },
+      wait_ms: { type: 'integer', minimum: 0, maximum: MAX_WAIT_MS, description: 'Wait until the job is done or this long, whichever comes first.' },
+      ...authProperties,
+      env: { type: 'string', description: 'Must be the instance the job was started on; the job_id says which.' }
     },
     required: ['job_id']
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
-
     const parsed = parse(params?.job_id);
-    if (!parsed.valid) return failure('INVALID_JOB_ID', `That is not a job_id: ${parsed.message}.`);
+    // Not a handle this server minted: the caller passed the wrong string.
+    if (!parsed.valid) throw ToolError.input('INVALID_JOB_ID', `That is not a job_id: ${parsed.message}.`);
     const { job } = parsed;
 
-    let auth;
+    let resolution;
     try {
-      // Before any request: a handle for another instance must not be answered with this one's
-      // status for the same id.
-      const resolution = await authForJob(job, params, ctx);
-      if (resolution.mismatch) return failure('JOB_INSTANCE_MISMATCH', `${resolution.mismatch.message}.`);
-      auth = resolution.auth;
+      resolution = await authForJob(job, params, ctx);
     } catch (e) {
       // Name the instance the job needs: "no credentials configured" does not say which
-      // environment to add.
-      return failure('AUTH_ERROR', `${String(e.message || e)}. The job was started on ${job.origin}`);
+      // environment to add. The resolver's own kind and code are kept — ENV_NOT_FOUND is more
+      // use than a blanket AUTH_ERROR — and only the message gains the fact it was missing.
+      const failure = e instanceof ToolError ? e : ToolError.auth('AUTH_ERROR', String(e.message || e));
+      throw new ToolError(failure.kind, failure.code, `${failure.message}. The job was started on ${job.origin}`, failure.details);
     }
+
+    // Before any request: a handle for another instance must not be answered with this one's
+    // status for the same id.
+    if (resolution.mismatch) throw ToolError.input('JOB_INSTANCE_MISMATCH', `${resolution.mismatch.message}.`);
+    const auth = resolution.auth;
+    // What `resolveAuth` recorded is what it resolved first; when no env was named, authForJob
+    // redirects to the environment that points at the job's instance. meta.auth has to report the
+    // credentials actually used, not the ones that were reached for.
+    ctx.resolvedAuth = auth;
 
     const adapter = adapters.get(job.kind);
     const GatewayCtor = ctx.Gateway || Gateway;
@@ -82,46 +82,40 @@ const jobStatusTool = {
     const deadline = Date.now() + (Number.isInteger(params?.wait_ms) ? params.wait_ms : 0);
     // A seam, like ctx.Gateway and ctx.request: tests drive the interval rather than sleep it.
     const pollInterval = ctx.pollIntervalMs ?? POLL_INTERVAL_MS;
-    const meta = () => ({
-      startedAt,
-      finishedAt: new Date().toISOString(),
-      auth: { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source }
-    });
 
     for (let poll = 0; ; poll++) {
-      if (ctx.signal?.aborted) return cancelled();
+      if (ctx.signal?.aborted) throw cancelled();
 
       let polled;
       try {
         polled = await adapter.poll(deps, job.id, job.flags);
       } catch (e) {
-        if (e instanceof JobNotFoundError) return failure('JOB_NOT_FOUND', `${e.message}.`);
+        // The instance has no such job: a bad argument, not a failed job.
+        if (e instanceof JobNotFoundError) throw ToolError.not_found('JOB_NOT_FOUND', `${e.message}.`);
         log.debug('tool:job-status poll failed', { kind: job.kind, error: String(e) });
 
         // Outside a wait there is nothing to retry into; inside one, a blip should not end a
-        // two-minute wait early.
-        if (!isTransient(e) || Date.now() >= deadline) {
-          return failure('JOB_STATUS_ERROR', String(e.message || e), apiDetails(e));
-        }
+        // two-minute wait early. Giving up rethrows the original, so runTool classifies the
+        // status and body rather than burying them under a code named after this tool.
+        if (!isTransient(e) || Date.now() >= deadline) throw e;
+
         await abortableDelay(Math.min(intervalFor(poll, pollInterval), deadline - Date.now()), ctx.signal);
         continue;
       }
 
       const done = polled.state !== 'running';
       if (done || Date.now() >= deadline) {
+        // A job that failed is still a status call that worked: `state` carries the job's own
+        // outcome, and the call only fails when the status could not be read.
         return {
-          ok: true,
-          data: {
-            job_id: params.job_id,
-            kind: job.kind,
-            state: polled.state,
-            done,
-            status: polled.status,
-            ...(polled.error && { error: polled.error }),
-            ...(polled.warnings && { warnings: polled.warnings }),
-            result: polled.result
-          },
-          meta: meta()
+          job_id: params.job_id,
+          kind: job.kind,
+          state: polled.state,
+          done,
+          status: polled.status,
+          ...(polled.error && { error: polled.error }),
+          ...(polled.warnings && { warnings: polled.warnings }),
+          result: polled.result
         };
       }
 

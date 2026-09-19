@@ -1,4 +1,6 @@
 import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { runTool } from '../run-tool.js';
+import { rejectionFor } from '../validate-params.js';
 
 // Mock the pos-cli libs before importing tools
 vi.mock('../../lib/files', () => ({
@@ -13,19 +15,16 @@ vi.mock('../../lib/settings', () => ({
 
 describe('data-clean tools', () => {
   let dataCleanTool;
-  let dataCleanStatusTool;
 
   beforeAll(async () => {
     const cleanModule = await import('../data/clean.js');
-    const statusModule = await import('../data/clean-status.js');
     dataCleanTool = cleanModule.default;
-    dataCleanStatusTool = statusModule.default;
   });
 
   describe('data-clean', () => {
-    test('has correct description and inputSchema', () => {
-      expect(dataCleanTool.description).toContain('clean');
-      expect(dataCleanTool.description).toContain('DESTRUCTIVE');
+    test('has the expected inputSchema, and says it destroys things where a client can act on it', () => {
+      // The word DESTRUCTIVE used to be in the prose, where only a person could see it.
+      expect(dataCleanTool.annotations).toEqual({ destructiveHint: true });
       expect(dataCleanTool.inputSchema.properties).toHaveProperty('env');
       expect(dataCleanTool.inputSchema.properties).toHaveProperty('confirmation');
       expect(dataCleanTool.inputSchema.properties).toHaveProperty('includeSchema');
@@ -33,16 +32,16 @@ describe('data-clean tools', () => {
     });
 
     test('rejects invalid confirmation text', async () => {
-      const result = await dataCleanTool.handler({ env: 'staging', confirmation: 'wrong' });
+      const result = await runTool(dataCleanTool, { env: 'staging', confirmation: 'wrong' });
 
       expect(result.ok).toBe(false);
+      expect(result.error.kind).toBe('input');
       expect(result.error.code).toBe('CONFIRMATION_REQUIRED');
-      expect(result.error.expected).toBe('CLEAN DATA');
-      expect(result.error.received).toBe('wrong');
+      expect(result.error.details).toEqual({ expected: 'CLEAN DATA', received: 'wrong' });
     });
 
     test('rejects missing confirmation', async () => {
-      const result = await dataCleanTool.handler({ env: 'staging' });
+      const result = await runTool(dataCleanTool, { env: 'staging' });
 
       expect(result.ok).toBe(false);
       expect(result.error.code).toBe('CONFIRMATION_REQUIRED');
@@ -53,7 +52,7 @@ describe('data-clean tools', () => {
         dataClean = vi.fn().mockResolvedValue({ id: 'clean-job-123', status: 'pending' });
       }
 
-      const result = await dataCleanTool.handler(
+      const result = await runTool(dataCleanTool, 
         { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', confirmation: 'CLEAN DATA' },
         { Gateway: MockGateway }
       );
@@ -62,7 +61,7 @@ describe('data-clean tools', () => {
       expect(result.data.id).toBe('clean-job-123');
       expect(result.data.status).toBe('pending');
       expect(result.data.includeSchema).toBe(false);
-      expect(result.warning).toContain('remove ALL data');
+      expect(result.data.warning).toContain('remove ALL data');
     });
 
     test('includes schema warning when includeSchema is true', async () => {
@@ -70,14 +69,14 @@ describe('data-clean tools', () => {
         dataClean = vi.fn().mockResolvedValue({ id: 'clean-job-456', status: 'pending' });
       }
 
-      const result = await dataCleanTool.handler(
+      const result = await runTool(dataCleanTool, 
         { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', confirmation: 'CLEAN DATA', includeSchema: true },
         { Gateway: MockGateway }
       );
 
       expect(result.ok).toBe(true);
       expect(result.data.includeSchema).toBe(true);
-      expect(result.warning).toContain('schema files');
+      expect(result.data.warning).toContain('schema files');
     });
 
     test('handles 422 error (not supported)', async () => {
@@ -88,109 +87,51 @@ describe('data-clean tools', () => {
         dataClean = vi.fn().mockRejectedValue(error);
       }
 
-      const result = await dataCleanTool.handler(
+      const result = await runTool(dataCleanTool, 
         { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', confirmation: 'CLEAN DATA' },
         { Gateway: MockGateway }
       );
 
       expect(result.ok).toBe(false);
+      expect(result.error.kind).toBe('instance');
       expect(result.error.code).toBe('NOT_SUPPORTED');
-      expect(result.error.statusCode).toBe(422);
+      expect(result.error.details.statusCode).toBe(422);
     });
 
-    test('handles generic errors', async () => {
+    test('an error carrying nothing to classify it by is reported as our defect', async () => {
       class MockGateway {
-        dataClean = vi.fn().mockRejectedValue(new Error('Network error'));
+        dataClean = vi.fn().mockRejectedValue(new Error('something went wrong'));
       }
 
-      const result = await dataCleanTool.handler(
+      const result = await runTool(dataCleanTool, 
         { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', confirmation: 'CLEAN DATA' },
         { Gateway: MockGateway }
       );
 
       expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('DATA_CLEAN_ERROR');
-      expect(result.error.message).toContain('Network error');
-    });
-  });
-
-  describe('data-clean-status', () => {
-    test('has correct description and inputSchema', () => {
-      expect(dataCleanStatusTool.description).toContain('status');
-      expect(dataCleanStatusTool.inputSchema.properties).toHaveProperty('jobId');
-      expect(dataCleanStatusTool.inputSchema.required).toContain('jobId');
+      // No status, no network code: there is genuinely nothing to tell the caller to do, and
+      // saying so beats the old DATA_CLEAN_ERROR, which covered a 401 and a 503 as well.
+      expect(result.error.kind).toBe('internal');
+      expect(result.error.code).toBe('INTERNAL_ERROR');
+      expect(result.error.message).toContain('something went wrong');
     });
 
-    test('returns validation error when jobId not provided', async () => {
-      const result = await dataCleanStatusTool.handler({ url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token' });
-
-      expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('VALIDATION_ERROR');
-      expect(result.error.message).toContain('jobId');
-    });
-
-    test('successfully returns status for completed job', async () => {
+    // What the Gateway actually throws when the instance cannot be reached. The old catch-all
+    // reported this identically to a bug in pos-cli; an agent can act on the difference.
+    test('an unreachable instance is reported as worth retrying', async () => {
       class MockGateway {
-        dataCleanStatus = vi.fn().mockResolvedValue({ id: 'job-123', status: { name: 'done' } });
+        dataClean = vi.fn().mockRejectedValue(Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:443'), { code: 'ECONNREFUSED' }));
       }
 
-      const result = await dataCleanStatusTool.handler(
-        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-123' },
-        { Gateway: MockGateway }
-      );
-
-      expect(result.ok).toBe(true);
-      expect(result.data.id).toBe('job-123');
-      expect(result.data.status).toBe('done');
-      expect(result.data.done).toBe(true);
-      expect(result.data.failed).toBe(false);
-      expect(result.data.pending).toBe(false);
-    });
-
-    test('correctly identifies pending status', async () => {
-      class MockGateway {
-        dataCleanStatus = vi.fn().mockResolvedValue({ id: 'job-456', status: 'pending' });
-      }
-
-      const result = await dataCleanStatusTool.handler(
-        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-456' },
-        { Gateway: MockGateway }
-      );
-
-      expect(result.ok).toBe(true);
-      expect(result.data.status).toBe('pending');
-      expect(result.data.done).toBe(false);
-      expect(result.data.pending).toBe(true);
-    });
-
-    test('correctly identifies failed status', async () => {
-      class MockGateway {
-        dataCleanStatus = vi.fn().mockResolvedValue({ id: 'job-789', status: 'failed' });
-      }
-
-      const result = await dataCleanStatusTool.handler(
-        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'job-789' },
-        { Gateway: MockGateway }
-      );
-
-      expect(result.ok).toBe(true);
-      expect(result.data.status).toBe('failed');
-      expect(result.data.done).toBe(false);
-      expect(result.data.failed).toBe(true);
-    });
-
-    test('handles errors', async () => {
-      class MockGateway {
-        dataCleanStatus = vi.fn().mockRejectedValue(new Error('Not found'));
-      }
-
-      const result = await dataCleanStatusTool.handler(
-        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', jobId: 'invalid-job' },
+      const result = await runTool(dataCleanTool,
+        { url: 'https://staging.example.com', email: 'test@example.com', token: 'test-token', confirmation: 'CLEAN DATA' },
         { Gateway: MockGateway }
       );
 
       expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('DATA_CLEAN_STATUS_ERROR');
+      expect(result.error.kind).toBe('unavailable');
+      expect(result.error.code).toBe('ECONNREFUSED');
     });
   });
+
 });

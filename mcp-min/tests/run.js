@@ -1,7 +1,8 @@
 // platformos.tests.run - execute tests via /_tests/run?formatter=text
 import log from '../log.js';
-import { resolveAuth, maskToken } from '../auth.js';
+import { resolveAuth } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
+import { ToolError, kindForStatus } from '../tool-error.js';
 import makeRequest, { testAuthHeaders, testsUrl } from './request.js';
 
 /**
@@ -239,96 +240,60 @@ function extractJsonObjects(str) {
 }
 
 const testsRunTool = {
-  description: 'Run platformOS tests via /_tests/run endpoint. Returns parsed test results with assertions count, failures, and timing.',
+  description: 'Run tests on an instance and wait for the result. name is required because running every test times out; to run the whole suite, use tests-run-async.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      env: { type: 'string', description: 'Environment name from .pos config' },
       ...authProperties,
-      path: { type: 'string', description: 'Optional test path filter (e.g., "tests/users")' },
-      name: { type: 'string', description: 'Test name filter (e.g., "create_user_test"). Required to avoid running all tests which causes timeouts.' }
+      path: { type: 'string', description: 'Only tests under this path, e.g. tests/users.' },
+      name: { type: 'string', description: 'Which test to run, e.g. create_user_test.' }
     },
     // `env` is not required: resolveAuth also accepts url+email+token, MPKIT_* env
     // vars, or falls back to the first .pos environment.
     required: ['name']
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
     log.debug('tool:unit-tests-run invoked', { env: params?.env, path: params?.path });
 
-    try {
-      const auth = await resolveAuth(params, ctx);
+    const auth = await resolveAuth(params, ctx);
 
-      // Build the URL with query parameters
-      let testUrl = testsUrl(auth.url, '/_tests/run?formatter=text');
-      if (params?.path) {
-        testUrl += `&path=${encodeURIComponent(params.path)}`;
-      }
-      if (params?.name) {
-        testUrl += `&name=${encodeURIComponent(params.name)}`;
-      }
-
-      log.debug('Requesting tests', { url: testUrl });
-
-      // Make the request
-      const requestFn = ctx.request || makeRequest;
-      const response = await requestFn({
-        method: 'GET',
-        uri: testUrl,
-        headers: {
-          'Authorization': `Token ${auth.token}`,
-          'UserTemporaryToken': auth.token
-        }
-      });
-
-      const statusCode = response.statusCode;
-      const body = response.body;
-
-      if (statusCode >= 400) {
-        return {
-          ok: false,
-          error: {
-            code: 'HTTP_ERROR',
-            message: `Request failed with status ${statusCode}`,
-            statusCode,
-            body
-          },
-          meta: {
-            url: testUrl,
-            startedAt,
-            finishedAt: new Date().toISOString(),
-            auth: { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source }
-          }
-        };
-      }
-
-      // Parse the response
-      const parsed = parseTestResponse(body);
-
-      return {
-        ok: true,
-        data: {
-          tests: parsed.tests,
-          summary: parsed.summary,
-          passed: parsed.summary.failed === 0,
-          totalTests: parsed.tests.length
-        },
-        raw: body,
-        meta: {
-          url: testUrl,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          auth: { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source }
-        }
-      };
-    } catch (e) {
-      log.error('tool:unit-tests-run error', { error: String(e) });
-      return {
-        ok: false,
-        error: { code: 'TESTS_RUN_ERROR', message: String(e.message || e) }
-      };
+    // Build the URL with query parameters
+    let testUrl = testsUrl(auth.url, '/_tests/run?formatter=text');
+    if (params?.path) {
+      testUrl += `&path=${encodeURIComponent(params.path)}`;
     }
+    if (params?.name) {
+      testUrl += `&name=${encodeURIComponent(params.name)}`;
+    }
+
+    log.debug('Requesting tests', { url: testUrl });
+
+    // Make the request
+    const requestFn = ctx.request || makeRequest;
+    const response = await requestFn({ method: 'GET', uri: testUrl, headers: testAuthHeaders(auth.token) });
+
+    const statusCode = response.statusCode;
+    const body = response.body;
+
+    // The test endpoints answer with a status rather than throwing, so nothing reaches the
+    // invoker to classify: the kind is decided here from the same status it would have read.
+    if (statusCode >= 400) {
+      throw new ToolError(kindForStatus(statusCode), 'HTTP_ERROR', `Request failed with status ${statusCode}`, { statusCode, body });
+    }
+
+    // A run whose assertions failed is a run that happened: the failures are the answer, not an
+    // error. Only a run that could not be made fails the call.
+    const parsed = parseTestResponse(body);
+
+    return {
+      tests: parsed.tests,
+      summary: parsed.summary,
+      passed: parsed.summary.failed === 0,
+      totalTests: parsed.tests.length,
+      raw: body,
+      url: testUrl
+    };
   }
 };
 

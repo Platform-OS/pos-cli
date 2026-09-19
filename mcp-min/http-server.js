@@ -10,6 +10,8 @@ import { DEBUG } from './config.js';
 import { DEFAULT_HOST, DEFAULT_PORT, LOOPBACK_HOSTNAMES } from './http-config.js';
 import hostValidation from './host-validation.js';
 import { createMcpEndpoint } from './protocol/http-endpoint.js';
+import { buildInstructions } from './instructions.js';
+import { runTool } from './run-tool.js';
 import log from './log.js';
 
 // SSE sessions keyed by Mcp-Session-Id. Supports multiple concurrent clients.
@@ -82,6 +84,8 @@ export default async function startHttp({
     });
     next();
   });
+
+  const instructions = buildInstructions(tools);
 
   const trackStream = (res) => {
     state.streams.add(res);
@@ -176,19 +180,15 @@ export default async function startHttp({
         .json({ error: `invalid params: ${rejection.message}`, details: rejection.errors });
     }
 
-    try {
-      // Names, not values: `constants-set` carries an instance's API keys under `value`, and
-      // redaction can only cover what it can name.
-      log.debug('HTTP /call', { tool, params: Object.keys(params || {}), rawBodyKeys: Object.keys(body) });
-      const result = await entry.handler(params || {}, { transport: 'http', debug: DEBUG });
-      log.debug('HTTP /call result', { tool, ok: result?.ok, error: result?.error?.code });
-      res.json({ result });
-    } catch (err) {
-      log.debug('HTTP /call error', { tool, err: String(err), details: err && err._pos });
-      const payload = { error: String(err) };
-      if (err && err._pos) payload.details = err._pos;
-      res.status(500).json(payload);
-    }
+    // Names, not values: `constants-set` carries an instance's API keys under `value`, and
+    // redaction can only cover what it can name.
+    log.debug('HTTP /call', { tool, params: Object.keys(params || {}), rawBodyKeys: Object.keys(body) });
+    // A tool's own failure is that tool's answer, not a server fault: it comes back 200 with
+    // ok:false and the tool's code. This route used to turn one into a 500 with a stringified
+    // error, which lost the code and read as though the server had broken.
+    const result = await runTool(entry, params, { transport: 'http', debug: DEBUG });
+    log.debug('HTTP /call result', { tool, ok: result.ok, kind: result.error?.kind, error: result.error?.code });
+    res.json({ result });
   });
 
   // Streaming call with SSE
@@ -234,6 +234,9 @@ export default async function startHttp({
 
       // Methods
       if (method === 'initialize') {
+        // Deprecated route, but a client on it gets the same guidance as one on /mcp: the rules
+        // are about the tools, which are the same tools, and letting the two answers differ would
+        // be a difference nobody chose. Removed with the rest of these routes at the next major.
         const result = {
           protocolVersion: params.protocolVersion || '2025-06-18',
           capabilities: {
@@ -241,7 +244,8 @@ export default async function startHttp({
             prompts: {},
             tools: {}
           },
-          serverInfo: { name: 'mcp-min', version: '0.1.0' }
+          serverInfo: { name: 'mcp-min', version: '0.1.0' },
+          ...(instructions && { instructions })
         };
         respond({ result });
         return;
@@ -282,7 +286,7 @@ export default async function startHttp({
             });
             return;
           }
-          const result = await entry.handler(args, { transport: 'jsonrpc', debug: DEBUG });
+          const result = await runTool(entry, args, { transport: 'jsonrpc', debug: DEBUG });
           // Wrap result as text content for broad client compatibility
           const text = (() => { try { return JSON.stringify(result); } catch { return String(result); } })();
           respond({ result: { content: [{ type: 'text', text }] } });

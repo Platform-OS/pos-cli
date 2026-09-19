@@ -14,10 +14,13 @@ const DEV_TOOLS = Object.freeze([
   'graphql-exec',
   'envs-list',
   'deploy-start',
+  // With deploy-start and not this, an agent in the dev loop can only learn what a
+  // non-partial deploy deletes by deploying. deploy-start's description names it, too.
+  'deploy-dry-run',
   'unit-tests-run',
   'tests-run-async',
-  // Replaces deploy-status, deploy-wait and tests-run-async-result, which stay in `full`,
-  // deprecated, until the next major.
+  // The only way to read back anything a starter began; the six per-operation status tools it
+  // replaced are gone (7.0.0).
   'job-status'
 ]);
 

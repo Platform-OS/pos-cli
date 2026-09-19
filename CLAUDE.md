@@ -131,7 +131,7 @@ pos-cli/
 │   ├── profiles.js              # Built-in tool profiles: full (default), dev, none
 │   ├── tools-config.js          # Reads + validates tools.config.json / MCP_TOOLS_CONFIG (the only reader)
 │   ├── tool-selection.js        # Profile + --include/--exclude-tools + config → exposed tools; findTool
-│   ├── tools.config.json        # Enable/disable tools, customize descriptions
+│   ├── tools.config.json        # Overrides only: disable a tool, or replace its description
 │   └── <tool-name>/             # One directory per tool group (deploy/, data/, etc.)
 ├── gui/              # Web UI applications
 │   ├── graphql/                 # GraphiQL IDE (React, pre-built)
@@ -261,7 +261,10 @@ The MCP (Model Context Protocol) server exposes platformOS operations as tools f
 - **Transports receive the exposed tools and have no default.** `startStdio({ tools })` and `startHttp({ tools })` throw without a `Map`, so no caller can end up serving every registered tool by leaving it out. The selection is fixed for the process and identical on both transports: MCP forbids `tools/list` varying per connection, and it is always registry order.
 - **Hidden means uncallable.** A tool outside the selection is never registered with the SDK, so `tools/call` over stdio and `/mcp` answers it exactly like a name that matches no tool. The deprecated routes (`POST /call`, `POST /call-stream`, JSON-RPC `tools/call`) look tools up with `findTool`, which only finds exposed tools and never `Object.prototype` names. The HTTP transport has no authentication, so a listed-but-hidden tool that could still be called would make profiles cosmetic.
 - **The selection fails closed**: an unknown profile or tool name (Map lookups, so `constructor` is unknown), a name in both options, `--include-tools` naming a config-disabled tool, or an empty result throws `ToolsConfigError` before any transport starts.
-- **A description must not name a tool its built-in profile hides** — the model would go looking for it. `tool-selection.test.js` checks every built-in profile; a tool whose description points at another tool has to be exposed with it.
+- **A description must not name a tool its built-in profile hides** — the model would go looking for it. `tool-selection.test.js` checks every built-in profile; a tool whose description points at another tool has to be exposed with it. That check covers the whole registry only while every tool name is hyphenated: a single-word name cannot be told from ordinary prose, so one would silently drop out of it.
+- **The server instructions describe the server that was resolved.** `mcp-min/instructions.js` builds the MCP `instructions` string from the exposed `Map`, so a section about a tool disappears with the tool and `--profile`/`--include-tools`/`--exclude-tools` carry it without a second list to maintain. It holds only what no single tool owns — how credentials resolve, what every result looks like, what a relative path is relative to — because it must not restate a tool description that is already sent with every request. It never names a tool this server does not expose, and never a tool of another MCP server: what else a client has registered is not knowable here. `pos-cli mcp-config` prints the string for any selection.
+- **A tool is described where it is defined.** The `description` in the tool's own module is what clients are shown. `tools.config.json` can replace it — that is what the override is for — but the bundled file ships replacing nothing, and must stay that way: while it carried a description for every tool, editing a module changed nothing anyone saw, and six had drifted apart before it was noticed. It also froze all of them for anyone who edited the file, since an upgrade cannot update a description a user's config restates.
+- **What the server does not expose is a decision, not an oversight.** `docs/MCP_COVERAGE.md` holds one — expose, later or never, with its reason — for every pos-cli capability, and `mcp-min/__tests__/cli-coverage.test.js` derives the capability list from `bin/` the way commander does and fails when one has no row. A new CLI command therefore cannot ship without someone saying what it means for the agent surface. Every tool costs tokens on every request for every agent, so "expose everything" has never been the goal.
 - Bare `pos-cli-mcp` stays `full` in 6.x. `pos-cli ai init` writes `--profile dev`; `lib/ai.js` upgrades only entries equal to a form it wrote before (`PREVIOUS_SERVERS`) and leaves any other differing entry alone. Changing the written args means adding the old form there.
 
 Each tool group lives in its own directory (`deploy/`, `data/`, `logs/`, etc.) and calls the Gateway directly (no CLI subprocess spawning).
@@ -281,7 +284,7 @@ server.registerTool(name, { description, inputSchema: fromJsonSchema(tool.inputS
   async (args, ctx) => { /* rejectionFor → isError, then tool.handler(args, { signal, sendProgress, … }) */ });
 ```
 
-Tools include: envs-list, env-add, job-status, deploy-start, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, unit-tests-run, tests-run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, portal tools (instance-create, partners-list, partner-get, endpoints-list), plus the six deprecated status tools (deploy-status, deploy-wait, data-import-status, data-export-status, data-clean-status, tests-run-async-result).
+Tools include: envs-list, env-add, job-status, deploy-dry-run, deploy-start, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, unit-tests-run, tests-run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, and the Partner Portal tools (instance-create, partners-list, partner-get, endpoints-list).
 
 #### 3a. Asynchronous operations: one `job-status`, and what a `job_id` may decide
 
@@ -289,9 +292,9 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
 
 - **The handle is self-contained, and untrusted.** `mint`/`parse` (`jobs/handle.js`) encode the kind, the remote id, the instance origin and a per-kind flag allowlist. It is not a key into a table in this process: MCP clients restart stdio servers while the agent keeps its conversation, and a table would make every restart an "unknown job". Because it travels through the model, `parse` is strict — unknown kind, an id outside `^[A-Za-z0-9_-]{1,128}$`, an origin that is not exactly `new URL(o).origin`, an unexpected field or a flag the kind does not have are all `INVALID_JOB_ID`.
 - **Nothing in a handle chooses credentials or a URL.** `authForJob` (`jobs/auth-for-job.js`) resolves credentials the way every tool does, then *compares* origins: equal → use them; the caller named an instance that does not match → `JOB_INSTANCE_MISMATCH`; nothing named and exactly one `.pos` environment points at the job's instance → use that one; otherwise refuse. The refusal happens before any request, which is what the mismatch tests assert. A forged origin therefore cannot point this machine's token anywhere.
-- **The adapters are the only place a remote status is interpreted**, and the deprecated status tools run on them too, so the two can never disagree. `state` is `running` | `completed` | `failed`, where `completed` means the operation finished (a test run with failing assertions is `completed`) and `failed` means the operation itself failed. An unrecognised remote status is `running` — the job exists, so "finished" would be a lie — and is logged.
+- **The adapters are the only place a remote status is interpreted.** `state` is `running` | `completed` | `failed`, where `completed` means the operation finished (a test run with failing assertions is `completed`) and `failed` means the operation itself failed. An unrecognised remote status is `running` — the job exists, so "finished" would be a lie — and is logged.
 - **A deploy finishes twice.** The release import and the asset upload are reported independently, so `jobs/adapters/deploy.js` combines them, taking the phase from `local-phases.js` first (only the process that started an upload can see it) and then from the release record. `unknown` is a real answer after a restart; reporting `running` forever would be worse. `deploy/assets-task.js` waits for the release to settle before sending the manifest, as `lib/push.js` + `directAssetsUploadStrategy` do — sending one mid-import is untested against the API.
-- **No tool takes an argument that moves the request.** Eight did (`deploy-status`, `deploy-wait`, `logs-fetch`, `graphql-exec`, `liquid-exec`, `migrations-list/generate/run`): `endpoint` replaced the URL while the `.pos` token was still sent, so a name a model read somewhere could redirect this machine's credentials. The URL comes from the resolved credentials, full stop. `request-target.test.js` checks every registered tool for a redirecting parameter by name and scans the sources for `params.endpoint`, so a new tool inherits the rule. Calling another instance is the explicit-credentials path (`url` + `email` + `token`), where the caller brings the credential with the host.
+- **No tool takes an argument that moves the request.** Eight did (`logs-fetch`, `graphql-exec`, `liquid-exec`, `migrations-list/generate/run` and the two deploy status tools since removed): `endpoint` replaced the URL while the `.pos` token was still sent, so a name a model read somewhere could redirect this machine's credentials. The URL comes from the resolved credentials, full stop. `request-target.test.js` checks every registered tool for a redirecting parameter by name and scans the sources for `params.endpoint`, so a new tool inherits the rule. Calling another instance is the explicit-credentials path (`url` + `email` + `token`), where the caller brings the credential with the host.
 
 #### 4. File Watching Pattern - Sync Mode
 
@@ -587,10 +590,21 @@ unreachable. That rule is enforced by `mcp-min/__tests__/validate-params.test.js
 derives the tool list by scanning for `resolveAuth` rather than hard-coding names — a
 hand-written list silently stops guarding tools added later.
 
-Because `env` is advertised as optional, an MCP client that omits it lands on step 4 — the
-*first* `.pos` entry — including for mutating tools (`data-import`, `constants-set`,
-`uploads-push`). Runtime behaviour is unchanged, since nothing enforced `required` before,
-but the advertised contract now invites the omission.
+**A call that can change an instance has to name one.** Step 4 is the only step that names no
+instance at all: it takes whichever entry happens to be first in a file the model has never seen.
+`requireNamedInstance` (`auth.js`) refuses it with `ENV_REQUIRED` (`input`) when the tool is not
+`readOnlyHint` and `.pos` holds more than one environment, and the message lists them — a model
+cannot read `.pos`, so a refusal that does not name the choices cannot be acted on. Steps 1 to 3
+all name an instance and are untouched, which is why the guard is here and not `required: env` in
+the schemas: requiring the parameter would reject explicit credentials, `MPKIT_*` and the
+single-environment default alike. One environment is not a guess, so it is allowed.
+
+`runTool` derives the policy from the tool's own `annotations.readOnlyHint` and puts it on the
+call context, overriding anything a caller passed: which tools may land on an unnamed instance is
+the registry's decision, not a per-call one, and no tool can exempt itself. A tool added later is
+covered by declaring what it is. `resolveAuth` called directly — by `lib/` or the CLI — is
+unguarded, since the rule is about MCP tools. `mcp-min/__tests__/env-required.test.js` derives the
+guarded set from the registry and fails if a tool that may change an instance escapes it.
 
 **The tools config fails closed.** A missing, unreadable or unparseable config falls back to
 defaults (logged as a warning when `MCP_TOOLS_CONFIG` named it, and shown by `pos-cli
@@ -599,7 +613,11 @@ which tools are exposed, so ignoring a broken one would silently re-enable every
 author meant to switch off. Two checks, because the schema alone is not enough: it validates
 the shape, and `loadToolsConfig` (`tools-config.js`) separately rejects entries naming a tool
 that does not exist — a typo like `deploy-strt` would match nothing and otherwise leave
-`deploy-start` enabled while the config looks like it took effect. Both
+`deploy-start` enabled while the config looks like it took effect. The one exception is a name
+in `REMOVED_TOOLS`, a tool an earlier release registered: that is warned about and ignored, because
+it cannot leave anything enabled and a user could not have edited the line out before upgrading.
+A tool that is ever re-registered has to lose its tombstone, or its config entry would be ignored;
+a test checks that. Both
 `bin/pos-cli-mcp.js` and `bin/pos-cli-mcp-config.js` catch the error and report it through
 `logger`, with the same message, so a config mistake never surfaces as a Node stack trace.
 

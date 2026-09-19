@@ -2,6 +2,7 @@
 import files from '../lib/files.js';
 import { settingsFromDotPos } from '../lib/settings.js';
 import { mask } from './redact.js';
+import { ToolError } from './tool-error.js';
 
 const settings = { settingsFromDotPos };
 
@@ -23,9 +24,20 @@ export function maskToken(token) {
  * they meant. The order is the contract — `__tests__/auth.env-resolve.test.js` pins each step and
  * checks this list against what the function does.
  *
+ * `ctx.mayChangeInstance` guards step 4 only (see `requireNamedInstance`). `runTool` sets it from
+ * the tool's own annotations, so no tool decides this for itself.
+ *
  * @returns {Promise<{url, email, token, source}>}
  */
 export async function resolveAuth(params, ctx = {}) {
+  const auth = await resolve(params, ctx);
+  // `runTool` builds meta.auth from this. Recording it here is what lets a tool stop assembling
+  // the same masked block itself, and keeps it out of the thirteen that used to.
+  ctx.resolvedAuth = auth;
+  return auth;
+}
+
+async function resolve(params, ctx) {
   const settingsModule = ctx.settings || settings;
   const filesModule = ctx.files || files;
 
@@ -38,7 +50,7 @@ export async function resolveAuth(params, ctx = {}) {
   const explicit = ['url', 'email', 'token'].filter(name => params?.[name]);
   if (explicit.length > 0) {
     const missing = ['url', 'email', 'token'].filter(name => !params?.[name]);
-    throw new Error(`Explicit credentials need url, email and token together; missing: ${missing.join(', ')}`);
+    throw ToolError.input('INCOMPLETE_CREDENTIALS', `Explicit credentials need url, email and token together; missing: ${missing.join(', ')}`);
   }
 
   // Priority 2: read from `.pos` and nowhere else. `fetchSettings`, the CLI's resolver, answers
@@ -48,8 +60,10 @@ export async function resolveAuth(params, ctx = {}) {
   if (params?.env) {
     const found = settingsModule.settingsFromDotPos(params.env);
     if (found?.url && found?.token) return { ...found, source: `.pos(${params.env})` };
-    if (found) throw new Error(`Environment '${params.env}' in .pos has no url and token`);
-    throw new Error(`Environment '${params.env}' not found in .pos config`);
+    // The entry is there but unusable: the file needs fixing, which is not something the caller
+    // can do by changing an argument.
+    if (found) throw ToolError.project('ENV_INCOMPLETE', `Environment '${params.env}' in .pos has no url and token`);
+    throw ToolError.not_found('ENV_NOT_FOUND', `Environment '${params.env}' not found in .pos config`);
   }
 
   // Priority 3: MPKIT_* environment variables
@@ -60,12 +74,44 @@ export async function resolveAuth(params, ctx = {}) {
 
   // Priority 4: First environment in .pos config
   const conf = filesModule.getConfig();
-  const firstEnv = conf && Object.keys(conf)[0];
+  const names = conf ? Object.keys(conf) : [];
+  const firstEnv = names[0];
   if (firstEnv && conf[firstEnv]?.url && conf[firstEnv]?.token) {
+    requireNamedInstance(ctx, names, firstEnv);
     return { ...conf[firstEnv], source: `.pos(${firstEnv})` };
   }
 
-  throw new Error('AUTH_MISSING: Provide url,email,token or configure .pos / MPKIT_* env vars');
+  throw ToolError.auth('AUTH_MISSING', 'Provide url, email and token, or configure .pos / MPKIT_* environment variables');
+}
+
+/**
+ * The one resolution step that is a guess, refused for a call that can change an instance.
+ *
+ * Steps 1 to 3 all name an instance — in the arguments, in `.pos` by name, or in the environment
+ * a CI job exported — and are untouched. Step 4 names nothing: it takes whichever entry happens to
+ * be first in a file the model has never seen. For a tool that only reads, that is an
+ * inconvenience; for one that writes it is the wrong instance changed, silently.
+ *
+ * Why not `required: env` in the schemas, which would be simpler: `resolveAuth` has four supported
+ * call styles and only one of them passes `env`, so requiring it would reject explicit credentials,
+ * `MPKIT_*` and the single-environment default alike. The ambiguity is not "no env was passed", it
+ * is "nothing at all said which instance", and only this function can tell the two apart.
+ *
+ * One environment is not a guess, so it is allowed: a project with a single `.pos` entry has
+ * nothing to choose between, and demanding a name there would be ceremony.
+ *
+ * `input`, because the caller fixes it by adding an argument — and the message says which, since a
+ * model cannot read `.pos`.
+ */
+function requireNamedInstance(ctx, names, firstEnv) {
+  if (!ctx?.mayChangeInstance || names.length < 2) return;
+
+  throw ToolError.input(
+    'ENV_REQUIRED',
+    `This call can change an instance and nothing said which one. Pass env — one of: ${names.join(', ')}. `
+      + `Without it the call would have gone to ${firstEnv}, only because it is first in .pos.`,
+    { environments: names, wouldHaveUsed: firstEnv }
+  );
 }
 
 /**

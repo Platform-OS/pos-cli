@@ -11,6 +11,7 @@ import { describe, test, expect, beforeAll, afterAll, afterEach, vi } from 'vite
 import {
   launch, stop, stopAll, boundUrl, request, initializeOverStdio, makeWorkDir, MCP_BIN
 } from './helpers/server-process.js';
+import { runTool } from '../run-tool.js';
 
 // Distinct per case, so a leak can be traced to the path that leaked it.
 const HEADER_TOKEN = 'sk-header-000111222333444555';
@@ -127,7 +128,7 @@ describe('tool parameters', () => {
       expect(logged).not.toContain('someone@example.com');
       // The outcome is still there, which is what the line is for.
       expect(logged).toContain('"tool":"constants-list"');
-      expect(logged).toContain('CONSTANTS_LIST_FAILED');
+      expect(logged).toContain('"kind":"unavailable"');
     } finally {
       await stop(proc);
     }
@@ -235,7 +236,7 @@ describe('the device-authorization flow', () => {
       }
       : { ok: true, status: 200, json: async () => ({ access_token: ACCESS_TOKEN }) });
 
-    const result = await envAdd.handler(
+    const result = await runTool(envAdd, 
       { environment: 'device-test', url: 'https://redaction.example.com' },
       { fetch: fetchStub, storeEnvironment: entry => stored.push(entry), portalUrl: 'https://portal.example.com' }
     );

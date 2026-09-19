@@ -31,22 +31,23 @@ const TEST_SERVER = `
 import { toolsWith } from ${JSON.stringify(pathToFileURL(path.join(REPO_ROOT, 'mcp-min', '__tests__', 'helpers', 'tools.js')).href)};
 import startStdio from ${JSON.stringify(pathToFileURL(path.join(REPO_ROOT, 'mcp-min', 'stdio-server.js')).href)};
 import { abortableDelay, cancelled } from ${JSON.stringify(pathToFileURL(path.join(REPO_ROOT, 'mcp-min', 'cancellation.js')).href)};
+import { ToolError } from ${JSON.stringify(pathToFileURL(path.join(REPO_ROOT, 'mcp-min', 'tool-error.js')).href)};
 
 const closed = { type: 'object', properties: {}, additionalProperties: false };
 startStdio({ tools: toolsWith({
   'test-echo': {
     description: 'echoes msg',
     inputSchema: { type: 'object', properties: { msg: { type: 'string' } }, required: ['msg'], additionalProperties: false },
-    handler: async ({ msg }, ctx) => ({ ok: true, echo: msg, transport: ctx.transport })
+    handler: async ({ msg }, ctx) => ({ echo: msg, transport: ctx.transport })
   },
-  'test-fails': { description: 'reports a failure', inputSchema: closed, handler: async () => ({ ok: false, error: { code: 'TEST_FAILURE', message: 'it did not work' } }) },
+  'test-fails': { description: 'reports a failure', inputSchema: closed, handler: async () => { throw new ToolError('instance', 'TEST_FAILURE', 'it did not work'); } },
   'test-throws': { description: 'throws', inputSchema: closed, handler: async () => { throw new Error('kaboom'); } },
   'test-progress': {
     description: 'reports progress',
     inputSchema: { type: 'object', properties: { steps: { type: 'array', items: { type: 'number' } } } },
-    handler: async ({ steps = [] }, ctx) => { for (const step of steps) ctx.sendProgress(step, 10, 'step ' + step); return { ok: true }; }
+    handler: async ({ steps = [] }, ctx) => { for (const step of steps) ctx.sendProgress(step, 10, 'step ' + step); }
   },
-  'test-quiet': { description: 'says nothing for a while', inputSchema: closed, handler: async () => { await new Promise(r => setTimeout(r, ${HEARTBEAT_MS} + 700)); return { ok: true }; } },
+  'test-quiet': { description: 'says nothing for a while', inputSchema: closed, handler: async () => { await new Promise(r => setTimeout(r, ${HEARTBEAT_MS} + 700)); } },
   'test-poll': {
     description: 'polls until cancelled',
     inputSchema: closed,
@@ -132,7 +133,7 @@ describe('a 2026-07-28 client', () => {
       expect(list.result.resultType).toBe('complete');
 
       const call = await request(proc, modern('tools/call', { name: 'test-echo', arguments: { msg: 'hi' } }));
-      expect(toolOk(call)).toEqual({ ok: true, echo: 'hi', transport: 'stdio' });
+      expect(toolOk(call)).toMatchObject({ ok: true, data: { echo: 'hi', transport: 'stdio' } });
       expect(call.result.resultType).toBe('complete');
     });
   }, 30000);
@@ -194,7 +195,7 @@ describe.each(LEGACY_REVISIONS)('a %s client', (revision) => {
       const list = await request(proc, legacy('tools/list'));
       expect(list.result.tools.map(t => t.name)).toContain('test-echo');
 
-      expect(toolOk(await request(proc, legacy('tools/call', { name: 'test-echo', arguments: { msg: revision } })))).toMatchObject({ echo: revision });
+      expect(toolOk(await request(proc, legacy('tools/call', { name: 'test-echo', arguments: { msg: revision } })))).toMatchObject({ data: { echo: revision } });
       expect((await request(proc, legacy('ping'))).result).toEqual({});
     });
   }, 30000);
@@ -209,9 +210,13 @@ describe.each([['2026-07-28', true], ['2025-06-18', false]])('tool failures reac
       await open(proc);
 
       const missing = toolError(await request(proc, call('test-echo', {})));
+      // `kind` too: a rejection decided before the handler ran is still a failure, and the server
+      // instructions tell the model every failure carries one. This was the single result that
+      // arrived without it.
       expect(missing).toEqual({
         ok: false,
         error: {
+          kind: 'input',
           code: 'INVALID_PARAMS',
           message: "Invalid params: (root) is missing required property 'msg'",
           details: [{ path: '(root)', message: "(root) is missing required property 'msg'" }]
@@ -227,7 +232,7 @@ describe.each([['2026-07-28', true], ['2025-06-18', false]])('tool failures reac
     await withServer(async (proc) => {
       await open(proc);
 
-      expect(toolError(await request(proc, call('test-fails', {})))).toEqual({ ok: false, error: { code: 'TEST_FAILURE', message: 'it did not work' } });
+      expect(toolError(await request(proc, call('test-fails', {})))).toMatchObject({ ok: false, error: { code: 'TEST_FAILURE', message: 'it did not work' } });
     });
   }, 30000);
 
@@ -235,7 +240,7 @@ describe.each([['2026-07-28', true], ['2025-06-18', false]])('tool failures reac
     await withServer(async (proc) => {
       await open(proc);
 
-      expect(toolError(await request(proc, call('test-throws', {})))).toEqual({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'kaboom' } });
+      expect(toolError(await request(proc, call('test-throws', {})))).toMatchObject({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'kaboom' } });
     });
   }, 30000);
 
@@ -310,7 +315,7 @@ describe('a finished call holds nothing open', () => {
       await openLegacy(proc);
       const call = legacy('tools/call', { name: 'test-progress', arguments: { steps: [1, 2] } });
       if (progressToken !== undefined) call.params._meta = { progressToken };
-      expect(toolOk(await request(proc, call))).toEqual({ ok: true });
+      expect(toolOk(await request(proc, call))).toMatchObject({ ok: true, data: null });
 
       closeStdin(proc);
       const exit = await exitWithin(proc, 10000);

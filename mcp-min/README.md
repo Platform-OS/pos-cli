@@ -3,7 +3,7 @@ mcp-min: the pos-cli MCP server (stdio + HTTP)
 Purpose
 - Serves platformOS tools over MCP, on stdio (what editors launch) and over HTTP
 - Protocol layer: MCP TypeScript SDK v2 (@modelcontextprotocol/server) — revision 2026-07-28 and the 2025 revisions, from one definition
-- HTTP endpoints: POST /mcp (MCP Streamable HTTP) and GET /health; /, /tools, /call and /call-stream are the deprecated pre-SDK API, removed at the next major
+- HTTP endpoints: POST /mcp (MCP Streamable HTTP) and GET /health; /, /tools, /call and /call-stream are the deprecated pre-SDK API, removed in a future major
 - --no-http serves stdio only and does not read MCP_MIN_*
 
 Run
@@ -54,7 +54,7 @@ Jobs
 - state: running | completed | failed; completed means the operation finished (failing assertions still count), failed means it did not.
 - wait_ms (≤ 120 s) polls with backoff, reports progress, honours ctx.signal, and returns done:false at the deadline.
 - A deploy is completed only once its assets are in; the phase comes from this process's own record first, then the release record.
-- The six per-operation status tools are deprecated, run on the same adapters, and are removed at the next major.
+- The six per-operation status tools it replaced were removed in 7.0.0; `tools-config.js` keeps a tombstone for each, so a config naming one warns instead of refusing to start.
 
 Files
 - index.js: start({ selection, http }); starts stdio and HTTP servers with one shared shutdown (importing it starts nothing)
@@ -63,8 +63,11 @@ Files
 - cancellation.js: ctx.signal helpers for tools that wait or page
 - lifecycle.js: when the process ends (stdin EOF rule, drain, deadline)
 - cli-args.js: argument parsing for bin/pos-cli-mcp.js, and the tool-selection options shared with bin/pos-cli-mcp-config.js
+- run-tool.js: the one invoker — runs a handler and builds every result clients see (ok, error, meta)
+- tool-error.js: ToolError and the closed set of error kinds, plus the status-to-kind table
 - tools.js: the tool registry (every tool, in client order); reads no configuration
 - profiles.js: built-in profiles (full, dev, none)
+- instructions.js: builds the MCP `instructions` string from the exposed tools; cross-tool rules only, never a tool a selection hides
 - tools-config.js: reads and validates tools.config.json / MCP_TOOLS_CONFIG; the one place its rules live
 - tool-selection.js: resolves profile + options + config into the exposed tools; findTool, the lookup every dispatch path uses
 - stdio-server.js: MCP over stdio (SDK serveStdio) plus the stdin-EOF session rule

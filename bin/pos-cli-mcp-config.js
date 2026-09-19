@@ -4,6 +4,7 @@ import { program } from '../lib/program.js';
 import logger from '../lib/logger.js';
 import { addToolSelectionOptions, selectionFrom } from '../mcp-min/cli-args.js';
 import { selectTools } from '../mcp-min/tool-selection.js';
+import { buildInstructions } from '../mcp-min/instructions.js';
 
 const SOURCE_LABELS = { bundled: 'default (bundled)', MCP_TOOLS_CONFIG: 'MCP_TOOLS_CONFIG' };
 const STATE_NOTES = {
@@ -39,9 +40,11 @@ addToolSelectionOptions(program
 
     const { configFile, profile, include, exclude, tools, hidden } = selection;
     const exposed = [...tools].map(([name, tool]) => ({ name, description: tool.description || '' }));
+    // The same string the server would send this selection, so it can be read without starting one.
+    const instructions = buildInstructions(tools);
 
     if (opts.json) {
-      console.log(JSON.stringify({ config: configFile, profile, include, exclude, exposed, hidden }, null, 2));
+      console.log(JSON.stringify({ config: configFile, profile, include, exclude, exposed, hidden, instructions }, null, 2));
       return;
     }
 
@@ -59,6 +62,9 @@ addToolSelectionOptions(program
         console.log(`  ${t.name.padEnd(26)} ${reasonText(t.reason, profile)}`);
       }
     }
+
+    console.log(`\nInstructions sent to the client (${Buffer.byteLength(instructions)} bytes):`);
+    console.log(instructions ? instructions.split('\n').map(line => (line ? `  ${line}` : '')).join('\n') : '  (none)');
   });
 
 await program.parseAsync();

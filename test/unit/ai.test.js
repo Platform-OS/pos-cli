@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { withTmpDir } from '#test/utils/withTmpDir.js';
 import logger from '#lib/logger.js';
-import { init, SERVERS, RENAMED_FROM } from '#lib/ai.js';
+import { init, SERVERS, RENAMED_FROM, PLUGIN_DIR, PLUGIN_ID, REMINDERS_PLUGIN_ID } from '#lib/ai.js';
 
 vi.mock('#lib/logger.js', () => ({
   default: {
@@ -117,7 +117,12 @@ describe('ai init', () => {
         'merge that in by hand if you want it.'
     );
     expect(logger.Success).not.toHaveBeenCalled();
-    expect(logger.Info).not.toHaveBeenCalled();
+    // Nothing was written, so nothing may claim otherwise. The language-server suggestion is
+    // orthogonal to the MCP entry and is allowed here, which is why this names what it forbids
+    // rather than forbidding Info outright.
+    for (const [message] of logger.Info.mock.calls) {
+      expect(message).not.toMatch(/Registered|Updated existing|Renamed entries/);
+    }
   });
 
   test('claude - adds a missing server next to a customised one, without touching the customised one', async () => {
@@ -279,5 +284,96 @@ describe('ai init', () => {
 
     expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid JSON/));
     expect(fs.readFileSync(configPath('.mcp.json'), 'utf8')).toEqual('{ not valid json');
+  });
+});
+
+/**
+ * Claude Code takes language-server configuration only from a plugin, and installing one is a real
+ * install that writing a JSON file cannot stand in for — so init prints the commands instead of
+ * running them, which is also what keeps it from depending on the `claude` binary being present.
+ */
+describe('ai init — the language server', () => {
+  // An offer, not a warning: it goes through Log, which applies no colour of its own. Info is
+  // chalk.bold, and a paragraph of bold text reads as something having gone wrong.
+  const infoText = () => [...logger.Log.mock.calls, ...logger.Info.mock.calls]
+    .map(([message]) => String(message ?? '')).join('\n');
+
+  const enablePluginIn = (...segments) => {
+    writeJson({ enabledPlugins: { [PLUGIN_ID]: true } }, ...segments);
+  };
+
+  test('claude - prints both commands, with a path that exists', async () => {
+    await init({ tool: 'claude', rootPath: getTmpDir() });
+
+    const text = infoText();
+    expect(text).toContain('claude plugin marketplace add');
+    expect(text).toContain(`claude plugin install ${PLUGIN_ID}`);
+    // The manifest has to be where the printed command points, or the paste fails.
+    expect(fs.existsSync(path.join(PLUGIN_DIR, '.claude-plugin', 'marketplace.json'))).toBe(true);
+    expect(text).toContain(PLUGIN_DIR);
+  });
+
+  // A pasted command naming a plugin the marketplace does not have fails at the terminal, and the
+  // ids are close enough to each other that string-building one is easy to get wrong.
+  test('every plugin id it prints exists in the shipped marketplace', async () => {
+    await init({ tool: 'claude', rootPath: getTmpDir() });
+
+    const marketplace = JSON.parse(
+      fs.readFileSync(path.join(PLUGIN_DIR, '.claude-plugin', 'marketplace.json'), 'utf8')
+    );
+    const real = new Set(marketplace.plugins.map(p => `${p.name}@${marketplace.name}`));
+
+    const printed = [...infoText().matchAll(/claude plugin install (\S+)/g)].map(m => m[1]);
+    expect(printed.length).toBeGreaterThan(0);
+    for (const id of printed) {
+      expect(real, `${id} is not a plugin in the shipped marketplace`).toContain(id);
+    }
+    expect(printed).toContain(PLUGIN_ID);
+    expect(printed).toContain(REMINDERS_PLUGIN_ID);
+  });
+
+  test('the printed path is quoted, since an install path may contain spaces', async () => {
+    await init({ tool: 'claude', rootPath: getTmpDir() });
+    expect(infoText()).toContain(`"${PLUGIN_DIR}"`);
+  });
+
+  test('says nothing when the plugin is already enabled for this project', async () => {
+    enablePluginIn('.claude', 'settings.local.json');
+
+    await init({ tool: 'claude', rootPath: getTmpDir() });
+
+    expect(infoText()).not.toContain('claude plugin install');
+    expect(logger.Success).toHaveBeenCalledWith(expect.stringMatching(/language server.*already registered/i));
+  });
+
+  test('a settings file that is not valid JSON is not a yes, and does not throw', async () => {
+    writeJson('{ this is not json', '.claude', 'settings.local.json');
+
+    await expect(init({ tool: 'claude', rootPath: getTmpDir() })).resolves.not.toThrow();
+    expect(infoText()).toContain('claude plugin install');
+  });
+
+  // The plugin mechanism is Claude Code's; suggesting it to another tool would be noise.
+  test.each(['cursor', 'vscode'])('%s - is not told about a Claude Code plugin', async (tool) => {
+    await init({ tool, rootPath: getTmpDir() });
+    expect(infoText()).not.toContain('claude plugin');
+  });
+
+  // It is bold on a terminal, and a wall of bold text reads as an error rather than an offer.
+  test('is not printed through Info', async () => {
+    await init({ tool: 'claude', rootPath: getTmpDir() });
+
+    const info = logger.Info.mock.calls.map(([message]) => String(message ?? '')).join('\n');
+    expect(info).not.toContain('claude plugin');
+  });
+
+  // Every claim here has been wrong once: it said diagnostics arrive as files are read, and they
+  // do not — the server answers when something asks it.
+  test('does not claim diagnostics happen on their own', async () => {
+    await init({ tool: 'claude', rootPath: getTmpDir() });
+
+    const text = infoText();
+    expect(text).not.toMatch(/as files are read|automatic|automatically/i);
+    expect(text).toMatch(/does not trigger them|when something asks/);
   });
 });

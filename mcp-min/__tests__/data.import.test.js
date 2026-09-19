@@ -1,10 +1,11 @@
 import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { runTool } from '../run-tool.js';
+import { rejectionFor } from '../validate-params.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
 import dataImportTool from '../data/import.js';
-import dataImportStatusTool from '../data/import-status.js';
 
 const mockSettings = {
   settingsFromDotPos: (env) => {
@@ -17,8 +18,7 @@ const mockSettings = {
 
 describe('data-import tool', () => {
   describe('data-import', () => {
-    test('has correct description and inputSchema', () => {
-      expect(dataImportTool.description).toContain('Import data');
+    test('has the expected inputSchema', () => {
       expect(dataImportTool.inputSchema.properties).toHaveProperty('env');
       expect(dataImportTool.inputSchema.properties).toHaveProperty('filePath');
       expect(dataImportTool.inputSchema.properties).toHaveProperty('jsonData');
@@ -29,17 +29,17 @@ describe('data-import tool', () => {
     });
 
     test('returns error when env not found', async () => {
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'unknown', jsonData: { records: [] } },
         { settings: mockSettings }
       );
       expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('DATA_IMPORT_ERROR');
+      expect(result.error.code).toBe('ENV_NOT_FOUND');
       expect(result.error.message).toContain('unknown');
     });
 
     test('returns validation error when no data source provided', async () => {
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'staging' },
         { settings: mockSettings }
       );
@@ -49,7 +49,7 @@ describe('data-import tool', () => {
     });
 
     test('returns validation error when multiple data sources provided', async () => {
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         {
           env: 'staging',
           jsonData: { records: [] },
@@ -78,7 +78,7 @@ describe('data-import tool', () => {
       });
       const mockUploadFile = vi.fn().mockResolvedValue(true);
 
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'staging', jsonData: { records: [{ id: '1', properties: { name: 'test' }, model_schema: 'todo' }] }, validate: false },
         { Gateway: MockGateway, settings: mockSettings, presignUrl: mockPresignUrl, uploadFile: mockUploadFile }
       );
@@ -98,7 +98,7 @@ describe('data-import tool', () => {
         }
       }
 
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'staging', zipFileUrl: 'https://example.com/data.zip' },
         { Gateway: MockGateway, settings: mockSettings }
       );
@@ -108,7 +108,7 @@ describe('data-import tool', () => {
     });
 
     test('returns error when file not found', async () => {
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'staging', filePath: '/nonexistent/file.json' },
         { settings: mockSettings }
       );
@@ -118,7 +118,7 @@ describe('data-import tool', () => {
     });
 
     test('blocks import when validation fails (default)', async () => {
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         {
           env: 'staging',
           jsonData: {
@@ -135,7 +135,7 @@ describe('data-import tool', () => {
     });
 
     test('rejects jsonData with invalid top-level structure (empty object)', async () => {
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'staging', jsonData: {} },
         { settings: mockSettings }
       );
@@ -147,7 +147,7 @@ describe('data-import tool', () => {
     });
 
     test('rejects jsonData with unknown top-level keys only', async () => {
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'staging', jsonData: { items: [], data: [] } },
         { settings: mockSettings }
       );
@@ -158,7 +158,7 @@ describe('data-import tool', () => {
     });
 
     test('rejects jsonData with mix of valid and unknown top-level keys', async () => {
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'staging', jsonData: { records: [], extra: 'data' } },
         { settings: mockSettings }
       );
@@ -181,7 +181,7 @@ describe('data-import tool', () => {
       });
       const mockUploadFile = vi.fn().mockResolvedValue(true);
 
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'staging', jsonData: { users: [] } },
         { Gateway: MockGateway, settings: mockSettings, presignUrl: mockPresignUrl, uploadFile: mockUploadFile }
       );
@@ -201,7 +201,7 @@ describe('data-import tool', () => {
       });
       const mockUploadFile = vi.fn().mockResolvedValue(true);
 
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         { env: 'staging', jsonData: { records: [], users: [] } },
         { Gateway: MockGateway, settings: mockSettings, presignUrl: mockPresignUrl, uploadFile: mockUploadFile }
       );
@@ -214,7 +214,7 @@ describe('data-import tool', () => {
       fs.writeFileSync(tmpFile, JSON.stringify({ items: [{ id: 1 }] }));
 
       try {
-        const result = await dataImportTool.handler(
+        const result = await runTool(dataImportTool, 
           { env: 'staging', filePath: tmpFile },
           { settings: mockSettings }
         );
@@ -240,7 +240,7 @@ describe('data-import tool', () => {
       });
       const mockUploadFile = vi.fn().mockResolvedValue(true);
 
-      const result = await dataImportTool.handler(
+      const result = await runTool(dataImportTool, 
         {
           env: 'staging',
           jsonData: { records: [{ id: 'invalid-uuid' }] },
@@ -274,7 +274,7 @@ describe('data-import tool', () => {
       fs.writeFileSync(tmpFile, JSON.stringify(invalidData));
 
       try {
-        const result = await dataImportTool.handler(
+        const result = await runTool(dataImportTool, 
           {
             env: 'staging',
             filePath: tmpFile,
@@ -311,7 +311,7 @@ describe('data-import tool', () => {
         });
         const mockUploadFile = vi.fn().mockResolvedValue(true);
 
-        const result = await dataImportTool.handler(
+        const result = await runTool(dataImportTool, 
           { env: 'staging', filePath: tmpFile },
           { Gateway: MockGateway, settings: mockSettings, presignUrl: mockPresignUrl, uploadFile: mockUploadFile }
         );
@@ -324,54 +324,4 @@ describe('data-import tool', () => {
     });
   });
 
-  describe('data-import-status', () => {
-    test('has correct description and inputSchema', () => {
-      expect(dataImportStatusTool.description).toContain('status');
-      expect(dataImportStatusTool.inputSchema.properties).toHaveProperty('jobId');
-      expect(dataImportStatusTool.inputSchema.required).toEqual(['jobId']);
-    });
-
-    test('returns validation error when jobId not provided', async () => {
-      const result = await dataImportStatusTool.handler(
-        { env: 'staging' },
-        { settings: mockSettings }
-      );
-      expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('VALIDATION_ERROR');
-      expect(result.error.message).toContain('jobId');
-    });
-
-    test('successfully returns status for completed job', async () => {
-      class MockGateway {
-        async dataImportStatus() {
-          return { id: 'job-123', status: { name: 'done' } };
-        }
-      }
-
-      const result = await dataImportStatusTool.handler(
-        { env: 'staging', jobId: 'job-123' },
-        { Gateway: MockGateway, settings: mockSettings }
-      );
-
-      expect(result.ok).toBe(true);
-      expect(result.data.id).toBe('job-123');
-      expect(result.data.status).toBe('done');
-    });
-
-    test('correctly identifies pending status', async () => {
-      class MockGateway {
-        async dataImportStatus() {
-          return { id: 'job-456', status: 'pending' };
-        }
-      }
-
-      const result = await dataImportStatusTool.handler(
-        { env: 'staging', jobId: 'job-456' },
-        { Gateway: MockGateway, settings: mockSettings }
-      );
-
-      expect(result.ok).toBe(true);
-      expect(result.data.status).toBe('pending');
-    });
-  });
 });

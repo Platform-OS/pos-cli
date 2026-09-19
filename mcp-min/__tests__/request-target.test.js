@@ -9,6 +9,7 @@ import path from 'path';
 import { describe, test, expect, vi } from 'vitest';
 import registry from '../tools.js';
 import { rejectionFor } from '../validate-params.js';
+import { runTool } from '../run-tool.js';
 
 const AUTH = { url: 'https://staging.example.com', email: 'a@b.c', token: 'staging-token' };
 const ELSEWHERE = 'https://evil.example.com';
@@ -83,7 +84,7 @@ describe('a call that names another host', () => {
       runMigration = gatewayCall;
     }
 
-    await registry.get(name).handler({ ...AUTH, ...params, endpoint: ELSEWHERE }, { Gateway });
+    await runTool(registry.get(name), { ...AUTH, ...params, endpoint: ELSEWHERE }, { Gateway });
 
     expect(constructedWith).not.toHaveLength(0);
     for (const options of constructedWith) {
@@ -102,7 +103,7 @@ describe('the explicit-credentials path still works', () => {
       graph = async () => ({ data: {} });
     }
 
-    await registry.get('graphql-exec').handler(
+    await runTool(registry.get('graphql-exec'), 
       { url: ELSEWHERE, email: 'someone@example.com', token: 'their-token', query: '{ __typename }' },
       { Gateway }
     );

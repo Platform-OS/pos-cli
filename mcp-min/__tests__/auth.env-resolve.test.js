@@ -140,7 +140,7 @@ describe('resolveAuth precedence', () => {
     withoutMpkit();
 
     await expect(resolveAuth({}, { ...ctx, files: { getConfig: () => ({}) } }))
-      .rejects.toThrow(/AUTH_MISSING.*url,email,token.*MPKIT/s);
+      .rejects.toThrow(/Provide url, email and token.*MPKIT/s);
   });
 
   // Naming an environment settles which instance is meant, so an unknown name fails rather than
@@ -313,5 +313,80 @@ describe('a named environment is read from .pos, whatever MPKIT_* says', () => {
     const fromCli = await fetchSettings('production', { exit: false });
 
     expect(fromCli).toMatchObject({ url: 'https://mpkit.example.com' });
+  });
+});
+
+/**
+ * TASK-31. `env` stays optional — three of the four supported call styles do not pass it — so the
+ * guard is not in the schemas. It sits on the one resolution step that names no instance at all.
+ */
+describe('a call that can change an instance must name it', () => {
+  const TWO = {
+    prod: { url: 'https://prod.example.com', email: 'e@x', token: 'prod-token' },
+    staging: { url: 'https://staging.example.com', email: 'e@x', token: 'staging-token' }
+  };
+  const ONE = { only: { url: 'https://only.example.com', email: 'e@x', token: 'only-token' } };
+
+  const ctx = (config, mayChangeInstance) => ({
+    files: { getConfig: () => config },
+    settings: { settingsFromDotPos: name => config[name] },
+    mayChangeInstance
+  });
+
+  beforeEach(() => {
+    // Step 3 would answer before step 4 is ever reached.
+    delete process.env.MPKIT_URL;
+    delete process.env.MPKIT_EMAIL;
+    delete process.env.MPKIT_TOKEN;
+  });
+
+  test('refuses the unnamed default, and says what to pass instead', async () => {
+    await expect(resolveAuth({}, ctx(TWO, true))).rejects.toMatchObject({
+      kind: 'input',
+      code: 'ENV_REQUIRED',
+      details: { environments: ['prod', 'staging'], wouldHaveUsed: 'prod' }
+    });
+  });
+
+  // A model cannot read .pos, so a refusal that does not name the choices cannot be acted on.
+  test('the message names every environment and the one it would have used', async () => {
+    const error = await resolveAuth({}, ctx(TWO, true)).catch(e => e);
+
+    expect(error.message).toContain('prod, staging');
+    expect(error.message).toContain('would have gone to prod');
+  });
+
+  test('one environment is not a guess, so it still resolves', async () => {
+    await expect(resolveAuth({}, ctx(ONE, true)))
+      .resolves.toMatchObject({ url: ONE.only.url, source: '.pos(only)' });
+  });
+
+  test('a read-only call is not guarded: nothing it does is hard to undo', async () => {
+    await expect(resolveAuth({}, ctx(TWO, false)))
+      .resolves.toMatchObject({ url: TWO.prod.url, source: '.pos(prod)' });
+  });
+
+  // The other three steps each name an instance, so none of them is ambiguous and none is touched.
+  test.each([
+    ['explicit credentials', { url: 'https://named.example.com', email: 'e@x', token: 'tok' }, 'params'],
+    ['a named environment', { env: 'staging' }, '.pos(staging)']
+  ])('%s still resolves for a call that changes things', async (_label, params, source) => {
+    await expect(resolveAuth(params, ctx(TWO, true))).resolves.toMatchObject({ source });
+  });
+
+  test('MPKIT_* still resolves for a call that changes things', async () => {
+    vi.stubEnv('MPKIT_URL', 'https://ci.example.com');
+    vi.stubEnv('MPKIT_EMAIL', 'ci@x');
+    vi.stubEnv('MPKIT_TOKEN', 'ci-token');
+    try {
+      await expect(resolveAuth({}, ctx(TWO, true))).resolves.toMatchObject({ source: 'env' });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  // Nothing resolved at all is still "no credentials", not "name one of the credentials you lack".
+  test('an empty .pos still reports missing credentials', async () => {
+    await expect(resolveAuth({}, ctx({}, true))).rejects.toMatchObject({ code: 'AUTH_MISSING' });
   });
 });

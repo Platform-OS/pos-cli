@@ -6,6 +6,7 @@ import os from 'os';
 
 // Import the tool directly
 import uploadsTool from '../uploads/push.js';
+import { runTool } from '../run-tool.js';
 
 // Mock settings that can be injected via context
 const mockSettings = {
@@ -48,7 +49,7 @@ describe('uploads-push', () => {
     });
     const mockUploadFile = vi.fn().mockResolvedValue('https://s3.example.com/upload');
 
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'staging', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
@@ -69,7 +70,7 @@ describe('uploads-push', () => {
   });
 
   test('returns error when file not found', async () => {
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'staging', filePath: '/nonexistent/file.zip' },
       { settings: mockSettings }
     );
@@ -80,13 +81,13 @@ describe('uploads-push', () => {
   });
 
   test('returns error when env not found', async () => {
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'unknown-env', filePath: tempFile },
       { settings: mockSettings }
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('UPLOAD_FAILED');
+    expect(res.error.code).toBe('ENV_NOT_FOUND');
     expect(res.error.message).toContain('unknown-env');
     expect(res.error.message).toContain('not found');
   });
@@ -109,7 +110,7 @@ describe('uploads-push', () => {
     const mockPresignUrl = vi.fn().mockRejectedValue(new Error('S3 service unavailable'));
     const mockUploadFile = vi.fn();
 
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'staging', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
@@ -133,7 +134,7 @@ describe('uploads-push', () => {
     });
     const mockUploadFile = vi.fn().mockRejectedValue(new Error('Upload timeout'));
 
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'staging', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
@@ -158,7 +159,7 @@ describe('uploads-push', () => {
     });
     const mockUploadFile = vi.fn().mockResolvedValue('ok');
 
-    await uploadsTool.handler(
+    await runTool(uploadsTool, 
       { env: 'staging', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
@@ -180,7 +181,7 @@ describe('uploads-push', () => {
     });
     const mockUploadFile = vi.fn().mockResolvedValue('ok');
 
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'production', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );

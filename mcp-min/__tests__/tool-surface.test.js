@@ -17,13 +17,21 @@ import {
 } from './helpers/server-process.js';
 
 const DEV_TOOLS = [
-  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'job-status', 'deploy-start',
-  'unit-tests-run', 'tests-run-async', 'check-run'
+  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'job-status', 'deploy-dry-run',
+  'deploy-start', 'unit-tests-run', 'tests-run-async', 'check-run'
 ];
 
 // The profile exists to keep this payload small, so growth past the budget needs a deliberate
-// bump rather than a quiet one. Currently 7,188 bytes over stdio.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 7500;
+// bump rather than a quiet one. Currently 6,228 bytes over stdio, plus 1,101 of server
+// instructions (budgeted separately in instructions.test.js, since a client is charged for each
+// once).
+//
+// Raised from 6,000 for `deploy-dry-run` (TASK-25), which costs 739 bytes of it. The bump was
+// argued rather than assumed: `deploy-start` is in this profile and a deploy that is not partial
+// deletes every file missing from the build, so without the dry run an agent here can only find
+// that out by causing it. `deploy-start`'s own description names the dry run, and a description
+// may not point at a tool its profile hides — so the two travel together or neither does.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 6500;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -34,19 +42,56 @@ const PRE_PROFILES_TOOLS = [
   'uploads-push', 'constants-list', 'constants-set', 'constants-unset', 'instance-create', 'partners-list',
   'partner-get', 'endpoints-list', 'env-add'
 ];
-// Each one a deliberate widening of what a bare `pos-cli-mcp` exposes, and the reason the byte
-// count below moves.
-const ADDED_SINCE_PROFILES = ['job-status'];
+// Each a deliberate widening of what a bare `pos-cli-mcp` exposes, and the reason the byte count
+// below moves.
+const ADDED_SINCE_PROFILES = ['job-status', 'deploy-dry-run'];
+// The six per-operation status tools job-status replaced, removed in 7.0.0. Listed rather than
+// deleted from PRE_PROFILES_TOOLS so this file still records what 6.5.1 shipped and what became
+// of it: an agent on a 6.x server saw these, and a config or a launch flag naming one now has to
+// be answered (tools-config.js keeps a tombstone for each).
+const REMOVED_IN_7 = [
+  'deploy-status', 'deploy-wait', 'data-import-status', 'data-export-status', 'data-clean-status',
+  'tests-run-async-result'
+];
 
 const BARE_TOOLS = [
   ...PRE_PROFILES_TOOLS.slice(0, PRE_PROFILES_TOOLS.indexOf('deploy-start')),
   'job-status',
+  'deploy-dry-run',
   ...PRE_PROFILES_TOOLS.slice(PRE_PROFILES_TOOLS.indexOf('deploy-start'))
-];
+].filter(name => !REMOVED_IN_7.includes(name));
 
-// The bare surface pays for every tool it lists: the six deprecated status tools cost 4,528 bytes
-// of this, which comes back at the next major, and now for anyone on --profile dev.
-const BARE_TOOLS_LIST_BYTES = 25764;
+// The bare surface pays for every tool it lists.
+//
+// 25,764 before the descriptions were rewritten against one standard; 25,694 once check-run
+// stopped naming a pos-cli dependency as though the caller had to install it; 20,799 once `env`
+// and the auth triple moved into schemas/auth.js and stopped being restated per tool, and the
+// tool descriptions were cut to what a model can act on; 20,109 once the credential precedence
+// moved into the server instructions, which say it once a session rather than in every schema;
+// 20,848 with deploy-dry-run.
+//
+// 21,444 once the schemas declared the defaults their handlers were already applying, the three
+// parameters with no description at all got one, and `data-validate` said which field to branch
+// on. All three are the same bargain: a description rule here forbids restating a default in prose
+// *because the schema carries it*, and for twelve parameters it did not — `strictTypes` reads as
+// off when the handler has it on. A parameter the model has to guess at costs more than the bytes
+// that would have explained it.
+//
+// 21,492 once the descriptions were reviewed for *selection* rather than only for accuracy: two
+// tools that overlapped now say which to reach for. `partners-list` lost the `partner_id` branch
+// that duplicated `partner-get` (a saving), and `liquid-exec` names `graphql-exec` for queries,
+// since it can run them itself and nothing said which was meant.
+//
+// 17,997 once the six per-operation status tools were removed (7.0.0) — 3,495 bytes, 16% of what
+// a bare server sent, for tools whose own descriptions told the model not to use them. The cost
+// was never only tokens: two of them answer with less than the truth. `deploy-status` reports the
+// release and ignores the asset phase, and `deploy-wait` returns as soon as the release settles,
+// so a deploy still uploading assets reads as finished on both.
+//
+// 17,727 once `env` stopped saying "the first entry if omitted" on all eighteen tools that take
+// it. That was a warning the model had to remember; TASK-31 made it a refusal it receives at the
+// moment it matters, so the parameter can just say what it is.
+const BARE_TOOLS_LIST_BYTES = 17727;
 
 const HANG_MS = 15000;
 
@@ -139,7 +184,8 @@ function mcpConfigJson(args) {
 describe('which tools are listed', () => {
   test('bare pos-cli-mcp lists what it listed before profiles plus the tools added since, byte for byte, on every path', async () => {
     // Nothing that was exposed before profiles has quietly stopped being exposed.
-    expect(BARE_TOOLS.filter(name => !ADDED_SINCE_PROFILES.includes(name))).toEqual(PRE_PROFILES_TOOLS);
+    expect(BARE_TOOLS.filter(name => !ADDED_SINCE_PROFILES.includes(name)))
+      .toEqual(PRE_PROFILES_TOOLS.filter(name => !REMOVED_IN_7.includes(name)));
 
     const bare = await withServer([], listedEverywhere);
     expectSameEverywhere(bare, BARE_TOOLS);
@@ -167,8 +213,8 @@ describe('which tools are listed', () => {
     ['an allowlist', ['--profile', 'none', '--include-tools', 'graphql-exec,envs-list'], ['envs-list', 'graphql-exec']],
     ['the same allowlist as repeated flags', ['--profile', 'none', '--include-tools', 'graphql-exec', '--include-tools', 'envs-list'], ['envs-list', 'graphql-exec']],
     ['dev plus one tool minus another', ['--profile', 'dev', '--include-tools', 'sync-file', '--exclude-tools', 'job-status,check-run'],
-      ['envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'deploy-start', 'unit-tests-run',
-        'tests-run-async', 'sync-file']],
+      ['envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'deploy-dry-run', 'deploy-start',
+        'unit-tests-run', 'tests-run-async', 'sync-file']],
     ['full minus a group', ['--exclude-tools', 'data-import,data-export,data-clean'],
       BARE_TOOLS.filter(name => !['data-import', 'data-export', 'data-clean'].includes(name))]
   ])('%s', async (_label, args, expected) => {
@@ -182,6 +228,17 @@ describe('which tools are listed', () => {
 });
 
 describe('a selection that does not resolve stops startup', () => {
+  // The bundled config disables nothing, so the refusal for including a disabled tool needs a
+  // config that does. The rule it guards is what stops --include-tools from re-enabling a tool an
+  // operator switched off, which would make the config cosmetic.
+  let disablingConfig;
+
+  beforeAll(() => {
+    disablingConfig = path.join(workDir, 'disables-constants-list.json');
+    fs.writeFileSync(disablingConfig, JSON.stringify({ tools: { 'constants-list': { enabled: false } } }));
+  });
+
+  // [label, args, expected message, extra env (lazy: workDir exists only once beforeAll has run)]
   const REFUSALS = [
     ['an unknown profile', ['--profile', 'devv'], '--profile devv: no such profile. Available profiles: full, dev, none.'],
     ['a prototype name as a profile', ['--profile', 'constructor'], '--profile constructor: no such profile. Available profiles: full, dev, none.'],
@@ -189,14 +246,15 @@ describe('a selection that does not resolve stops startup', () => {
     ['an unknown tool to exclude', ['--exclude-tools', 'toString'], '--exclude-tools: no such tool: toString.'],
     ['a tool in both flags', ['--include-tools', 'sync-file', '--exclude-tools', 'sync-file'],
       'Named in both --include-tools and --exclude-tools: sync-file. Name each tool in only one of them.'],
-    ['including a tool the tools config disables', ['--profile', 'dev', '--include-tools', 'check'],
-      /^--include-tools names tools disabled in the tools config at .+tools\.config\.json: check\. Enable them there, or remove them from --include-tools\.$/],
+    ['including a tool the tools config disables', ['--profile', 'dev', '--include-tools', 'constants-list'],
+      /^--include-tools names tools disabled in the tools config at .+disables-constants-list\.json: constants-list\. Enable them there, or remove them from --include-tools\.$/,
+      () => ({ MCP_TOOLS_CONFIG: disablingConfig })],
     ['an empty selection', ['--profile', 'none'],
       'No tools to expose: profile none with --include-tools (none) and --exclude-tools (none) leaves none enabled. Choose another profile or name tools with --include-tools.']
   ];
 
-  test.each(REFUSALS)('%s: one message, exit 1, nothing started', async (_label, args, message) => {
-    const proc = launch({ workDir, args: [MCP_BIN, ...args], env: { MCP_MIN_PORT: '0' } });
+  test.each(REFUSALS)('%s: one message, exit 1, nothing started', async (_label, args, message, extraEnv) => {
+    const proc = launch({ workDir, args: [MCP_BIN, ...args], env: { MCP_MIN_PORT: '0', ...extraEnv?.() } });
     try {
       const exit = await exitWithin(proc, HANG_MS);
 
@@ -213,9 +271,10 @@ describe('a selection that does not resolve stops startup', () => {
     }
   }, 30000);
 
-  test.each(REFUSALS)('pos-cli mcp-config refuses %s with the same message', (_label, args, message) => {
-    const server = spawnSync(process.execPath, [MCP_BIN, ...args], { cwd: workDir, env: serverEnv(workDir, { MCP_MIN_PORT: '0' }), input: '', encoding: 'utf8', timeout: HANG_MS });
-    const config = spawnSync(process.execPath, [MCP_CONFIG_BIN, ...args], { cwd: workDir, env: serverEnv(workDir), encoding: 'utf8', timeout: HANG_MS });
+  test.each(REFUSALS)('pos-cli mcp-config refuses %s with the same message', (_label, args, message, extraEnv) => {
+    const extra = extraEnv?.() ?? {};
+    const server = spawnSync(process.execPath, [MCP_BIN, ...args], { cwd: workDir, env: serverEnv(workDir, { MCP_MIN_PORT: '0', ...extra }), input: '', encoding: 'utf8', timeout: HANG_MS });
+    const config = spawnSync(process.execPath, [MCP_CONFIG_BIN, ...args], { cwd: workDir, env: serverEnv(workDir, extra), encoding: 'utf8', timeout: HANG_MS });
 
     expect(config.status).toBe(1);
     expect(config.stdout).toBe('');
@@ -240,7 +299,7 @@ describe('a tool that is not exposed cannot be called', () => {
 
   afterAll(() => stop(proc));
 
-  const HIDDEN = ['deploy-start', 'check', 'constructor', 'toString', '__proto__', 'hasOwnProperty'];
+  const HIDDEN = ['deploy-start', 'constructor', 'toString', '__proto__', 'hasOwnProperty'];
 
   // The SDK paths answer an unknown tool with -32602 "Tool <name> not found". Names inherited
   // from Object.prototype come back as "Tool <name> disabled" — the SDK keeps its registry in a

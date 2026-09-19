@@ -2,6 +2,7 @@
 import { pathToFileURL } from 'url';
 import path from 'path';
 import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { runTool } from '../run-tool.js';
 
 vi.mock('../../lib/proxy', () => {
   class GatewayMock {
@@ -24,24 +25,37 @@ describe('platformos.liquid.exec', () => {
     tool = mod.default;
   });
 
+  // The failure marker is `Liquid error`, and it used to be enough for the output to contain the
+  // word `error` anywhere — so a page that renders the word was reported as a call that failed.
+  test.each([
+    ['an ordinary render that mentions the word', 'Sorry, there was no error on this page.', true],
+    ['output that partly rendered before failing', '<h1>Title</h1>Liquid error: undefined variable', false]
+  ])('%s', async (_label, result, shouldSucceed) => {
+    class LocalGateway { async liquid() { return { result }; } }
+
+    const res = await runTool(tool, { url: "https://x.example.com", email: "e@example.com", token: "t", template: "{{ x }}" }, { Gateway: LocalGateway });
+
+    expect(res.ok).toBe(shouldSucceed);
+  });
+
   test('success path returns result', async () => {
     class LocalGateway { async liquid(body) { return { output: 'Hello ' + (body.locals?.name || 'World') }; } }
-    const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', template: 'Hi {{name}}', locals: { name: 'Bob' } }, { Gateway: LocalGateway });
+    const res = await runTool(tool, { url: 'https://x', email: 'e', token: 't', template: 'Hi {{name}}', locals: { name: 'Bob' } }, { Gateway: LocalGateway });
     expect(res.ok).toBe(true);
-    expect(res.result.output).toMatch(/Hello/);
+    expect(res.data.output).toMatch(/Hello/);
   });
 
   test('logical liquid error returns error object', async () => {
     class LocalGateway { async liquid(_body) { return { result: 'Liquid error', error: "Liquid error: Couldn't find \"questions/search.graphql\"." }; } }
-    const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', template: 'logical_error' }, { Gateway: LocalGateway });
+    const res = await runTool(tool, { url: 'https://x', email: 'e', token: 't', template: 'logical_error' }, { Gateway: LocalGateway });
     expect(res.ok).toBe(false);
     expect(String(res.error.message)).toMatch(/Couldn't find/);
   });
 
-  test('Gateway error returns error object', async () => {
-    class LocalGateway { async liquid() { throw new Error('boom'); } }
-    const res = await tool.handler({ url: 'https://x', email: 'e', token: 't', template: 'throw' }, { Gateway: LocalGateway });
+  test('an instance that refused is reported as the instance refusing', async () => {
+    class LocalGateway { async liquid() { throw Object.assign(new Error('Unprocessable'), { statusCode: 422 }); } }
+    const res = await runTool(tool, { url: 'https://x', email: 'e', token: 't', template: 'throw' }, { Gateway: LocalGateway });
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('LIQUID_EXEC_ERROR');
+    expect(res.error).toMatchObject({ kind: 'instance', details: { statusCode: 422 } });
   });
 });
