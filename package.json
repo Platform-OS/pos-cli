@@ -23,7 +23,6 @@
   },
   "files": [
     "lib",
-    "plugin",
     "bin",
     "gui/liquid",
     "gui/graphql/public",

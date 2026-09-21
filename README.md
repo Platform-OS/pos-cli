@@ -304,50 +304,6 @@ The server communicates over **stdio** (standard input/output), which is the sta
 
 Installing pos-cli globally (`npm install -g @platformos/pos-cli`) automatically places `pos-cli-lsp` on your PATH — no wrapper script needed. Configure your editor to use it as the language server.
 
-##### Claude Code
-
-Claude Code reads language-server configuration only from a plugin — there is no `lsp` key in
-`settings.json` and no project-level LSP file it picks up on its own. pos-cli ships the plugin, so
-registering it is two commands run from your project:
-
-```bash
-claude plugin marketplace add "$(npm root -g)/@platformos/pos-cli/plugin" --scope local
-claude plugin install platformos-lsp@platformos --scope local
-```
-
-Both write to `.claude/settings.local.json`; use `--scope user` instead to enable it for every
-project on the machine. Restart Claude Code afterwards, and check it with `claude plugin details
-platformos-lsp@platformos` — it should report one LSP server. A language server runs out of process,
-so it adds nothing to what the model reads on each request.
-
-The server implements hover, go-to-definition, completions, code actions and rename. Of those,
-Claude Code's LSP tool can use **hover** and **go-to-definition**; diagnostics do not come back from
-either call, but arrive separately once one of them has made the server look at the file. The other
-operations that tool offers — find-references, document and workspace symbols, implementations, call
-hierarchy — are not implemented by this server and answer `Unhandled method`. An editor uses the
-full set.
-
-`pos-cli ai init` prints these two commands for you, and says nothing if the plugin is already
-registered.
-
-Diagnostics are pull-only: the server analyses a file when something makes an LSP request against it,
-and publishes the findings asynchronously, so they arrive on a later exchange. Reading or editing a
-file triggers nothing on its own. A second, optional plugin says so after each Liquid or GraphQL
-edit:
-
-```bash
-claude plugin install platformos-lsp-reminders@platformos --scope local
-```
-
-It runs no linter — it prints one line. Linting on each edit is not viable: `pos-cli check run` is
-whole-project only and takes around a minute on a large app, and starting a throwaway language
-server costs about four seconds per edit. Asking the server that is already running costs nothing.
-
-Older Claude Code releases kept the LSP tool behind an undocumented `ENABLE_LSP_TOOL` flag. It is not
-needed on current versions — verified against 2.1.274, where the tool works with the variable unset.
-If the plugin installs cleanly and nothing ever uses it, upgrade Claude Code before reaching for that
-flag.
-
 ##### Open Code (open-vsx / VSCodium-compatible editors)
 
 Add the following to your editor's `settings.json` (`Ctrl+Shift+P` → "Open User Settings (JSON)"):
