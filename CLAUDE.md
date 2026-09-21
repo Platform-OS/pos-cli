@@ -243,7 +243,7 @@ The MCP (Model Context Protocol) server exposes platformOS operations as tools f
 **Logging: one sink, redacted centrally** (`mcp-min/log.js`, `mcp-min/redact.js`). Everything the server writes goes to stderr and to `~/.pos-cli/logs/mcp-min.log` (`MCP_MIN_LOG_FILE`), which outlives the session and is shared by every session on the machine; `DEBUG=1` is what people turn on precisely when credentials are moving. Keep these:
 - **stdout belongs to the protocol.** `mcp-min/log.js` writes to stderr and the log file, never stdout, and `lib/logger.js` routes its stdout methods (`Info`, `Success`, `Log`, `News`, `Print`) to stderr while `isServerMode()`. CLI code called from a tool — `Gateway`'s Portal retry, a two-factor session message — would otherwise put non-JSON bytes into a stdio client's channel mid-response.
 - **Redaction happens in `log.js`, not at call sites.** `write()` passes every data object through `redact()` and every message through `scrubString()`. Masking by hand at one call site is a rule the next one will not know about; centrally, a leak takes a new *kind* of secret rather than a new logging line. Adding one means adding a key to `SECRET_KEYS` or `MASKED_KEYS` in `redact.js` — normalised, so an API-key header, its `SHOUTING_SNAKE` form and its camelCase form are one name.
-- **Two treatments, deliberately.** A secret (`authorization`, `cookie`, `password`, `mcp-session-id`, `device_code`…) is replaced whole: part of a password is still a leak, and one `Cookie` can carry several credentials. A credential *name* (`token`, `access_token`, `jwt`…) is masked to `abc...xyz` — enough to tell which credential, not enough to use, and the same shape `maskToken` (`auth.js`) writes into tool results. Under 12 characters it is redacted instead, because three of eight is most of the secret.
+- **Two treatments, deliberately.** A secret (`authorization`, `cookie`, `password`, `device_code`…) is replaced whole: part of a password is still a leak, and one `Cookie` can carry several credentials. A credential *name* (`token`, `access_token`, `jwt`, and session ids including `mcp-session-id`) is masked to `abc...xyz` — enough to tell which credential, not enough to use, and the same shape `maskToken` (`auth.js`) writes into tool results. Under 12 characters it is redacted instead, because three of eight is most of the secret. A session id is masked rather than replaced because it is not a credential here: the HTTP transport has no authentication, so knowing one gains nothing that reaching the port does not — and since 6.6.0 this server is stateless and issues none at all, so one in a log arrived from a client.
 - **Credentials also travel inside strings**, so `Token …`/`Bearer …` and sensitive URL query values (`access_token`, `device_code`, `user_code`, `password`…) are scrubbed wherever they appear, including in the message.
 - **A log line must never fail a request.** `serialise()` catches everything — a cycle, a bigint, a getter that throws — and writes `[unserialisable]` rather than propagating. Structures are bounded (`MAX_DEPTH`, `MAX_STRING_LENGTH`) so a `data-import` payload cannot become a megabyte of log.
 - **The file is owner-only**: created `0600`, and an existing one (every log written before this) is tightened once per process through `restrictToOwner`.
@@ -587,14 +587,22 @@ unreachable. That rule is enforced by `mcp-min/__tests__/validate-params.test.js
 derives the tool list by scanning for `resolveAuth` rather than hard-coding names — a
 hand-written list silently stops guarding tools added later.
 
-**A call that can change an instance has to name one.** Step 4 is the only step that names no
-instance at all: it takes whichever entry happens to be first in a file the model has never seen.
-`requireNamedInstance` (`auth.js`) refuses it with `ENV_REQUIRED` (`input`) when the tool is not
-`readOnlyHint` and `.pos` holds more than one environment, and the message lists them — a model
+**A call that is not `readOnlyHint` has to name an instance.** Step 4 is the only step that names
+no instance at all: it takes whichever entry happens to be first in a file the model has never
+seen. `requireNamedInstance` (`auth.js`) refuses it with `ENV_REQUIRED` (`input`) when the tool is
+not `readOnlyHint` and `.pos` holds more than one environment, and the message lists them — a model
 cannot read `.pos`, so a refusal that does not name the choices cannot be acted on. Steps 1 to 3
 all name an instance and are untouched, which is why the guard is here and not `required: env` in
 the schemas: requiring the parameter would reject explicit credentials, `MPKIT_*` and the
 single-environment default alike. One environment is not a guess, so it is allowed.
+
+The rule is stated as `readOnlyHint` rather than as "can change an instance" because that is what
+the code can actually test, and the two are not the same proposition: `readOnlyHint` promises a
+tool changes nothing *locally or* on the instance (`tools.js`), so a tool that only writes a local
+file while reading an instance is also refused. That is deliberate — it is the safe direction, and
+today it costs nothing, since every one of the nineteen tools that call `resolveAuth` does touch an
+instance. A tool that genuinely needs the narrower rule should come with the annotation that says
+so, not with a second reading of this one.
 
 `runTool` derives the policy from the tool's own `annotations.readOnlyHint` and puts it on the
 call context, overriding anything a caller passed: which tools may land on an unnamed instance is

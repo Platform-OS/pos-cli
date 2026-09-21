@@ -3,9 +3,10 @@ id: TASK-37
 title: >-
   MCP: measure what an upstream error body costs in a tool result, then decide
   whether it needs a bound
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-21 12:12'
+updated_date: '2026-09-21 14:56'
 labels:
   - mcp
   - agent-facing
@@ -15,6 +16,9 @@ references:
   - mcp-min/redact.js
   - mcp-min/protocol/server-factory.js
   - lib/apiRequest.js
+modified_files:
+  - mcp-min/tool-error.js
+  - mcp-min/__tests__/tool-envelope.test.js
 priority: low
 ordinal: 74000
 ---
@@ -35,9 +39,66 @@ Found in the branch review of 2026-09-21. Deliberately separated from the confir
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The sizes real platformOS error bodies reach are measured and recorded in this task, covering at least a 4xx from the app_builder API, a 5xx from the instance, and a failure from an intermediary such as a proxy or CDN
-- [ ] #2 A decision on whether an error body needs a bound is recorded, with the measurement as its justification
-- [ ] #3 If a bound is added, it keeps the part of the body that carries the reason for the failure, and a test proves an oversized body is still readable enough for an agent to act on
-- [ ] #4 If a bound is added, it is applied in one place rather than per tool, consistent with how classify already works
-- [ ] #5 If no bound is added, the reasoning is recorded next to classify so the question is not reopened without new evidence
+- [x] #1 The sizes real platformOS error bodies reach are measured and recorded in this task, covering at least a 4xx from the app_builder API, a 5xx from the instance, and a failure from an intermediary such as a proxy or CDN
+- [x] #2 A decision on whether an error body needs a bound is recorded, with the measurement as its justification
+- [x] #3 If a bound is added, it keeps the part of the body that carries the reason for the failure, and a test proves an oversized body is still readable enough for an agent to act on
+- [x] #4 If a bound is added, it is applied in one place rather than per tool, consistent with how classify already works
+- [x] #5 If no bound is added, the reasoning is recorded next to classify so the question is not reopened without new evidence
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Measured against a real platformOS instance (a test instance the user provided), read-only
+requests only.
+
+**What an upstream error body actually is** — the value `classify` copies into `details.body`:
+
+| failure | status | body | shape |
+|---|---|---|---|
+| token rejected | 401 | **27 B** | text — `HTTP Token: Access denied.` |
+| graph over GET | 400 | **10 B** | text — `BadRequest` |
+| app_builder path with no route | 404 | **1,430 B** | HTML — `Aw, Snap!` |
+| release that does not exist | 503 | **2,062 B** | HTML — `Oops (503)` |
+
+**And what the model receives** — the whole serialised result:
+
+| call | whole result | of which body |
+|---|---|---|
+| `constants-list`, valid (a success, for scale) | 999 B | — |
+| `constants-list`, token rejected | 512 B | 27 B |
+| `liquid-exec`, template that does not compile | 914 B | 0 B |
+| `graphql-exec`, syntax error | 738 B | 0 B |
+| `job-status`, release that does not exist | **2,597 B** | **2,062 B** |
+
+Two things the measurement settled that guessing would not have:
+
+1. **Most failures carry no body at all.** GraphQL and Liquid errors come back `200` with the
+   problem in the payload, so the tool reads them and `classify` never sees a `response.body`.
+   The unbounded path is narrower than the task assumed.
+2. **The worst observed result is 2.6 KB**, about 2.6× a small success. Not the problem the task
+   suspected.
+
+**Decision: a ceiling, but only on a body that is not JSON, set at 4,096 — above everything
+measured.** `apiRequest` parses the body as JSON when it can, so `typeof body === 'string'` is
+exactly "the instance or something in front of it sent a page instead". Parsed JSON is never cut:
+it is small, structured, and it is what carries the `file_path` a failed deploy names — truncating
+it would hand the model a string that no longer parses.
+
+The head is kept, not the tail, because that is where the reason is: `<title>Oops (503)</title>`
+sits in the first 200 bytes of both pages measured.
+
+So this changes nothing observable. Re-measured against the instance after the change: every
+number identical, including the 2,597 B worst case. That is deliberate — 2 KB does not justify
+cutting anything, and what does justify the ceiling is the tail a single healthy instance cannot
+show us (a CDN's 502, an application backtrace), where the body is whatever someone else chose to
+send. The reasoning is recorded on `MAX_ERROR_BODY_LENGTH` in `tool-error.js`, beside `classify`.
+
+**Bite check**, sha256-verified restore: reverting `boundedBody` to the raw body fails "a page far
+larger than the ceiling is cut".
+
+Four tests: oversized page is cut and says how much was dropped; what survives still contains the
+reason and the status; a realistic body is untouched; a JSON body is never cut however long.
+
+1348 mcp-min tests pass.
+<!-- SECTION:NOTES:END -->

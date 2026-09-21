@@ -35,10 +35,15 @@ describe('keys whose value is a credential', () => {
 });
 
 describe('keys that name a credential', () => {
-  // A session id names a stream on a transport that has no authentication: knowing one gains
-  // nothing that reaching the port does not, and it is what ties a log line to a session.
-  test.each(['session', 'sessionId', 'Mcp-Session-Id', 'x-session-id'])('%s is masked, so a log can still be followed', (key) => {
-    expect(redact({ [key]: SECRET })).toEqual({ [key]: 'sk-...hij' });
+  // Masked rather than replaced, because a session id is not a credential on this server: the
+  // HTTP transport has no authentication, so knowing one gains nothing that reaching the port
+  // does not. Since 6.6.0 the server is stateless and issues none at all — the pre-SDK session
+  // registry went with those routes — so one reaching the log came from a client.
+  test.each(['session', 'sessionId', 'Mcp-Session-Id', 'x-session-id'])('%s is masked, never printed whole', (key) => {
+    const redacted = redact({ [key]: SECRET });
+
+    expect(redacted[key]).toBe('sk-...hij');
+    expect(redacted[key]).not.toContain('live');
   });
 
   test.each(['token', 'access_token', 'accessToken', 'api_token', 'auth_token', 'MPKIT_TOKEN', 'jwt'])(

@@ -90,6 +90,27 @@ const networkCode = (err, depth = 0) => {
 const UNREACHABLE = new Set(['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN']);
 
 /**
+ * A ceiling on an upstream body that is not JSON, which the model pays for in tokens while it is
+ * already dealing with a failure.
+ *
+ * `apiRequest` parses the body as JSON when it can, so a string here means the instance or
+ * something in front of it answered with a page instead. Measured against a real instance: an
+ * error page is 1,430 bytes (404) to 2,062 bytes (503), and a JSON or plain-text error is 10 to 27
+ * — so nothing observed reaches this, and it exists for the tail we cannot measure from one
+ * instance, such as a CDN's 502 or an application backtrace. Parsed JSON is never cut: it is small
+ * and structured, and it is what carries the file path a failed deploy names.
+ *
+ * The head is kept rather than the tail because that is where the reason is — `<title>Oops
+ * (503)</title>` sits in the first 200 bytes of both pages measured.
+ */
+export const MAX_ERROR_BODY_LENGTH = 4096;
+
+const boundedBody = (body) => {
+  if (typeof body !== 'string' || body.length <= MAX_ERROR_BODY_LENGTH) return body;
+  return `${body.slice(0, MAX_ERROR_BODY_LENGTH)}… (${body.length - MAX_ERROR_BODY_LENGTH} more characters)`;
+};
+
+/**
  * What a thrown error means, when whatever threw it did not say. It lives here rather than with
  * the invoker because it is the same judgement `kindForStatus` is: a tool that needs it must not
  * have to import `run-tool.js`, which is the thing that calls tools.
@@ -102,7 +123,7 @@ export function classify(err) {
 
   const status = err?.statusCode ?? err?.status;
   const code = networkCode(err);
-  const details = status ? { statusCode: status, ...(err?.response?.body !== undefined && { body: err.response.body }) } : undefined;
+  const details = status ? { statusCode: status, ...(err?.response?.body !== undefined && { body: boundedBody(err.response.body) }) } : undefined;
   const message = String(err?.message || err);
 
   if (err?.name === 'RequestError' || (code && UNREACHABLE.has(code))) {

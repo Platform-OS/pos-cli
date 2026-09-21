@@ -15,7 +15,7 @@ import path from 'path';
 import { describe, test, expect } from 'vitest';
 import registry from '../tools.js';
 import { runTool } from '../run-tool.js';
-import { ToolError, ERROR_KINDS } from '../tool-error.js';
+import { ToolError, ERROR_KINDS, MAX_ERROR_BODY_LENGTH } from '../tool-error.js';
 
 const MCP_MIN = path.resolve(import.meta.dirname, '..');
 
@@ -192,6 +192,59 @@ describe('runTool is the only thing that shapes a result', () => {
 
     expect(result).toMatchObject({ ok: false, error: { kind, code: 'A_CODE', message: 'what went wrong' } });
     expect(result.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+/**
+ * What an upstream failure costs the model. Measured against a real instance: a JSON or plain-text
+ * error body is 10–27 bytes, an error page is 1,430 (404) to 2,062 (503), and the whole result of
+ * the worst of those is 2,597 bytes. Nothing observed reaches the ceiling; it is there for the tail
+ * one instance cannot show us, and it must not cost the reason.
+ */
+describe('an upstream error body is bounded, and stays readable', () => {
+  const failing = (body) => ({
+    handler: async () => {
+      throw Object.assign(new Error('Request failed with status 503'), {
+        statusCode: 503,
+        response: { statusCode: 503, body }
+      });
+    }
+  });
+
+  test('a page far larger than the ceiling is cut, and says how much was dropped', async () => {
+    const page = `<!DOCTYPE html><html><head><title>Oops (503)</title></head><body>${'x'.repeat(40000)}</body></html>`;
+
+    const { error } = await runTool(failing(page), {});
+
+    expect(error.details.body.length).toBeLessThan(page.length);
+    expect(error.details.body).toMatch(/… \(\d+ more characters\)$/);
+  });
+
+  test('what it keeps is the head, which is where the reason is', async () => {
+    const page = `<!DOCTYPE html><html><head><title>Oops (503)</title></head><body>${'x'.repeat(40000)}</body></html>`;
+
+    const { error } = await runTool(failing(page), {});
+
+    expect(error.details.body).toContain('Oops (503)');
+    expect(error.details.statusCode).toBe(503);
+  });
+
+  test('a body within the ceiling is untouched, which is every one measured', async () => {
+    const realistic = 'HTTP Token: Access denied.';
+
+    const { error } = await runTool(failing(realistic), {});
+
+    expect(error.details.body).toBe(realistic);
+  });
+
+  // Parsed JSON is small, structured, and carries what a failed deploy names — the file it
+  // objected to. Cutting it would leave the model a string that no longer parses.
+  test('a JSON body is never cut, however long', async () => {
+    const body = { error: 'deploy failed', details: { file_path: 'app/views/pages/index.liquid' }, noise: 'y'.repeat(MAX_ERROR_BODY_LENGTH * 2) };
+
+    const { error } = await runTool(failing(body), {});
+
+    expect(error.details.body).toEqual(body);
   });
 });
 
