@@ -1045,8 +1045,9 @@ A malformed value stops the server at startup. If the port is taken, the server 
 | Endpoint | Status |
 | --- | --- |
 | `POST /mcp` | MCP Streamable HTTP. 2026-07-28, and 2025-era clients served statelessly (`GET` and `DELETE` answer `405`: there is no session to resume). |
-| `GET /health` | Unchanged. |
-| `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` | **Deprecated.** The pre-SDK HTTP API, still served and removed in a future major. Use `/mcp`. |
+| `GET /health` | `{"status":"ok"}`, for checking the listener is up without speaking the protocol. |
+
+The pre-SDK HTTP API — `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` — was removed in 6.6.0. `/mcp` replaces all of it.
 
 Invoking a tool over stdio by naming it as the JSON-RPC method (`{"method":"envs-list"}`) has been **removed**; it was never part of MCP. Use `tools/call`.
 

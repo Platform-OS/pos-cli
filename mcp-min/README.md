@@ -3,7 +3,7 @@ mcp-min: the pos-cli MCP server (stdio + HTTP)
 Purpose
 - Serves platformOS tools over MCP, on stdio (what editors launch) and over HTTP
 - Protocol layer: MCP TypeScript SDK v2 (@modelcontextprotocol/server) — revision 2026-07-28 and the 2025 revisions, from one definition
-- HTTP endpoints: POST /mcp (MCP Streamable HTTP) and GET /health; /, /tools, /call and /call-stream are the deprecated pre-SDK API, removed in a future major
+- HTTP endpoints: POST /mcp (MCP Streamable HTTP) and GET /health; the pre-SDK API (/, /tools, /call, /call-stream) was removed in 6.6.0
 - --no-http serves stdio only and does not read MCP_MIN_*
 
 Run
@@ -15,19 +15,7 @@ Debug mode
 - MCP_MIN_DEBUG=1 pos-cli-mcp (DEBUG=1 works too)
 - Log: stderr and ~/.pos-cli/logs/mcp-min.log (MCP_MIN_LOG_FILE), created owner-only (0600)
 - Every line goes through redact.js: credential headers and passwords are replaced, tokens masked to abc...xyz, and Token/Bearer values and sensitive URL query values scrubbed out of strings
-- Debug logs include: detailed HTTP access logs, request/response tracing, stdio requests/responses, SSE connection status and heartbeats, and tool-level progress
-
-Root configuration (recommended)
-- Server runs at root path (/).
-- Endpoints: GET /health, GET /tools, POST /call, POST /call-stream
-- SSE handshake on GET / (Accept: text/event-stream) emits first event:
-  event: endpoint
-  data: /call-stream
-- This matches clients (like cagent) that connect to base URL and expect an absolute endpoint path.
-
-Client example (cagent)
-- url: http://localhost:5910
-- transport_type: sse
+- Debug logs include: HTTP access logs, request tracing, stdio requests/responses, and tool-level progress
 
 Security
 - The HTTP transport has no authentication: whoever can send it a request can run every enabled tool with the platformOS credentials the server resolves (.pos, MPKIT_*).
@@ -54,7 +42,7 @@ Jobs
 - state: running | completed | failed; completed means the operation finished (failing assertions still count), failed means it did not.
 - wait_ms (≤ 120 s) polls with backoff, reports progress, honours ctx.signal, and returns done:false at the deadline.
 - A deploy is completed only once its assets are in; the phase comes from this process's own record first, then the release record.
-- The six per-operation status tools it replaced were removed in 7.0.0; `tools-config.js` keeps a tombstone for each, so a config naming one warns instead of refusing to start.
+- The six per-operation status tools it replaced were removed in 6.6.0; `tools-config.js` keeps a tombstone for each, so a config naming one warns instead of refusing to start.
 
 Files
 - index.js: start({ selection, http }); starts stdio and HTTP servers with one shared shutdown (importing it starts nothing)
@@ -71,19 +59,14 @@ Files
 - tools-config.js: reads and validates tools.config.json / MCP_TOOLS_CONFIG; the one place its rules live
 - tool-selection.js: resolves profile + options + config into the exposed tools; findTool, the lookup every dispatch path uses
 - stdio-server.js: MCP over stdio (SDK serveStdio) plus the stdin-EOF session rule
-- http-server.js: Express app: /mcp, /health and the deprecated pre-SDK routes
+- http-server.js: Express app: the bind, the Host/Origin check, /mcp and /health
 - http-config.js: reads MCP_MIN_HOST / MCP_MIN_PORT / MCP_MIN_ALLOWED_HOSTS
 - host-validation.js: Host/Origin check applied to every HTTP route
 - jobs/status.js: the job-status tool; jobs/handle.js (the job_id), jobs/auth-for-job.js (which instance), jobs/local-phases.js (uploads this process started), jobs/adapters/* (one per kind)
 - deploy/assets-task.js: the background asset upload — waits for the release to settle, then sends the manifest for it
 - sync/single-file.js: Extracted implementation of sync.singleFile tool
-- sse.js: Server-Sent Events helpers and heartbeat
 - config.js: Centralized DEBUG flag and debugLog helper
 
-SSE framing and heartbeat
-- Each SSE message is framed using optional "event: <name>" and one or more "data: <line>" lines followed by an empty line
-- Heartbeat is sent every 15s as a comment line starting with ':' to keep intermediaries from closing idle connections
-
 Notes
-- ESM package. Keep dependencies minimal (express, body-parser, morgan)
+- ESM package. Keep dependencies minimal (express, and the MCP SDK for the protocol)
 - Designed to be a minimal, self-contained example in a single process

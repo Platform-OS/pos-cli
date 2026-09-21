@@ -1,28 +1,9 @@
 import http from 'http';
 import express from 'express';
-import bodyParser from 'body-parser';
-import { randomUUID } from 'crypto';
-import { findTool } from './tool-selection.js';
-import { rejectionFor } from './validate-params.js';
-import { OPEN_OBJECT_SCHEMA } from './schemas/default.js';
-import { sseHandler, writeSSE } from './sse.js';
-import { DEBUG } from './config.js';
 import { DEFAULT_HOST, DEFAULT_PORT, LOOPBACK_HOSTNAMES } from './http-config.js';
 import hostValidation from './host-validation.js';
 import { createMcpEndpoint } from './protocol/http-endpoint.js';
-import { buildInstructions } from './instructions.js';
-import { runTool } from './run-tool.js';
 import log from './log.js';
-
-// SSE sessions keyed by Mcp-Session-Id. Supports multiple concurrent clients.
-const sseSessions = new Map();
-
-// A session id is the only thing separating one SSE client's stream from another's, so it has to
-// be unguessable (Math.random() is predictable from a few prior samples) and it has to be ours: an
-// id taken from the request lets a caller register its stream over another client's.
-function generateSessionId() {
-  return `mcpmin-${randomUUID()}`;
-}
 
 // Per-server shutdown state, reached by stopHttp(). A WeakMap so a closed server is not kept alive.
 const shutdownState = new WeakMap();
@@ -72,8 +53,6 @@ export default async function startHttp({
   const state = { closing: false, stopped: null, streams: new Set() };
   shutdownState.set(server, state);
 
-  const router = express.Router();
-
   // First, so it covers every response, including rejected and unknown-route ones.
   app.use((req, res, next) => {
     if (state.closing) res.setHeader('Connection', 'close');
@@ -84,8 +63,6 @@ export default async function startHttp({
     });
     next();
   });
-
-  const instructions = buildInstructions(tools);
 
   const trackStream = (res) => {
     state.streams.add(res);
@@ -108,279 +85,15 @@ export default async function startHttp({
     next();
   });
 
-  // After logging, so a rejected request is still logged; before body parsing and every route, so
-  // one is never parsed or dispatched — including routes added later.
+  // After logging, so a rejected request is still logged; before every route, so a request is
+  // never dispatched or its body read — including by routes added later.
   app.use(hostValidation(allowedHostnames));
 
-  // Before the JSON body parser, because the SDK reads the body itself.
   app.all('/mcp', createMcpEndpoint({ tools, trackStream }));
 
-  // Everything below is the deprecated pre-SDK HTTP API (/, /tools, /call, /call-stream),
-  // kept working through 6.x and removed at the next major.
-  app.use(bodyParser.json({ limit: '1mb' }));
-
-  // Root route for basic info and discovery
-  const handleBaseRoot = (req, res) => {
-    const acceptHeader = req.get('accept') || '';
-    const wantsSSE = /text\/event-stream/i.test(acceptHeader) || (typeof req.accepts === 'function' && !!req.accepts(['text/event-stream']));
-    if (wantsSSE) {
-      // SSE handshake on base URL for clients that only know base url + transport=sse
-      const sessionId = generateSessionId();
-      res.set('Mcp-Session-Id', sessionId); // must be set before writeHead in sseHandler
-      sseHandler(req, res);
-      trackStream(res);
-      sseSessions.set(sessionId, res);
-      req.on('close', () => {
-        // Only this stream's entry: a late close must not unregister whatever is under that key.
-        if (sseSessions.get(sessionId) === res) sseSessions.delete(sessionId);
-        log.debug('SSE session closed', { sessionId });
-      });
-      // minimal required event (plain text)
-      const endpointPath = '/call-stream';
-      writeSSE(res, { event: 'endpoint', data: endpointPath });
-      // extended info (optional)
-      const baseUrl = `${req.protocol}://${req.get('host')}`;
-      writeSSE(res, { event: 'endpoint_info', data: JSON.stringify({ base_url: baseUrl, transport: 'sse', path: '/call-stream' }) });
-      return; // keep connection open for client to proceed as designed
-    }
-
-    res.json({
-      name: 'mcp-min',
-      status: 'ok',
-      endpoints: {
-        health: { method: 'GET', path: `/health` },
-        tools: { method: 'GET', path: `/tools` },
-        call: { method: 'POST', path: `/call` },
-        call_stream: { method: 'POST', path: `/call-stream`, transport: 'sse' }
-      }
-    });
-  };
-
-  router.get('/', handleBaseRoot);
-
-  router.get('/health', (req, res) => res.json({ status: 'ok' }));
-
-  router.get('/tools', (req, res) => {
-    const list = [...tools].map(([id, tool]) => ({ id, description: tool.description || '' }));
-    res.json({ tools: list });
-  });
-
-  router.post('/call', async (req, res) => {
-    const body = req.body || {};
-    const tool = body.tool || body.name || body.id;
-    const params = body.params ?? body.input ?? body.data ?? {};
-    if (!tool) return res.status(400).json({ error: 'tool required (expected body.tool/name/id)' });
-    const entry = findTool(tools, tool);
-    if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
-
-    const rejection = rejectionFor(tool, entry, params);
-    if (rejection) {
-      return res
-        .status(rejection.httpStatus)
-        .json({ error: `invalid params: ${rejection.message}`, details: rejection.errors });
-    }
-
-    // Names, not values: `constants-set` carries an instance's API keys under `value`, and
-    // redaction can only cover what it can name.
-    log.debug('HTTP /call', { tool, params: Object.keys(params || {}), rawBodyKeys: Object.keys(body) });
-    // A tool's own failure is that tool's answer, not a server fault: it comes back 200 with
-    // ok:false and the tool's code. This route used to turn one into a 500 with a stringified
-    // error, which lost the code and read as though the server had broken.
-    const result = await runTool(entry, params, { toolName: tool, transport: 'http', debug: DEBUG });
-    log.debug('HTTP /call result', { tool, ok: result.ok, kind: result.error?.kind, error: result.error?.code });
-    res.json({ result });
-  });
-
-  // Streaming call with SSE
-  const callStreamHandler = async (req, res) => {
-    const body = req.body || {};
-
-    // JSON-RPC compatibility path (e.g., cagent initialize, tools/list)
-    if (body && body.jsonrpc === '2.0') {
-      const id = body.id ?? null;
-      const method = body.method;
-      const params = body.params || {};
-
-      // Resolve SSE session for this request (if a prior SSE channel was registered)
-      const reqSessionId = req.headers['mcp-session-id'];
-      const sseRes = reqSessionId ? sseSessions.get(reqSessionId) : null;
-
-      const respond = (payload) => {
-        const responsePayload = { jsonrpc: '2.0', id, ...payload };
-        const protocolVersion = responsePayload.result?.protocolVersion || '2025-06-18';
-        const sessionId = reqSessionId || 'mcpmin-1';
-
-        // If this is a notification (no id), acknowledge with 202
-        if (id == null) {
-          try { res.set('Mcp-Protocol-Version', protocolVersion); } catch {}
-          try { res.set('Mcp-Session-Id', sessionId); } catch {}
-          log.debug('JSON-RPC notify -> 202 Accepted');
-          res.status(202).end();
-          return true;
-        }
-        // For requests with id: emit on associated SSE channel (if present) and return JSON
-        if (sseRes) {
-          log.debug('JSON-RPC respond on SSE channel', { method, id, sessionId });
-          writeSSE(sseRes, { event: 'message', data: JSON.stringify(responsePayload) });
-        }
-        try { res.set('Mcp-Protocol-Version', protocolVersion); } catch {}
-        try { res.set('Mcp-Session-Id', sessionId); } catch {}
-        // Not the payload: for `tools/call` it carries the tool's result re-encoded as a JSON
-        // string, which redaction cannot see into.
-        log.debug('JSON-RPC respond 200 JSON', { method, id, ok: !responsePayload.error, error: responsePayload.error?.code });
-        res.status(200).json(responsePayload);
-        return true;
-      };
-
-      // Methods
-      if (method === 'initialize') {
-        // Deprecated route, but a client on it gets the same guidance as one on /mcp: the rules
-        // are about the tools, which are the same tools, and letting the two answers differ would
-        // be a difference nobody chose. Removed with the rest of these routes at the next major.
-        const result = {
-          protocolVersion: params.protocolVersion || '2025-06-18',
-          capabilities: {
-            roots: { listChanged: true },
-            prompts: {},
-            tools: {}
-          },
-          serverInfo: { name: 'mcp-min', version: '0.1.0' },
-          ...(instructions && { instructions })
-        };
-        respond({ result });
-        return;
-      }
-
-      if (method === 'tools/list') {
-        const list = [...tools].map(([name, tool]) => ({
-          name,
-          description: tool.description || '',
-          inputSchema: tool.inputSchema || OPEN_OBJECT_SCHEMA,
-          ...(tool.annotations && { annotations: tool.annotations })
-        }));
-        respond({ result: { tools: list } });
-        return;
-      }
-
-      if (method === 'tools/call') {
-        try {
-          const name = params?.name || params?.tool || params?.id;
-          const args = params?.arguments || params?.params || params?.input || {};
-          if (!name) {
-            respond({ error: { code: -32602, message: 'Invalid params: name required' } });
-            return;
-          }
-          const entry = findTool(tools, name);
-          if (!entry || typeof entry.handler !== 'function') {
-            respond({ error: { code: -32601, message: `Tool not found: ${name}` } });
-            return;
-          }
-          const rejection = rejectionFor(name, entry, args);
-          if (rejection) {
-            respond({
-              error: {
-                code: rejection.jsonRpcCode,
-                message: `Invalid params: ${rejection.message}`,
-                data: { errors: rejection.errors }
-              }
-            });
-            return;
-          }
-          const result = await runTool(entry, args, { toolName: name, transport: 'jsonrpc', debug: DEBUG });
-          // Wrap result as text content for broad client compatibility
-          const text = (() => { try { return JSON.stringify(result); } catch { return String(result); } })();
-          respond({ result: { content: [{ type: 'text', text }] } });
-          return;
-        } catch (e) {
-          respond({ error: { code: -32603, message: `Internal error: ${String(e)}` } });
-          return;
-        }
-      }
-
-      if (method === 'roots/list') {
-        respond({ result: { roots: [] } });
-        return;
-      }
-
-      // Unknown method -> JSON-RPC error
-      const error = { code: -32601, message: `Method not found: ${method}` };
-      respond({ error });
-      return;
-    }
-
-    // Legacy tool streaming path
-    const tool = body.tool || body.name || body.id;
-    const params = body.params ?? body.input ?? body.data ?? {};
-    if (!tool) return res.status(400).json({ error: 'tool required (expected body.tool/name/id)' });
-    const entry = findTool(tools, tool);
-    if (!entry) return res.status(404).json({ error: `tool not found: ${tool}` });
-
-    // Validate before the SSE handshake: once the stream is open the status code is
-    // already sent, so a rejection could only be reported as an in-band error event.
-    const streamRejection = rejectionFor(tool, entry, params);
-    if (streamRejection) {
-      return res
-        .status(streamRejection.httpStatus)
-        .json({ error: `invalid params: ${streamRejection.message}`, details: streamRejection.errors });
-    }
-
-    // Prepare SSE response
-    sseHandler(req, res);
-    trackStream(res);
-
-    // Emit initial endpoint event required by some clients (legacy pattern)
-    try {
-      const baseUrl = `${req.protocol}://${req.get('host')}`;
-      // Plain string first event
-      writeSSE(res, { event: 'endpoint', data: 'call-stream' });
-      // Extended info (optional secondary event)
-      writeSSE(res, { event: 'endpoint_info', data: JSON.stringify({ base_url: baseUrl, transport: 'sse', path: '/call-stream' }) });
-      log.debug('SSE initial endpoint event(s) sent', { endpoint: 'call-stream' });
-    } catch (e) {
-      log.debug('Failed to send initial endpoint event', String(e));
-    }
-
-    let closed = false;
-    req.on('close', () => { closed = true; log.debug('SSE connection closed', { tool }); });
-
-    // Provide a simple writer function to the tool
-    const writer = (event) => {
-      if (closed) return;
-      // `event.data` is a JSON string built by the tool — redaction cannot see into it.
-      log.debug('SSE write', { tool, event: event?.event, bytes: event?.data?.length });
-      writeSSE(res, event);
-    };
-
-    // Call the tool's stream handler if present
-    if (typeof entry.streamHandler === 'function') {
-      try {
-        log.debug('HTTP /call-stream start', { tool, params: Object.keys(params || {}) });
-        entry.streamHandler(params || {}, { transport: 'http', writer, debug: DEBUG })
-          .then(() => {
-            writeSSE(res, { event: 'done', data: '' });
-            res.end();
-            log.debug('HTTP /call-stream done', { tool });
-          })
-          .catch((err) => {
-            writeSSE(res, { event: 'error', data: String(err) });
-            res.end();
-            log.debug('HTTP /call-stream error', { tool, err: String(err) });
-          });
-      } catch (err) {
-        writeSSE(res, { event: 'error', data: String(err) });
-        res.end();
-        log.debug('HTTP /call-stream exception', { tool, err: String(err) });
-      }
-    } else {
-      writeSSE(res, { event: 'error', data: 'tool has no streamHandler' });
-      res.end();
-      log.debug('HTTP /call-stream missing streamHandler', { tool });
-    }
-  };
-
-  router.post('/call-stream', callStreamHandler);
-
-  app.use('/', router);
+  // Not MCP, and not deprecated with the pre-SDK routes that were: it is how a person, a test or a
+  // supervisor asks whether the listener is up without speaking the protocol at all.
+  app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
   // Not app.listen(port, cb): Express 5 hands a listen error to that same callback, which is
   // how a failed bind used to be logged as "listening".

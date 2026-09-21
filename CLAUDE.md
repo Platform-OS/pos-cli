@@ -124,7 +124,7 @@ pos-cli/
 │   │   ├── server-factory.js    # One McpServer definition: tools, schemas, errors, progress, cancellation
 │   │   └── http-endpoint.js     # /mcp: Express ⇄ web-standard bridge for the SDK's HTTP handler
 │   ├── stdio-server.js          # MCP over stdio (for editor integrations)
-│   ├── http-server.js           # HTTP transport: /mcp + the deprecated pre-SDK routes (127.0.0.1:5910)
+│   ├── http-server.js           # HTTP transport: the bind, Host/Origin, /mcp and /health (127.0.0.1:5910)
 │   ├── http-config.js           # MCP_MIN_HOST / MCP_MIN_PORT / MCP_MIN_ALLOWED_HOSTS, fails closed
 │   ├── host-validation.js       # Host/Origin check on every HTTP route (DNS rebinding)
 │   ├── tools.js                 # Tool registry (a Map, client order); reads no configuration
@@ -222,7 +222,7 @@ export { run };
 
 The MCP (Model Context Protocol) server exposes platformOS operations as tools for AI clients. The protocol is spoken by the MCP TypeScript SDK v2 (`@modelcontextprotocol/server`), which serves revision 2026-07-28 and the 2025 revisions from one definition. It runs two transports:
 - **stdio** (`stdio-server.js`): what editors and AI tools launch. `--no-http` makes it the only one.
-- **HTTP** (`http-server.js`) on `127.0.0.1:5910` (env: `MCP_MIN_PORT`, `MCP_MIN_HOST`): MCP Streamable HTTP at `/mcp`, plus the pre-SDK routes (`/`, `/tools`, `/call`, `/call-stream`), which are deprecated and go at the next major.
+- **HTTP** (`http-server.js`) on `127.0.0.1:5910` (env: `MCP_MIN_PORT`, `MCP_MIN_HOST`): MCP Streamable HTTP at `/mcp`, and `GET /health`. The pre-SDK routes (`/`, `/tools`, `/call`, `/call-stream`) were removed in 6.6.0 — with them went `sse.js`, the session registry and the body parser, so the file is now the bind, the Host/Origin check and those two routes.
 
 **The HTTP transport has no authentication** — whoever can reach it runs every enabled tool with this machine's platformOS credentials. Three invariants stand in for auth; keep them when touching `http-server.js` (including the SDK migration):
 - **Loopback bind by default.** `readHttpConfig` (`http-config.js`) defaults `MCP_MIN_HOST` to `127.0.0.1`, and `startHttp` defaults to it too, so a caller passing only a port is still loopback-only. A non-loopback `MCP_MIN_HOST` is an explicit opt-in and logs an unauthenticated-exposure warning on every start.
@@ -231,7 +231,7 @@ The MCP (Model Context Protocol) server exposes platformOS operations as tools f
 
 **Protocol layer.** `createServerFactory` (`protocol/server-factory.js`) builds the one `McpServer` both transports serve from. Keep these when touching it or either transport:
 - **The SDK owns the protocol; this repo owns the tools.** Version negotiation, `server/discover`, the `_meta` envelope, error codes, notifications and cancellation are the SDK's. Tools stay plain modules with a JSON Schema and a handler returning `{ ok, … }`.
-- **What is published is what is enforced.** A tool's `inputSchema` goes out through `fromJsonSchema` with a publish-only validator, byte-identically; arguments are checked in the tool callback by `rejectionFor` (`validate-params.js`), the same function the deprecated HTTP routes use. Tool schemas are enforced as JSON Schema 2020-12 — the dialect MCP 2026-07-28 assigns to a schema published without `$schema`.
+- **What is published is what is enforced.** A tool's `inputSchema` goes out through `fromJsonSchema` with a publish-only validator, byte-identically; arguments are checked in the tool callback by `rejectionFor` (`validate-params.js`). Tool schemas are enforced as JSON Schema 2020-12 — the dialect MCP 2026-07-28 assigns to a schema published without `$schema`.
 - **A tool schema that does not compile stops startup**, naming the tool. The SDK builds `tools/list` from the schemas, so one it cannot use would fail the list for *every* tool; a schema is code, so this is our defect to report at startup, not a per-call error.
 - **Tool failures are tool results, not protocol errors.** Invalid arguments (`INVALID_PARAMS`), a handler returning `{ ok: false }` and a handler that throws (`INTERNAL_ERROR`) all come back as `isError: true` with a JSON body carrying a code — that is what a model can act on. An unknown tool or method stays a protocol error (`-32602` / `-32601`).
 - **Handler context**: `{ transport, debug, log, sendProgress, signal }`. `sendProgress({ progress, total?, message? })` takes one named object — the shape the notification itself has — and throws where the tool wrote it when `progress` is not a finite number, checked whether or not a token was passed. Three positional arguments were read as an object at one call site, which `Math.max` made NaN and JSON wrote as `null`, poisoning the counter for the rest of the call. It only sends when the client passed a progress token, and only ever increases; a call with a token also gets a heartbeat every `HEARTBEAT_MS`. `signal` aborts when the client cancels or goes away — a tool that waits or pages must check it (`cancellation.js`), or it keeps calling the instance for a client that has stopped listening.
@@ -259,7 +259,7 @@ The MCP (Model Context Protocol) server exposes platformOS operations as tools f
 - **`tools.js` is only the registry**: a `Map` of every tool in the order clients see, with no import-time configuration. `full` is computed from it, so a new tool reaches `full` by being registered; it reaches `dev` (`profiles.js`) only when added there on purpose.
 - **One resolution, shared.** `selectTools` (`tool-selection.js`) loads the config through `loadToolsConfig` (`tools-config.js`, the only reader of that file and the only place the enabled/disabled rule lives) and resolves the options. `bin/pos-cli-mcp.js` and `bin/pos-cli-mcp-config.js` both call it, with options defined once (`addToolSelectionOptions`), so `pos-cli mcp-config` prints — and refuses — exactly what the server would.
 - **Transports receive the exposed tools and have no default.** `startStdio({ tools })` and `startHttp({ tools })` throw without a `Map`, so no caller can end up serving every registered tool by leaving it out. The selection is fixed for the process and identical on both transports: MCP forbids `tools/list` varying per connection, and it is always registry order.
-- **Hidden means uncallable.** A tool outside the selection is never registered with the SDK, so `tools/call` over stdio and `/mcp` answers it exactly like a name that matches no tool. The deprecated routes (`POST /call`, `POST /call-stream`, JSON-RPC `tools/call`) look tools up with `findTool`, which only finds exposed tools and never `Object.prototype` names. The HTTP transport has no authentication, so a listed-but-hidden tool that could still be called would make profiles cosmetic.
+- **Hidden means uncallable.** A tool outside the selection is never registered with the SDK, so `tools/call` over stdio and `/mcp` answers it exactly like a name that matches no tool. `findTool` stays the one lookup for a client-supplied name, so an unexposed tool and an `Object.prototype` name are alike unknown. The HTTP transport has no authentication, so a listed-but-hidden tool that could still be called would make profiles cosmetic.
 - **The selection fails closed**: an unknown profile or tool name (Map lookups, so `constructor` is unknown), a name in both options, `--include-tools` naming a config-disabled tool, or an empty result throws `ToolsConfigError` before any transport starts.
 - **A description must not name a tool its built-in profile hides** — the model would go looking for it. `tool-selection.test.js` checks every built-in profile; a tool whose description points at another tool has to be exposed with it. That check covers the whole registry only while every tool name is hyphenated: a single-word name cannot be told from ordinary prose, so one would silently drop out of it.
 - **The server instructions describe the server that was resolved.** `mcp-min/instructions.js` builds the MCP `instructions` string from the exposed `Map`, so a section about a tool disappears with the tool and `--profile`/`--include-tools`/`--exclude-tools` carry it without a second list to maintain. It holds only what no single tool owns — how credentials resolve, what every result looks like, what a relative path is relative to — because it must not restate a tool description that is already sent with every request. It never names a tool this server does not expose, and never a tool of another MCP server: what else a client has registered is not knowable here. `pos-cli mcp-config` prints the string for any selection.
@@ -277,7 +277,7 @@ await start({ selection, http: parsed.http });    // mcp-min/index.js; http: fal
 // mcp-min/index.js — start()
 const shutdown = createShutdown();                                  // shared: stdin EOF stops both transports
 startStdio({ tools: selection.tools, shutdown });                   // MCP over stdio (serveStdio, dual-era)
-await startHttpTransport(httpConfig, selection.tools, shutdown);    // /mcp + deprecated routes
+await startHttpTransport(httpConfig, selection.tools, shutdown);    // /mcp and /health
 
 // mcp-min/protocol/server-factory.js — the definition both transports serve
 server.registerTool(name, { description, inputSchema: fromJsonSchema(tool.inputSchema, PUBLISH_ONLY), annotations },
@@ -545,16 +545,13 @@ auth properties are what use it.
 | Where | What is validated |
 |---|---|
 | `mcp-min/protocol/server-factory.js` — stdio and `/mcp` `tools/call` | tool params vs `inputSchema` → `isError` result, code `INVALID_PARAMS` |
-| `mcp-min/http-server.js` — deprecated `POST /call`, `/call-stream` | same → 400 |
-| `mcp-min/http-server.js` — deprecated JSON-RPC `tools/call` | same → `-32602` |
 | `mcp-min/tools-config.js` | `tools.config.json` vs `tools.config.schema.json`, plus tool names |
 | `lib/server.js` | GUI requests for graph / liquid / logs / logsv2 / sync |
 
-Every MCP dispatch site (the first three rows) routes through `rejectionFor` in
-`mcp-min/validate-params.js`, so one place decides what a rejection becomes: a tool result with
-`isError` on the MCP paths, as the 2026-07-28 tools specification asks — the model reads it and
-can correct itself — and the status codes (400/500, `-32602`/`-32603`) the deprecated routes
-still answer with. Tool schemas are validated in the 2020-12 dialect (`TOOL_SCHEMA_DIALECT`);
+Both MCP dispatch sites route through `rejectionFor` in `mcp-min/validate-params.js`, so one
+place decides what a rejection becomes: a tool result with `isError`, as the 2026-07-28 tools
+specification asks — the model reads it and can correct itself. Tool schemas are validated in the
+2020-12 dialect (`TOOL_SCHEMA_DIALECT`);
 the GUI's own schemas stay draft-07. The GUI server keeps its own
 `rejectInvalid` in `lib/server.js` because it answers with a different body shape; the two
 apply the same 400/500 rule and have to be changed together.

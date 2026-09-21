@@ -20,7 +20,7 @@ const DEV_TOOLS = Object.freeze([
   'unit-tests-run',
   'tests-run-async',
   // The only way to read back anything a starter began; the six per-operation status tools it
-  // replaced are gone (7.0.0).
+  // replaced are gone (6.6.0).
   'job-status'
 ]);
 

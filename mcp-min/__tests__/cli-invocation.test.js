@@ -291,7 +291,7 @@ describe('work in flight when the client leaves', () => {
 
   // Keep-alive is what the drain has to handle: a finished response on a keep-alive
   // connection would otherwise hold the process open for the 5 s keep-alive timeout.
-  test('an HTTP call running when stdin closes gets its response, an open SSE stream is ended, and the server exits', async () => {
+  test('an HTTP call running when stdin closes gets its response, an open stream is ended, and the server exits', async () => {
     const instance = await startSlowInstance();
     const proc = launch({ workDir, args: [MCP_BIN], env: { MCP_MIN_PORT: '0' } });
     const agent = new http.Agent({ keepAlive: true });
@@ -299,28 +299,50 @@ describe('work in flight when the client leaves', () => {
       const url = new URL(await boundUrl(proc));
       await initializeOverStdio(proc);
 
-      const sseClosed = new Promise((resolve, reject) => {
-        http.get({ host: url.hostname, port: url.port, path: '/', headers: { Accept: 'text/event-stream' } }, (res) => {
+      // A subscription stream never ends by itself, so shutdown has to end it.
+      const streamClosed = new Promise((resolve, reject) => {
+        const req = http.request({
+          host: url.hostname, port: url.port, path: '/mcp', method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json, text/event-stream',
+            'MCP-Protocol-Version': '2026-07-28',
+            'Mcp-Method': 'subscriptions/listen'
+          }
+        }, (res) => {
           res.on('data', () => {});
           res.on('close', resolve);
-        }).on('error', reject);
+        });
+        req.on('error', reject);
+        req.end(JSON.stringify({
+          jsonrpc: '2.0',
+          id: 'sub',
+          method: 'subscriptions/listen',
+          params: {
+            notifications: { toolsListChanged: true },
+            _meta: { 'io.modelcontextprotocol/protocolVersion': '2026-07-28', 'io.modelcontextprotocol/clientCapabilities': {} }
+          }
+        }));
       });
 
       const callResponse = new Promise((resolve, reject) => {
-        const req = http.request({ host: url.hostname, port: url.port, path: '/call', method: 'POST', agent, headers: { 'Content-Type': 'application/json' } }, (res) => {
+        const req = http.request({
+          host: url.hostname, port: url.port, path: '/mcp', method: 'POST', agent,
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-06-18' }
+        }, (res) => {
           let body = '';
           res.setEncoding('utf8');
           res.on('data', c => (body += c));
           res.on('end', () => resolve({ status: res.statusCode, body, at: Date.now() }));
         });
         req.on('error', reject);
-        req.end(JSON.stringify({ tool: 'graphql-exec', params: graphCall(0, instance.url).params.arguments }));
+        req.end(JSON.stringify(graphCall(0, instance.url)));
       });
       await instance.requestReceived;
 
       closeStdin(proc);
       await waitFor(proc, p => p.stderr.includes('stdin closed by the MCP client'), 'shutdown to begin');
-      await sseClosed;
+      await streamClosed;
       expect(proc.exit).toBeNull();
 
       instance.release();

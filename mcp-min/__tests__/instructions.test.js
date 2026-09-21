@@ -158,16 +158,4 @@ describe('every client is told the same thing', () => {
     expect(overStdio.result.instructions).toBe(expected());
     expect(http.result.instructions).toBe(overStdio.result.instructions);
   }, 30000);
-
-  // The pre-SDK routes are deprecated and removed at the next major, but while they answer they
-  // answer with the same guidance: the tools are the same tools.
-  test('the deprecated JSON-RPC route carries them too', async () => {
-    const response = await fetch(`${base}/call-stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 'l1', method: 'initialize', params: { protocolVersion: '2025-06-18' } })
-    });
-
-    expect((await response.json()).result.instructions).toBe(expected());
-  }, 30000);
 });

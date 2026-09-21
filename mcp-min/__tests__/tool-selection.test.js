@@ -32,7 +32,7 @@ const refusal = (options, context) => {
 const PROTOTYPE_NAMES = ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'];
 
 // What a bare pos-cli-mcp exposes: 6.5.1's set, plus job-status and deploy-dry-run, minus the six
-// per-operation status tools job-status replaced (removed in 7.0.0).
+// per-operation status tools job-status replaced (removed in 6.6.0).
 const PRE_PROFILES_TOOLS = [
   'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'generators-list', 'generators-help', 'generators-run',
   'migrations-list', 'migrations-generate', 'migrations-run', 'job-status', 'deploy-dry-run', 'deploy-start',

@@ -116,9 +116,8 @@ These exist only over MCP, and are not omissions in the other direction:
   it implements `streamHandler`, the deprecated pre-SDK interface that the SDK dispatch path
   cannot call; it returns a promise that never resolves; and it polls on a `setTimeout` chain with
   no `ctx.signal` check, which is exactly the unbounded handle the shutdown rule in CLAUDE.md
-  forbids. No registered tool has a `streamHandler`, so `POST /call-stream` can only ever answer
-  `tool has no streamHandler` — it is kept alive by a synthetic tool in `http-shutdown.test.js`
-  and goes away with the other deprecated routes at the next major.
+  forbids. No registered tool had a `streamHandler`, so `POST /call-stream` could only ever answer
+  `tool has no streamHandler`; that route went with the rest of the pre-SDK API in 6.6.0.
 - The premise that logsv2 supersedes the logs stack turned out to be **overstated**. The README
   still documents `logsv2` under a roadmap with alerts, error handling and a GUI unbuilt, nothing
   deprecates `pos-cli logs`, and `logsv2 search` did not run. It is an additional capability worth

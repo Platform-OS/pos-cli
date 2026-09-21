@@ -16,20 +16,6 @@ function deferred() {
   return { promise, resolve };
 }
 
-function openStream({ port, method = 'GET', path = '/', body }) {
-  return new Promise((resolve, reject) => {
-    const req = http.request({
-      host: '127.0.0.1', port, path, method,
-      headers: { Accept: 'text/event-stream', ...(body ? { 'Content-Type': 'application/json' } : {}) }
-    }, (res) => {
-      const closed = new Promise(r => res.on('close', r));
-      res.once('data', () => resolve({ res, closed }));
-    });
-    req.on('error', reject);
-    req.end(body ? JSON.stringify(body) : undefined);
-  });
-}
-
 const within = (promise, ms) => Promise.race([promise.then(() => true), new Promise(r => setTimeout(() => r(false), ms))]);
 
 describe('stopHttp', () => {
@@ -57,79 +43,6 @@ describe('stopHttp', () => {
       });
 
       expect(await within(stopHttp(server), 1000)).toBe(true);
-    } finally {
-      agent.destroy();
-    }
-  });
-
-  test('ends the GET / SSE stream, which would otherwise never finish', async () => {
-    const server = await startHttp({ port: 0, tools: defaultTools() });
-    const { closed } = await openStream({ port: server.address().port });
-
-    const stopped = stopHttp(server);
-
-    expect(await within(closed, 1000)).toBe(true);
-    expect(await within(stopped, 1000)).toBe(true);
-  });
-
-  test('ends a POST /call-stream tool stream, which would otherwise never finish', async () => {
-    const tools = toolsWith({
-      'test-endless-stream': {
-        description: 'streams forever',
-        inputSchema: { type: 'object' },
-        streamHandler: () => new Promise(() => {})
-      }
-    });
-    const server = await startHttp({ port: 0, tools });
-    const { closed } = await openStream({
-      port: server.address().port,
-      method: 'POST',
-      path: '/call-stream',
-      body: { tool: 'test-endless-stream', params: {} }
-    });
-
-    const stopped = stopHttp(server);
-
-    expect(await within(closed, 1000)).toBe(true);
-    expect(await within(stopped, 1000)).toBe(true);
-  });
-
-  // Without the drain, the response arrives but the connection then idles for the 5 s
-  // keep-alive timeout, and the process with it.
-  test('a call in flight on a keep-alive connection is answered, then its connection closes promptly', async () => {
-    const release = deferred();
-    const started = deferred();
-    const tools = toolsWith({
-      'test-slow': {
-        description: 'answers when released',
-        inputSchema: { type: 'object' },
-        handler: async () => { started.resolve(); await release.promise; return { answered: 'after stop began' }; }
-      }
-    });
-    const server = await startHttp({ port: 0, tools });
-    const { port } = server.address();
-    const agent = new http.Agent({ keepAlive: true });
-    try {
-      const response = new Promise((resolve, reject) => {
-        const req = http.request({ host: '127.0.0.1', port, path: '/call', method: 'POST', agent, headers: { 'Content-Type': 'application/json' } }, (res) => {
-          let body = '';
-          res.setEncoding('utf8');
-          res.on('data', c => (body += c));
-          res.on('end', () => resolve({ status: res.statusCode, body }));
-        });
-        req.on('error', reject);
-        req.end(JSON.stringify({ tool: 'test-slow', params: {} }));
-      });
-      await started.promise;
-
-      const stopped = stopHttp(server);
-      expect(await within(stopped, 300)).toBe(false);
-
-      release.resolve();
-      const { status, body } = await response;
-      expect(status).toBe(200);
-      expect(JSON.parse(body).result.data.answered).toBe('after stop began');
-      expect(await within(stopped, 1000)).toBe(true);
     } finally {
       agent.destroy();
     }

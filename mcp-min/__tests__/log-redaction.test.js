@@ -98,31 +98,26 @@ describe('the HTTP request logger', () => {
 });
 
 describe('tool parameters', () => {
-  // Redaction covers the names it knows, but a tool's payload is the caller's shape —
-  // `constants-set` puts an instance's API keys under `value` — so the route logs which
-  // parameters arrived, not what was in them.
-  test('are logged by name, with no value of any of them', async () => {
-    const { dir, proc } = session('http-call-params', { DEBUG: '1' });
+  // A tool's payload is the caller's shape — `constants-set` puts an instance's API keys under
+  // `value`, and every authenticating tool takes a `token` — so nothing on the /mcp path logs a
+  // tool's arguments at all. Express never parses that body; the SDK reads it. What is logged is
+  // the outcome, which is what makes DEBUG worth turning on.
+  test('never reach the log, on the one HTTP path there is', async () => {
+    const { dir, proc } = session('mcp-call-params', { DEBUG: '1' });
     try {
       const baseUrl = await boundUrl(proc);
 
-      const response = await post(baseUrl, '/call', {
-        tool: 'envs-list',
-        params: {}
-      });
+      // A tool that takes explicit credentials, pointed at a host that does not exist: the call
+      // fails, and the arguments travelled through the whole dispatch to get there.
+      const response = await post(baseUrl, '/mcp', {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: { name: 'constants-list', arguments: { url: 'https://nowhere.invalid', email: 'someone@example.com', token: PARAM_TOKEN } }
+      }, { 'MCP-Protocol-Version': '2025-06-18', Accept: 'application/json, text/event-stream' });
       expect(response.status).toBe(200);
 
-      // A tool that takes explicit credentials, pointed at a host that does not exist: the call
-      // fails, but only after the params have been logged, which is the point.
-      const withCredentials = await post(baseUrl, '/call', {
-        tool: 'constants-list',
-        params: { url: 'https://nowhere.invalid', email: 'someone@example.com', token: PARAM_TOKEN }
-      });
-      expect([200, 500]).toContain(withCredentials.status);
-
       const logged = everythingLogged(proc, dir);
-      expect(logged).toContain('HTTP /call');
-      expect(logged).toContain('["url","email","token"]');
       expect(logged).not.toContain(PARAM_TOKEN);
       expect(logged).not.toContain('sk-...556');
       expect(logged).not.toContain('someone@example.com');

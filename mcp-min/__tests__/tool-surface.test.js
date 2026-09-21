@@ -45,7 +45,7 @@ const PRE_PROFILES_TOOLS = [
 // Each a deliberate widening of what a bare `pos-cli-mcp` exposes, and the reason the byte count
 // below moves.
 const ADDED_SINCE_PROFILES = ['job-status', 'deploy-dry-run'];
-// The six per-operation status tools job-status replaced, removed in 7.0.0. Listed rather than
+// The six per-operation status tools job-status replaced, removed in 6.6.0. Listed rather than
 // deleted from PRE_PROFILES_TOOLS so this file still records what 6.5.1 shipped and what became
 // of it: an agent on a 6.x server saw these, and a config or a launch flag naming one now has to
 // be answered (tools-config.js keeps a tombstone for each).
@@ -82,7 +82,7 @@ const BARE_TOOLS = [
 // that duplicated `partner-get` (a saving), and `liquid-exec` names `graphql-exec` for queries,
 // since it can run them itself and nothing said which was meant.
 //
-// 17,997 once the six per-operation status tools were removed (7.0.0) — 3,495 bytes, 16% of what
+// 17,997 once the six per-operation status tools were removed (6.6.0) — 3,495 bytes, 16% of what
 // a bare server sent, for tools whose own descriptions told the model not to use them. The cost
 // was never only tokens: two of them answer with less than the truth. `deploy-status` reports the
 // release and ignores the asset phase, and `deploy-wait` returns as soon as the release settles,
@@ -162,17 +162,13 @@ async function listedEverywhere({ proc, baseUrl }) {
   const stdio = (await request(proc, rpc('tools/list'))).result.tools;
   const mcpLegacy = (await mcpPost(baseUrl, rpc('tools/list'))).body.result.tools;
   const mcpModern = (await mcpPost(baseUrl, rpc('tools/list'), { modern: true })).body.result.tools;
-  const jsonRpc = (await httpJson(baseUrl, 'POST', '/call-stream', rpc('tools/list'))).body.result.tools;
-  const rest = (await httpJson(baseUrl, 'GET', '/tools')).body.tools;
-  return { stdio, mcpLegacy, mcpModern, jsonRpc, rest };
+  return { stdio, mcpLegacy, mcpModern };
 }
 
 function expectSameEverywhere(lists, expectedNames) {
   expect(lists.stdio.map(t => t.name)).toEqual(expectedNames);
   expect(lists.mcpLegacy).toEqual(lists.stdio);
   expect(lists.mcpModern).toEqual(lists.stdio);
-  expect(lists.jsonRpc).toEqual(lists.stdio);
-  expect(lists.rest).toEqual(lists.stdio.map(t => ({ id: t.name, description: t.description })));
 }
 
 function mcpConfigJson(args) {
@@ -330,32 +326,6 @@ describe('a tool that is not exposed cannot be called', () => {
       found: response => expect(toolText(response.body.result)).toContain('environments'),
       notFound: (response, name) => sdkNotFound(response.body.error, name)
     },
-    'HTTP POST /call': {
-      call: name => httpJson(baseUrl, 'POST', '/call', { tool: name, params: {} }),
-      found: response => expect(response.body.result.data.environments).toBeDefined(),
-      notFound: (response, name) => expect(response).toEqual({ status: 404, body: { error: `tool not found: ${name}` } })
-    },
-    'HTTP POST /call-stream': {
-      // envs-list has no streamHandler, so a found tool opens the stream and says so in-band.
-      call: name => new Promise((resolve, reject) => {
-        const url = new URL('/call-stream', baseUrl);
-        const req = http.request({ host: url.hostname, port: url.port, path: url.pathname, method: 'POST', headers: { 'Content-Type': 'application/json' } }, (res) => {
-          let text = '';
-          res.setEncoding('utf8');
-          res.on('data', c => (text += c));
-          res.on('end', () => resolve({ status: res.statusCode, text }));
-        });
-        req.on('error', reject);
-        req.end(JSON.stringify({ tool: name, params: {} }));
-      }),
-      found: response => expect(response).toMatchObject({ status: 200, text: expect.stringContaining('tool has no streamHandler') }),
-      notFound: (response, name) => expect(response).toEqual({ status: 404, text: JSON.stringify({ error: `tool not found: ${name}` }) })
-    },
-    'HTTP JSON-RPC tools/call': {
-      call: name => httpJson(baseUrl, 'POST', '/call-stream', rpc('tools/call', { name, arguments: {} })),
-      found: response => expect(response.body.result.content[0].text).toContain('environments'),
-      notFound: (response, name) => expect(response.body.error).toEqual({ code: -32601, message: `Tool not found: ${name}` })
-    }
   };
 
   describe.each(Object.keys(PATHS))('%s', (path) => {

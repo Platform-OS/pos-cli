@@ -97,18 +97,10 @@ const modernMcpHeaders = name => ({ Accept: MCP_ACCEPT, 'MCP-Protocol-Version': 
 // Every route, including the long-lived SSE handshake and a path with no route at all: the
 // check is app-level, so a route added later is covered without anyone remembering to.
 const ROUTES = [
-  { name: 'GET /' },
-  { name: 'GET / (SSE handshake)', headers: { Accept: 'text/event-stream' } },
   { name: 'GET /health', path: '/health' },
-  { name: 'GET /tools', path: '/tools' },
-  { name: 'POST /call', method: 'POST', path: '/call', body: { tool: 'envs-list', params: {} } },
-  {
-    name: 'POST /call-stream (JSON-RPC)',
-    method: 'POST',
-    path: '/call-stream',
-    body: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'envs-list', arguments: {} } }
-  },
-  { name: 'POST /call-stream (legacy stream)', method: 'POST', path: '/call-stream', body: { tool: 'envs-list', params: {} } },
+  // No route at all, and the bare root, which stopped being one when the pre-SDK API went: the
+  // check is app-level, so both are covered by it and neither is covered by a handler.
+  { name: 'GET /' },
   { name: 'GET /no-such-route', path: '/no-such-route' },
   {
     name: 'POST /mcp (2026-07-28)',
@@ -198,19 +190,22 @@ describe('default server', () => {
     expectForbidden(await rawRequest(port, { path: '/health', headers: { Origin: origin } }), message);
   });
 
-  // If the check ran after bodyParser, a malformed body would be answered 400 by the parser
+  // If the check ran after the endpoint, a malformed body would be answered by whatever read it
   // — i.e. the request was read and processed before anyone asked where it came from.
-  test('rejects before the body is parsed', async () => {
+  test('rejects before the body is read', async () => {
+    const malformed = '{"jsonrpc": "2.0", "method": "tools/call", this is not json';
     const res = await rawRequest(port, {
       method: 'POST',
-      path: '/call',
-      headers: { Origin: 'http://evil.example' },
-      body: '{"tool": "data-clean", this is not json'
+      path: '/mcp',
+      headers: { Accept: MCP_ACCEPT, Origin: 'http://evil.example' },
+      body: malformed
     });
     expectForbidden(res, 'Invalid Origin: evil.example');
 
-    const control = await rawRequest(port, { method: 'POST', path: '/call', body: '{"tool": "data-clean", this is not json' });
-    expect(control.status).toBe(400);
+    // The control proves the body would otherwise have been read and objected to.
+    const control = await rawRequest(port, { method: 'POST', path: '/mcp', headers: { Accept: MCP_ACCEPT }, body: malformed });
+    expect(control.status).not.toBe(403);
+    expect(control.body).toMatch(/parse|invalid|-3270/i);
   });
 
   describe('accepts requests addressed to this machine', () => {
@@ -243,22 +238,27 @@ describe('default server', () => {
       expect(res.status).toBe(200);
     });
 
-    test('a POST from a localhost page still has its body parsed and dispatched', async () => {
+    test('a POST from a localhost page still has its body read and dispatched', async () => {
       const res = await rawRequest(port, {
         method: 'POST',
-        path: '/call',
-        headers: { Origin: 'http://localhost:3000' },
-        body: { tool: 'no-such-tool', params: {} }
+        path: '/mcp',
+        headers: { Accept: MCP_ACCEPT, Origin: 'http://localhost:3000' },
+        body: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'no-such-tool', arguments: {} } }
       });
-      expect(res.status).toBe(404);
-      expect(JSON.parse(res.body)).toEqual({ error: 'tool not found: no-such-tool' });
+      expect(res.status).toBe(200);
+      expect(res.body).toContain('no-such-tool');
     });
 
-    test('the SSE handshake still opens for an allowed request', async () => {
-      const res = await rawRequest(port, { headers: { Accept: 'text/event-stream', Origin: 'http://localhost:3000' } });
+    // A 2025-era call is answered as a stream, so the check must not stand in the way of one.
+    test('a streaming response still opens for an allowed request', async () => {
+      const res = await rawRequest(port, {
+        method: 'POST',
+        path: '/mcp',
+        headers: { Accept: MCP_ACCEPT, Origin: 'http://localhost:3000' },
+        body: { jsonrpc: '2.0', id: 1, method: 'tools/list' }
+      });
       expect(res.status).toBe(200);
-      expect(res.streaming).toBe(true);
-      expect(res.body).toContain('event: endpoint');
+      expect(res.body).toContain('event: message');
     });
   });
 
@@ -283,23 +283,6 @@ describe('default server', () => {
       method: 'tools/call',
       params: { name: 'data-clean', arguments: CLEAN.params }
     };
-
-    test.each(REJECTIONS)('POST /call data-clean with $name', async (rejection) => {
-      const res = await rawRequest(port, { ...rejection.request(port), method: 'POST', path: '/call', body: CLEAN });
-
-      // The tool is checked first: that nothing ran is the property, the 403 is how it is reported.
-      expect(handler).not.toHaveBeenCalled();
-      expect(resolveAuth).not.toHaveBeenCalled();
-      expectForbidden(res, rejection.message);
-    });
-
-    test.each(REJECTIONS)('JSON-RPC tools/call data-clean with $name', async (rejection) => {
-      const res = await rawRequest(port, { ...rejection.request(port), method: 'POST', path: '/call-stream', body: CLEAN_RPC });
-
-      expect(handler).not.toHaveBeenCalled();
-      expect(resolveAuth).not.toHaveBeenCalled();
-      expectForbidden(res, rejection.message);
-    });
 
     const CLEAN_MCP = [
       ['2026-07-28', modernMcpHeaders('data-clean'), { ...CLEAN_RPC, params: { ...CLEAN_RPC.params, _meta: MODERN_ENVELOPE } }],
@@ -329,17 +312,6 @@ describe('default server', () => {
       });
     });
 
-    // Without this, the assertions above would pass with spies wired to nothing.
-    test('control: the same request from an allowed origin reaches the handler and resolves credentials', async () => {
-      vi.mocked(resolveAuth).mockRejectedValueOnce(new Error('stopped before any network call'));
-
-      const res = await rawRequest(port, { method: 'POST', path: '/call', headers: { Origin: 'http://localhost:3000' }, body: CLEAN });
-
-      expect(res.status).toBe(200);
-      expect(JSON.parse(res.body).result.ok).toBe(false);
-      expect(handler).toHaveBeenCalledTimes(1);
-      expect(resolveAuth).toHaveBeenCalledTimes(1);
-    });
   });
 });
 
@@ -400,32 +372,3 @@ describe('startHttp', () => {
   });
 });
 
-// The session id separates one client's stream from another's on a port with no authentication:
-// a caller supplying its own could register a stream under any name, or over someone else's.
-describe('SSE session ids are the server\'s to choose', () => {
-  test('a client-supplied Mcp-Session-Id is ignored', async () => {
-    const server = await startHttp({ port: 0, tools: defaultTools() });
-    try {
-      const { port } = server.address();
-      const chosen = 'mcpmin-chosen-by-the-client';
-
-      const assigned = await new Promise((resolve, reject) => {
-        const req = http.request(
-          { host: '127.0.0.1', port, path: '/', method: 'GET', headers: { Accept: 'text/event-stream', 'Mcp-Session-Id': chosen } },
-          (res) => {
-            const id = res.headers['mcp-session-id'];
-            res.destroy();
-            resolve(id);
-          }
-        );
-        req.on('error', reject);
-        req.end();
-      });
-
-      expect(assigned).not.toBe(chosen);
-      expect(assigned).toMatch(/^mcpmin-[0-9a-f-]{36}$/);
-    } finally {
-      await stopHttp(server);
-    }
-  }, 20000);
-});

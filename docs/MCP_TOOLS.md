@@ -47,15 +47,13 @@ A call that fails is a tool result with `isError: true` whose text is a JSON bod
 
 Tools that only read are published with `annotations.readOnlyHint: true`: `envs-list`, `logs-fetch`, `job-status`, `data-validate`, `constants-list`, `generators-list`, `generators-help`, `migrations-list` and the Partner Portal lookups. `data-clean`, `constants-unset`, `deploy-start` and `sync-file` carry `annotations.destructiveHint: true`, because each can delete something on the instance. `deploy-dry-run` states `annotations.destructiveHint: false`, because it sits beside a tool that is destructive and the specification's default for an absent hint is destructive. Everything else carries no annotation, which clients read as "may change things".
 
-**The endpoints used in the examples below — `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` — are deprecated.** They are the pre-SDK HTTP API, still served and removed in a future major; new clients should speak MCP at `/mcp`.
+The per-tool examples below give the `name` and `arguments` of a `tools/call`; put them in the envelope above, or send them over stdio. The pre-SDK HTTP API — `GET /`, `GET /tools`, `POST /call`, `POST /call-stream` — was removed in 6.6.0; `/mcp` replaces all of it, and `GET /health` is unchanged.
 
 `--no-http` starts the server without any HTTP listener (stdio only), which is what `pos-cli ai init` writes into client configurations.
 
 ### Streaming
 
 A `/mcp` request whose `Accept` includes `text/event-stream` is answered as SSE, and that is where a long call's progress notifications arrive: a tool that reports progress (`job-status` while it waits, `deploy-start`, `logs-fetch`) sends `notifications/progress` for the call's progress token, and a call with a token also gets a heartbeat every five seconds so an idle-timeout does not kill it. An MCP client handles this itself; nothing extra is needed to opt in.
-
-The deprecated `POST /call-stream` is the pre-SDK version of the same idea — one SSE stream per call, framed as `event: data` / `event: done` — and goes at the next major along with the other pre-SDK routes.
 
 ## HTTP Transport Security
 
@@ -102,7 +100,7 @@ exposed = (tools of --profile  ∪  --include-tools)  −  --exclude-tools  − 
 | `--include-tools <names>` | Adds tools to the profile — not an allowlist, unlike Gemini CLI's `includeTools`. For an allowlist: `--profile none --include-tools a,b`. |
 | `--exclude-tools <names>` | Removes tools. Excluding a tool the profile does not contain is allowed, so one exclude list works with any profile. |
 
-Names are comma-separated and each option can be repeated. Tools are always listed in the same order, whatever order they are named in. A tool that is not exposed is also not callable: `tools/call`, `POST /call` and `POST /call-stream` answer it as an unknown tool (`-32601` / `404`), exactly like a name that matches no tool.
+Names are comma-separated and each option can be repeated. Tools are always listed in the same order, whatever order they are named in. A tool that is not exposed is also not callable: `tools/call` answers it as an unknown tool (`-32601`), exactly like a name that matches no tool.
 
 The server does not start — it prints one message and exits 1 before either transport opens — for an unknown profile, an unknown tool name in either option (close matches are suggested), a tool named in both, `--include-tools` naming a tool that `tools.config.json` disables, or a selection that leaves no tools.
 
@@ -200,7 +198,7 @@ All tools (except `envs-list` and generator tools) support multiple authenticati
 
 The status of anything `deploy-start`, `data-import`, `data-export`, `data-clean` or `tests-run-async` started. Each of those returns a `job_id` beside its own fields; this reads it back.
 
-The only way to read back anything a starter began. It replaced six per-operation status tools — one each for a deploy, a deploy wait, a data import, export and clean, and an async test run — which were deprecated in 6.6 and removed in 7.0.
+The only way to read back anything a starter began. It replaced six per-operation status tools — one each for a deploy, a deploy wait, a data import, export and clean, and an async test run — which it removed in 6.6.0.
 
 **Tool Name**: `job-status`
 
@@ -251,13 +249,11 @@ The only way to read back anything a starter began. It replaced six per-operatio
 | `CANCELLED` | the client cancelled the call. |
 
 **Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "job-status",
-    "params": { "job_id": "pjob1_…", "wait_ms": 30000 }
-  }'
+```json
+{
+  "name": "job-status",
+  "arguments": { "job_id": "pjob1_…", "wait_ms": 30000 }
+}
 ```
 
 **Use Case**: poll one operation, whatever kind it is, without learning a status tool per kind.
@@ -325,30 +321,30 @@ Fetch recent logs from a platformOS instance in batches. Pagination supported vi
 ```
 
 **Example Usage**:
-```bash
-# Fetch first 100 logs
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "logs-fetch",
-    "params": {
-      "env": "staging",
-      "limit": 100,
-      "lastId": "0"
-    }
-  }'
+Fetch first 100 logs:
 
-# Fetch next batch starting from previous lastId
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "logs-fetch",
-    "params": {
-      "env": "staging",
-      "limit": 100,
-      "lastId": "1002"
-    }
-  }'
+```json
+{
+  "name": "logs-fetch",
+  "arguments": {
+    "env": "staging",
+    "limit": 100,
+    "lastId": "0"
+  }
+}
+```
+
+Fetch next batch starting from previous lastId:
+
+```json
+{
+  "name": "logs-fetch",
+  "arguments": {
+    "env": "staging",
+    "limit": 100,
+    "lastId": "1002"
+  }
+}
 ```
 
 **Use Case**: Retrieve historical logs for debugging and monitoring.
@@ -392,29 +388,29 @@ Execute GraphQL queries and mutations on a platformOS instance.
 ```
 
 **Example Usage**:
-```bash
-# Query users
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "graphql-exec",
-    "params": {
-      "env": "staging",
-      "query": "{ users { id name email } }"
-    }
-  }'
+Query users:
 
-# Mutation with variables
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "graphql-exec",
-    "params": {
-      "env": "staging",
-      "query": "mutation CreateUser($email: String!) { create_user(user: { email: $email }) { id } }",
-      "variables": { "email": "newuser@example.com" }
-    }
-  }'
+```json
+{
+  "name": "graphql-exec",
+  "arguments": {
+    "env": "staging",
+    "query": "{ users { id name email } }"
+  }
+}
+```
+
+Mutation with variables:
+
+```json
+{
+  "name": "graphql-exec",
+  "arguments": {
+    "env": "staging",
+    "query": "mutation CreateUser($email: String!) { create_user(user: { email: $email }) { id } }",
+    "variables": { "email": "newuser@example.com" }
+  }
+}
 ```
 
 **Use Case**: Execute custom GraphQL queries and mutations for data operations.
@@ -462,30 +458,30 @@ Render Liquid templates on a platformOS instance.
 ```
 
 **Example Usage**:
-```bash
-# Simple template
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "liquid-exec",
-    "params": {
-      "env": "staging",
-      "template": "Hello {{ name }}!",
-      "locals": { "name": "Alice" }
-    }
-  }'
+Simple template:
 
-# Template with logic
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "liquid-exec",
-    "params": {
-      "env": "staging",
-      "template": "{% if score >= 50 %}Passed{% else %}Failed{% endif %}",
-      "locals": { "score": 75 }
-    }
-  }'
+```json
+{
+  "name": "liquid-exec",
+  "arguments": {
+    "env": "staging",
+    "template": "Hello {{ name }}!",
+    "locals": { "name": "Alice" }
+  }
+}
+```
+
+Template with logic:
+
+```json
+{
+  "name": "liquid-exec",
+  "arguments": {
+    "env": "staging",
+    "template": "{% if score >= 50 %}Passed{% else %}Failed{% endif %}",
+    "locals": { "score": 75 }
+  }
+}
 ```
 
 **Use Case**: Test Liquid template rendering and behavior.
@@ -524,10 +520,8 @@ List all available yeoman generators in the project.
 ```
 
 **Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{"tool": "generators-list", "params": {}}'
+```json
+{"name": "generators-list", "arguments": {}}
 ```
 
 **Use Case**: Discover available generators before running one.
@@ -560,13 +554,11 @@ Show detailed help for a specific generator.
 ```
 
 **Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "generators-help",
-    "params": { "generatorPath": "modules/core/generators/model" }
-  }'
+```json
+{
+  "name": "generators-help",
+  "arguments": { "generatorPath": "modules/core/generators/model" }
+}
 ```
 
 **Use Case**: Get help on how to use a specific generator.
@@ -610,18 +602,17 @@ Run a yeoman generator with arguments and options.
 ```
 
 **Example Usage**:
-```bash
-# Generate a model
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "generators-run",
-    "params": {
-      "generatorPath": "modules/core/generators/model",
-      "args": ["user"],
-      "options": { "fields": "name,email,phone" }
-    }
-  }'
+Generate a model:
+
+```json
+{
+  "name": "generators-run",
+  "arguments": {
+    "generatorPath": "modules/core/generators/model",
+    "args": ["user"],
+    "options": { "fields": "name,email,phone" }
+  }
+}
 ```
 
 **Use Case**: Generate code scaffolds for models, pages, commands, etc.
@@ -659,13 +650,11 @@ List all migrations deployed to a platformOS instance.
 ```
 
 **Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "migrations-list",
-    "params": { "env": "staging" }
-  }'
+```json
+{
+  "name": "migrations-list",
+  "arguments": { "env": "staging" }
+}
 ```
 
 **Use Case**: Check migration status and history.
@@ -701,16 +690,14 @@ Generate a new migration on the server and write local file.
 ```
 
 **Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "migrations-generate",
-    "params": {
-      "env": "staging",
-      "name": "add_user_fields"
-    }
-  }'
+```json
+{
+  "name": "migrations-generate",
+  "arguments": {
+    "env": "staging",
+    "name": "add_user_fields"
+  }
+}
 ```
 
 **Use Case**: Generate new migrations with auto-generated timestamps.
@@ -747,17 +734,16 @@ Execute a specific migration on the server.
 ```
 
 **Example Usage**:
-```bash
-# By name
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "migrations-run",
-    "params": {
-      "env": "staging",
-      "name": "1674403200_add_user_fields"
-    }
-  }'
+By name:
+
+```json
+{
+  "name": "migrations-run",
+  "arguments": {
+    "env": "staging",
+    "name": "1674403200_add_user_fields"
+  }
+}
 ```
 
 **Use Case**: Execute pending migrations.
@@ -855,22 +841,22 @@ Deploy to a platformOS instance. Creates archive from `app/` and `modules/` dire
 ```
 
 **Example Usage**:
-```bash
-# Full deploy
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "deploy-start",
-    "params": { "env": "staging", "partial": false }
-  }'
+Full deploy:
 
-# Partial deploy (doesn't remove files)
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "deploy-start",
-    "params": { "env": "staging", "partial": true }
-  }'
+```json
+{
+  "name": "deploy-start",
+  "arguments": { "env": "staging", "partial": false }
+}
+```
+
+Partial deploy (doesn't remove files):
+
+```json
+{
+  "name": "deploy-start",
+  "arguments": { "env": "staging", "partial": true }
+}
 ```
 
 **Use Case**: Deploy code to a platformOS instance.
@@ -916,44 +902,45 @@ Start a data import from JSON file, JSON object, or ZIP archive.
 ```
 
 **Example Usage**:
-```bash
-# Import from file
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-import",
-    "params": {
-      "env": "staging",
-      "filePath": "./export.json"
-    }
-  }'
+Import from file:
 
-# Import from JSON object
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-import",
-    "params": {
-      "env": "staging",
-      "jsonData": {
-        "users": [
-          { "external_id": "1", "name": "Alice", "email": "alice@example.com" },
-          { "external_id": "2", "name": "Bob", "email": "bob@example.com" }
-        ]
-      }
-    }
-  }'
+```json
+{
+  "name": "data-import",
+  "arguments": {
+    "env": "staging",
+    "filePath": "./export.json"
+  }
+}
+```
 
-# Import from remote ZIP
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-import",
-    "params": {
-      "env": "staging",
-      "zipFileUrl": "https://example.com/backup.zip"
+Import from JSON object:
+
+```json
+{
+  "name": "data-import",
+  "arguments": {
+    "env": "staging",
+    "jsonData": {
+      "users": [
+        { "external_id": "1", "name": "Alice", "email": "alice@example.com" },
+        { "external_id": "2", "name": "Bob", "email": "bob@example.com" }
+      ]
     }
-  }'
+  }
+}
+```
+
+Import from remote ZIP:
+
+```json
+{
+  "name": "data-import",
+  "arguments": {
+    "env": "staging",
+    "zipFileUrl": "https://example.com/backup.zip"
+  }
+}
 ```
 
 **Use Case**: Bulk import data to a platformOS instance.
@@ -992,29 +979,29 @@ Start a data export from a platformOS instance.
 ```
 
 **Example Usage**:
-```bash
-# Export as JSON
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-export",
-    "params": {
-      "env": "staging",
-      "zip": false
-    }
-  }'
+Export as JSON:
 
-# Export as ZIP with internal IDs
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-export",
-    "params": {
-      "env": "staging",
-      "zip": true,
-      "exportInternalIds": true
-    }
-  }'
+```json
+{
+  "name": "data-export",
+  "arguments": {
+    "env": "staging",
+    "zip": false
+  }
+}
+```
+
+Export as ZIP with internal IDs:
+
+```json
+{
+  "name": "data-export",
+  "arguments": {
+    "env": "staging",
+    "zip": true,
+    "exportInternalIds": true
+  }
+}
 ```
 
 **Use Case**: Backup data from a platformOS instance.
@@ -1069,30 +1056,30 @@ Start a destructive data clean operation. Requires confirmation string.
 ```
 
 **Example Usage**:
-```bash
-# Clean data only
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-clean",
-    "params": {
-      "env": "staging",
-      "confirmation": "CLEAN DATA",
-      "includeSchema": false
-    }
-  }'
+Clean data only:
 
-# Clean data AND schema
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-clean",
-    "params": {
-      "env": "staging",
-      "confirmation": "CLEAN DATA",
-      "includeSchema": true
-    }
-  }'
+```json
+{
+  "name": "data-clean",
+  "arguments": {
+    "env": "staging",
+    "confirmation": "CLEAN DATA",
+    "includeSchema": false
+  }
+}
+```
+
+Clean data AND schema:
+
+```json
+{
+  "name": "data-clean",
+  "arguments": {
+    "env": "staging",
+    "confirmation": "CLEAN DATA",
+    "includeSchema": true
+  }
+}
 ```
 
 **Use Case**: Reset instance for testing or troubleshooting.
@@ -1147,48 +1134,50 @@ Run platformOS tests on an instance.
 ```
 
 **Example Usage**:
-```bash
-# Run all tests
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "unit-tests-run",
-    "params": { "env": "staging" }
-  }'
+Run all tests:
 
-# Run tests in specific path
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "unit-tests-run",
-    "params": {
-      "env": "staging",
-      "path": "tests/users"
-    }
-  }'
+```json
+{
+  "name": "unit-tests-run",
+  "arguments": { "env": "staging" }
+}
+```
 
-# Run specific test by path and name
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "unit-tests-run",
-    "params": {
-      "env": "staging",
-      "path": "tests/users",
-      "name": "create_user_test"
-    }
-  }'
+Run tests in specific path:
 
-# Run test by name only
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "unit-tests-run",
-    "params": {
-      "env": "staging",
-      "name": "create_user_test"
-    }
-  }'
+```json
+{
+  "name": "unit-tests-run",
+  "arguments": {
+    "env": "staging",
+    "path": "tests/users"
+  }
+}
+```
+
+Run specific test by path and name:
+
+```json
+{
+  "name": "unit-tests-run",
+  "arguments": {
+    "env": "staging",
+    "path": "tests/users",
+    "name": "create_user_test"
+  }
+}
+```
+
+Run test by name only:
+
+```json
+{
+  "name": "unit-tests-run",
+  "arguments": {
+    "env": "staging",
+    "name": "create_user_test"
+  }
+}
 ```
 
 **API Endpoint Called**:
@@ -1252,25 +1241,25 @@ Run the platformos-check linter over an app directory and report offences groupe
 **Errors**: `PATH_NOT_FOUND` and `NOT_A_DIRECTORY` for an `appPath` that is not a directory on this machine; `MISSING_DEPENDENCY` if the linter cannot be loaded from the installation.
 
 **Example Usage**:
-```bash
-# Lint the current directory
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "check-run",
-    "params": {}
-  }'
+Lint the current directory:
 
-# Lint a specific app directory and fix what can be fixed
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "check-run",
-    "params": {
-      "appPath": ".",
-      "autoFix": true
-    }
-  }'
+```json
+{
+  "name": "check-run",
+  "arguments": {}
+}
+```
+
+Lint a specific app directory and fix what can be fixed:
+
+```json
+{
+  "name": "check-run",
+  "arguments": {
+    "appPath": ".",
+    "autoFix": true
+  }
+}
 ```
 
 **Use Case**: Find violations before deploying, and fix the mechanical ones. `autoFix` writes to the files it fixes, so the positions in a previous result no longer apply afterwards.
@@ -1338,44 +1327,45 @@ Sync a single file to a platformOS instance (upload or delete).
 ```
 
 **Example Usage**:
-```bash
-# Upload a file
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "sync-file",
-    "params": {
-      "env": "staging",
-      "filePath": "app/views/index.html",
-      "op": "upload"
-    }
-  }'
+Upload a file:
 
-# Delete a file (requires confirmation)
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "sync-file",
-    "params": {
-      "env": "staging",
-      "filePath": "app/views/old.html",
-      "op": "delete",
-      "confirmDelete": true
-    }
-  }'
+```json
+{
+  "name": "sync-file",
+  "arguments": {
+    "env": "staging",
+    "filePath": "app/views/index.html",
+    "op": "upload"
+  }
+}
+```
 
-# Dry run upload (simulate without performing)
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "sync-file",
-    "params": {
-      "env": "staging",
-      "filePath": "app/views/index.html",
-      "op": "upload",
-      "dryRun": true
-    }
-  }'
+Delete a file (requires confirmation):
+
+```json
+{
+  "name": "sync-file",
+  "arguments": {
+    "env": "staging",
+    "filePath": "app/views/old.html",
+    "op": "delete",
+    "confirmDelete": true
+  }
+}
+```
+
+Dry run upload (simulate without performing):
+
+```json
+{
+  "name": "sync-file",
+  "arguments": {
+    "env": "staging",
+    "filePath": "app/views/index.html",
+    "op": "upload",
+    "dryRun": true
+  }
+}
 ```
 
 **Use Case**: Sync individual files without full deployment.
@@ -1426,28 +1416,28 @@ Upload a ZIP file containing property uploads (files referenced by upload-type p
 ```
 
 **Example Usage**:
-```bash
-# Upload a ZIP file
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "uploads-push",
-    "params": {
-      "env": "staging",
-      "filePath": "./uploads.zip"
-    }
-  }'
+Upload a ZIP file:
 
-# Upload from seed directory
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "uploads-push",
-    "params": {
-      "env": "production",
-      "filePath": "./seed/images.zip"
-    }
-  }'
+```json
+{
+  "name": "uploads-push",
+  "arguments": {
+    "env": "staging",
+    "filePath": "./uploads.zip"
+  }
+}
+```
+
+Upload from seed directory:
+
+```json
+{
+  "name": "uploads-push",
+  "arguments": {
+    "env": "production",
+    "filePath": "./seed/images.zip"
+  }
+}
 ```
 
 ---
@@ -1518,17 +1508,16 @@ cd seed && zip -r ../uploads.zip photo_images/
 
 Use the `uploads-push` tool to upload the ZIP file:
 
-```bash
-# Using MCP server
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "uploads-push",
-    "params": {
-      "env": "staging",
-      "filePath": "./uploads.zip"
-    }
-  }'
+Using MCP server:
+
+```json
+{
+  "name": "uploads-push",
+  "arguments": {
+    "env": "staging",
+    "filePath": "./uploads.zip"
+  }
+}
 ```
 
 Or using the CLI directly:
@@ -1581,16 +1570,14 @@ After uploading files, import your data records that reference them.
 ```
 
 Import the data:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "data-import",
-    "params": {
-      "env": "staging",
-      "filePath": "./seed/data.json"
-    }
-  }'
+```json
+{
+  "name": "data-import",
+  "arguments": {
+    "env": "staging",
+    "filePath": "./seed/data.json"
+  }
+}
 ```
 
 #### Step 5: Access Uploaded Files
@@ -1648,57 +1635,30 @@ Here's a complete workflow combining all steps:
 set -e
 
 ENV="staging"
-MCP_URL="http://localhost:5910/call"
+
+mcp() {
+  curl -s -X POST http://localhost:5910/mcp \
+    -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' \
+    -H 'MCP-Protocol-Version: 2025-06-18' \
+    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"$1\",\"arguments\":$2}}" \
+    | sed -n 's/^data: //p' | jq -r '.result.content[0].text'
+}
 
 echo "=== Step 1: Push uploads ==="
-curl -s -X POST $MCP_URL \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"tool\": \"uploads-push\",
-    \"params\": {
-      \"env\": \"$ENV\",
-      \"filePath\": \"./uploads.zip\"
-    }
-  }" | jq .
+mcp uploads-push "{\"env\": \"$ENV\", \"filePath\": \"./uploads.zip\"}" | jq .
 
 echo ""
 echo "=== Step 2: Import data ==="
-IMPORT_RESULT=$(curl -s -X POST $MCP_URL \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"tool\": \"data-import\",
-    \"params\": {
-      \"env\": \"$ENV\",
-      \"filePath\": \"./seed/data.json\"
-    }
-  }")
-
-echo "$IMPORT_RESULT" | jq .
-JOB_ID=$(echo "$IMPORT_RESULT" | jq -r '.data.id')
+IMPORT=$(mcp data-import "{\"env\": \"$ENV\", \"filePath\": \"./seed/data.json\"}")
+echo "$IMPORT" | jq .
+JOB_ID=$(echo "$IMPORT" | jq -r '.data.job_id')
 
 echo ""
 echo "=== Step 3: Wait for import ==="
-while true; do
-  STATUS=$(curl -s -X POST $MCP_URL \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"tool\": \"data-import-status\",
-      \"params\": {
-        \"env\": \"$ENV\",
-        \"jobId\": \"$JOB_ID\"
-      }
-    }")
-
-  STATE=$(echo "$STATUS" | jq -r '.data.status')
-  echo "Status: $STATE"
-
-  if [ "$STATE" = "done" ] || [ "$STATE" = "failed" ]; then
-    echo "$STATUS" | jq .
-    break
-  fi
-
-  sleep 2
-done
+# job-status waits for up to wait_ms rather than being polled in a loop; a job longer than the
+# 120 s bound is a few of these calls, each returning the state it had reached.
+mcp job-status "{\"job_id\": \"$JOB_ID\", \"wait_ms\": 120000}" | jq .
 
 echo ""
 echo "=== Done! ==="
@@ -1752,13 +1712,11 @@ List all constants configured on a platformOS instance.
 ```
 
 **Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "constants-list",
-    "params": { "env": "staging" }
-  }'
+```json
+{
+  "name": "constants-list",
+  "arguments": { "env": "staging" }
+}
 ```
 
 ---
@@ -1790,30 +1748,30 @@ Set a constant on a platformOS instance. Creates or updates the constant.
 ```
 
 **Example Usage**:
-```bash
-# Set a new constant
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "constants-set",
-    "params": {
-      "env": "staging",
-      "name": "API_KEY",
-      "value": "sk-1234567890"
-    }
-  }'
+Set a new constant:
 
-# Update an existing constant
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "constants-set",
-    "params": {
-      "env": "production",
-      "name": "STRIPE_KEY",
-      "value": "pk_live_xxxxx"
-    }
-  }'
+```json
+{
+  "name": "constants-set",
+  "arguments": {
+    "env": "staging",
+    "name": "API_KEY",
+    "value": "sk-1234567890"
+  }
+}
+```
+
+Update an existing constant:
+
+```json
+{
+  "name": "constants-set",
+  "arguments": {
+    "env": "production",
+    "name": "STRIPE_KEY",
+    "value": "pk_live_xxxxx"
+  }
+}
 ```
 
 ---
@@ -1844,16 +1802,14 @@ Delete a constant from a platformOS instance.
 ```
 
 **Example Usage**:
-```bash
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "constants-unset",
-    "params": {
-      "env": "staging",
-      "name": "DEPRECATED_KEY"
-    }
-  }'
+```json
+{
+  "name": "constants-unset",
+  "arguments": {
+    "env": "staging",
+    "name": "DEPRECATED_KEY"
+  }
+}
 ```
 
 **Note**: If the constant doesn't exist, the response will have `deleted: false`.
@@ -1929,12 +1885,8 @@ tool did not do what was asked.
 Every long-running operation follows the same pattern, whatever it started.
 
 **1. Start it**:
-```javascript
-POST /call
-{
-  "tool": "deploy-start",
-  "params": {"env": "staging"}
-}
+```json
+{ "name": "deploy-start", "arguments": { "env": "staging" } }
 ```
 
 **2. Take the `job_id` from the response**:
@@ -1946,21 +1898,13 @@ POST /call
 ```
 
 **3. Poll it**:
-```javascript
-POST /call
-{
-  "tool": "job-status",
-  "params": {"job_id": "pjob1_…"}
-}
+```json
+{ "name": "job-status", "arguments": { "job_id": "pjob1_…" } }
 ```
 
 **4. Or wait for it**:
-```javascript
-POST /call
-{
-  "tool": "job-status",
-  "params": {"job_id": "pjob1_…", "wait_ms": 60000}
-}
+```json
+{ "name": "job-status", "arguments": { "job_id": "pjob1_…", "wait_ms": 60000 } }
 ```
 
 Poll until `done` is true. `wait_ms` is bounded (120 s maximum); reaching the deadline returns the current state with `done: false`, so a long job is a few waits rather than one call that never ends.
@@ -1969,74 +1913,49 @@ Poll until `done` is true. `wait_ms` is bounded (120 s maximum); reaching the de
 
 ## Workflow Examples
 
+Every example below uses this helper:
+
+```bash
+# One helper for every call below. /mcp answers a 2025-era request as a single SSE message whose
+# result carries the tool's JSON as text, so the reply is unwrapped once here rather than inline.
+mcp() {
+  curl -s -X POST http://localhost:5910/mcp \
+    -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' \
+    -H 'MCP-Protocol-Version: 2025-06-18' \
+    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"$1\",\"arguments\":$2}}" \
+    | sed -n 's/^data: //p' | jq -r '.result.content[0].text'
+}
+```
+
 ### Complete Deployment Workflow
 
 ```bash
-# 1. Start deployment
-JOB_ID=$(curl -s -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "deploy-start",
-    "params": {"env": "staging"}
-  }' | jq -r '.data.job_id')
+JOB_ID=$(mcp deploy-start '{"env": "staging"}' | jq -r '.data.job_id')
 
-# 2. Wait for completion — including its assets
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"tool\": \"job-status\",
-    \"params\": {
-      \"job_id\": \"$JOB_ID\",
-      \"wait_ms\": 120000
-    }
-  }"
+# Waits for the release and its assets both to be in.
+mcp job-status "{\"job_id\": \"$JOB_ID\", \"wait_ms\": 120000}" | jq .
 ```
 
 ### Data Migration Workflow
 
 ```bash
-# 1. Export data from production
-EXPORT_ID=$(curl -s -X POST http://localhost:5910/call \
-  -d '{
-    "tool": "data-export",
-    "params": {"env": "production", "zip": true}
-  }' | jq -r '.data.id')
+# 1. Export from production, and wait for the export to be written
+EXPORT_JOB=$(mcp data-export '{"env": "production", "zip": true}' | jq -r '.data.job_id')
+ZIP_URL=$(mcp job-status "{\"job_id\": \"$EXPORT_JOB\", \"wait_ms\": 120000}" | jq -r '.data.result.zipFileUrl')
 
-# 2. Poll export status
-curl -X POST http://localhost:5910/call \
-  -d "{
-    \"tool\": \"data-export-status\",
-    \"params\": {\"env\": \"production\", \"jobId\": \"$EXPORT_ID\", \"isZip\": true}
-  }"
-
-# 3. Get ZIP URL and import to staging
-ZIP_URL=$(curl -s -X POST http://localhost:5910/call \
-  -d "{...}" | jq -r '.data.zipFileUrl')
-
-IMPORT_ID=$(curl -s -X POST http://localhost:5910/call \
-  -d "{
-    \"tool\": \"data-import\",
-    \"params\": {\"env\": \"staging\", \"zipFileUrl\": \"$ZIP_URL\"}
-  }" | jq -r '.data.id')
-
-# 4. Poll import status
-curl -X POST http://localhost:5910/call \
-  -d "{
-    \"tool\": \"data-import-status\",
-    \"params\": {\"env\": \"staging\", \"jobId\": \"$IMPORT_ID\"}
-  }"
+# 2. Import it into staging, and wait for that
+IMPORT_JOB=$(mcp data-import "{\"env\": \"staging\", \"zipFileUrl\": \"$ZIP_URL\"}" | jq -r '.data.job_id')
+mcp job-status "{\"job_id\": \"$IMPORT_JOB\", \"wait_ms\": 120000}" | jq .
 ```
 
 ### Test & Deploy Workflow
 
 ```bash
-# 1. Run tests
-curl -X POST http://localhost:5910/call \
-  -d '{"tool": "unit-tests-run", "params": {"env": "staging"}}'
-
-# 2. If tests pass, deploy
-curl -X POST http://localhost:5910/call \
-  -d '{"tool": "deploy-start", "params": {"env": "staging"}}'
+# 1. Run the tests, and deploy only if none failed
+if [ "$(mcp unit-tests-run '{"env": "staging"}' | jq -r '.data.passed')" = "true" ]; then
+  mcp deploy-start '{"env": "staging"}' | jq .
+fi
 ```
 
 ---
@@ -2070,12 +1989,11 @@ The log file is named on the first line the server writes; `DEBUG=1` does the sa
 pos-cli-mcp </dev/null &
 
 # In another terminal, test a tool
-curl -X POST http://localhost:5910/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "envs-list",
-    "params": {}
-  }'
+curl -s -X POST http://localhost:5910/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'MCP-Protocol-Version: 2025-06-18' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"envs-list","arguments":{}}}'
 ```
 
 ---

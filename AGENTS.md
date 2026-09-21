@@ -111,7 +111,6 @@ pos-cli/
 │   ├── index.js      # Server entry point
 │   ├── stdio-server.js
 │   ├── http-server.js
-│   ├── sse.js        # Server-sent events
 │   └── portal/       # Partner Portal API tools
 ├── test/             # Tests and fixtures
 └── scripts/          # Utility scripts

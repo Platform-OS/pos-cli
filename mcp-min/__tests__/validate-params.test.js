@@ -100,7 +100,7 @@ describe('authentication params stay accepted', () => {
   const authenticatingFiles = authFileList;
 
   // A floor, so the scan cannot pass by finding nothing. Lowered from 20 when the six deprecated
-  // status tools were removed in 7.0.0; five of them authenticated.
+  // status tools were removed in 6.6.0; five of them authenticated.
   test('the scan finds the authenticating tools', () => {
     expect(authenticatingFiles.length).toBeGreaterThanOrEqual(18);
   });

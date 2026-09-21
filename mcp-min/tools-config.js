@@ -20,13 +20,13 @@ const configSchema = JSON.parse(readFileSync(join(here, 'tools.config.schema.jso
 // entry to fail to switch off — and refusing to start would break an upgrade over a line the user
 // could not have known to remove. Warned about and ignored instead.
 export const REMOVED_TOOLS = new Map([
-  ['check', 'removed in 7.0.0; use check-run'],
-  ['deploy-status', 'removed in 7.0.0; use job-status with the job_id deploy-start returned'],
-  ['deploy-wait', 'removed in 7.0.0; use job-status with wait_ms'],
-  ['data-import-status', 'removed in 7.0.0; use job-status with the job_id data-import returned'],
-  ['data-export-status', 'removed in 7.0.0; use job-status with the job_id data-export returned'],
-  ['data-clean-status', 'removed in 7.0.0; use job-status with the job_id data-clean returned'],
-  ['tests-run-async-result', 'removed in 7.0.0; use job-status with the job_id tests-run-async returned']
+  ['check', 'removed in 6.6.0; use check-run'],
+  ['deploy-status', 'removed in 6.6.0; use job-status with the job_id deploy-start returned'],
+  ['deploy-wait', 'removed in 6.6.0; use job-status with wait_ms'],
+  ['data-import-status', 'removed in 6.6.0; use job-status with the job_id data-import returned'],
+  ['data-export-status', 'removed in 6.6.0; use job-status with the job_id data-export returned'],
+  ['data-clean-status', 'removed in 6.6.0; use job-status with the job_id data-clean returned'],
+  ['tests-run-async-result', 'removed in 6.6.0; use job-status with the job_id tests-run-async returned']
 ]);
 
 export function toolsConfigLocation(env) {
