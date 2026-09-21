@@ -77,14 +77,25 @@ function toWebHeaders(nodeHeaders) {
 /**
  * @param {(res: import('express').Response) => void} options.trackStream - registers a response
  *   that only shutdown can end
+ * @param {() => boolean} [options.isClosing] - whether shutdown has begun
+ * @returns {{endpoint: import('express').RequestHandler, close: () => Promise<void>}}
+ *   `close` releases what the SDK still holds. It **aborts in-flight modern exchanges**, so
+ *   `stopHttp` calls it after the drain rather than at the start of one.
  */
-export function createMcpEndpoint({ tools, trackStream }) {
+export function createMcpEndpoint({ tools, trackStream, isClosing = () => false }) {
   const handler = createMcpHandler(createServerFactory(tools, { transport: 'http' }), {
     legacy: 'stateless',
     onerror: err => log.debug('/mcp', { error: err.message })
   });
 
-  return async (req, res) => {
+  const endpoint = async (req, res) => {
+    // A drain answers what is already running and begins nothing new: `server.close()` stops new
+    // connections, but one that was mid-request can still carry another request.
+    if (isClosing()) {
+      res.setHeader('Connection', 'close');
+      return jsonRpcError(res, 503, 'Server is shutting down');
+    }
+
     const declared = Number(req.headers['content-length']);
     if (Number.isFinite(declared) && declared > MCP_BODY_LIMIT_BYTES) {
       res.setHeader('Connection', 'close');
@@ -131,4 +142,6 @@ export function createMcpEndpoint({ tools, trackStream }) {
       if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE') log.debug('/mcp response stream', { error: String(err) });
     });
   };
+
+  return { endpoint, close: () => handler.close() };
 }

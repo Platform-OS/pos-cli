@@ -14,7 +14,10 @@ const shutdownState = new WeakMap();
  * request in flight gets its response, and its connection closes as soon as that response is sent
  * rather than lingering for the keep-alive timeout and holding the process open.
  *
- * Resolves once every connection has closed.
+ * `state.closing` is set first, so `/mcp` refuses a request arriving after this point.
+ *
+ * Resolves once every connection has closed **and** the SDK handler with it. That order matters:
+ * `close()` aborts in-flight exchanges, which is what this drain exists to let finish.
  */
 export function stopHttp(server) {
   const state = shutdownState.get(server);
@@ -22,7 +25,10 @@ export function stopHttp(server) {
   if (state.stopped) return state.stopped;
 
   state.closing = true;
-  state.stopped = new Promise(resolve => server.close(() => resolve()));
+  state.stopped = new Promise(resolve => server.close(() => resolve()))
+    .then(() => state.closeHandler())
+    // The listener is already down; a handler that will not close must not fail the shutdown.
+    .catch(err => log.error('mcp-min: MCP handler did not close cleanly', { error: String(err) }));
   for (const res of state.streams) res.destroy();
   server.closeIdleConnections();
   return state.stopped;
@@ -50,7 +56,7 @@ export default async function startHttp({
   if (!(tools instanceof Map)) throw new TypeError('startHttp: tools must be the Map of exposed tools');
   const app = express();
   const server = http.createServer(app);
-  const state = { closing: false, stopped: null, streams: new Set() };
+  const state = { closing: false, stopped: null, streams: new Set(), closeHandler: () => {} };
   shutdownState.set(server, state);
 
   // First, so it covers every response, including rejected and unknown-route ones.
@@ -89,7 +95,9 @@ export default async function startHttp({
   // never dispatched or its body read — including by routes added later.
   app.use(hostValidation(allowedHostnames));
 
-  app.all('/mcp', createMcpEndpoint({ tools, trackStream }));
+  const mcp = createMcpEndpoint({ tools, trackStream, isClosing: () => state.closing });
+  state.closeHandler = mcp.close;
+  app.all('/mcp', mcp.endpoint);
 
   // Not MCP, and not deprecated with the pre-SDK routes that were: it is how a person, a test or a
   // supervisor asks whether the listener is up without speaking the protocol at all.

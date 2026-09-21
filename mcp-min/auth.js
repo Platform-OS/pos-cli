@@ -13,6 +13,28 @@ export function maskToken(token) {
   return mask(token);
 }
 
+/** The `source` a resolved `.pos` environment carries, and the name inside it. */
+const DOT_POS_SOURCE = /^\.pos\((.+)\)$/;
+
+/**
+ * How a rejected stored token is fixed. Only for a `.pos` credential, the only one the command
+ * rewrites: explicit params came from the caller and `MPKIT_*` is the server's own environment.
+ *
+ * `runBy` is part of the advice — without it an agent holding a shell runs the command itself and
+ * hangs on its password prompt, which is why `refresh-token` is not an MCP tool.
+ *
+ * @returns {{command: string, runBy: string}|undefined}
+ */
+export function refreshTokenRemedy(auth) {
+  const env = DOT_POS_SOURCE.exec(auth?.source ?? '')?.[1];
+  if (!env) return undefined;
+
+  return {
+    command: `pos-cli env refresh-token ${env}`,
+    runBy: 'a person at a terminal: it asks for a password and a second factor'
+  };
+}
+
 /**
  * Resolve authentication from params, falling back through:
  *   1. Explicit params (url + email + token)
@@ -123,8 +145,10 @@ function requireNamedInstance(ctx, names, firstEnv) {
 /**
  * Run an async function with MARKETPLACE_* set from auth, restoring the originals afterwards.
  *
- * Not concurrency-safe: two tool calls that both do this can interfere. Prefer passing auth
- * directly to lib functions where possible.
+ * Not concurrency-safe, and this server is concurrent: the variables are process-wide, so two
+ * overlapping calls restore each other's values. Pass auth to the lib function instead —
+ * `presignUrl`/`presignDirectory` and `lib/assets.js` take it. `sync-file` is the only caller
+ * left and should stay the last.
  */
 export async function runWithAuth(auth, fn) {
   const saved = {

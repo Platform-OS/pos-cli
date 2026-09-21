@@ -3,8 +3,8 @@ import { stateOf, statusOf } from './data.js';
 
 export default {
   kind: 'data-import',
-  // `true` is the `csv_import` query parameter the CLI also passes for a ZIP-sourced import
-  // (bin/pos-cli-data-import.js); data-import always uploads a ZIP, converting JSON itself.
+  // Always true: `data-import` always uploads a ZIP, and without the flag the instance answers a
+  // 503 that is indistinguishable from "no such job" (see `Gateway.dataImportStatus`).
   poll: async ({ gateway }, id) => {
     const response = await statusRequest(() => gateway.dataImportStatus(id, true), { kind: 'data-import', id });
     const status = statusOf(response);

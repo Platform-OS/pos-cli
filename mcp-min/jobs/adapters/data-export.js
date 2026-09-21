@@ -17,6 +17,8 @@ function exported(response, zip) {
 export default {
   kind: 'data-export',
   poll: async ({ gateway }, id, flags = {}) => {
+    // The handle's flag, never a guess: the wrong reader answers a 503 indistinguishable from
+    // "no such job" for an export that finished (see `Gateway.dataExportStatus`).
     const zip = flags.zip === true;
     const response = await statusRequest(() => gateway.dataExportStatus(id, zip), { kind: 'data-export', id });
     const status = statusOf(response);

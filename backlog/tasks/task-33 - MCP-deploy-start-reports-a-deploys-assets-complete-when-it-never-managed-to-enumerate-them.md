@@ -6,7 +6,7 @@ title: >-
 status: Done
 assignee: []
 created_date: '2026-09-21 12:10'
-updated_date: '2026-09-21 12:45'
+updated_date: '2026-09-21 17:19'
 labels:
   - mcp
   - deploy
@@ -99,4 +99,6 @@ finished as soon as its release is in" case still asserts `{ phase: 'none' }`, s
 confused again.
 
 1416 mcp-min tests pass.
+
+**Superseded by TASK-21 (2026-09-21), and not by being undone.** This fix had to live with asset enumeration happening *after* the push: the release was already in, so a failure could not fail the call, and the handle had to be able to say "we never found out" (`flags: {}`) rather than `assets: false`, which `job-status` reads as an asset phase that finished. TASK-21 moved enumeration before the push, because the presign fallback needs the answer to decide what goes into the archive. A failure there now fails a call that has deployed nothing, so there is no state left for a handle to be unsure about and `flags` is always definite. The `hasAssets === undefined` branch and its test are gone; the test was replaced by one asserting the stronger property (an enumeration that cannot be done deploys nothing at all), not deleted.
 <!-- SECTION:NOTES:END -->

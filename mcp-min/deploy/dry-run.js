@@ -21,7 +21,7 @@
 import fs from 'fs';
 import path from 'path';
 import log from '../log.js';
-import { resolveAuth, runWithAuth } from '../auth.js';
+import { resolveAuth } from '../auth.js';
 import { ToolError } from '../tool-error.js';
 import { cancelled, abortableDelay } from '../cancellation.js';
 import files from '../../lib/files.js';
@@ -30,10 +30,7 @@ import { makeArchive } from '../../lib/archive.js';
 import { manifestGenerate } from '../../lib/assets/manifest.js';
 import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
-
-// Its own path: `deploy-start` writes tmp/release.zip, and a dry run run beside a real deploy
-// must not overwrite the archive that deploy is streaming.
-const ARCHIVE_PATH = './tmp/release-dry-run.zip';
+import { makeWorkDir, removeWorkDir } from './work-dir.js';
 
 const ASSET_POLL_MS = 1000;
 // The release report comes back with the upload; only the asset validation is polled. A minute is
@@ -105,32 +102,42 @@ const dryRunDeployTool = {
       throw ToolError.project('NO_DIRECTORIES', `No deployable directories found. Need at least one of: ${dir.ALLOWED.join(', ')}`);
     }
 
-    if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp', { recursive: true });
+    // Its own directory per call: one fixed name was safe against `deploy-start`, which uses a
+    // different one, and not against a second dry run.
+    const workDir = makeWorkDir('dry-run');
+    const archivePath = path.join(workDir, 'release.zip');
 
-    const numberOfFiles = await makeArchive({ TARGET: ARCHIVE_PATH }, { withoutAssets: true });
-    if (!numberOfFiles) {
-      throw ToolError.project('EMPTY_ARCHIVE', 'No files to deploy. Archive would be empty.');
-    }
-
-    if (ctx.signal?.aborted) throw cancelled();
-
-    // Absolute because that path, not the stream, is what gets read: `buildFormData`
-    // (lib/apiRequest.js) sees `.path` on a read stream and reads the file itself. The stream is
-    // therefore never consumed, so `finally` destroys it to close the descriptor, and the `error`
-    // listener is not optional — a read stream without one raises an uncaught exception, which in
-    // a server is the process rather than the call.
-    const archiveStream = fs.createReadStream(path.resolve(ARCHIVE_PATH));
-    archiveStream.on('error', (err) => log.debug('dry-run archive stream error', { error: String(err) }));
+    // Nothing after the push looks at the directory again — the manifest is generated from the
+    // project's own assets — so it goes here, on every path out.
+    let numberOfFiles;
     let pushResponse;
     try {
-      // `dry_run` is set here and nowhere else in this module, and no path omits it.
-      pushResponse = await runWithAuth(auth, () => gateway.push({
-        'marketplace_builder[partial_deploy]': String(partial),
-        'marketplace_builder[dry_run]': 'true',
-        'marketplace_builder[zip_file]': archiveStream
-      }));
+      numberOfFiles = await makeArchive({ TARGET: archivePath }, { withoutAssets: true });
+      if (!numberOfFiles) {
+        throw ToolError.project('EMPTY_ARCHIVE', 'No files to deploy. Archive would be empty.');
+      }
+
+      if (ctx.signal?.aborted) throw cancelled();
+
+      // Absolute because that path, not the stream, is what gets read: `buildFormData`
+      // (lib/apiRequest.js) sees `.path` and reads the file itself. The stream is never consumed,
+      // so it is destroyed to close the descriptor; its `error` listener is not optional, since a
+      // read stream without one raises an uncaught exception — in a server, the process.
+      const archiveStream = fs.createReadStream(path.resolve(archivePath));
+      archiveStream.on('error', (err) => log.debug('dry-run archive stream error', { error: String(err) }));
+      try {
+        // `dry_run` is set here and nowhere else in this module, and no path omits it.
+        pushResponse = await gateway.push({
+          'marketplace_builder[partial_deploy]': String(partial),
+          'marketplace_builder[dry_run]': 'true',
+          'marketplace_builder[zip_file]': archiveStream
+        });
+      } finally {
+        // Before the directory goes: Windows will not remove a file with a handle still open.
+        archiveStream.destroy();
+      }
     } finally {
-      archiveStream.destroy();
+      removeWorkDir(workDir);
     }
 
     const releaseId = pushResponse?.id ?? null;
@@ -150,7 +157,7 @@ const dryRunDeployTool = {
       if (releaseId) {
         ctx.sendProgress?.({ progress: 1, total: 2, message: 'Validating assets' });
         const manifest = await manifestGenerate();
-        await runWithAuth(auth, () => gateway.sendManifest(manifest, releaseId));
+        await gateway.sendManifest(manifest, releaseId);
 
         // The report goes to `byCategory` with the rest of the file report, so it is read the same
         // way; what stays here is the verdict on the asset phase itself.
@@ -171,7 +178,8 @@ const dryRunDeployTool = {
       skipped: { count: sumOver(categories, 'skipped'), files: Object.values(categories).flatMap(c => c.skipped.files) },
       byCategory: categories,
       assets,
-      archive: { path: ARCHIVE_PATH, fileCount: numberOfFiles }
+      // No path: the archive is already removed by here.
+      archive: { fileCount: numberOfFiles }
     };
   }
 };

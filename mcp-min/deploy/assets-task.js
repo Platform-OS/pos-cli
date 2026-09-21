@@ -44,9 +44,14 @@ async function waitForRelease(gateway, releaseId, { pollIntervalMs, timeoutMs, w
   }
 }
 
-/** `now` is paired with `wait`, so a caller that fakes the waiting fakes the clock with it. */
+/**
+ * `now` is paired with `wait`, so a caller that fakes the waiting fakes the clock with it.
+ * `workDir` goes to `deployAssets` for the assets zip and manifest: this upload outlives the call
+ * that asked for it, so a shared path would be packed over while still uploading.
+ */
 export async function deployAssetsForRelease(gateway, releaseId, {
   deployAssets,
+  workDir,
   pollIntervalMs = POLL_INTERVAL_MS,
   timeoutMs = RELEASE_TIMEOUT_MS,
   wait = sleep,
@@ -58,7 +63,7 @@ export async function deployAssetsForRelease(gateway, releaseId, {
     throw new Error("the release failed, so its assets were not uploaded");
   }
   log.debug('release settled, uploading assets', { releaseId });
-  return deployAssets(gateway, { releaseId });
+  return deployAssets(gateway, { releaseId, workDir });
 }
 
 export default deployAssetsForRelease;

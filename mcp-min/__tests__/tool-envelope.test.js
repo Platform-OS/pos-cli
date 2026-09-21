@@ -12,9 +12,10 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import registry from '../tools.js';
 import { runTool } from '../run-tool.js';
+import { resolveAuth } from '../auth.js';
 import { ToolError, ERROR_KINDS, MAX_ERROR_BODY_LENGTH } from '../tool-error.js';
 
 const MCP_MIN = path.resolve(import.meta.dirname, '..');
@@ -271,4 +272,105 @@ describe('every registered tool answers in that shape', () => {
       expect(result.error.message.length).toBeGreaterThan(0);
     }
   }, 20000);
+});
+
+/**
+ * The one failure a tool can name a fix for. An expired stored token answers `kind: auth`, which
+ * an agent cannot act on by itself — `refresh-token` needs a password and a second factor, so it
+ * is not an MCP tool. The command rides in `details`, and is attached to nothing else.
+ */
+describe('a rejected stored credential says how it is fixed', () => {
+  const CONFIG = {
+    staging: { url: 'https://staging.example.com', email: 'a@b.c', token: 'staging-token' },
+    prod: { url: 'https://prod.example.com', email: 'a@b.c', token: 'prod-token' }
+  };
+
+  const unauthorized = () => Object.assign(new Error('Request failed with status 401'), {
+    name: 'StatusCodeError',
+    statusCode: 401,
+    response: { statusCode: 401, body: { error: 'Unauthorized' } }
+  });
+
+  /** Resolves credentials the way all nineteen authenticating tools do, then is refused. */
+  const refused = (fail = unauthorized) => ({
+    annotations: { readOnlyHint: true },
+    handler: async (params, ctx) => {
+      await resolveAuth(params, ctx);
+      throw fail();
+    }
+  });
+
+  const context = (config = CONFIG) => ({
+    files: { getConfig: () => config },
+    settings: { settingsFromDotPos: name => config[name] }
+  });
+
+  beforeEach(() => {
+    // resolveAuth reads MPKIT_* before the .pos fallback; a developer's own .env must not decide
+    // which credential these resolve to.
+    vi.stubEnv('MPKIT_URL', undefined);
+    vi.stubEnv('MPKIT_EMAIL', undefined);
+    vi.stubEnv('MPKIT_TOKEN', undefined);
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  test('the command names the environment that was actually rejected', async () => {
+    const result = await runTool(refused(), { env: 'prod' }, context());
+
+    expect(result.error.kind).toBe('auth');
+    expect(result.error.details.remedy.command).toBe('pos-cli env refresh-token prod');
+  });
+
+  // Without this the obvious next move for an agent holding a shell is to run the command and hang
+  // on the password prompt.
+  test('it says a person has to run it, so the agent does not try', async () => {
+    const result = await runTool(refused(), { env: 'staging' }, context());
+
+    expect(result.error.details.remedy.runBy).toMatch(/person/);
+  });
+
+  test('it joins what the instance said rather than replacing it', async () => {
+    const result = await runTool(refused(), { env: 'staging' }, context());
+
+    expect(result.error.details).toMatchObject({ statusCode: 401, body: { error: 'Unauthorized' } });
+  });
+
+  // Refreshing a .pos entry would not touch a credential the caller passed in.
+  test('credentials the caller supplied are not something refresh-token can fix', async () => {
+    const params = { url: 'https://staging.example.com', email: 'a@b.c', token: 'supplied' };
+
+    const result = await runTool(refused(), params, context());
+
+    expect(result.error.kind).toBe('auth');
+    expect(result.error.details).not.toHaveProperty('remedy');
+  });
+
+  // Nor would it touch the environment this server was started in.
+  test('MPKIT_* credentials are not something refresh-token can fix either', async () => {
+    vi.stubEnv('MPKIT_URL', 'https://staging.example.com');
+    vi.stubEnv('MPKIT_EMAIL', 'a@b.c');
+    vi.stubEnv('MPKIT_TOKEN', 'from-the-environment');
+
+    const result = await runTool(refused(), {}, context());
+
+    expect(result.error.kind).toBe('auth');
+    expect(result.error.details).not.toHaveProperty('remedy');
+  });
+
+  // `auth` covers "there were no credentials" as well, and there is no environment to name there.
+  test('an auth failure with nothing resolved names no command', async () => {
+    const result = await runTool(refused(), {}, context({}));
+
+    expect(result.error).toMatchObject({ kind: 'auth', code: 'AUTH_MISSING' });
+    expect(result.error.details).toBeUndefined();
+  });
+
+  // The advice belongs to a rejected token and to nothing else: a 503 while the Partner Portal is
+  // down is the case `lib/utils/partnerPortal.js` exists to stop answering with it.
+  test.each(Object.keys(ERROR_KINDS).filter(kind => kind !== 'auth'))('a %s failure gains no remedy', async (kind) => {
+    const result = await runTool(refused(() => new ToolError(kind, 'SOMETHING', 'it went wrong')), { env: 'staging' }, context());
+
+    expect(result.error.kind).toBe(kind);
+    expect(result.error.details).toBeUndefined();
+  });
 });

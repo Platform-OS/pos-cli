@@ -12,11 +12,15 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const getAssets = vi.fn();
 const deployAssets = vi.fn();
+const canPresignAssetUpload = vi.fn();
 const makeArchive = vi.fn(async () => 7);
 
 vi.mock('../../lib/files.js', () => ({ default: { getAssets: (...args) => getAssets(...args), getConfig: () => ({}) } }));
 vi.mock('../../lib/archive.js', () => ({ makeArchive: (...args) => makeArchive(...args) }));
-vi.mock('../../lib/assets.js', () => ({ deployAssets: (...args) => deployAssets(...args) }));
+vi.mock('../../lib/assets.js', () => ({
+  deployAssets: (...args) => deployAssets(...args),
+  canPresignAssetUpload: (...args) => canPresignAssetUpload(...args)
+}));
 vi.mock('../../lib/directories.js', () => ({ default: { available: () => ['app'], ALLOWED: ['app'] } }));
 
 const { default: deployStart } = await import('../deploy/start.js');
@@ -24,6 +28,7 @@ const { runTool } = await import('../run-tool.js');
 const { default: jobStatus } = await import('../jobs/status.js');
 const { parse } = await import('../jobs/handle.js');
 const { forgetUploads, uploadPhase } = await import('../jobs/local-phases.js');
+const { DEPLOY_WORK_ROOT } = await import('../deploy/work-dir.js');
 
 const ORIGIN = 'https://staging.example.com';
 const AUTH = { url: `${ORIGIN}/`, email: 'a@b.c', token: 'staging-token' };
@@ -63,6 +68,8 @@ beforeEach(() => {
   makeArchive.mockResolvedValue(7);
   getAssets.mockResolvedValue([]);
   deployAssets.mockResolvedValue({ added: [] });
+  // The common instance: object storage configured, so assets go up on their own.
+  canPresignAssetUpload.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -118,20 +125,24 @@ describe('the job_id deploy-start returns', () => {
     expect(parse(result.data.job_id).job.flags).toEqual({ assets: true });
   });
 
-  // The release is already in, so an enumeration that throws is carried in the answer rather than
-  // failing the call — but it must not be recorded as "there were none". `assets: false` is a
-  // claim, and job-status reads it as an asset phase that finished.
-  test('claims nothing about assets it could not enumerate', async () => {
+  /**
+   * Replaces TASK-33's case. Enumeration used to run after the push, so a failure could not fail
+   * the call and the handle had to carry "we never found out". It now decides what goes into the
+   * archive, so it happens first and there is nothing left for a handle to be unsure about.
+   */
+  test('an enumeration it cannot do fails the call, and deploys nothing', async () => {
     getAssets.mockRejectedValue(new Error('EACCES: app/assets'));
-    const { Gateway } = gatewayWith(['success']);
+    const pushed = vi.fn();
+    class Gateway {
+      push = pushed;
+      async getStatus() { return { status: 'success' }; }
+    }
 
     const started = await runTool(deployStart, AUTH, { Gateway });
-    const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
 
-    expect(started.ok).toBe(true);
-    expect(started.data.assets.error).toMatch(/EACCES/);
-    expect(parse(started.data.job_id).job.flags).toEqual({});
-    expect(status.data.result.assets).toEqual({ phase: 'unknown' });
+    expect(started.ok).toBe(false);
+    expect(started.error.message).toMatch(/EACCES/);
+    expect(pushed).not.toHaveBeenCalled();
   });
 });
 
@@ -159,7 +170,7 @@ describe('the background asset upload', () => {
     await vi.waitFor(() => expect(deployAssets).toHaveBeenCalled(), { timeout: 10000 });
 
     expect(seen).toEqual([4141, 4141, 4141]);
-    expect(deployAssets.mock.calls[0][1]).toEqual({ releaseId: 4141 });
+    expect(deployAssets.mock.calls[0][1]).toMatchObject({ releaseId: 4141 });
 
     // And once it is in, the same job_id reports the deploy as finished.
     await vi.waitFor(async () => {
@@ -193,4 +204,156 @@ describe('the background asset upload', () => {
     expect(status.data).toMatchObject({ state: 'completed', done: true });
     expect(status.data.result.assets).toEqual({ phase: 'none' });
   });
+});
+
+/**
+ * An instance with no object storage answers 501 to a presign. `pos-cli deploy` has always asked
+ * first and sent the assets inside the release; `deploy-start` did not, so on exactly the
+ * instances that need the fallback it uploaded into a presign that could never succeed.
+ */
+describe('an instance that cannot presign a direct upload', () => {
+  beforeEach(() => {
+    getAssets.mockResolvedValue(['app/assets/a.css', 'app/assets/b.js']);
+    canPresignAssetUpload.mockResolvedValue(false);
+  });
+
+  test('puts the assets inside the release archive instead', async () => {
+    const { Gateway } = gatewayWith(['success']);
+
+    await runTool(deployStart, AUTH, { Gateway });
+
+    expect(makeArchive.mock.calls[0][1]).toEqual({ withoutAssets: false });
+    expect(deployAssets).not.toHaveBeenCalled();
+  });
+
+  test('says so, and names the cause', async () => {
+    const { Gateway } = gatewayWith(['success']);
+
+    const result = await runTool(deployStart, AUTH, { Gateway });
+
+    expect(result.data.assets).toMatchObject({ count: 2, status: 'in_release_archive' });
+    expect(result.data.assets.reason).toMatch(/cannot presign/);
+    expect(result.data.archive.assetsIncluded).toBe(true);
+  });
+
+  // There is no second phase to wait for: when the release is in, the assets are in with it.
+  test('is finished as soon as its release is in', async () => {
+    const { Gateway } = gatewayWith(['success']);
+
+    const started = await runTool(deployStart, AUTH, { Gateway });
+    const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
+
+    expect(parse(started.data.job_id).job.flags).toEqual({ assets: false });
+    expect(status.data).toMatchObject({ state: 'completed', done: true });
+  });
+
+  // Two requests to answer a question with only one answer.
+  test('is not asked at all when there is nothing to upload', async () => {
+    getAssets.mockResolvedValue([]);
+    const { Gateway } = gatewayWith(['success']);
+
+    await runTool(deployStart, AUTH, { Gateway });
+
+    expect(canPresignAssetUpload).not.toHaveBeenCalled();
+  });
+
+  // Asked before the archive is built, so a failure to answer costs nothing.
+  test('an unreadable answer fails the call before anything is deployed', async () => {
+    canPresignAssetUpload.mockRejectedValue(Object.assign(new Error('Request failed with status 403'), { statusCode: 403 }));
+    const pushed = vi.fn();
+    class Gateway {
+      push = pushed;
+      async getStatus() { return { status: 'success' }; }
+    }
+
+    const result = await runTool(deployStart, AUTH, { Gateway });
+
+    expect(result.ok).toBe(false);
+    expect(pushed).not.toHaveBeenCalled();
+    expect(makeArchive).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The fixed `tmp/release.zip` and `tmp/assets.zip` are held for as long as an import takes, so a
+ * second deploy in that window repacked them underneath the first.
+ */
+describe('two deploys started close together', () => {
+  const archiveTargets = () => makeArchive.mock.calls.map(([env]) => env.TARGET);
+
+  test('do not write the same release archive', async () => {
+    const { Gateway } = gatewayWith(['success']);
+
+    await Promise.all([runTool(deployStart, AUTH, { Gateway }), runTool(deployStart, AUTH, { Gateway })]);
+
+    const [first, second] = archiveTargets();
+    expect(first).not.toBe(second);
+  });
+
+  test('do not pack assets over each other', async () => {
+    getAssets.mockResolvedValue(['app/assets/a.css']);
+    deployAssets.mockImplementation(() => new Promise(() => {}));
+    const { Gateway } = gatewayWith(['success']);
+
+    await Promise.all([runTool(deployStart, AUTH, { Gateway }), runTool(deployStart, AUTH, { Gateway })]);
+    await vi.waitFor(() => expect(deployAssets).toHaveBeenCalledTimes(2), { timeout: 10000 });
+
+    const [{ workDir: a }, { workDir: b }] = deployAssets.mock.calls.map(([, options]) => options);
+    expect(a).toBeDefined();
+    expect(a).not.toBe(b);
+  }, 30000);
+
+  // Whatever fails before the push has answered has to take the directory away with it.
+  test.each([
+    ['the archive cannot be built', () => makeArchive.mockRejectedValue(new Error('ENOSPC'))],
+    ['the archive is empty', () => makeArchive.mockResolvedValue(0)],
+    ['the instance refuses the push', () => { /* the Gateway below does it */ }]
+  ])('leave nothing behind when %s', async (_label, arrange) => {
+    arrange();
+    class Gateway {
+      async push() { throw Object.assign(new Error('Request failed with status 422'), { statusCode: 422 }); }
+      async getStatus() { return { status: 'success' }; }
+    }
+
+    const result = await runTool(deployStart, AUTH, { Gateway });
+
+    expect(result.ok).toBe(false);
+    const root = path.join(workDir, DEPLOY_WORK_ROOT);
+    expect(fs.existsSync(root) ? fs.readdirSync(root) : []).toEqual([]);
+  });
+
+  // A server that ran for a week would otherwise keep every release zip it ever built.
+  test('leave nothing behind once they are done', async () => {
+    const { Gateway } = gatewayWith(['success']);
+
+    await runTool(deployStart, AUTH, { Gateway });
+
+    const root = path.join(workDir, DEPLOY_WORK_ROOT);
+    expect(fs.existsSync(root) ? fs.readdirSync(root) : []).toEqual([]);
+  });
+});
+
+/**
+ * `runWithAuth` set MARKETPLACE_* process-wide for the length of an import plus an upload, so a
+ * second tool in that window could change or clear what the upload was still reading.
+ */
+describe('a background upload does not export its credentials', () => {
+  test('nothing sets MARKETPLACE_* for the length of the upload', async () => {
+    getAssets.mockResolvedValue(['app/assets/a.css']);
+    let seen;
+    deployAssets.mockImplementation(async () => {
+      seen = {
+        url: process.env.MARKETPLACE_URL,
+        token: process.env.MARKETPLACE_TOKEN,
+        email: process.env.MARKETPLACE_EMAIL
+      };
+      return { added: [] };
+    });
+    const { Gateway } = gatewayWith(['success']);
+
+    await runTool(deployStart, AUTH, { Gateway });
+    await vi.waitFor(() => expect(seen).toBeDefined(), { timeout: 10000 });
+
+    expect(seen).toEqual({ url: undefined, token: undefined, email: undefined });
+  }, 30000);
 });

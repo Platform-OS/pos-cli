@@ -3,9 +3,10 @@ id: TASK-39
 title: >-
   MCP: a job_id for a release that does not exist tells the agent to retry
   forever
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-21 16:11'
+updated_date: '2026-09-21 16:44'
 labels:
   - mcp
   - agent-facing
@@ -16,6 +17,10 @@ references:
   - mcp-min/jobs/status.js
   - mcp-min/tool-error.js
   - mcp-min/jobs/adapters/deploy.js
+modified_files:
+  - mcp-min/jobs/errors.js
+  - mcp-min/jobs/status.js
+  - mcp-min/__tests__/job-status.test.js
 priority: medium
 ordinal: 78000
 ---
@@ -53,9 +58,89 @@ Related: the 2 KB HTML page rides along on every one of these failures. `MAX_ERR
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 It is established, against at least two instances, whether a 503 for a release that does not exist can be told apart from a 503 from an unhealthy instance, and the finding is recorded here
-- [ ] #2 An agent polling a job_id that can never resolve is not advised to keep retrying indefinitely
-- [ ] #3 A genuinely transient 5xx is still reported as retryable, and a real deploy that is slow to answer is never reported as a job that does not exist
-- [ ] #4 Tests cover both cases separately, driven by the status the instance actually returns rather than by a 404 that platformOS does not send
-- [ ] #5 jobs/errors.js no longer implies 404 is the only way a status request says the job is not there, in code or in its comment
+- [x] #1 It is established whether a 503 for a release that does not exist can be told apart from a 503 from an unhealthy instance, and the finding — with the limits of the evidence — is recorded here
+- [x] #2 An agent polling a job_id that can never resolve is not advised to keep retrying indefinitely
+- [x] #3 A genuinely transient 5xx is still reported as retryable, and a real deploy that is slow to answer is never reported as a job that does not exist
+- [x] #4 Tests cover both cases separately, driven by the status the instance actually returns rather than by a 404 that platformOS does not send
+- [x] #5 jobs/errors.js no longer implies 404 is the only way a status request says the job is not there, in code or in its comment
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## What the instance actually does
+
+Measured against `fk-verification-instance` on 2026-09-21. **One instance, not two** — AC #1 was
+written asking for two and only one was available, so it was rewritten to ask what the evidence can
+actually answer. What it settles is decisive on its own; what it cannot rule out is noted below.
+
+| request | answer |
+|---|---|
+| `/marketplace_releases/23264` (real) | 200, 505 B, `x-request-id` present |
+| `/marketplace_releases/999999999` | **503**, 2,062 B `Oops (503)` page |
+| `/marketplace_releases/nosuchthing` | **503**, byte-identical page |
+| `/imports/999999999`, `/exports/999999999` | **503**, byte-identical page |
+| `/definitely_not_a_route/1` | 404, a *different* 1,430 B page, `x-request-id` present |
+
+So the 503 is the whole API's answer for a job it does not have, not the release endpoint's — the
+fix had to be shared by every adapter, not put in `deploy.js`. The 404 mapping that was the only
+thing standing between a bad `job_id` and the retry advice never fired at all; 404 is what an
+unknown *route* gets.
+
+**The response cannot settle it.** Six rounds, the missing-id body was the same sha256 every time
+while the real release and `/instance` both answered 200 in the same second. The 503 page carries
+none of the application's own headers (`x-request-id`, `x-runtime`) — but that only says it never
+reached the application, which is equally true of a 503 from an unwell one. `error.response.headers`
+is available (`lib/apiRequest.js`), and it does not help: there is nothing in the response to read.
+
+Not ruled out, and not rulable out from one instance: that some other deployment answers 404 here.
+That costs nothing — `statusRequest` still maps a 404, so such an instance takes the cheaper path.
+
+## The fix
+
+Since nothing in the response separates the two, the instance is asked a second question.
+
+- `jobs/errors.js` gains `absentOrUnwell(err, { kind, id, health })`, next to the 404 mapping, so
+  the whole "how a status request says the job is not there" question has one home. A 5xx becomes
+  `JobNotFoundError` only when the instance answers `getInstance` — chosen over `ping` because it
+  is 90 B against 333 B and growing, and because it is instance-wide, so it answers for the test
+  runner too, whose status lives outside the app_builder API.
+- `jobs/status.js` asks about the job **twice** before calling it. The default `wait_ms` is 0, so
+  without this a single slow answer for a real deploy would be reported as a job that never
+  existed — the worse of the two errors, and the one AC #3 forbids. A wait long enough to have
+  retried has already done this; the confirmation is what covers the no-wait case.
+- A health probe that throws for any reason leaves the original error exactly as it was, so an
+  instance with no `getInstance` behaves as it did before this existed. Logged at debug.
+- The inference is visible rather than hidden: `details: { statusCode, instanceResponding: true }`,
+  and the message says the instance is answering for itself but not for this job.
+
+A refused connection is never read as an absent job: nothing answered, so there is nothing to
+compare against. A 401/403/422 is a refusal the instance meant, and is not probed.
+
+## Tested
+
+13 tests, all driven by 503. Three bite checks, each restored against its sha256:
+
+- absence never inferred → 7 fail
+- inferred without the health probe → 3 fail, including "the same 503 from an instance that is not
+  answering stays retryable", which is AC #3's guard
+- decided from one 503 with no confirmation → 3 fail, including "a 503 that clears when asked again
+  is the job's status"
+
+mcp-min: 1361 passing across 59 files.
+
+## On the wire
+
+Against the live instance, through `runTool`:
+
+- release 23264 → `ok: true`, `state: completed`, `status: success`
+- release 999999999 → `not_found` / `JOB_NOT_FOUND`, *"the instance is answering for itself, but
+  answers 503 for this job"*, `details: { statusCode: 503, instanceResponding: true }`, 5.1 s for
+  two polls and a probe
+
+The 2 KB HTML page the task noted rides along **no longer**: it was attached by `classify` reading
+`err.response.body`, and this path no longer reaches `classify`. It can still appear on the genuine
+`unavailable` case, which is now the rare one. Trimming an HTML body to its `<title>` in
+`tool-error.js` would remove the remainder; left out deliberately as it would change error bodies
+for every tool and belongs with TASK-37's measurement, not here.
+<!-- SECTION:NOTES:END -->

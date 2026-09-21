@@ -787,7 +787,7 @@ archive a concurrent `deploy-start` is streaming).
       Asset:  { upserted: {...}, deleted: {...}, skipped: {...} }
     },
     assets: { state: "validated", count: 42 },
-    archive: { path: "./tmp/release-dry-run.zip", fileCount: 156 }
+    archive: { fileCount: 156 }
   },
   meta: { ... }
 }
@@ -797,6 +797,10 @@ archive a concurrent `deploy-start` is streaming).
 `data.deleted.count` without walking the report. Each carries `count` and `files` separately
 because the API answers some categories with a count rather than the paths; `count` is right either
 way, and `files` is empty when it was not given them.
+
+Each call writes its archive into a directory of its own under `tmp/pos-cli-mcp-deploy/` and
+removes it when the call is done, so two deploys started close together cannot pack over each
+other. `archive` therefore reports the file count and not a path: there is nothing left to open.
 
 `assets.state` is one of `none` (the project has no assets), `validated` (the manifest was checked,
 and its verdict is the `Asset` category), `failed` (the asset phase rejected it, with `error`),
@@ -819,6 +823,15 @@ Deploy to a platformOS instance. Creates archive from `app/` and `modules/` dire
 - `token` *(string, optional)*: API token
 - `partial` *(boolean, optional, default: false)*: Partial deploy (doesn't remove missing files)
 
+`assets.status` is `deploying_in_background` (the assets are going straight to object storage, and
+`job-status` reports when they land), `in_release_archive` or `skipped`.
+
+**`in_release_archive`** is the fallback `pos-cli deploy` has always had. An instance with no object
+storage configured cannot presign an upload, and answers `501`. Asked before the archive is built,
+because the answer decides what goes into it: the assets travel inside the release instead, there is
+no second phase to wait for, and `job-status` reports the deploy finished when the release is in.
+`assets.reason` says why, and `archive.assetsIncluded` is `true`.
+
 **Response Format**:
 ```javascript
 {
@@ -827,7 +840,7 @@ Deploy to a platformOS instance. Creates archive from `app/` and `modules/` dire
     id: "abc123def456",
     job_id: "...",
     status: "processing",
-    archive: { path: "./tmp/release.zip", fileCount: 156 },
+    archive: { fileCount: 156, assetsIncluded: false },
     assets: { count: 42, status: "deploying_in_background" },
     params: { partial: false }
   },

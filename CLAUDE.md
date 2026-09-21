@@ -252,7 +252,7 @@ The MCP (Model Context Protocol) server exposes platformOS operations as tools f
 **Invocation and lifetime.** MCP clients start `pos-cli-mcp` (or `pos-cli mcp`, a commander executable subcommand that spawns the same bin with stdio inherited) and stop it by closing stdin. Keep these when touching the bins, `stdio-server.js` or `index.js`:
 - **Arguments and the tool selection are settled before any transport starts.** `bin/pos-cli-mcp.js` calls `parseServerArgs` (`cli-args.js`), then `selectTools`, then `start({ selection })` from `mcp-min/index.js` (importing it starts nothing); `--help`/`--version` set `process.exitCode` (not `process.exit()`, which can truncate output on a pipe) and never load the server. Unknown options and positionals are rejected, not ignored: every option decides what an unauthenticated server exposes, so a typo must fail closed. `pos-cli mcp -v` is answered by `pos-cli` itself, with the same package version.
 - **stdin EOF ends the session** when stdin is a client pipe/socket, or when stdio carried at least one message (`stdinEndEndsSession`). `</dev/null`, a file or a TTY with no messages keeps HTTP serving — that is how the HTTP transport runs alone.
-- **Shutdown drains; it does not `process.exit()`.** `createShutdown` (`lifecycle.js`) is shared by both transports: on EOF, stdio stops reading and `stopHttp` (`http-server.js`) stops accepting, destroys SSE streams, and closes each keep-alive connection as soon as its in-flight response finishes (otherwise it idles for the 5 s keep-alive timeout and holds the process). The process then exits by itself, so responses are written and background work a tool started (deploy-start's asset upload) completes. An unref'd deadline (`SHUTDOWN_DEADLINE_MS`, 120 s — covers `waitForUnpack`'s 90 s) forces exit 0 if something never finishes. A transport that finishes starting after shutdown began is stopped at once (`onShutdown` runs late closers immediately).
+- **Shutdown drains; it does not `process.exit()`.** `createShutdown` (`lifecycle.js`) is shared by both transports: on EOF, stdio stops reading and `stopHttp` (`http-server.js`) stops accepting, makes `/mcp` refuse a *new* request (`isClosing`, so a request pipelined onto a busy connection cannot start a tool the drain would then wait for), destroys SSE streams, and closes each keep-alive connection as soon as its in-flight response finishes (otherwise it idles for the 5 s keep-alive timeout and holds the process). The SDK handler's `close()` runs **after** that drain, never at the start of one: it aborts in-flight modern exchanges and closes their per-request servers, which is exactly what this shutdown exists to let finish. The process then exits by itself, so responses are written and background work a tool started (deploy-start's asset upload) completes. An unref'd deadline (`SHUTDOWN_DEADLINE_MS`, 120 s — covers `waitForUnpack`'s 90 s) forces exit 0 if something never finishes. A transport that finishes starting after shutdown began is stopped at once (`onShutdown` runs late closers immediately).
 - A new long-lived handle (interval, stream, socket) in a tool or transport must end when its request does, or it will hold every shutdown until the deadline.
 
 **Tool selection.** Which tools a server exposes is `(tools of --profile ∪ --include-tools) − --exclude-tools − tools disabled in tools.config.json`, resolved once at startup. Keep these when touching tools, profiles, the config or a transport:
@@ -293,7 +293,51 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
 - **The handle is self-contained, and untrusted.** `mint`/`parse` (`jobs/handle.js`) encode the kind, the remote id, the instance origin and a per-kind flag allowlist. It is not a key into a table in this process: MCP clients restart stdio servers while the agent keeps its conversation, and a table would make every restart an "unknown job". Because it travels through the model, `parse` is strict — unknown kind, an id outside `^[A-Za-z0-9_-]{1,128}$`, an origin that is not exactly `new URL(o).origin`, an unexpected field or a flag the kind does not have are all `INVALID_JOB_ID`.
 - **Nothing in a handle chooses credentials or a URL.** `authForJob` (`jobs/auth-for-job.js`) resolves credentials the way every tool does, then *compares* origins: equal → use them; the caller named an instance that does not match → `JOB_INSTANCE_MISMATCH`; nothing named and exactly one `.pos` environment points at the job's instance → use that one; otherwise refuse. The refusal happens before any request, which is what the mismatch tests assert. A forged origin therefore cannot point this machine's token anywhere.
 - **The adapters are the only place a remote status is interpreted.** `state` is `running` | `completed` | `failed`, where `completed` means the operation finished (a test run with failing assertions is `completed`) and `failed` means the operation itself failed. An unrecognised remote status is `running` — the job exists, so "finished" would be a lie — and is logged.
+- **"That job is not here" is inferred, not read.** platformOS answers a status request for a
+  release, import or export id it does not have with **503**, not 404 — the same error page for a
+  nonsense id as for a plausible one, with nothing machine-readable in it, so it cannot be told
+  from a 503 by an instance that is unwell. Left alone, `classify` reads the 5xx as `unavailable`,
+  "the same call may work later", and an agent polls a job that will never exist. `absentOrUnwell`
+  (`jobs/errors.js`) settles it by asking the instance a second question — `getInstance`, which is
+  instance-wide so it answers for the test runner too — and only an instance that answers for
+  itself while refusing one job turns that into `JOB_NOT_FOUND`. `status.js` asks about the job
+  twice first, because the default `wait_ms` is 0 and reporting a deploy that was briefly slow as
+  one that never existed is the worse of the two errors. A probe that fails for any reason leaves
+  the error exactly as it was, and a 503 the instance explains as `partner_portal_unavailable` is
+  never read this way.
 - **A deploy finishes twice.** The release import and the asset upload are reported independently, so `jobs/adapters/deploy.js` combines them, taking the phase from `local-phases.js` first (only the process that started an upload can see it) and then from the release record. `unknown` is a real answer after a restart; reporting `running` forever would be worse. `deploy/assets-task.js` waits for the release to settle before sending the manifest, as `lib/push.js` + `directAssetsUploadStrategy` do — sending one mid-import is untested against the API.
+- **Where the assets travel is decided before the archive is built.** An instance with no object
+  storage configured cannot presign an upload and answers `501` (`isDirectUploadUnavailable`);
+  `pos-cli deploy` has always asked first and sent the assets inside the release archive when the
+  answer is no. `deploy-start` did not, so it archived `withoutAssets` and then uploaded into a
+  presign that could never succeed — on exactly the instances that need the fallback, an MCP deploy
+  could not deploy assets at all. `planAssets` (`deploy/start.js`) asks in the same order the
+  strategy does, and only when there is something to upload. Assets inside the release are not a
+  second phase, so the handle carries `assets: false` and the deploy is finished when the release
+  is in.
+- **Each deploy owns its scratch directory.** `deploy-start` wrote `./tmp/release.zip`,
+  `deploy-dry-run` wrote `./tmp/release-dry-run.zip` and `lib/assets.js` packed `./tmp/assets.zip`,
+  all fixed — safe for a CLI that runs one deploy and exits, and not for a server that answers
+  while the deploy is still running. `makeWorkDir` (`deploy/work-dir.js`) gives each call
+  `tmp/pos-cli-mcp-deploy/<label>-<uuid>/`, under the project's `tmp/` for the reason module
+  staging is, and `removeWorkDir` takes it away when the deploy is done — after the background
+  upload, which packs into it. A result therefore reports `archive.fileCount` and no path.
+- **Credentials travel with the call, not through the environment.** `runWithAuth` sets
+  `MARKETPLACE_*` process-wide and restores them on the way out, and `deploy-start` wrapped its
+  background asset upload in it — so for the length of an import plus a CDN wait, a second tool
+  resolving different credentials changed them under the upload, or cleared them by finishing
+  first. `presignUrl`/`presignDirectory` now take the credentials as an argument (the environment
+  is the fallback, which is what keeps every CLI caller working), `lib/assets.js` passes the
+  Gateway's, and `deploy-start`, `deploy-dry-run`, `uploads-push` and `data-import` no longer call
+  `runWithAuth` at all. `sync-file` is the last caller; nothing else may become one without
+  passing auth down instead.
+- **A job status is read the way the job was made.** `csv_import` / `csv_export` on `/imports/:id`
+  and `/exports/:id` select which reader answers, and the two are exclusive — measured against a
+  live instance on 2026-09-21, an export made with `zip` answers 200 with `?csv_export=true` and
+  **503** without it, and one made without `zip` answers the other way round. That 503 is the same
+  one an id that does not exist gets, so asking the wrong way reports a finished job as a missing
+  one. `data-export` carries the flag in its handle; `data-import` always passes `true` because it
+  always uploads a ZIP.
 - **No tool takes an argument that moves the request.** Eight did (`logs-fetch`, `graphql-exec`, `liquid-exec`, `migrations-list/generate/run` and the two deploy status tools since removed): `endpoint` replaced the URL while the `.pos` token was still sent, so a name a model read somewhere could redirect this machine's credentials. The URL comes from the resolved credentials, full stop. `request-target.test.js` checks every registered tool for a redirecting parameter by name and scans the sources for `params.endpoint`, so a new tool inherits the rule. Calling another instance is the explicit-credentials path (`url` + `email` + `token`), where the caller brings the credential with the host.
 
 #### 4. File Watching Pattern - Sync Mode
@@ -610,6 +654,19 @@ the registry's decision, not a per-call one, and no tool can exempt itself. A to
 covered by declaring what it is. `resolveAuth` called directly — by `lib/` or the CLI — is
 unguarded, since the rule is about MCP tools. `mcp-min/__tests__/env-required.test.js` derives the
 guarded set from the registry and fails if a tool that may change an instance escapes it.
+
+**A rejected stored credential names its own fix.** An expired instance token makes every
+authenticating tool answer `kind: auth`, which an agent cannot act on: `pos-cli env refresh-token`
+asks for a password and a second factor, so it is deliberately not an MCP tool. `runTool` attaches
+`details.remedy` — `{ command, runBy }` — built by `refreshTokenRemedy` (`auth.js`) from the
+resolved `source`. Only for a `.pos(<env>)` source, because that is the only credential the command
+rewrites: explicit `url`/`email`/`token` came from the caller and `MPKIT_*` is the server's own
+environment. Only on `kind: auth`, because telling someone to refresh a working token is the
+mistake `lib/utils/partnerPortal.js` exists to stop making — an instance whose Portal is down
+cannot judge a token at all and answers `503`, not `401`. `runBy` is part of the advice: without it
+an agent holding a shell runs the command itself and hangs on the password prompt. The server
+instructions say a person has to do it; the command with the environment filled in is on the error,
+so neither restates the other.
 
 **The tools config fails closed.** A missing, unreadable or unparseable config falls back to
 defaults (logged as a warning when `MCP_TOOLS_CONFIG` named it, and shown by `pos-cli

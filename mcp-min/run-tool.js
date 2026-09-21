@@ -9,7 +9,7 @@
  *
  * It also owns `meta`, which twenty-seven tools used to build for themselves.
  */
-import { maskToken } from './auth.js';
+import { maskToken, refreshTokenRemedy } from './auth.js';
 import { ToolError, classify } from './tool-error.js';
 
 /**
@@ -20,6 +20,19 @@ import { ToolError, classify } from './tool-error.js';
 const isEnvelope = (data) =>
   data !== null && typeof data === 'object'
   && typeof data.ok === 'boolean' && (Object.hasOwn(data, 'data') || Object.hasOwn(data, 'error'));
+
+/**
+ * The error body, with the remedy attached when there is one to name. `auth` only: an instance
+ * whose Partner Portal is down answers 503 and cannot judge a token at all, and advising a refresh
+ * there costs the caller a working credential (`lib/utils/partnerPortal.js`).
+ */
+const errorBody = (error, auth) => {
+  const body = error.toResult();
+  if (error.kind !== 'auth') return body;
+
+  const remedy = refreshTokenRemedy(auth);
+  return remedy ? { ...body, details: { ...body.details, remedy } } : body;
+};
 
 /**
  * Runs one tool call and builds the result a client receives.
@@ -65,7 +78,7 @@ export async function runTool(tool, params, { toolName, ...ctx } = {}) {
     }
     return { ok: true, data: data ?? null, meta: meta() };
   } catch (err) {
-    return { ok: false, error: classify(err).toResult(), meta: meta() };
+    return { ok: false, error: errorBody(classify(err), call.resolvedAuth), meta: meta() };
   }
 }
 

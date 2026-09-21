@@ -10,7 +10,7 @@ import { authProperties } from '../schemas/auth.js';
 import { recordCheckProperties } from '../schemas/record-checks.js';
 import log from '../log.js';
 import { ToolError } from '../tool-error.js';
-import { resolveAuth, runWithAuth } from '../auth.js';
+import { resolveAuth } from '../auth.js';
 import { mintFor } from '../jobs/handle.js';
 import Gateway from '../../lib/proxy.js';
 import isValidJSON from '../../lib/data/isValidJSON.js';
@@ -68,7 +68,9 @@ const dataImportTool = {
     const GatewayCtor = ctx.Gateway || Gateway;
     const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-    const presignUrlFn = ctx.presignUrl || ((...args) => runWithAuth(auth, () => presignUrl(...args)));
+    // Passed, not exported: MARKETPLACE_* is process-wide, so this call and a deploy's
+    // background upload could each restore the other's values.
+    const presignUrlFn = ctx.presignUrl || ((s3Path, filePath) => presignUrl(s3Path, filePath, { url: auth.url, token: auth.token }));
     const uploadFileFn = ctx.uploadFile || uploadFile;
 
     const {

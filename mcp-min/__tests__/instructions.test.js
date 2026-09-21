@@ -98,7 +98,13 @@ describe('instructions claim nothing this server cannot do', () => {
 describe('instructions are paid for on every session', () => {
   // Charged like the tool definitions are, and bounded for the same reason. Kept apart from the
   // tools/list budget so that each can be read on its own.
-  const BUDGET = 1200;
+  //
+  // Raised from 1200 in 6.6.0, when the refresh-token sentence (TASK-30) took full to 1186 and left
+  // fourteen bytes. A ceiling that close fails on a reworded clause rather than on the growth it is
+  // there to catch, which teaches the next person to raise it without thinking. This is the number
+  // that still forces the conversation: full is 1186 and dev 1148, so an addition worth a sentence
+  // fits and one worth a paragraph does not.
+  const BUDGET = 1400;
 
   test.each([['full', {}], ['dev', { profile: 'dev' }]])('%s fits the budget', (_label, options) => {
     const size = Buffer.byteLength(buildInstructions(resolve(options)));

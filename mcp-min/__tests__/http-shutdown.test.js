@@ -5,8 +5,10 @@
  * and holding the process open.
  */
 import http from 'http';
+import express from 'express';
 import { describe, test, expect } from 'vitest';
 import startHttp, { stopHttp } from '../http-server.js';
+import { createMcpEndpoint } from '../protocol/http-endpoint.js';
 import { connectOutcome } from './helpers/server-process.js';
 import { defaultTools, toolsWith } from './helpers/tools.js';
 
@@ -58,6 +60,8 @@ describe('stopHttp', () => {
       ...(name && { 'Mcp-Name': name })
     });
 
+    // Also what stops `close()` being called at the start of a shutdown: it would abort exactly
+    // the call this test is about.
     test('a call in flight is answered, then the server stops promptly', async () => {
       const release = deferred();
       const started = deferred();
@@ -115,4 +119,79 @@ describe('stopHttp', () => {
       expect(await within(stopped, 1000)).toBe(true);
     });
   });
+});
+
+/**
+ * The SDK handler's `close()` cannot simply be called first: it aborts in-flight exchanges, and
+ * this shutdown answers them. So the two halves are separate — `/mcp` refuses a *new* request as
+ * soon as shutdown begins, and the handler is closed once the drain is done.
+ */
+describe('the SDK handler is closed, and late requests do not reach a tool', () => {
+  const envelope = { 'io.modelcontextprotocol/protocolVersion': '2026-07-28', 'io.modelcontextprotocol/clientCapabilities': {} };
+
+  const callHeaders = (name) => ({
+    'Content-Type': 'application/json',
+    Accept: 'application/json, text/event-stream',
+    'MCP-Protocol-Version': '2026-07-28',
+    'Mcp-Method': 'tools/call',
+    'Mcp-Name': name
+  });
+
+  const callBody = (name) =>
+    JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: {}, _meta: envelope } });
+
+  /** A tool that records every time it is reached. */
+  const counting = (calls) => toolsWith({
+    'test-counted': {
+      description: 'records that it ran',
+      inputSchema: { type: 'object' },
+      handler: async () => { calls.push(Date.now()); return { ran: true }; }
+    }
+  });
+
+  /** The endpoint on a server of its own, so `close()` can be called while it is still listening. */
+  async function mounted(tools, isClosing) {
+    const { endpoint, close } = createMcpEndpoint({ tools, trackStream: () => {}, isClosing });
+    const app = express();
+    app.all('/mcp', endpoint);
+    const server = http.createServer(app);
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    return { close, port: server.address().port, stop: () => new Promise(resolve => server.close(resolve)) };
+  }
+
+  const post = (port, name) =>
+    fetch(`http://127.0.0.1:${port}/mcp`, { method: 'POST', headers: callHeaders(name), body: callBody(name) });
+
+  test('close() stops the handler serving, so a call after it never reaches the tool', async () => {
+    const calls = [];
+    const { close, port, stop } = await mounted(counting(calls));
+    try {
+      expect((await post(port, 'test-counted')).status).toBe(200);
+      expect(calls).toHaveLength(1);
+
+      await close();
+
+      const after = await post(port, 'test-counted');
+      expect(after.ok).toBe(false);
+      expect(calls).toHaveLength(1);
+    } finally {
+      await stop();
+    }
+  });
+
+  // The drain answers what is already running; it does not start anything new.
+  test('once shutdown has begun, /mcp refuses a request instead of running a tool', async () => {
+    const calls = [];
+    const { port, stop } = await mounted(counting(calls), () => true);
+    try {
+      const response = await post(port, 'test-counted');
+
+      expect(response.status).toBe(503);
+      expect((await response.json()).error.message).toMatch(/shutting down/i);
+      expect(calls).toEqual([]);
+    } finally {
+      await stop();
+    }
+  });
+
 });

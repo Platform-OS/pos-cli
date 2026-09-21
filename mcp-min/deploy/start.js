@@ -2,21 +2,48 @@
 import fs from 'fs';
 import path from 'path';
 import log from '../log.js';
-import { resolveAuth, runWithAuth } from '../auth.js';
+import { resolveAuth } from '../auth.js';
 import { ToolError } from '../tool-error.js';
 import files from '../../lib/files.js';
 import Gateway from '../../lib/proxy.js';
 import { makeArchive } from '../../lib/archive.js';
-import { deployAssets } from '../../lib/assets.js';
+import { deployAssets, canPresignAssetUpload } from '../../lib/assets.js';
 
 // Aliases for backwards compatibility
 const archive = { makeArchive };
-const assets = { deployAssets };
+const assets = { deployAssets, canPresignAssetUpload };
 import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
 import { mintFor, originOf } from '../jobs/handle.js';
 import { trackUpload } from '../jobs/local-phases.js';
 import { deployAssetsForRelease } from './assets-task.js';
+import { makeWorkDir, removeWorkDir } from './work-dir.js';
+
+/**
+ * Where this deploy's assets travel, asked before the archive is built because it decides what goes
+ * into it — the same order as `lib/deploy/directAssetsUploadStrategy`. An instance with no object
+ * storage cannot presign an upload (501), and its assets ride inside the release instead.
+ *
+ * Skipped with no assets, where the two archives are equal. Anything it throws leaves this call
+ * having changed nothing, which is why it is asked before the release goes in and not after.
+ */
+async function planAssets(gateway, assetsToDeploy) {
+  if (assetsToDeploy.length === 0) return { mode: 'none', count: 0 };
+
+  const direct = await assets.canPresignAssetUpload(gateway);
+  return { mode: direct ? 'direct' : 'in-archive', count: assetsToDeploy.length };
+}
+
+/** What the caller is told about the asset half, per plan. */
+const assetsReport = (plan) => ({
+  none: { count: 0, skipped: true },
+  direct: { count: plan.count, status: 'deploying_in_background' },
+  'in-archive': {
+    count: plan.count,
+    status: 'in_release_archive',
+    reason: 'this instance cannot presign a direct upload, so the assets were deployed inside the release archive'
+  }
+}[plan.mode]);
 
 const startDeployTool = {
   description: 'Deploy the project to an instance. Everything missing from the build is deleted there unless partial is set; deploy-dry-run reports that list first, changing nothing. Returns a job_id: the deploy is still running when this answers, and job-status reports when its release and its assets are both in.',
@@ -37,7 +64,6 @@ const startDeployTool = {
     const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
     const partial = !!params.partial;
-    const archivePath = './tmp/release.zip';
 
     // Nothing here is deployable, so there is nothing to send: the project is not ready.
     const availableDirs = dir.available();
@@ -45,78 +71,80 @@ const startDeployTool = {
       throw ToolError.project('NO_DIRECTORIES', `No deployable directories found. Need at least one of: ${dir.ALLOWED.join(', ')}`);
     }
 
-    // Ensure tmp directory exists
-    if (!fs.existsSync('./tmp')) {
-      fs.mkdirSync('./tmp', { recursive: true });
-    }
+    // Both before the push, so a failure to enumerate fails a call that has deployed nothing —
+    // and the handle's `assets` flag below is never a guess.
+    const assetsToDeploy = await files.getAssets();
+    const plan = await planAssets(gateway, assetsToDeploy);
 
-    // Create archive (without assets - they're uploaded directly)
-    const env = { TARGET: archivePath };
-    const numberOfFiles = await archive.makeArchive(env, { withoutAssets: true });
+    const workDir = makeWorkDir('release');
+    const archivePath = path.join(workDir, 'release.zip');
 
-    // Before the upload: a release that is not partial is the whole intended state of the
-    // instance, so an empty archive asks it to delete every file it has. `pos-cli deploy` skips
-    // the upload the same way.
-    if (numberOfFiles === 0 || numberOfFiles === false) {
-      throw ToolError.project('EMPTY_ARCHIVE', 'No files to deploy. Archive would be empty.');
-    }
-
-    // Absolute because that path, not the stream, is what gets read: `buildFormData`
-    // (lib/apiRequest.js) sees `.path` on a read stream and reads the file itself. The stream is
-    // therefore never consumed, so `finally` destroys it to close the descriptor, and the `error`
-    // listener is not optional — a read stream without one raises an uncaught exception, which in
-    // a server is the process rather than the call.
-    const archiveStream = fs.createReadStream(path.resolve(archivePath));
-    archiveStream.on('error', (err) => log.debug('deploy archive stream error', { error: String(err) }));
+    // One cleanup site for everything that fails before a release exists. After the push the
+    // directory belongs to the deploy, and goes with it.
+    let numberOfFiles;
     let pushResponse;
     try {
-      pushResponse = await runWithAuth(auth, () => gateway.push({
-        'marketplace_builder[partial_deploy]': String(partial),
-        'marketplace_builder[zip_file]': archiveStream
-      }));
-    } finally {
-      archiveStream.destroy();
+      // The assets ride inside the release exactly when there is no direct upload to make.
+      numberOfFiles = await archive.makeArchive({ TARGET: archivePath }, { withoutAssets: plan.mode !== 'in-archive' });
+
+      // Before the upload: a release that is not partial is the whole intended state of the
+      // instance, so an empty archive asks it to delete every file it has. `pos-cli deploy` skips
+      // the upload the same way.
+      if (numberOfFiles === 0 || numberOfFiles === false) {
+        throw ToolError.project('EMPTY_ARCHIVE', 'No files to deploy. Archive would be empty.');
+      }
+
+      // Absolute because that path, not the stream, is what gets read: `buildFormData`
+      // (lib/apiRequest.js) sees `.path` on a read stream and reads the file itself. The stream is
+      // therefore never consumed, so `finally` destroys it to close the descriptor, and the `error`
+      // listener is not optional — a read stream without one raises an uncaught exception, which in
+      // a server is the process rather than the call.
+      const archiveStream = fs.createReadStream(path.resolve(archivePath));
+      archiveStream.on('error', (err) => log.debug('deploy archive stream error', { error: String(err) }));
+      try {
+        // No `runWithAuth`: the Gateway carries its own credentials and `lib/assets.js` passes
+        // them on, so nothing here needs MARKETPLACE_* set process-wide.
+        pushResponse = await gateway.push({
+          'marketplace_builder[partial_deploy]': String(partial),
+          'marketplace_builder[zip_file]': archiveStream
+        });
+      } finally {
+        // Before the directory can go: Windows will not remove a file with a handle still open.
+        archiveStream.destroy();
+      }
+    } catch (err) {
+      removeWorkDir(workDir);
+      throw err;
     }
 
     // In the background: release import + S3 upload + CDN wait can take minutes. Registered
     // under the release id, so `job-status` does not report the deploy finished while it runs.
     const releaseId = pushResponse.id;
     const origin = originOf(auth.url);
-    let assetsInfo = null;
-    // Undefined until we know. Enumeration that throws must not leave this `false`: the handle
-    // would then claim the deploy carried no assets, and job-status reads that as an asset phase
-    // that finished — reporting a deploy complete when nothing ever looked for an asset.
-    let hasAssets;
-    try {
-      const assetsToDeploy = await files.getAssets();
-      hasAssets = assetsToDeploy.length > 0;
-      if (hasAssets) {
-        const upload = runWithAuth(auth, () => deployAssetsForRelease(gateway, releaseId, { deployAssets: assets.deployAssets }));
-        trackUpload(origin, releaseId, upload);
-        upload.then(() => {
-          log.info('Background asset deployment completed');
-        }).catch(err => {
-          log.error('Background asset deployment failed', { error: String(err) });
-        });
-        assetsInfo = { count: assetsToDeploy.length, status: 'deploying_in_background' };
-      } else {
-        assetsInfo = { count: 0, skipped: true };
-      }
-    } catch (assetErr) {
-      // The release is already in. Failing the whole call now would report a deploy that did
-      // happen as one that did not, so this is carried in the answer instead.
-      assetsInfo = { error: String(assetErr) };
+
+    if (plan.mode === 'direct') {
+      const upload = deployAssetsForRelease(gateway, releaseId, { deployAssets: assets.deployAssets, workDir });
+      trackUpload(origin, releaseId, upload);
+      upload
+        .then(() => log.info('Background asset deployment completed'))
+        .catch(err => log.error('Background asset deployment failed', { error: String(err) }))
+        // The zip is packed into workDir by the upload itself, so it cannot go before this.
+        .finally(() => removeWorkDir(workDir));
+    } else {
+      // The release archive has been read and sent; nothing else will look at it.
+      removeWorkDir(workDir);
     }
 
     return {
       id: releaseId,
-      // `assets` records whether there was an upload at all, which a server that did not start
-      // this deploy cannot otherwise know. Left out when we never found out, which the adapter
-      // answers as an asset phase it cannot see rather than as one there was none of.
-      job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: hasAssets === undefined ? {} : { assets: hasAssets } }),
+      // `assets` is whether there is a separate phase to wait for, which a server that did not
+      // start this deploy cannot know. Assets inside the release are not one.
+      job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: { assets: plan.mode === 'direct' } }),
       status: pushResponse.status,
-      archive: { path: archivePath, fileCount: numberOfFiles },
-      assets: assetsInfo,
+      // No path: the archive is removed when the deploy is done, so naming it invites a caller
+      // to depend on a file that will not be there.
+      archive: { fileCount: numberOfFiles, assetsIncluded: plan.mode === 'in-archive' },
+      assets: assetsReport(plan),
       params: { partial }
     };
   }

@@ -64,7 +64,8 @@ describe('uploads-push', () => {
     // Verify mocks were called with correct arguments
     expect(mockPresignUrl).toHaveBeenCalledWith(
       'instances/test-instance-123/property_uploads/data.public_property_upload_import.zip',
-      tempFile
+      tempFile,
+      { url: 'https://staging.example.com', token: 'secret123' }
     );
     expect(mockUploadFile).toHaveBeenCalledWith(tempFile, 'https://s3.example.com/upload');
   });
@@ -181,17 +182,23 @@ describe('uploads-push', () => {
     });
   });
 
-  test('sets MARKETPLACE env vars for presignUrl', async () => {
+  /**
+   * This used to set MARKETPLACE_* around the presign call and assert that it had. `runWithAuth`
+   * sets them process-wide and restores them on the way out, so a deploy's background asset upload
+   * — which runs for as long as an import plus a CDN wait — could have them changed under it by
+   * this call, or cleared by this call finishing first. The credentials travel with the call now,
+   * and what this pins is that they are not exported at all.
+   */
+  test('passes its credentials to presignUrl instead of putting them in the environment', async () => {
     class MockGateway {
       async getInstance() {
         return { id: 'inst-001' };
       }
     }
 
-    let capturedToken, capturedUrl;
+    let duringTheCall;
     const mockPresignUrl = vi.fn().mockImplementation(() => {
-      capturedToken = process.env.MARKETPLACE_TOKEN;
-      capturedUrl = process.env.MARKETPLACE_URL;
+      duringTheCall = { token: process.env.MARKETPLACE_TOKEN, url: process.env.MARKETPLACE_URL };
       return Promise.resolve({ uploadUrl: 'https://s3.example.com/upload', accessUrl: 'https://cdn.example.com/file.zip' });
     });
     const mockUploadFile = vi.fn().mockResolvedValue('ok');
@@ -201,8 +208,8 @@ describe('uploads-push', () => {
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
 
-    expect(capturedToken).toBe('secret123');
-    expect(capturedUrl).toBe('https://staging.example.com');
+    expect(mockPresignUrl.mock.calls[0][2]).toEqual({ url: 'https://staging.example.com', token: 'secret123' });
+    expect(duringTheCall).toEqual({ token: undefined, url: undefined });
   });
 
   test('works with production environment', async () => {

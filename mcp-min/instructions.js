@@ -44,7 +44,10 @@ const SECTIONS = [
   (tools) => ([...tools.values()].some(tool => tool.inputSchema?.properties?.env)
     ? 'Credentials: name the instance with env. Omit it and a call that only reads uses the first .pos entry, '
       + 'while a call that could change an instance is refused and the error lists the environments to choose '
-      + 'from. An env that is not in .pos is an error, never a fall back to another instance.'
+      + 'from. An env that is not in .pos is an error, never a fall back to another instance. '
+      // Who and why; the command with the environment filled in is on the error itself.
+      + 'A rejected stored token needs a person to run pos-cli env refresh-token; no tool here can, '
+      + 'and the error names the command.'
     : null),
 
   // `runTool` builds every result, so this can be stated plainly. It used to hedge — "usually as

@@ -9,6 +9,7 @@ import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { runTool } from '../run-tool.js';
 import registry from '../tools.js';
 import dryRunTool from '../deploy/dry-run.js';
+import { DEPLOY_WORK_ROOT } from '../deploy/work-dir.js';
 
 const AUTH = { url: 'https://dry.example.com', email: 'e@example.com', token: 'tok' };
 
@@ -238,5 +239,49 @@ describe('its annotations', () => {
   test('it writes its own archive, never the one a real deploy is streaming', () => {
     const source = fs.readFileSync(new URL('../deploy/dry-run.js', import.meta.url), 'utf8');
     expect(source).not.toMatch(/['"]\.\/tmp\/release\.zip['"]/);
+  });
+});
+
+/**
+ * One fixed archive name was only ever safe against `deploy-start`, which uses a different one —
+ * not against a second dry run. Each call gets its own directory, and does not leave it behind.
+ */
+describe('the archive directory a dry run writes into', () => {
+  const leftBehind = () => {
+    const root = path.join(workDir, DEPLOY_WORK_ROOT);
+    return fs.existsSync(root) ? fs.readdirSync(root) : [];
+  };
+
+  test('is removed when the dry run answers', async () => {
+    const { Fake } = gatewayFake({ report: { Liquid: { upserted: ['a.liquid'] } } });
+
+    const result = await runTool(dryRunTool, AUTH, { Gateway: Fake });
+
+    expect(result.ok).toBe(true);
+    expect(result.data.archive).toEqual({ fileCount: 1 });
+    expect(leftBehind()).toEqual([]);
+  });
+
+  // The archive is built inside it, so every way of failing afterwards has to remove it.
+  test('is removed when there is nothing to archive', async () => {
+    fs.rmSync(path.join(workDir, 'app', 'views'), { recursive: true, force: true });
+    const { Fake, calls } = gatewayFake({});
+
+    const result = await runTool(dryRunTool, AUTH, { Gateway: Fake });
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'EMPTY_ARCHIVE' } });
+    expect(calls.push).toEqual([]);
+    expect(leftBehind()).toEqual([]);
+  });
+
+  test('is removed when the instance refuses the push', async () => {
+    class Fake {
+      async push() { throw Object.assign(new Error('Request failed with status 422'), { statusCode: 422 }); }
+    }
+
+    const result = await runTool(dryRunTool, AUTH, { Gateway: Fake });
+
+    expect(result.ok).toBe(false);
+    expect(leftBehind()).toEqual([]);
   });
 });

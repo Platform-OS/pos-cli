@@ -6,7 +6,7 @@ import normalize from 'normalize-path';
 import Gateway from '../../lib/proxy.js';
 import { presignUrl } from '../../lib/presignUrl.js';
 import { uploadFile } from '../../lib/s3UploadFile.js';
-import { resolveAuth, runWithAuth } from '../auth.js';
+import { resolveAuth } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
 import { ToolError, classify } from '../tool-error.js';
 
@@ -46,7 +46,9 @@ const uploadsPushTool = {
     // which told the caller a TypeError of ours was worth retrying.
     let uploadUrl, accessUrl;
     try {
-      ({ uploadUrl, accessUrl } = await runWithAuth(auth, () => presignUrlFn(s3Path, filePath)));
+      // Passed, not exported: MARKETPLACE_* is process-wide, so this call and a deploy's
+      // background upload could each restore the other's values.
+      ({ uploadUrl, accessUrl } = await presignUrlFn(s3Path, filePath, { url: auth.url, token: auth.token }));
       await uploadFileFn(filePath, uploadUrl);
     } catch (e) {
       if (e instanceof ToolError) throw e;

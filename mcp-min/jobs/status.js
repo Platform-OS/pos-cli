@@ -11,7 +11,7 @@ import makeRequest, { testAuthHeaders } from '../tests/request.js';
 import adapters from './adapters/index.js';
 import { parse } from './handle.js';
 import { authForJob } from './auth-for-job.js';
-import { JobNotFoundError } from './errors.js';
+import { JobNotFoundError, absentOrUnwell, isServerError } from './errors.js';
 
 export const MAX_WAIT_MS = 120000;
 
@@ -27,7 +27,10 @@ const intervalFor = (poll, base) => base * Math.min(2 ** Math.max(0, poll - BACK
  * worth asking again. The same two `lib/push.js` retries, and no more: retrying our own TypeError
  * for a whole wait would hide it.
  */
-const isTransient = err => err?.name === 'RequestError' || err?.statusCode >= 500;
+const isTransient = err => err?.name === 'RequestError' || isServerError(err);
+
+/** What the instance said the job is not there, in the form a client reads. */
+const jobNotFound = err => ToolError.not_found('JOB_NOT_FOUND', `${err.message}.`, err.details);
 
 const jobStatusTool = {
   description: 'Status of an operation started earlier: a deploy, a data import, export or clean, or an async test run. state is running, completed (it finished; a test run whose assertions failed still counts) or failed (the operation itself failed).',
@@ -83,6 +86,9 @@ const jobStatusTool = {
     // A seam, like ctx.Gateway and ctx.request: tests drive the interval rather than sleep it.
     const pollInterval = ctx.pollIntervalMs ?? POLL_INTERVAL_MS;
 
+    // A 5xx means either "no such job" or "unwell" (`jobs/errors.js`), so one is not an answer.
+    let confirmed = false;
+
     for (let poll = 0; ; poll++) {
       if (ctx.signal?.aborted) throw cancelled();
 
@@ -91,17 +97,36 @@ const jobStatusTool = {
         polled = await adapter.poll(deps, job.id, job.flags);
       } catch (e) {
         // The instance has no such job: a bad argument, not a failed job.
-        if (e instanceof JobNotFoundError) throw ToolError.not_found('JOB_NOT_FOUND', `${e.message}.`);
+        if (e instanceof JobNotFoundError) throw jobNotFound(e);
         log.debug('tool:job-status poll failed', { kind: job.kind, error: String(e) });
 
         // Outside a wait there is nothing to retry into; inside one, a blip should not end a
         // two-minute wait early. Giving up rethrows the original, so runTool classifies the
         // status and body rather than burying them under a code named after this tool.
-        if (!isTransient(e) || Date.now() >= deadline) throw e;
+        if (!isTransient(e) || Date.now() >= deadline) {
+          // The default wait is none at all, so without this a single slow answer for a real
+          // deploy would be reported as a job that never existed.
+          if (isServerError(e) && !confirmed) {
+            confirmed = true;
+            await abortableDelay(pollInterval, ctx.signal);
+            continue;
+          }
+
+          const settled = await absentOrUnwell(e, {
+            kind: job.kind,
+            id: job.id,
+            // Instance-wide, so it answers for every kind, including the test runner.
+            health: () => deps.gateway.getInstance()
+          });
+          throw settled instanceof JobNotFoundError ? jobNotFound(settled) : settled;
+        }
 
         await abortableDelay(Math.min(intervalFor(poll, pollInterval), deadline - Date.now()), ctx.signal);
         continue;
       }
+
+      // A 5xx later in a long wait gets its own confirmation.
+      confirmed = false;
 
       const done = polled.state !== 'running';
       if (done || Date.now() >= deadline) {

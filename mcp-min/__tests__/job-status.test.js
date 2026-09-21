@@ -25,7 +25,7 @@ const CONFIG = {
 const handle = (kind, id = '41', flags) => mint({ kind, id, origin: ORIGIN, flags });
 
 /** ctx with the whole world stubbed: no .pos on disk, no network, no MPKIT_* leaking in. */
-function context({ config = CONFIG, getStatus, dataImportStatus, dataExportStatus, dataCleanStatus, request, pollIntervalMs = 5 } = {}) {
+function context({ config = CONFIG, getStatus, dataImportStatus, dataExportStatus, dataCleanStatus, request, getInstance, pollIntervalMs = 5 } = {}) {
   const calls = { gateway: [], request: [] };
   const record = (name, fn) => async (...args) => {
     calls.gateway.push({ name, args });
@@ -37,6 +37,12 @@ function context({ config = CONFIG, getStatus, dataImportStatus, dataExportStatu
     dataImportStatus = record('dataImportStatus', dataImportStatus);
     dataExportStatus = record('dataExportStatus', dataExportStatus);
     dataCleanStatus = record('dataCleanStatus', dataCleanStatus);
+    // The health probe behind `absentOrUnwell`. It defaults to an instance that is not answering,
+    // which is the conservative half: a test has to say the instance is well before a 5xx here can
+    // be read as a job that does not exist.
+    getInstance = record('getInstance', getInstance ?? (() => {
+      throw new Error('this test did not say whether the instance answers for itself');
+    }));
   }
   return {
     calls,
@@ -306,6 +312,18 @@ describe('data jobs', () => {
     expect(result.error.message).toContain(kind);
   });
 
+  /**
+   * The two readers are exclusive, and the wrong one answers the same 503 an id that does not
+   * exist gets — so asking the wrong way reports a finished job as a missing one.
+   */
+  test('a data-import status is always read the way a ZIP-sourced import can answer', async () => {
+    const { ctx, calls } = context({ dataImportStatus: async () => ({ status: 'done' }) });
+
+    await runTool(jobStatus, { job_id: handle('data-import', '9'), env: 'staging' }, ctx);
+
+    expect(calls.gateway.find(c => c.name === 'dataImportStatus').args).toEqual(['9', true]);
+  });
+
   test('a data-export handle carries the zip flag, so the status is read the way the export was made', async () => {
     const zipped = context({ dataExportStatus: async () => ({ status: 'done', zip_file_url: 'https://cdn.example.com/e.zip' }) });
     const plain = context({ dataExportStatus: async () => ({ status: 'done', data: { users: { results: [{ id: 1 }] } } }) });
@@ -523,5 +541,151 @@ describe('wait_ms', () => {
 
     expect(await result).toMatchObject({ ok: false, error: { kind: 'cancelled', code: 'CANCELLED' } });
     expect(calls.gateway.filter(c => c.name === 'getStatus').length).toBeLessThanOrEqual(polls + 1);
+  }, 20000);
+});
+
+/**
+ * platformOS answers **503**, not 404, for a release, import or export id it does not have — the
+ * same page either way, so nothing in the response separates "no such job" from an unwell
+ * instance. These are driven by that 503, and by the second question that does separate them.
+ */
+describe('a 5xx: the job is not there, or the instance is unwell', () => {
+  // A 2 KB HTML error page, shortened: nothing in it is machine-readable, which is the point.
+  const OOPS = '<!DOCTYPE html>\n<html>\n<head>\n  <title>Oops (503)</title>\n</head>\n</html>';
+
+  const serviceUnavailable = () => Object.assign(new Error('Request failed with status 503'), {
+    name: 'StatusCodeError',
+    statusCode: 503,
+    response: { statusCode: 503, body: OOPS }
+  });
+
+  const answering = async () => ({ id: 1, name: 'verification' });
+  const notAnswering = () => { throw Object.assign(new TypeError('fetch failed'), { name: 'RequestError' }); };
+
+  const polls = calls => calls.gateway.filter(c => c.name === 'getStatus').length;
+  const probes = calls => calls.gateway.filter(c => c.name === 'getInstance').length;
+
+  test('an instance answering for itself while refusing one job means the job is not there', async () => {
+    const { ctx, calls } = context({ getStatus: async () => { throw serviceUnavailable(); }, getInstance: answering });
+
+    const result = await runTool(jobStatus, { job_id: handle('deploy', '999999999'), env: 'staging' }, ctx);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatchObject({ kind: 'not_found', code: 'JOB_NOT_FOUND' });
+    expect(result.error.message).toContain('999999999');
+    expect(result.error.details).toEqual({ statusCode: 503, instanceResponding: true });
+    expect(probes(calls)).toBe(1);
+  });
+
+  test('the same 503 from an instance that is not answering stays retryable', async () => {
+    const { ctx, calls } = context({ getStatus: async () => { throw serviceUnavailable(); }, getInstance: notAnswering });
+
+    const result = await runTool(jobStatus, { job_id: handle('deploy', '999999999'), env: 'staging' }, ctx);
+
+    expect(result.error).toMatchObject({ kind: 'unavailable', code: 'INSTANCE_UNAVAILABLE' });
+    expect(probes(calls)).toBe(1);
+  });
+
+  // The error this whole path exists to avoid: telling an agent to stop waiting on a deploy that
+  // is running, because the instance was slow once.
+  test('a 503 that clears when asked again is the job\'s status, and the instance is never probed', async () => {
+    let asked = 0;
+    const { ctx, calls } = context({
+      getStatus: async () => { if (asked++ === 0) throw serviceUnavailable(); return { status: 'success' }; },
+      getInstance: answering
+    });
+
+    const result = await runTool(jobStatus, { job_id: handle('deploy', '41', { assets: false }), env: 'staging' }, ctx);
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toMatchObject({ state: 'completed', status: 'success' });
+    expect(probes(calls)).toBe(0);
+  });
+
+  test('one 503 is never enough on its own: the job is always asked twice first', async () => {
+    const { ctx, calls } = context({ getStatus: async () => { throw serviceUnavailable(); }, getInstance: answering });
+
+    await runTool(jobStatus, { job_id: handle('deploy', '999999999'), env: 'staging' }, ctx);
+
+    expect(polls(calls)).toBe(2);
+  });
+
+  // Nothing was answered at all, so there is no instance to compare against and nothing to infer.
+  test('a refused connection is never read as a job that does not exist', async () => {
+    const { ctx, calls } = context({
+      getStatus: async () => { throw Object.assign(new TypeError('fetch failed'), { name: 'RequestError' }); },
+      getInstance: answering
+    });
+
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging' }, ctx);
+
+    expect(result.error).toMatchObject({ kind: 'unavailable', code: 'INSTANCE_UNAVAILABLE' });
+    expect(probes(calls)).toBe(0);
+    expect(polls(calls)).toBe(1);
+  });
+
+  // A refusal the instance meant is already an answer; probing its health would say nothing.
+  test.each([[401, 'auth'], [403, 'auth'], [422, 'instance']])('a %i is answered on its merits, not probed', async (statusCode, kind) => {
+    const { ctx, calls } = context({
+      getStatus: async () => { throw Object.assign(new Error(`Request failed with status ${statusCode}`), { statusCode }); },
+      getInstance: answering
+    });
+
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging' }, ctx);
+
+    expect(result.error.kind).toBe(kind);
+    expect(probes(calls)).toBe(0);
+  });
+
+  // The 503 is the whole API's answer, not the release endpoint's: imports and exports were
+  // measured giving the identical page.
+  test.each([
+    ['data-import', 'dataImportStatus'],
+    ['data-export', 'dataExportStatus'],
+    ['data-clean', 'dataCleanStatus']
+  ])('%s: a persistent 503 on a live instance is JOB_NOT_FOUND', async (kind, method) => {
+    const { ctx } = context({ [method]: async () => { throw serviceUnavailable(); }, getInstance: answering });
+
+    const result = await runTool(jobStatus, { job_id: handle(kind, '999999999'), env: 'staging' }, ctx);
+
+    expect(result.error).toMatchObject({ kind: 'not_found', code: 'JOB_NOT_FOUND' });
+    expect(result.error.message).toContain(kind);
+  });
+
+  // The test runner is not an app_builder endpoint, so it reaches the same decision by its own
+  // route — which is why the health probe is instance-wide rather than per kind.
+  test('test-run: a persistent 503 on a live instance is JOB_NOT_FOUND', async () => {
+    const { ctx, calls } = context({ request: async () => ({ statusCode: 503, body: OOPS }), getInstance: answering });
+
+    const result = await runTool(jobStatus, { job_id: handle('test-run', '999999999'), env: 'staging' }, ctx);
+
+    expect(result.error).toMatchObject({ kind: 'not_found', code: 'JOB_NOT_FOUND' });
+    expect(calls.request).toHaveLength(2);
+    expect(probes(calls)).toBe(1);
+  });
+
+  // The instance says what this 503 was: the Partner Portal, the only thing that can validate a
+  // token, did not answer. Nothing was decided about the job, and the advice for it is to wait.
+  test('a 503 the instance explains as a Partner Portal outage is never read as a missing job', async () => {
+    const outage = () => Object.assign(new Error('Request failed with status 503'), {
+      name: 'StatusCodeError',
+      statusCode: 503,
+      response: { statusCode: 503, body: { error: 'partner_portal_unavailable' } }
+    });
+    const { ctx, calls } = context({ getStatus: async () => { throw outage(); }, getInstance: answering });
+
+    const result = await runTool(jobStatus, { job_id: handle('deploy', '41'), env: 'staging' }, ctx);
+
+    expect(result.error).toMatchObject({ kind: 'unavailable', code: 'INSTANCE_UNAVAILABLE' });
+    expect(probes(calls)).toBe(0);
+  });
+
+  test('a wait spends its whole window on the instance before deciding the job is absent', async () => {
+    const { ctx, calls } = context({ getStatus: async () => { throw serviceUnavailable(); }, getInstance: answering });
+
+    const result = await runTool(jobStatus, { job_id: handle('deploy', '999999999'), env: 'staging', wait_ms: 200 }, ctx);
+
+    expect(result.error).toMatchObject({ kind: 'not_found', code: 'JOB_NOT_FOUND' });
+    expect(polls(calls)).toBeGreaterThan(2);
   }, 20000);
 });
