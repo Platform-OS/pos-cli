@@ -45,9 +45,20 @@ startStdio({ tools: toolsWith({
   'test-progress': {
     description: 'reports progress',
     inputSchema: { type: 'object', properties: { steps: { type: 'array', items: { type: 'number' } } } },
-    handler: async ({ steps = [] }, ctx) => { for (const step of steps) ctx.sendProgress(step, 10, 'step ' + step); }
+    handler: async ({ steps = [] }, ctx) => { for (const step of steps) ctx.sendProgress({ progress: step, total: 10, message: 'step ' + step }); }
   },
-  'test-quiet': { description: 'says nothing for a while', inputSchema: closed, handler: async () => { await new Promise(r => setTimeout(r, ${HEARTBEAT_MS} + 700)); } },
+  // Reports once and then says nothing, so the heartbeat that follows proves the counter survived
+  // a tool's own report — a bad one used to leave it NaN for the rest of the call.
+  'test-quiet': {
+    description: 'reports once, then says nothing for a while',
+    inputSchema: closed,
+    handler: async (params, ctx) => { ctx.sendProgress({ progress: 4, message: 'started' }); await new Promise(r => setTimeout(r, ${HEARTBEAT_MS} + 700)); }
+  },
+  'test-progress-misused': {
+    description: 'reports progress the old positional way',
+    inputSchema: closed,
+    handler: async (params, ctx) => { ctx.sendProgress(1, 2, 'positional'); }
+  },
   'test-poll': {
     description: 'polls until cancelled',
     inputSchema: closed,
@@ -273,7 +284,7 @@ describe.each([['2026-07-28', true], ['2025-06-18', false]])('tool failures reac
     });
   }, 30000);
 
-  test('a long call with a progress token gets a heartbeat', async () => {
+  test('a long call with a progress token gets a heartbeat, numbered on from the report the tool made', async () => {
     await withServer(async (proc) => {
       await open(proc);
       const quiet = call('test-quiet', {});
@@ -281,7 +292,27 @@ describe.each([['2026-07-28', true], ['2025-06-18', false]])('tool failures reac
 
       await request(proc, quiet, 20000);
       const beats = stdoutMessages(proc).filter(m => m.method === 'notifications/progress' && m.params.progressToken === 'hb');
-      expect(beats).toEqual([{ jsonrpc: '2.0', method: 'notifications/progress', params: { progressToken: 'hb', progress: 1, message: 'working' } }]);
+      expect(beats.map(m => m.params)).toEqual([
+        { progressToken: 'hb', progress: 4, message: 'started' },
+        { progressToken: 'hb', progress: 5, message: 'working' }
+      ]);
+    });
+  }, 30000);
+
+  // The shape a tool reports with is checked where the tool wrote it. Before that check, three
+  // positional arguments were read as one object, Math.max made it NaN, and the notification went
+  // out with `progress: null` — which the client cannot use and no later report could undo.
+  test('a tool that reports progress the wrong way fails its call and puts nothing on the wire', async () => {
+    await withServer(async (proc) => {
+      await open(proc);
+      const misused = call('test-progress-misused', {});
+      misused.params._meta = { ...misused.params._meta, progressToken: 'bad' };
+
+      expect(toolError(await request(proc, misused))).toMatchObject({
+        ok: false,
+        error: { kind: 'internal', code: 'INTERNAL_ERROR', message: expect.stringContaining('sendProgress') }
+      });
+      expect(stdoutMessages(proc).filter(m => m.method === 'notifications/progress')).toEqual([]);
     });
   }, 30000);
 

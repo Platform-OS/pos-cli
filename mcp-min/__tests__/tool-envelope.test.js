@@ -89,6 +89,18 @@ describe('no tool builds a result itself', () => {
     expect(unknown, `kinds are ${Object.keys(ERROR_KINDS).join(', ')}`).toEqual([]);
     expect(used.size, 'no tool classifies anything, which means the conversion did not happen').toBeGreaterThan(3);
   });
+
+  // The call context hands tools one named object. A positional call was read as that object,
+  // turned into NaN by the counter and written to the wire as `progress: null`; the reporter
+  // throws on it now, and this is what catches a new call site no test exercises.
+  test('every sendProgress call passes the one named object', () => {
+    const calls = toolModules().flatMap(([file, text]) =>
+      [...text.matchAll(/sendProgress(?:\?\.)?\(\s*(\S)/g)].map(([call, first]) => ({ file, call, first })));
+
+    expect(calls.length, 'no tool reports progress, so this is checking nothing').toBeGreaterThan(0);
+    expect(calls.filter(({ first }) => first !== '{').map(({ file, call }) => `${file}: ${call}`),
+      'sendProgress({ progress, total?, message? })').toEqual([]);
+  });
 });
 
 describe('runTool is the only thing that shapes a result', () => {

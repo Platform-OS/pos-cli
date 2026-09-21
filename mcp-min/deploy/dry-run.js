@@ -114,14 +114,12 @@ const dryRunDeployTool = {
 
     if (ctx.signal?.aborted) throw cancelled();
 
-    // Absolute, and resolved now: a read stream opens lazily, so a relative path would be
-    // resolved against whatever the working directory is by the time the request body is read.
-    // Destroyed in `finally` because a push that throws never consumes it, and an unconsumed
-    // stream holds its file descriptor until it is collected.
+    // Absolute because that path, not the stream, is what gets read: `buildFormData`
+    // (lib/apiRequest.js) sees `.path` on a read stream and reads the file itself. The stream is
+    // therefore never consumed, so `finally` destroys it to close the descriptor, and the `error`
+    // listener is not optional — a read stream without one raises an uncaught exception, which in
+    // a server is the process rather than the call.
     const archiveStream = fs.createReadStream(path.resolve(ARCHIVE_PATH));
-    // A read stream with no `error` listener raises an uncaught exception, which in a server is
-    // the process rather than the call. The archive was just written and counted, so a failure to
-    // read it is exceptional; the request it was feeding fails on its own and carries the outcome.
     archiveStream.on('error', (err) => log.debug('dry-run archive stream error', { error: String(err) }));
     let pushResponse;
     try {

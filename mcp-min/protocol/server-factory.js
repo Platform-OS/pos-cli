@@ -53,24 +53,40 @@ function toolResult(result) {
 /**
  * Progress for one call: only when the client asked for it, and always increasing, as the protocol
  * requires — the heartbeat and a tool's own reports share one counter.
+ *
+ * A tool reports with one named object, the shape the notification itself has. Three positional
+ * arguments, two of them optional, was read as an object at one call site: `Math.max` turned it
+ * into NaN, JSON wrote that as `null`, and the counter kept it, so every later report for that
+ * call was `null` too. A bad value now throws where the tool wrote it, as `ToolError` does for a
+ * bad kind — only this repo's own modules call this.
  */
 function progressReporter(ctx) {
   const progressToken = ctx.mcpReq._meta?.progressToken;
   let last = 0;
 
-  const send = (progress, total, message) => {
-    if (progressToken === undefined || ctx.mcpReq.signal.aborted) return;
+  // Takes a checked progress, so the heartbeat cannot throw from inside its interval.
+  const emit = (progress, total, message) => {
+    if (ctx.mcpReq.signal.aborted) return;
     last = Math.max(progress, last + 1);
     const params = { progressToken, progress: last };
-    if (total != null) params.total = total;
+    if (total !== undefined) params.total = total;
     if (message) params.message = message;
     ctx.mcpReq.notify({ method: 'notifications/progress', params })
       .catch(err => log.debug('progress notification not sent', { error: String(err) }));
   };
 
+  // Checked even with no token, so misuse surfaces on the first client rather than on the first
+  // one that happens to ask for progress.
+  const send = (report) => {
+    const { progress, total, message } = Object(report);
+    if (!Number.isFinite(progress)) throw new TypeError(`sendProgress: progress must be a finite number, not ${typeof progress}`);
+    if (total !== undefined && !Number.isFinite(total)) throw new TypeError(`sendProgress: total must be a finite number, not ${typeof total}`);
+    if (progressToken !== undefined) emit(progress, total, message);
+  };
+
   if (progressToken === undefined) return { send, stop: () => {} };
 
-  const heartbeat = setInterval(() => send(last + 1, undefined, 'working'), HEARTBEAT_MS);
+  const heartbeat = setInterval(() => emit(last + 1, undefined, 'working'), HEARTBEAT_MS);
   const stop = () => clearInterval(heartbeat);
   // The call finishing stops it (the handler's finally); so does the client going away. unref in
   // case of a tool that watches neither, which would otherwise hold the event loop open.

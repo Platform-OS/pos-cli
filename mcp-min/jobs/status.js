@@ -119,7 +119,7 @@ const jobStatusTool = {
         };
       }
 
-      ctx.sendProgress?.(poll + 1, undefined, `${job.kind}: ${polled.status ?? 'running'}`);
+      ctx.sendProgress?.({ progress: poll + 1, message: `${job.kind}: ${polled.status ?? 'running'}` });
       await abortableDelay(Math.min(intervalFor(poll, pollInterval), deadline - Date.now()), ctx.signal);
     }
   }

@@ -433,7 +433,8 @@ describe('wait_ms', () => {
     );
 
     expect(sendProgress).toHaveBeenCalledTimes(2);
-    expect(sendProgress.mock.calls[0][2]).toBe('deploy: in_progress');
+    expect(sendProgress.mock.calls.map(([report]) => report))
+      .toEqual([{ progress: 1, message: 'deploy: in_progress' }, { progress: 2, message: 'deploy: in_progress' }]);
   }, 20000);
 
   // A wait is minutes long on a degraded network; a single refused connection ending it early

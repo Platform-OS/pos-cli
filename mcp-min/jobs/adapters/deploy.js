@@ -77,7 +77,8 @@ export default {
     }
 
     // A deploy that carried no assets is finished here; the handle's `assets: false` is the only
-    // way a process that did not start it can tell that from "an upload I cannot see".
+    // way a process that did not start it can tell that from "an upload I cannot see". An absent
+    // flag is the starter saying it never found out, which is that second case, not this one.
     const assets = flags.assets === false ? { phase: 'none' } : assetPhase(response, { origin, id });
     return {
       state: ASSET_STATES[assets.phase],

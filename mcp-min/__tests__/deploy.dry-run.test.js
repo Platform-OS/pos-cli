@@ -104,6 +104,24 @@ describe('deploy-dry-run applies nothing', () => {
     expect(result.data.byCategory.Asset.upserted.count).toBe(1);
   });
 
+  // The call context takes one named object and refuses anything else. This tool reported three
+  // positional arguments for a release: they were read as that object, became NaN, and went out as
+  // `progress: null` — after which every heartbeat for the call was null too.
+  test('reports progress in the shape the call context takes', async () => {
+    fs.mkdirSync(path.join(workDir, 'app', 'assets'), { recursive: true });
+    fs.writeFileSync(path.join(workDir, 'app', 'assets', 'app.css'), 'body{}');
+    const { Fake } = gatewayFake({ report: {}, assetStatuses: [{ asset_report: { upserted: [], deleted: [] } }] });
+    const sendProgress = vi.fn();
+
+    await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, sendProgress });
+
+    expect(sendProgress).toHaveBeenCalledTimes(1);
+    const [report, ...extra] = sendProgress.mock.calls[0];
+    expect(extra, 'sendProgress takes one named object').toEqual([]);
+    expect(Number.isFinite(report.progress), `progress was ${report.progress}`).toBe(true);
+    expect(Number.isFinite(report.total), `total was ${report.total}`).toBe(true);
+  });
+
   test('the registry entry is the same tool, so the transports get this one', () => {
     expect(registry.get('deploy-dry-run')).toBe(dryRunTool);
   });

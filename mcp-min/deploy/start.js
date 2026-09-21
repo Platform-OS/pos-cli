@@ -61,11 +61,11 @@ const startDeployTool = {
       throw ToolError.project('EMPTY_ARCHIVE', 'No files to deploy. Archive would be empty.');
     }
 
-    // Absolute, and resolved now: a read stream opens lazily, so a relative path would be resolved
-    // against whatever the working directory is by the time the request body is read. The `error`
+    // Absolute because that path, not the stream, is what gets read: `buildFormData`
+    // (lib/apiRequest.js) sees `.path` on a read stream and reads the file itself. The stream is
+    // therefore never consumed, so `finally` destroys it to close the descriptor, and the `error`
     // listener is not optional — a read stream without one raises an uncaught exception, which in
-    // a server is the process rather than the call — and an upload that throws never consumes the
-    // stream, which holds its file descriptor until it is collected.
+    // a server is the process rather than the call.
     const archiveStream = fs.createReadStream(path.resolve(archivePath));
     archiveStream.on('error', (err) => log.debug('deploy archive stream error', { error: String(err) }));
     let pushResponse;
@@ -83,7 +83,10 @@ const startDeployTool = {
     const releaseId = pushResponse.id;
     const origin = originOf(auth.url);
     let assetsInfo = null;
-    let hasAssets = false;
+    // Undefined until we know. Enumeration that throws must not leave this `false`: the handle
+    // would then claim the deploy carried no assets, and job-status reads that as an asset phase
+    // that finished — reporting a deploy complete when nothing ever looked for an asset.
+    let hasAssets;
     try {
       const assetsToDeploy = await files.getAssets();
       hasAssets = assetsToDeploy.length > 0;
@@ -107,9 +110,10 @@ const startDeployTool = {
 
     return {
       id: releaseId,
-      // `assets` records whether there was an upload at all, which a server that did not
-      // start this deploy cannot otherwise know.
-      job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: { assets: hasAssets } }),
+      // `assets` records whether there was an upload at all, which a server that did not start
+      // this deploy cannot otherwise know. Left out when we never found out, which the adapter
+      // answers as an asset phase it cannot see rather than as one there was none of.
+      job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: hasAssets === undefined ? {} : { assets: hasAssets } }),
       status: pushResponse.status,
       archive: { path: archivePath, fileCount: numberOfFiles },
       assets: assetsInfo,

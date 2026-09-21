@@ -30,7 +30,7 @@ const tools = toolsWith({
     inputSchema: closed,
     handler: async (params, ctx) => {
       for (const step of [1, 2, 3]) {
-        ctx.sendProgress(step, 3);
+        ctx.sendProgress({ progress: step, total: 3 });
         await new Promise(resolve => setTimeout(resolve, 20));
       }
       return { steps: 3 };

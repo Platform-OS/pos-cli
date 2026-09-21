@@ -117,6 +117,22 @@ describe('the job_id deploy-start returns', () => {
 
     expect(parse(result.data.job_id).job.flags).toEqual({ assets: true });
   });
+
+  // The release is already in, so an enumeration that throws is carried in the answer rather than
+  // failing the call — but it must not be recorded as "there were none". `assets: false` is a
+  // claim, and job-status reads it as an asset phase that finished.
+  test('claims nothing about assets it could not enumerate', async () => {
+    getAssets.mockRejectedValue(new Error('EACCES: app/assets'));
+    const { Gateway } = gatewayWith(['success']);
+
+    const started = await runTool(deployStart, AUTH, { Gateway });
+    const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
+
+    expect(started.ok).toBe(true);
+    expect(started.data.assets.error).toMatch(/EACCES/);
+    expect(parse(started.data.job_id).job.flags).toEqual({});
+    expect(status.data.result.assets).toEqual({ phase: 'unknown' });
+  });
 });
 
 describe('the background asset upload', () => {
