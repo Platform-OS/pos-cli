@@ -186,7 +186,7 @@ export default async function startHttp({
     // A tool's own failure is that tool's answer, not a server fault: it comes back 200 with
     // ok:false and the tool's code. This route used to turn one into a 500 with a stringified
     // error, which lost the code and read as though the server had broken.
-    const result = await runTool(entry, params, { transport: 'http', debug: DEBUG });
+    const result = await runTool(entry, params, { toolName: tool, transport: 'http', debug: DEBUG });
     log.debug('HTTP /call result', { tool, ok: result.ok, kind: result.error?.kind, error: result.error?.code });
     res.json({ result });
   });
@@ -286,7 +286,7 @@ export default async function startHttp({
             });
             return;
           }
-          const result = await runTool(entry, args, { transport: 'jsonrpc', debug: DEBUG });
+          const result = await runTool(entry, args, { toolName: name, transport: 'jsonrpc', debug: DEBUG });
           // Wrap result as text content for broad client compatibility
           const text = (() => { try { return JSON.stringify(result); } catch { return String(result); } })();
           respond({ result: { content: [{ type: 'text', text }] } });

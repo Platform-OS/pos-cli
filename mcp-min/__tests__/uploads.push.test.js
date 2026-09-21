@@ -144,6 +144,43 @@ describe('uploads-push', () => {
     expect(res.error.message).toContain('Upload timeout');
   });
 
+  /**
+   * The code says which leg failed; the kind says what to do about it, and that judgement is
+   * `classify`'s. This tool used to answer `unavailable` — "the same call may work later" — for
+   * anything without an HTTP status, so a defect of ours sent the agent round a retry loop that
+   * could never finish.
+   */
+  describe('the kind it reports is the one classify would', () => {
+    const failing = (error) => {
+      class MockGateway {
+        async getInstance() { return { id: 'test-instance-123' }; }
+      }
+      return runTool(uploadsTool,
+        { env: 'staging', filePath: tempFile },
+        {
+          Gateway: MockGateway,
+          presignUrl: vi.fn().mockResolvedValue({ uploadUrl: 'https://s3.example.com/upload', accessUrl: 'https://cdn.example.com/u.zip' }),
+          uploadFile: vi.fn().mockRejectedValue(error),
+          settings: mockSettings
+        }
+      );
+    };
+
+    const refused = Object.assign(new Error('fetch failed'), { name: 'RequestError', cause: Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }) });
+
+    test.each([
+      ['a programming error, which is ours to fix', new TypeError('uploadUrl is not a function'), 'internal'],
+      ['a rejected token, which retrying cannot mend', Object.assign(new Error('Forbidden'), { statusCode: 403 }), 'auth'],
+      ['a refused connection, which may work later', refused, 'unavailable']
+    ])('%s', async (_label, error, kind) => {
+      const res = await failing(error);
+
+      expect(res.error).toMatchObject({ kind, code: 'UPLOAD_FAILED' });
+      // The code and the file it was asked to send stay this tool's to report.
+      expect(res.error.details.filePath).toContain('test-uploads.zip');
+    });
+  });
+
   test('sets MARKETPLACE env vars for presignUrl', async () => {
     class MockGateway {
       async getInstance() {

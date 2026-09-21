@@ -81,6 +81,35 @@ describe('no tool builds a result itself', () => {
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * A kind says what the caller should do next about a failure the tool did not expect, so
+   * choosing one is the taxonomy's job. `uploads-push` decided for itself that anything without an
+   * HTTP status was `unavailable` — "the same call may work later" — which told an agent that a
+   * TypeError of ours was worth retrying.
+   *
+   * So the kind handed to `new ToolError` has to come from something that decided it: `.kind` off
+   * a classified error, or `kindForStatus` for the endpoints that answer with a status instead of
+   * throwing. A literal or a bare local is someone choosing by hand.
+   *
+   * Matched on the argument's position rather than on kind names appearing in the source, which
+   * was the first attempt and cannot work: `cancelled`, `input` and `instance` are ordinary words
+   * here, and it fired on `env-add`'s waiter returning `{ status: 'cancelled' }`.
+   *
+   * It says nothing about `ToolError.<kind>()`, which is how a tool raises a condition it
+   * recognises — `EMPTY_ARCHIVE`, `FILE_NOT_FOUND` — and is right to choose for itself. Whether
+   * one of those is reached for inside a catch block is not something a scan can see; the
+   * per-tool error tests are what cover that.
+   */
+  test('a kind handed to new ToolError comes from something that decided it', () => {
+    const decided = /(\.kind|^kindForStatus\(.*\))$/;
+    const offenders = toolModules().flatMap(([file, text]) =>
+      [...text.matchAll(/new ToolError\(\s*([^,]+),/g)]
+        .filter(([, kind]) => !decided.test(kind.trim()))
+        .map(([, kind]) => `${file}: new ToolError(${kind.trim()}, …)`));
+
+    expect(offenders, 'take the kind from classify(err).kind or kindForStatus(status)').toEqual([]);
+  });
+
   test('every kind used anywhere is one the closed set defines', () => {
     const used = new Set();
     for (const [, text] of toolModules()) for (const [, kind] of text.matchAll(/ToolError\.([a-z_]+)\(/g)) used.add(kind);
@@ -111,6 +140,26 @@ describe('runTool is the only thing that shapes a result', () => {
 
     expect(result.ok).toBe(false);
     expect(result.error.code).toBe('DOUBLE_ENVELOPE');
+  });
+
+  // The drift this catches is otherwise silent, and there are thirty tools: an error that cannot
+  // say which one half-converted is most of the way to no error at all. Every dispatch path knows
+  // the registry key, so it passes it.
+  test('it names the tool, which is the only thing that makes it actionable', async () => {
+    const halfConverted = { handler: async () => ({ ok: false, error: {} }) };
+
+    const result = await runTool(halfConverted, {}, { toolName: 'data-import' });
+
+    expect(result.error.message).toContain('data-import');
+  });
+
+  // toolName is the dispatcher's, and the handler context is a documented shape.
+  test('the name is not passed on to the handler', async () => {
+    let seen;
+    await runTool({ handler: async (_params, ctx) => { seen = ctx; } }, {}, { toolName: 'envs-list', transport: 'stdio' });
+
+    expect(seen).not.toHaveProperty('toolName');
+    expect(seen.transport).toBe('stdio');
   });
 
   // `status` on its own is ordinary payload — a release record and a job both carry one — so the

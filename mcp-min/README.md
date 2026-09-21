@@ -64,7 +64,7 @@ Files
 - lifecycle.js: when the process ends (stdin EOF rule, drain, deadline)
 - cli-args.js: argument parsing for bin/pos-cli-mcp.js, and the tool-selection options shared with bin/pos-cli-mcp-config.js
 - run-tool.js: the one invoker — runs a handler and builds every result clients see (ok, error, meta)
-- tool-error.js: ToolError and the closed set of error kinds, plus the status-to-kind table
+- tool-error.js: ToolError and the closed set of error kinds, plus the two things that pick one — the status-to-kind table and `classify`, for an error nothing classified
 - tools.js: the tool registry (every tool, in client order); reads no configuration
 - profiles.js: built-in profiles (full, dev, none)
 - instructions.js: builds the MCP `instructions` string from the exposed tools; cross-tool rules only, never a tool a selection hides

@@ -116,6 +116,7 @@ function registerTool(server, name, tool, transport) {
       // runTool owns the envelope and turns anything thrown into a classified error, so there is
       // nothing left to catch here: a handler cannot reach this frame with an exception.
       const result = await runTool(tool, args, {
+        toolName: name,
         transport,
         debug: DEBUG,
         log: log.info.bind(log),

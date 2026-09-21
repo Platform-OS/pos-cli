@@ -25,6 +25,11 @@ const tools = toolsWith({
     handler: async ({ msg }, ctx) => ({ echo: msg, transport: ctx.transport })
   },
   'test-fails': { description: 'reports a failure', inputSchema: closed, handler: async () => { throw new ToolError('instance', 'TEST_FAILURE', 'it did not work'); } },
+  'test-half-converted': {
+    description: 'still builds its own envelope',
+    inputSchema: closed,
+    handler: async () => ({ ok: true, data: { x: 1 } })
+  },
   'test-progress': {
     description: 'reports progress',
     inputSchema: closed,
@@ -195,6 +200,20 @@ describe.each([['2026-07-28', true], ['2025-06-18', false]])('tool failures reac
 
     expect(result.isError).toBe(true);
     expect(toolResult(result)).toMatchObject({ ok: false, error: { code: 'TEST_FAILURE', message: 'it did not work' } });
+  });
+
+  // runTool refuses a handler that builds its own envelope, and the message has to say which tool
+  // did it — there are thirty of them. The name is the registry key, so this is also what proves
+  // the dispatch path passes it rather than runTool merely being able to use one.
+  test('a handler that returns an envelope is refused, by name', async () => {
+    const { result } = await call('test-half-converted', {});
+
+    expect(result.isError).toBe(true);
+    expect(toolResult(result).error).toMatchObject({
+      kind: 'internal',
+      code: 'DOUBLE_ENVELOPE',
+      message: expect.stringContaining('test-half-converted')
+    });
   });
 
   test('a client that goes away cancels the call, and the tool stops polling', async () => {

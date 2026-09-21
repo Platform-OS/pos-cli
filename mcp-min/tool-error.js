@@ -53,9 +53,9 @@ export class ToolError extends Error {
  * The kind an HTTP status implies.
  *
  * One table, because three places need the same judgement and a second copy is a second answer:
- * `classify` (run-tool.js) reads it off a thrown error, the `/_tests/*` tools read it off a
- * response that carries a status instead of throwing, and `sync-file` reads it off a response whose
- * body it has already opened. A status this does not recognise is the instance having refused.
+ * `classify` below reads it off a thrown error, the `/_tests/*` tools read it off a response that
+ * carries a status instead of throwing, and `sync-file` reads it off a response whose body it has
+ * already opened. A status this does not recognise is the instance having refused.
  */
 export const kindForStatus = (status) => {
   if (status === 401 || status === 403) return 'auth';
@@ -68,6 +68,54 @@ export const kindForStatus = (status) => {
 // goes: `ToolError.input('VALIDATION_ERROR', 'Provide one of: filePath or jsonData')`.
 for (const kind of Object.keys(ERROR_KINDS)) {
   ToolError[kind] = (code, message, details) => new ToolError(kind, code, message, details);
+}
+
+/** The code for a failure the thrower did not classify, one per kind `classify` assigns. */
+const UNCLASSIFIED = {
+  auth: 'UNAUTHORIZED',
+  not_found: 'NOT_FOUND',
+  unavailable: 'INSTANCE_UNAVAILABLE',
+  instance: 'INSTANCE_REFUSED',
+  internal: 'INTERNAL_ERROR'
+};
+
+// A network failure keeps its code two or three `cause` levels down (CLAUDE.md), so the chain is
+// walked rather than read at the top.
+const networkCode = (err, depth = 0) => {
+  if (!err || depth > 5) return null;
+  if (typeof err.code === 'string') return err.code;
+  return networkCode(err.cause, depth + 1);
+};
+
+const UNREACHABLE = new Set(['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN']);
+
+/**
+ * What a thrown error means, when whatever threw it did not say. It lives here rather than with
+ * the invoker because it is the same judgement `kindForStatus` is: a tool that needs it must not
+ * have to import `run-tool.js`, which is the thing that calls tools.
+ *
+ * Having it in one place is how twenty tools stopped reporting a 401, a 503 and a TypeError under
+ * one code named after the tool.
+ */
+export function classify(err) {
+  if (err instanceof ToolError) return err;
+
+  const status = err?.statusCode ?? err?.status;
+  const code = networkCode(err);
+  const details = status ? { statusCode: status, ...(err?.response?.body !== undefined && { body: err.response.body }) } : undefined;
+  const message = String(err?.message || err);
+
+  if (err?.name === 'RequestError' || (code && UNREACHABLE.has(code))) {
+    return ToolError.unavailable(code && UNREACHABLE.has(code) ? code : UNCLASSIFIED.unavailable, message, details);
+  }
+  // Only a status decides a kind here; without one there is nothing to read, and a guess would be
+  // a worse answer than "we do not know what this is".
+  if (status >= 400) {
+    const kind = kindForStatus(status);
+    return new ToolError(kind, UNCLASSIFIED[kind], message, details);
+  }
+
+  return ToolError.internal(UNCLASSIFIED.internal, message);
 }
 
 export default ToolError;
