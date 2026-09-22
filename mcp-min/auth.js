@@ -85,7 +85,7 @@ async function resolve(params, ctx) {
     // The entry is there but unusable: the file needs fixing, which is not something the caller
     // can do by changing an argument.
     if (found) throw ToolError.project('ENV_INCOMPLETE', `Environment '${params.env}' in .pos has no url and token`);
-    throw ToolError.not_found('ENV_NOT_FOUND', `Environment '${params.env}' not found in .pos config`);
+    throw envNotFound(params.env, filesModule);
   }
 
   // Priority 3: MPKIT_* environment variables
@@ -104,6 +104,48 @@ async function resolve(params, ctx) {
   }
 
   throw ToolError.auth('AUTH_MISSING', 'Provide url, email and token, or configure .pos / MPKIT_* environment variables');
+}
+
+/**
+ * This is already the error path: a `.pos` that cannot be read must not replace a name the caller
+ * can act on with a failure about the file. An unreadable file has no names to offer, which is the
+ * same position as an empty one.
+ */
+function readConfig(filesModule) {
+  try {
+    return filesModule?.getConfig?.() || {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * A name that is not in `.pos`, answered with the names that are — the model cannot read the file,
+ * and `ENV_REQUIRED` already answers this way, so leaving them out only bought an `envs-list` round
+ * trip the caller may not even have the tool for.
+ *
+ * The command is named only when there is nothing to choose between. With environments configured
+ * the list is the fix and the caller makes it in one more call; offering `env add` as well would
+ * put a remedy on every typo, which is how a field an agent should act on becomes one it skips.
+ * `--url` is required and no one here knows it, so it stays a placeholder a person fills in.
+ */
+function envNotFound(name, filesModule) {
+  const configured = Object.keys(readConfig(filesModule));
+  if (configured.length > 0) {
+    return ToolError.not_found(
+      'ENV_NOT_FOUND',
+      `Environment '${name}' is not in .pos. Configured: ${configured.join(', ')}.`,
+      { environments: configured }
+    );
+  }
+
+  return ToolError.not_found('ENV_NOT_FOUND', `Environment '${name}' is not in .pos, which has no environments configured.`, {
+    environments: [],
+    remedy: {
+      command: `pos-cli env add ${name} --url <instance url>`,
+      runBy: 'a person at a terminal: it needs the instance URL and a browser sign-in'
+    }
+  });
 }
 
 /**

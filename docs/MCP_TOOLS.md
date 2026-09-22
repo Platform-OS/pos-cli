@@ -1896,6 +1896,26 @@ An error a tool does not classify itself is classified from what it carries: a r
 or a 5xx is `unavailable`, a 401 or 403 is `auth`, a 404 is `not_found`, another 4xx is `instance`,
 and anything else is `internal`.
 
+`code` is more specific than the kind wherever pos-cli knows something the status does not say:
+
+| code | what it adds |
+|---|---|
+| `PAYLOAD_TOO_LARGE` | a 413: the request body is over the 50MB limit |
+| `PARTNER_PORTAL_UNAVAILABLE` | a 503 the instance explains — it could not reach the Partner Portal, which is the only thing that can verify an API token, so the token was never judged and refreshing it cannot help. `details.retryAfterSeconds` says how long to wait |
+| `ENOTFOUND` / `EAI_AGAIN` | the instance hostname does not resolve; `details.host` names it |
+| `ECONNREFUSED` / `ETIMEDOUT` / `ECONNRESET` | the host is there and did not answer; `details.host` names it |
+| `ENV_NOT_FOUND` | the `env` is not in `.pos`; `details.environments` lists the ones that are |
+
+A 500, 502 or 504 says in its message that platformOS has already been notified, so it is not
+something to report or to work around.
+
+**`details.remedy`** appears where a failure has a command that fixes it: `{ command, runBy }`.
+`runBy` is part of the advice, not a label — a remedy that says a person runs it needs a password,
+a second factor or a browser, and an agent that runs it itself stops on a prompt nobody can answer.
+Today three failures carry one: a rejected `.pos` token (`pos-cli env refresh-token`), an `env` that
+is not in `.pos` when none are configured (`pos-cli env add`), and a missing tests module
+(`TESTS_MODULE_MISSING`).
+
 **A failure of the work is not a failure of the call.** A test run whose assertions failed answers
 `ok: true` — the run did what was asked, and the failures are in `data`. So does a `job-status` call
 about a job that failed, and a `data-validate` run that found invalid records. `ok: false` means the

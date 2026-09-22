@@ -55,7 +55,7 @@ describe('env resolution never exits the process', () => {
       throw new Error('process.exit must not be called from resolveAuth');
     });
 
-    await expect(resolveAuth({ env: 'ps' })).rejects.toThrow(/Environment 'ps' not found/);
+    await expect(resolveAuth({ env: 'ps' })).rejects.toMatchObject({ code: 'ENV_NOT_FOUND' });
     expect(exitSpy).not.toHaveBeenCalled();
 
     exitSpy.mockRestore();
@@ -146,7 +146,7 @@ describe('resolveAuth precedence', () => {
   // Naming an environment settles which instance is meant, so an unknown name fails rather than
   // resolving to whatever MPKIT_* points at — often a different instance entirely.
   test('a named environment that is not in .pos fails instead of falling back to MPKIT_*', async () => {
-    await expect(resolveAuth({ env: 'missing' }, ctx)).rejects.toThrow(/Environment 'missing' not found/);
+    await expect(resolveAuth({ env: 'missing' }, ctx)).rejects.toMatchObject({ code: 'ENV_NOT_FOUND' });
   });
 
   // Two of the three names an instance and then resolves a different one from .pos, so the call
@@ -160,7 +160,8 @@ describe('resolveAuth precedence', () => {
     ['an entry with no credentials in it', 'hollow'],
     ['an entry that is not there', 'missing']
   ])('%s is an error, not something to authenticate with', async (_label, name) => {
-    await expect(resolveAuth({ env: name }, ctx)).rejects.toThrow(/Environment '.+' (in \.pos has no url and token|not found)/);
+    await expect(resolveAuth({ env: name }, ctx))
+      .rejects.toMatchObject({ code: expect.stringMatching(/^ENV_(INCOMPLETE|NOT_FOUND)$/) });
   });
 
   test('MPKIT_* needs all three too; two of them fall through to .pos', async () => {
@@ -290,14 +291,15 @@ describe('a named environment is read from .pos, whatever MPKIT_* says', () => {
   });
 
   test('an environment that is not in .pos fails instead of quietly using MPKIT_*', async () => {
-    await expect(resolveAuth({ env: 'does-not-exist' })).rejects.toThrow(/Environment 'does-not-exist' not found/);
+    await expect(resolveAuth({ env: 'does-not-exist' })).rejects.toMatchObject({ code: 'ENV_NOT_FOUND' });
   });
 
   // The name comes from a model, so it can be anything at all.
   test.each(['constructor', '__proto__', 'toString', 'hasOwnProperty'])(
     'an environment named %s resolves nothing',
     async (name) => {
-      await expect(resolveAuth({ env: name })).rejects.toThrow(`Environment '${name}' not found`);
+      await expect(resolveAuth({ env: name })).rejects.toMatchObject({ code: 'ENV_NOT_FOUND' });
+      await expect(resolveAuth({ env: name })).rejects.toThrow(`Environment '${name}'`);
     }
   );
 

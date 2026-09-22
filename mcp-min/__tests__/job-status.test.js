@@ -676,7 +676,9 @@ describe('a 5xx: the job is not there, or the instance is unwell', () => {
 
     const result = await runTool(jobStatus, { job_id: handle('deploy', '41'), env: 'staging' }, ctx);
 
-    expect(result.error).toMatchObject({ kind: 'unavailable', code: 'INSTANCE_UNAVAILABLE' });
+    // `classify` gives this 503 a code of its own (TASK-40), so an agent can tell it from an
+    // instance that is simply down without reading the message.
+    expect(result.error).toMatchObject({ kind: 'unavailable', code: 'PARTNER_PORTAL_UNAVAILABLE' });
     expect(probes(calls)).toBe(0);
   });
 

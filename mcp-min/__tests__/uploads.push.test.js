@@ -90,7 +90,7 @@ describe('uploads-push', () => {
     expect(res.ok).toBe(false);
     expect(res.error.code).toBe('ENV_NOT_FOUND');
     expect(res.error.message).toContain('unknown-env');
-    expect(res.error.message).toContain('not found');
+    expect(res.error.details).toHaveProperty('environments');
   });
 
   test('has correct description and schema with required fields', () => {

@@ -262,7 +262,7 @@ The MCP (Model Context Protocol) server exposes platformOS operations as tools f
 - **Hidden means uncallable.** A tool outside the selection is never registered with the SDK, so `tools/call` over stdio and `/mcp` answers it exactly like a name that matches no tool. `findTool` stays the one lookup for a client-supplied name, so an unexposed tool and an `Object.prototype` name are alike unknown. The HTTP transport has no authentication, so a listed-but-hidden tool that could still be called would make profiles cosmetic.
 - **The selection fails closed**: an unknown profile or tool name (Map lookups, so `constructor` is unknown), a name in both options, `--include-tools` naming a config-disabled tool, or an empty result throws `ToolsConfigError` before any transport starts.
 - **A description must not name a tool its built-in profile hides** — the model would go looking for it. `tool-selection.test.js` checks every built-in profile; a tool whose description points at another tool has to be exposed with it. That check covers the whole registry only while every tool name is hyphenated: a single-word name cannot be told from ordinary prose, so one would silently drop out of it.
-- **The server instructions describe the server that was resolved.** `mcp-min/instructions.js` builds the MCP `instructions` string from the exposed `Map`, so a section about a tool disappears with the tool and `--profile`/`--include-tools`/`--exclude-tools` carry it without a second list to maintain. It holds only what no single tool owns — how credentials resolve, what every result looks like, what a relative path is relative to — because it must not restate a tool description that is already sent with every request. It never names a tool this server does not expose, and never a tool of another MCP server: what else a client has registered is not knowable here. `pos-cli mcp-config` prints the string for any selection.
+- **The server instructions describe the server that was resolved.** `mcp-min/instructions.js` builds the MCP `instructions` string from the exposed `Map`, so a section about a tool disappears with the tool and `--profile`/`--include-tools`/`--exclude-tools` carry it without a second list to maintain. It holds only what no single tool owns — how credentials resolve, what every result looks like, what a relative path is relative to — because it must not restate a tool description that is already sent with every request. It never names a tool this server does not expose, and never a tool of another MCP server: what else a client has registered is not knowable here. It does name every kind `ERROR_KINDS` defines — the two lists had drifted to five of eight, so an agent reading "the kind says what to do next" met a `kind: project` the guidance never mentioned — and `instructions.test.js` derives the required set from the table rather than repeating it, while the wording stays the model's rather than the table's, which costs about 200 bytes a session less. `pos-cli mcp-config` prints the string for any selection.
 - **A tool is described where it is defined.** The `description` in the tool's own module is what clients are shown. `tools.config.json` can replace it — that is what the override is for — but the bundled file ships replacing nothing, and must stay that way: while it carried a description for every tool, editing a module changed nothing anyone saw, and six had drifted apart before it was noticed. It also froze all of them for anyone who edited the file, since an upgrade cannot update a description a user's config restates.
 - **What the server does not expose is a decision, not an oversight.** `docs/MCP_COVERAGE.md` holds one — expose, later or never, with its reason — for every pos-cli capability, and `mcp-min/__tests__/cli-coverage.test.js` derives the capability list from `bin/` the way commander does and fails when one has no row. A new CLI command therefore cannot ship without someone saying what it means for the agent surface. Every tool costs tokens on every request for every agent, so "expose everything" has never been the goal.
 - Bare `pos-cli-mcp` stays `full` in 6.x. `pos-cli ai init` writes `--profile dev`; `lib/ai.js` upgrades only entries equal to a form it wrote before (`PREVIOUS_SERVERS`) and leaves any other differing entry alone. Changing the written args means adding the old form there.
@@ -676,9 +676,34 @@ rewrites: explicit `url`/`email`/`token` came from the caller and `MPKIT_*` is t
 environment. Only on `kind: auth`, because telling someone to refresh a working token is the
 mistake `lib/utils/partnerPortal.js` exists to stop making — an instance whose Portal is down
 cannot judge a token at all and answers `503`, not `401`. `runBy` is part of the advice: without it
-an agent holding a shell runs the command itself and hangs on the password prompt. The server
-instructions say a person has to do it; the command with the environment filled in is on the error,
-so neither restates the other.
+an agent holding a shell runs the command itself and hangs on the password prompt.
+
+**A remedy is `{ command, runBy }`, wherever it comes from.** Three failures name one — a rejected
+`.pos` token, an `env` that is not in `.pos` when none are configured (`envNotFound` in `auth.js`),
+and a missing tests module (`tests/module-check.js`) — and the instructions state the rule once
+rather than announcing each: `details.remedy` is the command that fixes the error and who runs it,
+and one marked for a person is not the agent's to run. Announcing them individually is what the
+refresh-token sentence used to do, and it does not scale past the first. `runBy` is the half that
+is easy to leave off and the one that matters, so `error-advice.test.js` finds every `command:` in
+`mcp-min/` by walking the sources and fails on one without it; a fourth producer is covered by being
+written. `ENV_NOT_FOUND` carries a command only when `.pos` holds nothing to choose between —
+otherwise the list of configured names is the fix, and a remedy on every mistyped name is how a
+field an agent should act on becomes one it skips.
+
+**The advice `lib/ServerError.js` carries belongs with the classification.** `classify`
+(`tool-error.js`) is the only thing that reads an upstream failure nobody classified, so it is where
+the CLI's per-status handlers are reproduced — as fields, never as the prose `ServerError` prints
+before exiting. Three of them: `STATUS_ADVICE`, holding only the statuses pos-cli knows something
+the response does not say (413's 50MB limit, and that a 500/502/504 is already reported, which is
+what stops an agent reporting a platformOS incident as the user's mistake); the Partner Portal
+`503`, which gets a code of its own and `details.retryAfterSeconds` because the obvious next move —
+refresh the token — is the one that cannot help; and a connection failure, which gains
+`details.host`, since `apiRequest` wraps the fetch error and its message is `fetch failed`, three
+words naming neither the host nor what happened to it. The origin only: a query string is a tool's
+to build and this reaches the model on every failure. Nothing is added for a status the table does
+not name, and nothing is invented when no host can be found — prose that restates a code the caller
+already has is tokens spent while a call is already failing. `STATUS_ADVICE` is a `Map` so a status
+arriving as a string cannot reach `Object.prototype` and turn a refusal into `undefined` advice.
 
 **The tools config fails closed.** A missing, unreadable or unparseable config falls back to
 defaults (logged as a warning when `MCP_TOOLS_CONFIG` named it, and shown by `pos-cli

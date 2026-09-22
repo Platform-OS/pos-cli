@@ -11,6 +11,8 @@
  * an agent branches on when it wants to handle one specific failure.
  */
 
+import { isPartnerPortalUnavailable, partnerPortalReason, retryAfterSeconds } from '../lib/utils/partnerPortal.js';
+
 /** The closed set, with the next action each one implies. */
 export const ERROR_KINDS = Object.freeze({
   input: 'the arguments were wrong; change them and call again',
@@ -79,15 +81,82 @@ const UNCLASSIFIED = {
   internal: 'INTERNAL_ERROR'
 };
 
-// A network failure keeps its code two or three `cause` levels down (CLAUDE.md), so the chain is
-// walked rather than read at the top.
-const networkCode = (err, depth = 0) => {
+// A network failure keeps its code — and the name it failed to resolve — two or three `cause`
+// levels down (CLAUDE.md), so the chain is walked rather than read at the top.
+const fromCauses = (err, field, depth = 0) => {
   if (!err || depth > 5) return null;
-  if (typeof err.code === 'string') return err.code;
-  return networkCode(err.cause, depth + 1);
+  if (typeof err[field] === 'string') return err[field];
+  return fromCauses(err.cause, field, depth + 1);
 };
 
 const UNREACHABLE = new Set(['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN']);
+
+// The one distinction among those that leads somewhere different: a name that does not resolve is
+// a URL to check, and everything else is a host that is there and did not answer. Which of the two
+// it was is already in the code; what the message adds is the host.
+const NAME_DID_NOT_RESOLVE = new Set(['ENOTFOUND', 'EAI_AGAIN']);
+
+/**
+ * The host a failed request was for. `apiRequest` wraps the fetch failure, whose message is
+ * `fetch failed` and names nothing, so without this an unreachable instance and an unreachable
+ * Partner Portal are the same three words — which is what `lib/ServerError.addressNotFound` and
+ * `connectionRefused` exist to put back.
+ *
+ * The origin, not the URI: a query string is a tool's to build, and this ends up in the model's
+ * context whatever is in it.
+ */
+const unreachableHost = (err) => {
+  const uri = err?.options?.uri;
+  if (typeof uri === 'string') {
+    try {
+      return new URL(uri).origin;
+    } catch {
+      // Not a URL; the system error underneath may still name the host.
+    }
+  }
+  return fromCauses(err, 'hostname');
+};
+
+const networkFailure = (err, code, message, details) => {
+  const host = unreachableHost(err);
+  if (!host) return ToolError.unavailable(code, message, details);
+
+  const what = NAME_DID_NOT_RESOLVE.has(code)
+    ? 'does not resolve; check the instance URL'
+    : 'did not answer';
+  return ToolError.unavailable(code, `${message}: ${host} ${what}`, { ...details, host });
+};
+
+/**
+ * What `lib/ServerError.js` tells an operator at a status, reduced to the part a model can act on
+ * and carried as a field rather than printed. Only the statuses where pos-cli knows something the
+ * response does not say — nothing here restates a status code the caller already has, and a status
+ * that is missing from this table keeps the bare message on purpose.
+ */
+const ALREADY_REPORTED = 'platformOS has been notified about it, so there is nothing to report and nothing to work around';
+
+const STATUS_ADVICE = new Map([
+  // `entityTooLarge`. The instance answers a 413 with a page, so the limit is the whole of what
+  // this failure has to say.
+  [413, { code: 'PAYLOAD_TOO_LARGE', note: 'the request body is over the 50MB limit; deploy fewer files, or keep large assets out of the release' }],
+  [500, { note: ALREADY_REPORTED }],
+  [502, { note: ALREADY_REPORTED }],
+  [504, { note: ALREADY_REPORTED }]
+]);
+
+/**
+ * The one 503 an instance explains, and the one whose obvious next move is wrong: it could not
+ * reach the Partner Portal, the only thing that can verify an API token, so the token was never
+ * judged. `runTool` attaches the refresh-token remedy to `auth` alone and this is `unavailable`,
+ * which keeps it off — but the message has to say so too, or an agent reads a failure that mentions
+ * a token and has someone refresh a working one (`lib/utils/partnerPortal.js`).
+ */
+const portalOutage = (err, details) => ToolError.unavailable(
+  'PARTNER_PORTAL_UNAVAILABLE',
+  (partnerPortalReason(err) || 'This instance could not reach the Partner Portal to verify the API token.')
+    + ' Nothing is wrong with the token; wait and call again.',
+  { ...details, retryAfterSeconds: retryAfterSeconds(err) }
+);
 
 /**
  * A ceiling on an upstream body that is not JSON, which the model pays for in tokens while it is
@@ -140,18 +209,24 @@ export function classify(err) {
   if (err instanceof ToolError) return err;
 
   const status = err?.statusCode ?? err?.status;
-  const code = networkCode(err);
+  const code = fromCauses(err, 'code');
   const details = status ? { statusCode: status, ...(err?.response?.body !== undefined && { body: err.response.body }) } : undefined;
   const message = String(err?.message || err);
 
   if (err?.name === 'RequestError' || (code && UNREACHABLE.has(code))) {
-    return ToolError.unavailable(code && UNREACHABLE.has(code) ? code : UNCLASSIFIED.unavailable, message, details);
+    const unreachable = code && UNREACHABLE.has(code) ? code : UNCLASSIFIED.unavailable;
+    return networkFailure(err, unreachable, message, details);
   }
   // Only a status decides a kind here; without one there is nothing to read, and a guess would be
   // a worse answer than "we do not know what this is".
   if (status >= 400) {
+    if (isPartnerPortalUnavailable(err)) return portalOutage(err, details);
+
     const kind = kindForStatus(status);
-    return new ToolError(kind, UNCLASSIFIED[kind], message, details);
+    // A Map, so a status arriving as a string cannot reach Object.prototype and turn a refusal
+    // into `undefined` advice.
+    const advice = STATUS_ADVICE.get(Number(status));
+    return new ToolError(kind, advice?.code ?? UNCLASSIFIED[kind], advice ? `${message}: ${advice.note}` : message, details);
   }
 
   return ToolError.internal(UNCLASSIFIED.internal, message);

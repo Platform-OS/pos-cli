@@ -11,6 +11,9 @@ import registry from '../tools.js';
 import { resolveTools } from '../tool-selection.js';
 import { PROFILE_NAMES, profileTools } from '../profiles.js';
 import { buildInstructions } from '../instructions.js';
+import { ERROR_KINDS } from '../tool-error.js';
+import { runTool } from '../run-tool.js';
+import { resolveAuth } from '../auth.js';
 import { launch, stopAll, request, send, boundUrl, makeWorkDir, MCP_BIN } from './helpers/server-process.js';
 
 const NO_CONFIG = { tools: {} };
@@ -109,6 +112,64 @@ describe('what the instructions promise about env is what the guard does', () =>
   });
 });
 
+/**
+ * The same rule again, for the sentence that replaced the refresh-token one: the instructions name
+ * `details.remedy` and say it carries a command and who runs it, so an error that carries a remedy
+ * has to have both. Half of it sends the model looking for a field that is not there; the missing
+ * half is usually `runBy`, and without that an agent holding a shell runs a command that stops on a
+ * password prompt.
+ */
+describe('the remedy the instructions promise is the one an error carries', () => {
+  test('what is named is what runTool attaches', async () => {
+    expect(buildInstructions(resolve())).toContain('details.remedy');
+
+    const config = { staging: { url: 'https://staging.example.com', email: 'a@b.c', token: 'stored' } };
+    const rejected = {
+      annotations: { readOnlyHint: true },
+      handler: async (params, ctx) => {
+        await resolveAuth(params, ctx);
+        throw Object.assign(new Error('Request failed with status 401'), { name: 'StatusCodeError', statusCode: 401 });
+      }
+    };
+
+    const { error } = await runTool(rejected, { env: 'staging' }, {
+      files: { getConfig: () => config },
+      settings: { settingsFromDotPos: name => config[name] }
+    });
+
+    expect(Object.keys(error.details.remedy).sort()).toEqual(['command', 'runBy']);
+  });
+});
+
+/**
+ * The kinds are a closed set the instructions restate in the model's own terms, which is two lists
+ * that have to agree — and they had drifted: `ERROR_KINDS` had eight members while the instructions
+ * named five, so an evaluation's second call came back `kind: project` against guidance that
+ * promised "the kind says what to do next" and did not mention it.
+ *
+ * Derived from the set rather than repeated here, so adding a kind fails this until it is described.
+ * They are not generated from `ERROR_KINDS` directly on purpose: those strings document the table
+ * for someone reading it, and saying them here in full costs about 200 bytes of every session.
+ */
+describe('the instructions describe every kind an error can carry', () => {
+  const named = (text, kind) => new RegExp(`(?<![\\w-])${kind}:`).test(text);
+
+  test('each member of the closed set is named, with what to do about it', () => {
+    const text = buildInstructions(resolve());
+
+    expect(Object.keys(ERROR_KINDS).filter(kind => !named(text, kind))).toEqual([]);
+  });
+
+  // Without this the check above passes for a server that authenticates nothing, which is the one
+  // place the error taxonomy is least likely to come up.
+  test('a server of local tools alone still describes them', () => {
+    const local = resolve({ profile: 'none', include: ['check-run', 'generators-list'] });
+    const text = buildInstructions(local);
+
+    expect(Object.keys(ERROR_KINDS).filter(kind => !named(text, kind))).toEqual([]);
+  });
+});
+
 describe('instructions are paid for on every session', () => {
   // Charged like the tool definitions are, and bounded for the same reason. Kept apart from the
   // tools/list budget so that each can be read on its own.
@@ -116,8 +177,12 @@ describe('instructions are paid for on every session', () => {
   // Raised from 1200 in 6.6.0, when the refresh-token sentence (TASK-30) took full to 1186 and left
   // fourteen bytes. A ceiling that close fails on a reworded clause rather than on the growth it is
   // there to catch, which teaches the next person to raise it without thinking. This is the number
-  // that still forces the conversation: full is 1186 and dev 1148, so an addition worth a sentence
+  // that still forces the conversation: full is 1346 and dev 1308, so an addition worth a sentence
   // fits and one worth a paragraph does not.
+  //
+  // Not raised again for TASK-40, which added the three kinds the list was missing: the
+  // refresh-token sentence it replaced said in advance what `details.remedy` now says on the error
+  // that needs it, and one general rule about remedies is shorter than one announcement per remedy.
   const BUDGET = 1400;
 
   test.each([['full', {}], ['dev', { profile: 'dev' }]])('%s fits the budget', (_label, options) => {
