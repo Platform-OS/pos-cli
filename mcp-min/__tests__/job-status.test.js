@@ -74,6 +74,17 @@ afterEach(() => {
   forgetUploads();
 });
 
+/**
+ * A field an agent is never told to read is a field it does not read. `warnings` can be set on a
+ * job that completed, which is the one combination that looks like nothing to check.
+ */
+describe('the description points at the field that qualifies a success', () => {
+  test('it says to read warnings even on a completed job', () => {
+    expect(jobStatus.description).toMatch(/warnings/);
+    expect(jobStatus.description).toMatch(/completed/);
+  });
+});
+
 describe('a job_id that cannot be trusted', () => {
   test.each([
     ['is missing', undefined],
@@ -192,6 +203,81 @@ describe('deploy', () => {
 
     expect(result.data.error).toBe('unknown filter\napp/views/pages/index.liquid');
     expect(result.data.warnings).toEqual(['modules/x is stale']);
+  });
+
+  /**
+   * The deploy converter drops a file it matches no rule for, and the release still reports
+   * `status: 'success'`. Reproduced against a live instance on 2026-09-22 with a file at
+   * `app/tests/…`: `ok`, `state`, `status` and `done` all said the deploy landed, and the one field
+   * that said otherwise was four levels down, inside the release record nobody reads.
+   */
+  describe('a file the deploy discarded', () => {
+    const discarding = (files) => deploy(async () => ({
+      status: 'success',
+      warning: { files_not_matched: files }
+    }));
+
+    // The assertion is the whole task: reached from `data`, without walking into `result.release`.
+    test('is named beside state, not only inside the release record', async () => {
+      const result = await discarding(['tests/eval/simple_test.liquid']);
+
+      expect(result.data.warnings).toHaveLength(1);
+      expect(result.data.warnings[0]).toContain('tests/eval/simple_test.liquid');
+    });
+
+    // `completed` is the truth — the deploy finished — so the warning has to be what carries this,
+    // and it has to be legible without a schema in hand.
+    test('does not make the job read as an unqualified success', async () => {
+      const result = await discarding(['tests/eval/simple_test.liquid']);
+
+      expect(result.data).toMatchObject({ state: 'completed', done: true, status: 'success' });
+      expect(result.data.warnings[0]).toMatch(/did not put it on the instance/);
+    });
+
+    test('says how many, and names them', async () => {
+      const result = await discarding(['a.liquid', 'b.liquid', 'c.liquid']);
+
+      expect(result.data.warnings[0]).toMatch(/^3 files /);
+      expect(result.data.warnings[0]).toContain('a.liquid, b.liquid, c.liquid');
+    });
+
+    // A misplaced directory drops every file under it, and the whole list would be the result.
+    test('a long list is bounded, and says how much it left out', async () => {
+      const files = Array.from({ length: 25 }, (_, i) => `f${i}.liquid`);
+
+      const result = await discarding(files);
+
+      expect(result.data.warnings[0]).toContain('f9.liquid, and 15 more');
+      expect(result.data.warnings[0]).not.toContain('f10.liquid');
+      // Bounded for reading, not for completeness: the record still carries every one.
+      expect(result.data.result.release.warning.files_not_matched).toHaveLength(25);
+    });
+
+    test('a deploy that discarded nothing carries no warnings at all', async () => {
+      const result = await deploy(async () => ({ status: 'success' }));
+
+      expect(result.data).not.toHaveProperty('warnings');
+    });
+
+    // The platform will add a second kind of warning before anyone here hears about it.
+    test('a warning key this does not recognise is passed through rather than dropped', async () => {
+      const result = await deploy(async () => ({ status: 'success', warning: { deprecated_syntax: ['old.liquid'] } }));
+
+      expect(result.data.warnings).toEqual(['deprecated_syntax: old.liquid']);
+    });
+
+    // A failed release can carry both, and one must not hide the other.
+    test('a failure keeps its own warnings and gains the discarded files', async () => {
+      const result = await deploy(async () => ({
+        status: 'error',
+        error: { error: 'unknown filter', warnings: ['modules/x is stale'] },
+        warning: { files_not_matched: ['tests/a_test.liquid'] }
+      }));
+
+      expect(result.data.state).toBe('failed');
+      expect(result.data.warnings[0]).toBe('modules/x is stale');
+      expect(result.data.warnings[1]).toContain('tests/a_test.liquid');
+    });
   });
 
   test('a release id this instance does not have is JOB_NOT_FOUND, not a failed deploy', async () => {

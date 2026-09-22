@@ -29,7 +29,7 @@ const makeProject = () => {
  * all (measured — it answers `ready_for_import` with `report: null`), and the file report and any
  * validation error appear on the release once it settles.
  */
-const gatewayFake = ({ report = null, releaseStatus = 'success', error = null, assetStatuses = [] } = {}) => {
+const gatewayFake = ({ report = null, releaseStatus = 'success', error = null, warning = null, assetStatuses = [] } = {}) => {
   const calls = { push: [], sendManifest: [], getStatus: [] };
   let assetIndex = 0;
   class Fake {
@@ -42,7 +42,7 @@ const gatewayFake = ({ report = null, releaseStatus = 'success', error = null, a
     async sendManifest(manifest, releaseId) { calls.sendManifest.push({ manifest, releaseId }); return {}; }
     async getStatus(id) {
       calls.getStatus.push(id);
-      const release = { status: releaseStatus, report, error };
+      const release = { status: releaseStatus, report, error, ...(warning && { warning }) };
       // The first poll settles the release; the asset script runs on the polls after it.
       if (calls.getStatus.length === 1) return release;
       return { ...release, ...(assetStatuses[Math.min(assetIndex++, assetStatuses.length - 1)] ?? {}) };
@@ -199,6 +199,58 @@ describe('what it reports', () => {
 
     expect(data.assets).toEqual({ state: 'none', count: 0 });
     expect(calls.sendManifest).toHaveLength(0);
+  });
+});
+
+/**
+ * A file the converter matches no rule for is dropped, and the release still reports success — so
+ * `verdict: would_succeed` is true and incomplete at the same time. This is the one call that can
+ * say so before the deploy rather than after it, which is what a dry run is for.
+ */
+describe('files the deploy would discard', () => {
+  const discarding = (files) => gatewayFake({ warning: { files_not_matched: files } });
+
+  test('are reported beside what would be added and deleted', async () => {
+    const { Fake } = discarding(['tests/eval/simple_test.liquid']);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.discarded).toEqual({ count: 1, files: ['tests/eval/simple_test.liquid'] });
+  });
+
+  // The deploy really would succeed; the discard is a separate fact and must not be folded into
+  // the verdict, or an agent reading `would_succeed` learns less than before.
+  test('do not change the verdict, which is still what the instance would do', async () => {
+    const { Fake } = discarding(['tests/a_test.liquid']);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('would_succeed');
+    expect(data.discarded.count).toBe(1);
+  });
+
+  // Always present, like deleted/upserted/skipped: an agent branching on the count must not have
+  // to tell "nothing was dropped" from "this tool does not answer that".
+  test('the field is there even when nothing would be dropped', async () => {
+    const { Fake } = gatewayFake({});
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.discarded).toEqual({ count: 0, files: [] });
+  });
+
+  // A release the instance refused still tells you what it would have thrown away.
+  test('are reported for a deploy that would fail too', async () => {
+    const { Fake } = gatewayFake({
+      releaseStatus: 'error',
+      error: { error: 'unknown filter' },
+      warning: { files_not_matched: ['tests/a_test.liquid'] }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('would_fail');
+    expect(data.discarded.files).toEqual(['tests/a_test.liquid']);
   });
 });
 

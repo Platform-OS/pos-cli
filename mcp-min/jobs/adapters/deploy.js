@@ -32,9 +32,55 @@ function releaseError(response) {
   return body.details?.file_path ? `${message}\n${body.details.file_path}` : message;
 }
 
-/** Warnings ride along with a failure the same way `lib/push.js` prints them. */
-const releaseWarnings = response =>
-  Array.isArray(response?.error?.warnings) && response.error.warnings.length > 0 ? response.error.warnings : undefined;
+/**
+ * Paths in the build that matched no part of the platformOS layout. The deploy converter drops
+ * them and the release still reports `status: 'success'` — measured against a live instance on
+ * 2026-09-22, a file at `app/tests/…` is discarded exactly this way.
+ *
+ * Exported because `deploy-dry-run` answers the same question before the deploy, and one reader of
+ * the platform's shape is the point.
+ */
+export const filesNotMatched = (release) =>
+  (Array.isArray(release?.warning?.files_not_matched) ? release.warning.files_not_matched : []);
+
+// A misplaced directory drops every file under it, so the readable form is bounded. The whole
+// record stays on `result.release.warning` for anyone who wants all of it.
+const MAX_LISTED = 10;
+
+const listOf = (values) => (values.length > MAX_LISTED
+  ? `${values.slice(0, MAX_LISTED).join(', ')}, and ${values.length - MAX_LISTED} more`
+  : values.join(', '));
+
+/**
+ * Everything the instance warned about, as sentences beside `state` rather than four levels inside
+ * the release record.
+ *
+ * This is the whole of TASK-43: the platform *does* report a file it discarded, and every field
+ * above it said the deploy succeeded — `ok`, `state`, `status` and `done` — so an agent making any
+ * reasonable check concluded the file was on the instance. `state` is still `completed`, because it
+ * is: the deploy finished and the converter's verdict is a fact about the project, not a failed
+ * operation. What changes is that the fact is no longer reachable only by walking into the record.
+ *
+ * A key this does not recognise is passed through rather than dropped, so the next one the platform
+ * adds is not invisible for a release.
+ */
+const releaseWarnings = (response) => {
+  const discarded = filesNotMatched(response);
+  const other = Object.entries(response?.warning ?? {})
+    .filter(([key]) => key !== 'files_not_matched')
+    .map(([key, value]) => `${key}: ${Array.isArray(value) ? listOf(value) : JSON.stringify(value)}`);
+
+  const warnings = [
+    ...(Array.isArray(response?.error?.warnings) ? response.error.warnings : []),
+    ...(discarded.length > 0
+      ? [`${discarded.length} file${discarded.length === 1 ? '' : 's'} matched no part of the platformOS layout, `
+        + `so the deploy did not put ${discarded.length === 1 ? 'it' : 'them'} on the instance: ${listOf(discarded)}`]
+      : []),
+    ...other
+  ];
+
+  return warnings.length > 0 ? warnings : undefined;
+};
 
 /**
  * Where the assets are, from two observers in order: this process knows about an upload it
@@ -80,10 +126,14 @@ export default {
     // way a process that did not start it can tell that from "an upload I cannot see". An absent
     // flag is the starter saying it never found out, which is that second case, not this one.
     const assets = flags.assets === false ? { phase: 'none' } : assetPhase(response, { origin, id });
+    // Beside `state`, not under `result`: a deploy that discarded a file reads as an unqualified
+    // success on every other field here.
+    const warnings = releaseWarnings(response);
     return {
       state: ASSET_STATES[assets.phase],
       status,
       ...(assets.error && { error: assets.error }),
+      ...(warnings && { warnings }),
       result: { release: response, assets }
     };
   }

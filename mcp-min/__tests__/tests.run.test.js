@@ -1,5 +1,6 @@
 import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { runTool } from '../run-tool.js';
+import registry from '../tools.js';
 
 // Mock the pos-cli libs before importing tools
 vi.mock('../../lib/files', () => ({
@@ -451,5 +452,34 @@ describe('a 404 from an instance with no test runner', () => {
     );
 
     expect(result.error.code).toBe('HTTP_ERROR');
+  });
+});
+
+/**
+ * The `path` example sent an evaluation to `app/tests/eval/simple_test.liquid`, which the deploy
+ * converter discards while still reporting success — so the test file it wrote was never on the
+ * instance, and nothing said so. Measured on 2026-09-22: anything under `app/tests` lands in
+ * `files_not_matched`, while `app/lib/**` deploys as Partials.
+ *
+ * The example itself stays: it is a path inside the runner's namespace, not a file path. What was
+ * missing is where the file goes, and that is what this pins.
+ */
+describe('the parameters say where a test file can actually live', () => {
+  const properties = () => registry.get('unit-tests-run').inputSchema.properties;
+
+  test('name names the directory the deploy keeps', () => {
+    expect(properties().name.description).toMatch(/app\/lib/);
+  });
+
+  test('name warns about the one the deploy throws away', () => {
+    expect(properties().name.description).toMatch(/app\/tests/);
+  });
+
+  // Measured against tests@1.3.5: the module filters on `context.params.name` and never reads
+  // `path`, so a run narrowed with `path` quietly runs the whole suite. Until TASK-51 settles what
+  // the parameter should be, it must not claim to filter.
+  test('path does not claim a filter the module does not apply', () => {
+    expect(properties().path.description).toMatch(/ignored/i);
+    expect(properties().path.description).not.toMatch(/only tests under/i);
   });
 });

@@ -22,23 +22,26 @@ const DEV_TOOLS = [
 ];
 
 // The profile exists to keep this payload small, so growth past the budget needs a deliberate
-// bump rather than a quiet one. Currently 6,680 bytes over stdio, plus the server instructions
+// bump rather than a quiet one. Currently 6,896 bytes over stdio, plus the server instructions
 // (budgeted separately in instructions.test.js, since a client is charged for each once).
 //
-// Raised from 6,000 for `deploy-dry-run` (TASK-25), which costs 739 bytes of it. The bump was
-// argued rather than assumed: `deploy-start` is in this profile and a deploy that is not partial
-// deletes every file missing from the build, so without the dry run an agent here can only find
-// that out by causing it. `deploy-start`'s own description names the dry run, and a description
-// may not point at a tool its profile hides — so the two travel together or neither does.
+// 6,000 → 6,500 for `deploy-dry-run` (TASK-25), which costs 739 bytes of it. Argued rather than
+// assumed: `deploy-start` is in this profile and a deploy that is not partial deletes every file
+// missing from the build, so without the dry run an agent here can only find that out by causing
+// it. `deploy-start`'s own description names the dry run, and a description may not point at a tool
+// its profile hides — so the two travel together or neither does.
 //
-// Raised to 6,800 for TASK-41 and TASK-42 together, which cost 297 bytes between them. Both are
-// the same purchase: an agent-perspective evaluation found two of this profile's descriptions
-// saying things that were not true, and each wasted more of that agent's context on a detour than
-// the correction costs every agent for a release. `liquid-exec` promised locals the endpoint does
-// not bind; `logs-fetch` documented a resume whose cursor its own schema rejected, and said
-// nothing about which end `limit` reads from or that the stream has no `{% log %}` output in it.
-// A description that is wrong is not cheaper than one that is longer.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 6800;
+// 6,500 → 7,000 across TASK-41, 42 and 43, which cost 411 bytes between them. One bump for three,
+// because they are one purchase: an agent-perspective evaluation found four of this profile's
+// descriptions stating things that were not true — locals the endpoint does not bind, a resume
+// whose cursor the schema rejected, a log stream that is not the one you would guess, and a test
+// path the deploy discards. Each cost that agent more context in one session than the correction
+// costs every agent for a release, and two of them ended in a wrong conclusion rather than a
+// retry. A description that is wrong is not cheaper than one that is longer.
+//
+// That is the argument spent. The next addition here comes out of existing text, not out of a
+// fourth raise: at 7,000 the dev profile is already 38% of the full surface it exists to avoid.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 7000;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -112,7 +115,13 @@ const BARE_TOOLS = [
 // lastId is handed back unchanged (TASK-42). Its schema used to reject the cursor it returned, so
 // the resume it documented had no input that worked at all; 33 of those bytes are the row-id
 // pattern, which is what now refuses a cursor carrying its own query parameters.
-const BARE_TOOLS_LIST_BYTES = 18157;
+//
+// 18,471 once `job-status` said to read `warnings` on a completed job, `deploy-dry-run` gained
+// `discarded`, and `unit-tests-run` said where a test file has to live and which of its two
+// parameters the tests module actually applies (TASK-43). The deploy converter drops a file it
+// matches no rule for and the release still reports success, so every field an agent would check
+// said the file was on the instance.
+const BARE_TOOLS_LIST_BYTES = 18471;
 
 const HANG_MS = 15000;
 

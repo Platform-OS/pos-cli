@@ -219,6 +219,7 @@ The only way to read back anything a starter began. It replaced six per-operatio
     done: false,               // state != running
     status: "in_progress",     // the instance's own word for it
     error: "…",                // only when state is failed
+    warnings: ["…"],           // only when there are any — read these on `completed` too
     result: { … }              // kind-specific: the release and asset phase, the export, the test run
   },
   meta: { startedAt, finishedAt, auth: { url, email, token, source } }
@@ -226,6 +227,22 @@ The only way to read back anything a starter began. It replaced six per-operatio
 ```
 
 `completed` means the operation finished, even if what it produced reports failures: a test run with failing assertions is `completed`, because the run did its work. `failed` means the operation itself failed.
+
+**A completed deploy is not always an unqualified one.** The deploy converter discards a file whose
+path matches no part of the platformOS layout — anything under `app/tests`, for instance — and the
+release still reports `status: "success"`. Every field above would otherwise say the deploy landed,
+so the discarded paths are named in `data.warnings`, beside `state` rather than inside the release
+record:
+
+```javascript
+{
+  state: "completed", done: true, status: "success",
+  warnings: ["2 files matched no part of the platformOS layout, so the deploy did not put them on the instance: tests/eval/simple_test.liquid, tests/probe/c_test.liquid"]
+}
+```
+
+The list is capped at ten paths for reading; `data.result.release.warning` always carries every one.
+`deploy-dry-run` reports the same files as `discarded`, before the deploy rather than after it.
 
 **Deploy jobs report two phases.** The release import and the asset upload finish separately, and a deploy that had assets is `completed` only when both are in. `data.result.assets.phase` is one of:
 
@@ -790,8 +807,7 @@ this is the only way to see that list before causing it.
 It is a separate tool rather than a flag on `deploy-start` so that no argument to it can apply a
 deploy: the request always carries `dry_run`. It is annotated `destructiveHint: false` and
 deliberately **not** `readOnlyHint`, because it does have effects — the API records a release, and
-the archive is written to `tmp/release-dry-run.zip` (its own path, so it cannot overwrite the
-archive a concurrent `deploy-start` is streaming).
+the archive is written under `tmp/` (in a directory of its own per call, described below).
 
 **Tool Name**: `deploy-dry-run`
 
@@ -808,6 +824,7 @@ archive a concurrent `deploy-start` is streaming).
     applied: false,
     releaseId: "rel-1",
     partial: false,
+    discarded: { count: 1, files: ["tests/eval/simple_test.liquid"] },
     deleted:  { count: 2, files: ["views/pages/old.liquid", "graphql/gone.graphql"] },
     upserted: { count: 12, files: ["views/pages/index.liquid", "..."] },
     skipped:  { count: 1, files: ["graphql/unchanged.graphql"] },
@@ -827,6 +844,12 @@ archive a concurrent `deploy-start` is streaming).
 `data.deleted.count` without walking the report. Each carries `count` and `files` separately
 because the API answers some categories with a count rather than the paths; `count` is right either
 way, and `files` is empty when it was not given them.
+
+`discarded` is the files the deploy would drop: paths matching no part of the platformOS layout,
+which the converter throws away while the release still reports success. It is always present, so
+`discarded.count === 0` means nothing would be dropped rather than "this tool does not answer that",
+and it does not change `verdict` — the deploy really would succeed, minus those files. `job-status`
+reports the same list in `warnings` once the deploy has run.
 
 `verdict` is `would_succeed`, `would_fail` or `not_known`. The instance evaluates the dry run and
 can refuse the deploy outright — a table that still holds records cannot be dropped, for one — and

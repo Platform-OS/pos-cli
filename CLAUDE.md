@@ -350,6 +350,18 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   one an id that does not exist gets, so asking the wrong way reports a finished job as a missing
   one. `data-export` carries the flag in its handle; `data-import` always passes `true` because it
   always uploads a ZIP.
+- **A deploy that discarded a file is not an unqualified success.** The converter drops a path that
+  matches no part of the platformOS layout — `app/tests/**` does, `app/lib/**` does not, both
+  measured 2026-09-22 — and the release still reports `status: 'success'`. The instance names them
+  in `warning.files_not_matched`; that is four levels inside the release record, so `ok`, `state`,
+  `status` and `done` all read as a clean deploy. `releaseWarnings` (`jobs/adapters/deploy.js`)
+  lifts them to `data.warnings`, beside `state`, and `deploy-dry-run` reports the same list as
+  `discarded` before the deploy. **`state` stays `completed`** and must: the deploy finished, and
+  what the converter kept is a fact about the project, not a failed operation — `running |
+  completed | failed` is shared by five job kinds and a fourth member would cost all of them. The
+  readable list is capped at ten paths, the record keeps all of them, and an unrecognised warning
+  key is passed through so the next one the platform adds is not invisible for a release.
+
 - **A log cursor is a string, and the same string everywhere.** A row id is a microsecond epoch
   (`"1790008926.7639065"`) and `/logs?last_id=` is a strict greater-than — measured 2026-09-22, so a
   cursor that loses its fraction re-delivers every row from that second and one rounded up skips

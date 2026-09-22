@@ -30,7 +30,7 @@ import { makeArchive } from '../../lib/archive.js';
 import { manifestGenerate } from '../../lib/assets/manifest.js';
 import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
-import { releaseState } from '../jobs/adapters/deploy.js';
+import { releaseState, filesNotMatched } from '../jobs/adapters/deploy.js';
 import { makeWorkDir, removeWorkDir } from './work-dir.js';
 
 const POLL_MS = 1000;
@@ -118,7 +118,7 @@ const validationError = (release) => {
 };
 
 const dryRunDeployTool = {
-  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start would be refused too, and error names the files.',
+  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start would be refused too, and error names the files. discarded names files a deploy would drop while still reporting success.',
   annotations: { destructiveHint: false },
   inputSchema: {
     type: 'object',
@@ -185,6 +185,9 @@ const dryRunDeployTool = {
     // it travels in the result — where the description tells the agent to read it.
     let verdict = 'not_known';
     let error;
+    // Files the converter matched no rule for. A deploy drops them and still reports success, so
+    // this is the one place an agent can find out before it happens rather than after.
+    let discarded = [];
 
     const clock = timing(ctx);
 
@@ -193,6 +196,7 @@ const dryRunDeployTool = {
       categories = Object.fromEntries(
         Object.entries(release.report ?? {}).map(([name, data]) => [name, category(data)])
       );
+      discarded = filesNotMatched(release);
       if (state === 'done') verdict = 'would_succeed';
       if (state === 'failed') {
         verdict = 'would_fail';
@@ -234,6 +238,9 @@ const dryRunDeployTool = {
       ...(error && { error }),
       // The question an agent is asking, answered before the detail: a non-partial deploy deletes
       // everything missing from the build, and this is that list.
+      // Beside the three the report names, and always present, so an agent branches on the count
+      // without having to tell "nothing was dropped" from "this tool does not say".
+      discarded: { count: discarded.length, files: discarded },
       deleted: { count: sumOver(categories, 'deleted'), files: Object.values(categories).flatMap(c => c.deleted.files) },
       upserted: { count: sumOver(categories, 'upserted'), files: Object.values(categories).flatMap(c => c.upserted.files) },
       skipped: { count: sumOver(categories, 'skipped'), files: Object.values(categories).flatMap(c => c.skipped.files) },
