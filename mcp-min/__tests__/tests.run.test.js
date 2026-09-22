@@ -1,8 +1,15 @@
-import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+/**
+ * `unit-tests-run` against the runner's JSON.
+ *
+ * The three things this file exists to hold, each one a defect an agent evaluation hit:
+ *  - a failing assertion is a **completed run**, not a transport failure to retry;
+ *  - a selection that matched nothing is **not** a pass;
+ *  - the per-test detail the runner sends is what comes back, rather than a text parser's guess.
+ */
+import { vi, describe, test, expect, beforeAll } from 'vitest';
 import { runTool } from '../run-tool.js';
 import registry from '../tools.js';
 
-// Mock the pos-cli libs before importing tools
 vi.mock('../../lib/files', () => ({
   default: { getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } }) },
   getConfig: () => ({ staging: { url: 'https://staging.example.com', token: 'test-token', email: 'test@example.com' } })
@@ -13,391 +20,219 @@ vi.mock('../../lib/settings', () => ({
   settingsFromDotPos: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' })
 }));
 
-vi.mock('request-promise', () => ({
-  default: vi.fn()
-}));
+vi.mock('request-promise', () => ({ default: vi.fn() }));
 
-describe('unit-tests-run tool', () => {
-  let testsRunTool;
-  let parseTestResponse;
-  let extractJsonObjects;
+let tool;
+let MAX_MESSAGE_LENGTH;
+beforeAll(async () => {
+  const module = await import('../tests/run.js');
+  tool = module.default;
+  MAX_MESSAGE_LENGTH = module.MAX_MESSAGE_LENGTH;
+});
 
-  beforeAll(async () => {
-    const module = await import('../tests/run.js');
-    testsRunTool = module.default;
-    parseTestResponse = module.parseTestResponse;
-    extractJsonObjects = module.extractJsonObjects;
+/**
+ * What tests@1.3.5 answers, captured from the verification instance on 2026-09-22 — including the
+ * leading and trailing blank lines the page emits, which the reader has to tolerate.
+ */
+const runBody = ({ total_tests = 2, total_assertions = 3, total_errors = 1, tests = [
+  { name: 'gen/gen03_test', success: false, assertions: 2, errors: { gen03_middle: ['expected 4 to equal 5'] } },
+  { name: 'gen/gen04_test', success: true, assertions: 1, errors: {} }
+] } = {}) => `\n\n\n${JSON.stringify({
+  success: total_errors === 0, total_tests, total_assertions, total_errors, duration_ms: 71, tests
+})}\n\n\n`;
+
+/** The runner answers 500 for a red run and 200 for a green one, with the same body shape. */
+const answering = (body, statusCode = 200) => vi.fn().mockResolvedValue({ statusCode, body });
+
+const call = (params, seam) => runTool(tool, { env: 'staging', ...params }, seam);
+
+describe('a failing assertion is a run that happened', () => {
+  /**
+   * The whole of TASK-51 and round 2's F1. The runner returns 500 when an assertion fails — its
+   * documented way of signalling a red build — and reading the status first made that
+   * `kind: unavailable`, which the server instructions define as "the same call may work later".
+   * An agent obeying its instructions retries a red build for as long as it stays red.
+   */
+  test('a 500 carrying a run is ok:true with passed:false', async () => {
+    const result = await call({ name: 'gen' }, { request: answering(runBody(), 500) });
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toMatchObject({ passed: false, matched: 2, failures: 1, assertions: 3 });
+    expect(result.error).toBeUndefined();
   });
 
-  describe('parseTestResponse', () => {
-    describe('JSON format', () => {
-      test('parses simple passing test response', () => {
-        const response = `{"path":"tests/example_test"}
-------------------------
-Assertions: 5. Failed: 0. Time: 50ms`;
+  // The other half: the body is read before the status, so a green run under 200 is unaffected.
+  test('a green run is passed:true', async () => {
+    const body = runBody({ total_errors: 0, tests: [{ name: 'a_test', success: true, assertions: 1, errors: {} }] });
 
-        const result = parseTestResponse(response);
+    const { data } = await call({ name: 'a' }, { request: answering(body) });
 
-        expect(result.summary.assertions).toBe(5);
-        expect(result.summary.failed).toBe(0);
-        expect(result.summary.timeMs).toBe(50);
-        expect(result.tests).toHaveLength(1);
-        expect(result.tests[0].path).toBe('tests/example_test');
-      });
-
-      test('parses test response with error', () => {
-        const response = `{"path":"tests/timezones/list_test"}{"class_name":"Liquid::Error","message":"Liquid error: can't find partial"}
-------------------------
-Assertions: 0. Failed: 0. Time: 31ms`;
-
-        const result = parseTestResponse(response);
-
-        expect(result.summary.assertions).toBe(0);
-        expect(result.summary.timeMs).toBe(31);
-        expect(result.tests).toHaveLength(1);
-        expect(result.tests[0].path).toBe('tests/timezones/list_test');
-        expect(result.tests[0].error.className).toBe('Liquid::Error');
-        expect(result.tests[0].error.message).toContain("can't find partial");
-      });
-
-      test('parses multiple tests', () => {
-        const response = `{"path":"tests/test1"}
-------------------------
-{"path":"tests/test2"}
-------------------------
-{"path":"tests/test3"}{"class_name":"Error","message":"failed"}
-------------------------
-Assertions: 10. Failed: 1. Time: 200ms`;
-
-        const result = parseTestResponse(response);
-
-        expect(result.tests).toHaveLength(3);
-        expect(result.tests[0].path).toBe('tests/test1');
-        expect(result.tests[1].path).toBe('tests/test2');
-        expect(result.tests[2].path).toBe('tests/test3');
-        expect(result.tests[2].error).toBeDefined();
-        expect(result.summary.assertions).toBe(10);
-        expect(result.summary.failed).toBe(1);
-      });
-    });
-
-    describe('Text/Indented format', () => {
-      test('parses indented test format with passing and failing tests', () => {
-        const response = `------------------------
-
-commands/questions/create_test
-
-  build_valid should be valid:
-
-  errors_populated translation missing: en.test.should.be_true
-
-
-commands/questions/update_test
-
-  build_valid should be valid:
-
-
-simple_test
-
-  simple_valid should be valid:
-
-
-------------------------
-
-
-Failed_
-
-  Total errors: 4
-
-
-
-Assertions: 11. Failed: 4. Time: 267ms`;
-
-        const result = parseTestResponse(response);
-
-        expect(result.summary.assertions).toBe(11);
-        expect(result.summary.failed).toBe(4);
-        expect(result.summary.timeMs).toBe(267);
-        expect(result.summary.totalErrors).toBe(4);
-
-        expect(result.tests).toHaveLength(3);
-
-        // First test with one pass and one fail
-        expect(result.tests[0].path).toBe('commands/questions/create_test');
-        expect(result.tests[0].cases).toHaveLength(2);
-        expect(result.tests[0].cases[0].name).toBe('build_valid');
-        expect(result.tests[0].cases[0].passed).toBe(true);
-        expect(result.tests[0].cases[0].description).toBe('should be valid');
-        expect(result.tests[0].cases[1].name).toBe('errors_populated');
-        expect(result.tests[0].cases[1].passed).toBe(false);
-        expect(result.tests[0].cases[1].error).toContain('translation missing');
-        expect(result.tests[0].cases[1].error).toContain('en.test.should.be_true');
-
-        // Second test - all passing
-        expect(result.tests[1].path).toBe('commands/questions/update_test');
-        expect(result.tests[1].passed).toBe(true);
-
-        // Third test - all passing
-        expect(result.tests[2].path).toBe('simple_test');
-        expect(result.tests[2].passed).toBe(true);
-      });
-
-      test('parses test with only passing cases', () => {
-        const response = `------------------------
-my_test
-
-  case_one should work:
-
-  case_two should also work:
-
-------------------------
-Assertions: 2. Failed: 0. Time: 50ms`;
-
-        const result = parseTestResponse(response);
-
-        expect(result.tests).toHaveLength(1);
-        expect(result.tests[0].path).toBe('my_test');
-        expect(result.tests[0].passed).toBe(true);
-        expect(result.tests[0].cases).toHaveLength(2);
-        expect(result.tests[0].cases.every(c => c.passed)).toBe(true);
-      });
-
-      test('parses mixed format with SYNTAX ERROR and indented tests', () => {
-        const response = `SYNTAX ERROR:{"path":"tests/timezones/convert_test"}{"class_name":"LiquidArgumentError","message":"Liquid error: hash_merge filter - first argument must be a hash"}
-------------------------
-
-tests/timezones/list_test
-
-  result.results should not be blank
-
-  has_results translation missing: en.test.should.be_true
-
-  first.region should not be blank
-
-  first.name should not be blank
-
-  au_sorted translation missing: en.test.should.be_true
-
-
-------------------------
-
-
-Failed_
-
-  Total errors: 5
-
-
-
-Assertions: 5. Failed: 5. Time: 123ms`;
-
-        const result = parseTestResponse(response);
-
-        expect(result.summary.assertions).toBe(5);
-        expect(result.summary.failed).toBe(5);
-        expect(result.summary.timeMs).toBe(123);
-        expect(result.summary.totalErrors).toBe(5);
-
-        expect(result.tests).toHaveLength(2);
-
-        // First test - syntax error from JSON
-        expect(result.tests[0].path).toBe('tests/timezones/convert_test');
-        expect(result.tests[0].syntaxError).toBe(true);
-        expect(result.tests[0].error.className).toBe('LiquidArgumentError');
-        expect(result.tests[0].error.message).toContain('hash_merge filter');
-
-        // Second test - indented format with failures
-        expect(result.tests[1].path).toBe('tests/timezones/list_test');
-        expect(result.tests[1].cases).toHaveLength(5);
-        expect(result.tests[1].cases[0].passed).toBe(true); // should not be blank
-        expect(result.tests[1].cases[1].passed).toBe(false); // translation missing
-        expect(result.tests[1].cases[1].error).toContain('translation missing');
-        expect(result.tests[1].passed).toBe(false);
-      });
-    });
-
-    test('handles empty response', () => {
-      const response = `Assertions: 0. Failed: 0. Time: 5ms`;
-
-      const result = parseTestResponse(response);
-
-      expect(result.tests).toHaveLength(0);
-      expect(result.summary.assertions).toBe(0);
-    });
+    expect(data.passed).toBe(true);
+    expect(data.failures).toBe(0);
   });
 
-  describe('extractJsonObjects', () => {
-    test('extracts single JSON object', () => {
-      const str = '{"path":"test"}';
-      const result = extractJsonObjects(str);
+  // A 500 with no run in it is still a failure of the call — the status is not ignored, it is
+  // judged second.
+  test('a 500 that is not a run is still an error', async () => {
+    const result = await call({ name: 'a' }, { request: answering('<html><title>Aw, Snap!</title></html>', 500) });
 
-      expect(result).toHaveLength(1);
-      expect(result[0].path).toBe('test');
-    });
+    expect(result.ok).toBe(false);
+    expect(result.error.code).toBe('HTTP_ERROR');
+  });
+});
 
-    test('extracts multiple concatenated JSON objects', () => {
-      const str = '{"path":"test"}{"error":"failed"}';
-      const result = extractJsonObjects(str);
+describe('what the failure says', () => {
+  test('the failing test, its assertion and the message all reach the caller', async () => {
+    const { data } = await call({ name: 'gen' }, { request: answering(runBody(), 500) });
 
-      expect(result).toHaveLength(2);
-      expect(result[0].path).toBe('test');
-      expect(result[1].error).toBe('failed');
-    });
-
-    test('handles nested objects', () => {
-      const str = '{"path":"test","meta":{"count":5}}';
-      const result = extractJsonObjects(str);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].meta.count).toBe(5);
-    });
-
-    test('returns empty array for non-JSON string', () => {
-      const str = 'not json at all';
-      const result = extractJsonObjects(str);
-
-      expect(result).toHaveLength(0);
-    });
+    const failed = data.tests.find(t => !t.success);
+    expect(failed.name).toBe('gen/gen03_test');
+    expect(failed.errors).toEqual({ gen03_middle: ['expected 4 to equal 5'] });
   });
 
-  describe('testsRunTool', () => {
-    test('has correct description and inputSchema', () => {
-      expect(testsRunTool.description).toContain('tests');
-      expect(testsRunTool.inputSchema.properties).toHaveProperty('env');
-      expect(testsRunTool.inputSchema.properties).toHaveProperty('path');
-      expect(testsRunTool.inputSchema.properties).toHaveProperty('name');
-      expect(testsRunTool.inputSchema.required).toContain('name');
-    });
+  // An evaluation could not learn *which* assertion failed by any route; the counters were all it
+  // got. This is the assertion that says the detail survives the trip.
+  test('a passing test keeps its name and count, and carries no empty errors object', async () => {
+    const { data } = await call({ name: 'gen' }, { request: answering(runBody(), 500) });
 
-    test('returns parsed test results on success', async () => {
-      const mockRequest = vi.fn().mockResolvedValue({
-        statusCode: 200,
-        body: `{"path":"tests/example"}
-------------------------
-Assertions: 3. Failed: 0. Time: 100ms`
-      });
+    const passed = data.tests.find(t => t.success);
+    expect(passed).toEqual({ name: 'gen/gen04_test', success: true, assertions: 1 });
+  });
 
-      const result = await runTool(testsRunTool, 
-        { env: 'staging', name: 'example_test' },
-        { request: mockRequest }
-      );
+  // The module before its own JSON report was fixed answers correct counters and an empty list.
+  test('an older module reports its counts, with no detail to show', async () => {
+    const { data } = await call({ name: 'gen' }, { request: answering(runBody({ tests: [] }), 500) });
 
-      expect(result.ok).toBe(true);
-      expect(result.data.summary.assertions).toBe(3);
-      expect(result.data.summary.failed).toBe(0);
-      expect(result.data.passed).toBe(true);
-      expect(result.data.tests).toHaveLength(1);
-      expect(mockRequest).toHaveBeenCalledWith(expect.objectContaining({
-        uri: expect.stringContaining('/_tests/run?formatter=text')
-      }));
-    });
+    expect(data).toMatchObject({ matched: 2, failures: 1, tests: [] });
+  });
+});
 
-    test('includes path filter in URL when provided', async () => {
-      const mockRequest = vi.fn().mockResolvedValue({
-        statusCode: 200,
-        body: 'Assertions: 0. Failed: 0. Time: 10ms'
-      });
+/**
+ * `should.equal` renders both compared values into its message, so the size of a failure is the
+ * size of the data under test. Measured against the verification instance: one assertion comparing
+ * a 100 KB string produced a 103 KB result — on a tool whose whole job is to be read by a model.
+ */
+describe('one runaway assertion cannot fill the context', () => {
+  // Built inside the tests: the constant is only there once `beforeAll` has imported the module.
+  const huge = () => 'x'.repeat(MAX_MESSAGE_LENGTH * 3);
+  const body = () => runBody({
+    total_tests: 1, total_assertions: 1, total_errors: 1,
+    tests: [{ name: 'big_test', success: false, assertions: 1, errors: { big: [huge()] } }]
+  });
 
-      await runTool(testsRunTool, 
-        { env: 'staging', name: 'users_test', path: 'tests/users' },
-        { request: mockRequest }
-      );
+  test('a very long assertion message is cut, and says how much it left out', async () => {
+    const { data } = await call({ name: 'big' }, { request: answering(body(), 500) });
 
-      expect(mockRequest).toHaveBeenCalledWith(expect.objectContaining({
-        uri: expect.stringContaining('path=tests%2Fusers')
-      }));
-    });
+    const message = data.tests[0].errors.big[0];
+    expect(MAX_MESSAGE_LENGTH).toBeGreaterThan(0);
+    expect(message.length).toBeLessThan(MAX_MESSAGE_LENGTH + 60);
+    expect(message).toContain(`${huge().length - MAX_MESSAGE_LENGTH} more characters`);
+  });
 
-    test('includes name filter in URL when provided', async () => {
-      const mockRequest = vi.fn().mockResolvedValue({
-        statusCode: 200,
-        body: 'Assertions: 0. Failed: 0. Time: 10ms'
-      });
+  // Bounded, not dropped: which test failed and on which field still comes back.
+  test('the test and the field it failed on survive the cut', async () => {
+    const { data } = await call({ name: 'big' }, { request: answering(body(), 500) });
 
-      await runTool(testsRunTool, 
-        { env: 'staging', name: 'create_user_test' },
-        { request: mockRequest }
-      );
+    expect(data.tests[0].name).toBe('big_test');
+    expect(Object.keys(data.tests[0].errors)).toEqual(['big']);
+    expect(data.failures).toBe(1);
+  });
 
-      expect(mockRequest).toHaveBeenCalledWith(expect.objectContaining({
-        uri: expect.stringContaining('name=create_user_test')
-      }));
-    });
+  test('an ordinary message is untouched', async () => {
+    const { data } = await call({ name: 'gen' }, { request: answering(runBody(), 500) });
 
-    test('includes both path and name filters in URL when provided', async () => {
-      const mockRequest = vi.fn().mockResolvedValue({
-        statusCode: 200,
-        body: 'Assertions: 0. Failed: 0. Time: 10ms'
-      });
+    expect(data.tests.find(t => !t.success).errors.gen03_middle).toEqual(['expected 4 to equal 5']);
+  });
+});
 
-      await runTool(testsRunTool, 
-        { env: 'staging', path: 'tests/users', name: 'create_user_test' },
-        { request: mockRequest }
-      );
+describe('a selection that matched nothing is not a pass', () => {
+  const empty = (extra) => runBody({ total_tests: 0, total_assertions: 0, total_errors: 0, tests: [], ...extra });
 
-      const callUri = mockRequest.mock.calls[0][0].uri;
-      expect(callUri).toContain('path=tests%2Fusers');
-      expect(callUri).toContain('name=create_user_test');
-    });
+  /**
+   * `passed: total_errors === 0` answered `true` for a run of nothing: no tests, so no failures.
+   * An evaluation mistyped a name and got a green tick with `totalTests: 1` beside it.
+   */
+  test('a name that matches no test is not_found, never passed:true', async () => {
+    const result = await call({ name: 'no_such_test_xyz' }, { request: answering(empty()) });
 
-    test('returns error on HTTP failure', async () => {
-      const mockRequest = vi.fn().mockResolvedValue({
-        statusCode: 500,
-        body: 'Internal Server Error'
-      });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatchObject({ kind: 'not_found', code: 'NO_TESTS_MATCHED' });
+    expect(result.error.message).toContain('no_such_test_xyz');
+    expect(result.error.details.matched).toBe(0);
+  });
 
-      const result = await runTool(testsRunTool, 
-        { env: 'staging', name: 'some_test' },
-        { request: mockRequest }
-      );
+  // No tool lists the tests, so the error carries the query that does.
+  test('and says how to find out which tests exist', async () => {
+    const result = await call({ name: 'typo' }, { request: answering(empty()) });
 
-      expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('HTTP_ERROR');
-      expect(result.error.details.statusCode).toBe(500);
-    });
+    expect(result.error.message).toContain('admin_liquid_partials');
+    expect(result.error.message).toContain('ends_with');
+  });
 
-    test('returns error on network failure', async () => {
-      const mockRequest = vi.fn().mockRejectedValue(new Error('Network error'));
+  // Without a filter the same emptiness means something different: nothing is deployed.
+  test('with no filter it is the project that has no tests', async () => {
+    const result = await call({}, { request: answering(empty()) });
 
-      const result = await runTool(testsRunTool, 
-        { env: 'staging', name: 'some_test' },
-        { request: mockRequest }
-      );
+    expect(result.error).toMatchObject({ kind: 'project', code: 'NO_TESTS' });
+    expect(result.error.details).not.toHaveProperty('filter');
+  });
+});
 
-      expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('INTERNAL_ERROR');
-      expect(result.error.message).toContain('Network error');
-    });
+describe('the request it makes', () => {
+  test('it asks for the format it parses, and passes the filter through', async () => {
+    const request = answering(runBody());
 
-    test('correctly identifies failed tests', async () => {
-      const mockRequest = vi.fn().mockResolvedValue({
-        statusCode: 200,
-        body: `{"path":"tests/failing"}{"class_name":"AssertionError","message":"Expected true"}
-------------------------
-Assertions: 5. Failed: 2. Time: 150ms`
-      });
+    await call({ name: 'users/create' }, { request });
 
-      const result = await runTool(testsRunTool, 
-        { env: 'staging', name: 'failing_test' },
-        { request: mockRequest }
-      );
+    expect(request.mock.calls[0][0].uri).toBe('https://staging.example.com/_tests/run.js?name=users%2Fcreate');
+  });
 
-      expect(result.ok).toBe(true);
-      expect(result.data.passed).toBe(false);
-      expect(result.data.summary.failed).toBe(2);
-    });
+  // Omitting the filter is how the whole suite runs. It used to be refused by the schema, with the
+  // description pointing at tests-run-async, which does not work.
+  test('no name means every test, and no query string', async () => {
+    const request = answering(runBody());
+
+    await call({}, { request });
+
+    expect(request.mock.calls[0][0].uri).toBe('https://staging.example.com/_tests/run.js');
+  });
+
+  test('name is optional in the published schema', () => {
+    expect(registry.get('unit-tests-run').inputSchema.required).toBeUndefined();
+  });
+
+  // It applied to nothing, and a parameter that silently does nothing is worse than one that is
+  // refused: the caller believes the run was narrowed.
+  test('path is gone rather than accepted and ignored', () => {
+    expect(registry.get('unit-tests-run').inputSchema.properties).not.toHaveProperty('path');
+  });
+});
+
+describe('an instance that cannot run tests says so', () => {
+  // A production instance answers 200 with this: the runner only exists in staging and development.
+  test('a refusal is reported as one, not as a run of nothing', async () => {
+    const body = '{"success":false,"error":"Tests can only be run in staging or development environment"}';
+
+    const result = await call({ name: 'a' }, { request: answering(body) });
+
+    expect(result.error).toMatchObject({ kind: 'project', code: 'TESTS_NOT_AVAILABLE' });
+    expect(result.error.message).toMatch(/staging or development/);
+  });
+
+  test('a 200 that is not JSON at all is an unreadable answer, not a silent pass', async () => {
+    const result = await call({ name: 'a' }, { request: answering('<html>hello</html>') });
+
+    expect(result.ok).toBe(false);
+    expect(result.error.code).toBe('TESTS_UNREADABLE');
   });
 });
 
 /**
  * The runner ships in the `tests` module, so an instance without it has no `/_tests/*` at all and
- * answers 404 — the same 404 a test name the runner does not know would get. An evaluating agent
- * spent four calls and a deploy cycle telling the two apart, and got ~1,100 tokens of HTML error
- * page for its trouble. `lib/test-runner` asks before every CLI run; this asks only after a 404.
+ * answers 404 — the same 404 a wrong path would get. An evaluating agent spent four calls and a
+ * deploy cycle telling the two apart, and ~1,100 tokens of HTML error page for its trouble.
  */
 describe('a 404 from an instance with no test runner', () => {
-  let testsRunTool;
-  beforeAll(async () => { testsRunTool = (await import('../tests/run.js')).default; });
-
   const notFound = () => vi.fn().mockResolvedValue({
     statusCode: 404,
     body: '<!DOCTYPE html><html><head><title>Aw, Snap!</title></head><body>page not found</body></html>'
@@ -408,10 +243,7 @@ describe('a 404 from an instance with no test runner', () => {
   };
 
   test('says the module is missing, and what installs it', async () => {
-    const result = await runTool(testsRunTool,
-      { env: 'staging', name: 'some_test' },
-      { request: notFound(), Gateway: withModules(['core']) }
-    );
+    const result = await call({ name: 'some_test' }, { request: notFound(), Gateway: withModules(['core']) });
 
     expect(result.error).toMatchObject({ kind: 'project', code: 'TESTS_MODULE_MISSING' });
     expect(result.error.details.remedy.command).toContain('modules install tests');
@@ -419,39 +251,36 @@ describe('a 404 from an instance with no test runner', () => {
     expect(JSON.stringify(result.error)).not.toContain('DOCTYPE');
   });
 
-  test('with the module installed, a 404 really is the test name', async () => {
-    const result = await runTool(testsRunTool,
-      { env: 'staging', name: 'some_test' },
-      { request: notFound(), Gateway: withModules(['core', 'tests']) }
-    );
+  /**
+   * With the module installed the path is static, so a 404 can only mean a module older than the
+   * one that added `/_tests/run.js` (tests 1.1.0). It used to read as "that test name is wrong",
+   * which is a hypothesis nothing can act on.
+   */
+  test('with the module installed, a 404 is a module too old to serve this endpoint', async () => {
+    const result = await call({ name: 'some_test' }, { request: notFound(), Gateway: withModules(['core', 'tests']) });
 
-    expect(result.error.code).toBe('HTTP_ERROR');
-    expect(result.error.details.statusCode).toBe(404);
+    expect(result.error).toMatchObject({ kind: 'project', code: 'TESTS_MODULE_OUTDATED' });
+    expect(result.error.details.remedy.command).toContain('modules update tests');
+    expect(result.error.details.remedy.runBy).toMatch(/shell|person/);
   });
 
   // Asked only when something already failed, and only for the status that is ambiguous.
   test('a 500 is not a missing module, and costs no extra request', async () => {
     const asked = vi.fn();
-    const request = vi.fn().mockResolvedValue({ statusCode: 500, body: 'boom' });
 
-    const result = await runTool(testsRunTool,
-      { env: 'staging', name: 'some_test' },
-      { request, Gateway: withModules(['core'], asked) }
-    );
+    const result = await call({ name: 'some_test' }, { request: answering('boom', 500), Gateway: withModules(['core'], asked) });
 
     expect(result.error.code).toBe('HTTP_ERROR');
     expect(asked).not.toHaveBeenCalled();
   });
 
-  test('an instance that will not say which modules it has keeps the original error', async () => {
+  test('an instance that will not say which modules it has still gets an actionable answer', async () => {
     const Unreadable = class { async listModules() { throw new Error('nope'); } };
 
-    const result = await runTool(testsRunTool,
-      { env: 'staging', name: 'some_test' },
-      { request: notFound(), Gateway: Unreadable }
-    );
+    const result = await call({ name: 'some_test' }, { request: notFound(), Gateway: Unreadable });
 
-    expect(result.error.code).toBe('HTTP_ERROR');
+    // Could not tell it apart, so it falls to the outdated-module reading, which carries a remedy.
+    expect(result.error.code).toBe('TESTS_MODULE_OUTDATED');
   });
 });
 
@@ -460,9 +289,6 @@ describe('a 404 from an instance with no test runner', () => {
  * converter discards while still reporting success — so the test file it wrote was never on the
  * instance, and nothing said so. Measured on 2026-09-22: anything under `app/tests` lands in
  * `files_not_matched`, while `app/lib/**` deploys as Partials.
- *
- * The example itself stays: it is a path inside the runner's namespace, not a file path. What was
- * missing is where the file goes, and that is what this pins.
  */
 describe('the parameters say where a test file can actually live', () => {
   const properties = () => registry.get('unit-tests-run').inputSchema.properties;
@@ -475,11 +301,9 @@ describe('the parameters say where a test file can actually live', () => {
     expect(properties().name.description).toMatch(/app\/tests/);
   });
 
-  // Measured against tests@1.3.5: the module filters on `context.params.name` and never reads
-  // `path`, so a run narrowed with `path` quietly runs the whole suite. Until TASK-51 settles what
-  // the parameter should be, it must not claim to filter.
-  test('path does not claim a filter the module does not apply', () => {
-    expect(properties().path.description).toMatch(/ignored/i);
-    expect(properties().path.description).not.toMatch(/only tests under/i);
+  // It pointed at tests-run-async, which answers MISSING_ID against tests@1.3.5 and runs the suite
+  // anyway. A description may not send an agent to a tool that cannot work.
+  test('the description no longer sends the whole suite to tests-run-async', () => {
+    expect(registry.get('unit-tests-run').description).not.toMatch(/tests-run-async/);
   });
 });

@@ -22,7 +22,7 @@ const DEV_TOOLS = [
 ];
 
 // The profile exists to keep this payload small, so growth past the budget needs a deliberate
-// bump rather than a quiet one. Currently 9,241 bytes over stdio, plus the server instructions
+// bump rather than a quiet one. Currently 9,146 bytes over stdio, plus the server instructions
 // (budgeted separately in instructions.test.js, since a client is charged for each once).
 //
 // Two kinds of growth, argued differently. **Prose** — a description that was wrong, a parameter
@@ -114,7 +114,9 @@ const BARE_TOOLS = [
 //         because twenty-one tools spread `authProperties` and each publishes its own copy
 // 22,599  page-fetch stopped publishing `email` and `token` (round 2, F10) and logs-fetch said
 //         which renders reach the error log (F13) — a correction that gave 126 B back
-const BARE_TOOLS_LIST_BYTES = 22599;
+// 22,504  unit-tests-run dropped `path`, which the tests module never read, and stopped sending
+//         a whole-suite run to tests-run-async (round 2, F1/F3/F4)
+const BARE_TOOLS_LIST_BYTES = 22504;
 
 const HANG_MS = 15000;
 

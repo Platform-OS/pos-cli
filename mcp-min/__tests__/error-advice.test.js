@@ -337,7 +337,7 @@ describe('every command this server offers an agent says who runs it', () => {
   });
 
   test('the scan finds the ones there are, so it is not passing on an empty list', () => {
-    expect(offers().map(({ file }) => file).sort()).toEqual(['auth.js', 'auth.js', 'tests/module-check.js']);
+    expect(offers().map(({ file }) => file).sort()).toEqual(['auth.js', 'auth.js', 'tests/module-check.js', 'tests/run.js']);
   });
 
   test('none of them leaves out runBy', () => {

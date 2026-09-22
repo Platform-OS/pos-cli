@@ -1278,51 +1278,65 @@ Clean data AND schema:
 
 ### unit-tests-run
 
-Run platformOS tests on an instance.
+Run platformOS tests on an instance and wait for the verdict.
 
 **Tool Name**: `unit-tests-run`
 
 **Input Parameters**:
 - `env` *(string, optional)*: Environment name from `.pos` config
-- `url` *(string, optional)*: Instance URL (alternative to `env`)
-- `email` *(string, optional)*: Account email
-- `token` *(string, optional)*: API token
-- `path` *(string, optional)*: Test path filter (e.g., `tests/users`). Calls `/_tests/run?formatter=text&path=...`
-- `name` *(string, optional)*: Test name filter (e.g., `create_user_test`). Calls `/_tests/run?formatter=text&name=...`
+- `url` / `email` / `token` *(string, optional)*: Explicit credentials
+- `name` *(string, optional)*: Any part of a test path, matched as a substring. **Omit it to run
+  every test.** Test files live under `app/lib` and their path must end with `_test`; a deploy
+  silently discards anything under `app/tests`.
 
-**Note**: Both `path` and `name` can be combined to narrow down test selection.
+`path` was removed in 6.6.0. The tests module filters on `name` alone and never read it, so a run
+narrowed with `path` quietly ran the whole suite — measured against tests@1.3.5.
 
 **Response Format**:
 ```javascript
 {
   ok: true,
   data: {
+    passed: false,          // no failed assertions; never true for a run that matched nothing
+    matched: 38,            // test files that ran
+    assertions: 110,
+    failures: 7,
+    durationMs: 71,
     tests: [
-      { name: "create_user_test", description: "Creates a new user", passed: true },
-      { name: "delete_user_test", description: "Deletes a user", passed: true },
-      { name: "invalid_email_test", description: "Rejects invalid email", passed: false, error: "Expected false, got true" }
+      { name: "gen/gen03_test", success: false, assertions: 3,
+        errors: { gen03_middle: ["expected 4 to equal 5"] } },
+      { name: "gen/gen04_test", success: true, assertions: 3 }
     ],
-    summary: {
-      assertions: 24,
-      failed: 1,
-      timeMs: 2345,
-      totalErrors: 1
-    },
-    passed: 2,
-    totalTests: 3
+    url: "https://staging.example.com/_tests/run.js?name=gen"
   },
-  raw: "...",  // raw test output
-  meta: {
-    url: "https://...",
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:02Z",
-    auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
-  }
+  meta: { … }
 }
 ```
 
+`errors` is present only on a test that has some. A passing test keeps its `name` and `assertions`,
+which is what says it ran. An assertion message is capped at 2,000 characters with a marker saying
+how much was left out: `should.equal` renders both compared values into it, so one test comparing
+two large objects produced a 103 KB result before the cap and 4.8 KB after, on the same suite.
+
+**A failing assertion is a completed run, not a failed call.** The runner answers **HTTP 500** when
+any assertion fails — deliberate, and how it signals a red build to CI — so the body is read before
+the status is judged. Reading the status first reported a red build as `kind: unavailable`, which
+the server instructions define as "the same call may work later"; an agent following them retries
+forever. `ok: false` is reserved for a call that could not be made.
+
+**A selection that matched nothing is refused, not passed.** No tests means no failures, which used
+to answer `passed: true` for a mistyped name or a suite that was never deployed. A `name` that
+matches nothing is now `NO_TESTS_MATCHED` (`not_found`); no `name` and no tests at all is `NO_TESTS`
+(`project`). Both name the GraphQL query that lists the test files, since no tool does.
+
+**Older tests modules**: the per-test `tests` array is empty on a module whose JSON report had not
+yet been fixed, while `matched`, `assertions` and `failures` are still correct — so the counts and
+the detail are read separately. A module older than tests 1.1.0 serves no `/_tests/run.js` at all
+and answers `TESTS_MODULE_OUTDATED` with the command that updates it.
+
 **Example Usage**:
-Run all tests:
+
+Run every test:
 
 ```json
 {
@@ -1331,32 +1345,7 @@ Run all tests:
 }
 ```
 
-Run tests in specific path:
-
-```json
-{
-  "name": "unit-tests-run",
-  "arguments": {
-    "env": "staging",
-    "path": "tests/users"
-  }
-}
-```
-
-Run specific test by path and name:
-
-```json
-{
-  "name": "unit-tests-run",
-  "arguments": {
-    "env": "staging",
-    "path": "tests/users",
-    "name": "create_user_test"
-  }
-}
-```
-
-Run test by name only:
+Run one test, or a directory of them:
 
 ```json
 {

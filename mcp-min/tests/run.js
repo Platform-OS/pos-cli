@@ -1,4 +1,18 @@
-// platformos.tests.run - execute tests via /_tests/run?formatter=text
+/**
+ * unit-tests-run — run tests on an instance and wait for the verdict.
+ *
+ * The runner answers `/_tests/run.js` with one JSON shape whatever happens, so this reads the body
+ * before it judges the status. That order is the whole point: **a failing assertion comes back as
+ * HTTP 500 with a complete run in it** — deliberate, documented in the tests module, and how it
+ * signals a red build to CI. Read status-first, it was `kind: unavailable`, which the server
+ * instructions define as "the same call may work later"; an agent following them retries a red
+ * build forever.
+ *
+ * This used to ask for `?formatter=text` and parse the prose. It never received prose: `/_tests/run`
+ * serves the `.js` page and ignores `formatter` entirely (measured 2026-09-22), so ~180 lines of
+ * text parser ran against JSON and invented a test out of every non-indented line — which is how a
+ * run that matched nothing reported `totalTests: 1, passed: true`.
+ */
 import log from '../log.js';
 import { resolveAuth } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
@@ -6,299 +20,142 @@ import { ToolError, kindForStatus } from '../tool-error.js';
 import makeRequest, { testAuthHeaders, testsUrl } from './request.js';
 import { missingTestsModule } from './module-check.js';
 
-/**
- * Parse the text response from /_tests/run?formatter=text
- *
- * Supports two formats:
- *
- * Format 1 (JSON):
- * {"path":"tests/example_test"}{"class_name":"...","message":"..."}
- * ------------------------
- * Assertions: 5. Failed: 1. Time: 123ms
- *
- * Format 2 (Text/Indented):
- * ------------------------
- * commands/questions/create_test
- *   build_valid should be valid:
- *   errors_populated translation missing: en.test.should.be_true
- * ------------------------
- * Failed_
- *   Total errors: 4
- * Assertions: 11. Failed: 4. Time: 267ms
- */
-function parseTestResponse(text) {
-  const lines = text.split('\n');
-  const tests = [];
-  let summary = { assertions: 0, failed: 0, timeMs: 0, totalErrors: 0 };
+/** How to find out what tests exist, for the errors that need to say so. No tool lists them. */
+const LIST_TESTS = 'graphql-exec: { admin_liquid_partials(filter: { path: { ends_with: "_test" } }) { results { path } } }';
 
-  let currentTestPath = null;
-  let currentTestCases = [];
-  let inFailedSection = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    // Skip empty lines
-    if (!trimmed) {
-      continue;
-    }
-
-    // Skip separator lines
-    if (/^-+$/.test(trimmed)) {
-      // If we have a current test, save it before moving on
-      if (currentTestPath) {
-        tests.push({
-          path: currentTestPath,
-          cases: currentTestCases,
-          passed: currentTestCases.every(c => c.passed)
-        });
-        currentTestPath = null;
-        currentTestCases = [];
-      }
-      continue;
-    }
-
-    // Check for summary line: "Assertions: X. Failed: Y. Time: Zms"
-    const summaryMatch = trimmed.match(/Assertions:\s*(\d+)\.\s*Failed:\s*(\d+)\.\s*Time:\s*(\d+)ms/i);
-    if (summaryMatch) {
-      summary.assertions = parseInt(summaryMatch[1], 10);
-      summary.failed = parseInt(summaryMatch[2], 10);
-      summary.timeMs = parseInt(summaryMatch[3], 10);
-      continue;
-    }
-
-    // Check for "Total errors: X" line
-    const totalErrorsMatch = trimmed.match(/Total errors:\s*(\d+)/i);
-    if (totalErrorsMatch) {
-      summary.totalErrors = parseInt(totalErrorsMatch[1], 10);
-      continue;
-    }
-
-    // Check for "Failed_" section marker
-    if (trimmed === 'Failed_') {
-      inFailedSection = true;
-      continue;
-    }
-
-    // Skip lines in Failed_ section (we already have the info)
-    if (inFailedSection) {
-      continue;
-    }
-
-    // Check for "SYNTAX ERROR:" prefix - strip it and parse JSON
-    let lineToParse = trimmed;
-    let isSyntaxError = false;
-    if (trimmed.startsWith('SYNTAX ERROR:')) {
-      lineToParse = trimmed.slice('SYNTAX ERROR:'.length);
-      isSyntaxError = true;
-    }
-
-    // Try to parse JSON objects from the line (Format 1)
-    const jsonObjects = extractJsonObjects(lineToParse);
-    if (jsonObjects.length > 0) {
-      const testResult = { raw: jsonObjects };
-
-      if (isSyntaxError) {
-        testResult.syntaxError = true;
-      }
-
-      for (const obj of jsonObjects) {
-        if (obj.path) {
-          testResult.path = obj.path;
-        }
-        if (obj.class_name) {
-          testResult.error = {
-            className: obj.class_name,
-            message: obj.message || ''
-          };
-        }
-        if (obj.status) testResult.status = obj.status;
-        if (obj.name) testResult.name = obj.name;
-        if (obj.assertions !== undefined) testResult.assertions = obj.assertions;
-        if (obj.failures !== undefined) testResult.failures = obj.failures;
-      }
-
-      tests.push(testResult);
-      continue;
-    }
-
-    // Format 2: Check if this is an indented test case (starts with spaces)
-    if (line.startsWith('  ') && currentTestPath) {
-      // This is a test case line
-      // Formats:
-      // - "  build_valid should be valid:" - pass (ends with colon, describing expected state)
-      // - "  result.results should not be blank" - pass (assertion description, no error)
-      // - "  errors_populated translation missing: en.test..." - fail (has error message)
-
-      const caseMatch = trimmed.match(/^(\S+)\s+(.*)$/);
-      if (caseMatch) {
-        const caseName = caseMatch[1];
-        const rest = caseMatch[2];
-
-        // Check for failure patterns - error messages typically contain these patterns
-        const failurePatterns = [
-          /translation missing:/i,
-          /error:/i,
-          /failed:/i,
-          /exception:/i,
-          /undefined method/i,
-          /cannot find/i,
-          /not found/i
-        ];
-
-        const isFailure = failurePatterns.some(pattern => pattern.test(rest));
-
-        if (isFailure) {
-          // Has error content - this is a failure
-          currentTestCases.push({
-            name: caseName,
-            passed: false,
-            error: rest
-          });
-        } else if (rest.match(/^[^:]+:$/)) {
-          // Ends with ":" and nothing after - this is a pass with description
-          // e.g., "should be valid:"
-          const description = rest.slice(0, -1).trim();
-          currentTestCases.push({
-            name: caseName,
-            description,
-            passed: true
-          });
-        } else {
-          // No error pattern and doesn't end with colon - treat as pass
-          // e.g., "should not be blank"
-          currentTestCases.push({
-            name: caseName,
-            description: rest,
-            passed: true
-          });
-        }
-      }
-      continue;
-    }
-
-    // Format 2: Non-indented line that's not a separator or summary - likely a test path
-    if (!line.startsWith(' ') && !trimmed.startsWith('{')) {
-      // Save previous test if exists
-      if (currentTestPath) {
-        tests.push({
-          path: currentTestPath,
-          cases: currentTestCases,
-          passed: currentTestCases.every(c => c.passed)
-        });
-      }
-      currentTestPath = trimmed;
-      currentTestCases = [];
-    }
+const asObject = (body) => {
+  try {
+    const parsed = JSON.parse(body);
+    return (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : null;
+  } catch {
+    return null;
   }
-
-  // Don't forget the last test if we ended without a separator
-  if (currentTestPath) {
-    tests.push({
-      path: currentTestPath,
-      cases: currentTestCases,
-      passed: currentTestCases.every(c => c.passed)
-    });
-  }
-
-  return { tests, summary };
-}
+};
 
 /**
- * Extract JSON objects from a string that may contain multiple concatenated JSON objects
+ * A run is recognised by its counters, not by its status or its `success` flag. The runner answers
+ * the same object for a pass, a failure and an empty selection; only a refusal (a production
+ * instance, where the runner does not exist) carries `error` and no counters.
  */
-function extractJsonObjects(str) {
-  const objects = [];
-  let depth = 0;
-  let start = -1;
+const asRun = (parsed) => (typeof parsed?.total_tests === 'number' ? parsed : null);
 
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
+const count = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 
-    if (char === '{') {
-      if (depth === 0) {
-        start = i;
-      }
-      depth++;
-    } else if (char === '}') {
-      depth--;
-      if (depth === 0 && start !== -1) {
-        const jsonStr = str.slice(start, i + 1);
-        try {
-          const parsed = JSON.parse(jsonStr);
-          objects.push(parsed);
-        } catch (e) {
-          // Not the blob: it is the instance's response body, not ours to publish.
-          log.debug('Failed to parse JSON object', { bytes: jsonStr.length, error: e.message });
-        }
-        start = -1;
-      }
-    }
-  }
+/**
+ * One assertion message, bounded. `should.equal` renders both compared values into its message, so
+ * a single test comparing two large objects puts the whole of both into the model's context —
+ * measured at 103 KB from one failing assertion. The divergence is at the front of the message,
+ * which is the part worth keeping; the same reasoning as `upstreamBody` in tool-error.js.
+ */
+export const MAX_MESSAGE_LENGTH = 2000;
 
-  return objects;
-}
+const boundMessage = (message) => (typeof message === 'string' && message.length > MAX_MESSAGE_LENGTH
+  ? `${message.slice(0, MAX_MESSAGE_LENGTH)}… (${message.length - MAX_MESSAGE_LENGTH} more characters)`
+  : message);
+
+const boundErrors = (errors) => Object.fromEntries(
+  Object.entries(errors).map(([field, messages]) =>
+    [field, Array.isArray(messages) ? messages.map(boundMessage) : boundMessage(messages)])
+);
+
+/**
+ * Per test, with an empty `errors` dropped the way `logs-fetch` drops an empty row field: provably
+ * nothing, on a list one entry long per test file. A passing test keeps its name and its assertion
+ * count, which is what says the test ran at all.
+ */
+const leanTest = (test) => {
+  if (test === null || typeof test !== 'object') return test;
+  const { errors, ...rest } = test;
+  const hasErrors = errors !== null && typeof errors === 'object' && Object.keys(errors).length > 0;
+  return { ...rest, ...(hasErrors && { errors: boundErrors(errors) }) };
+};
+
+/**
+ * Nothing ran, so nothing passed. `total_errors` is 0 when no test matched, which made
+ * `passed: total_errors === 0` answer `true` for a mistyped name or a suite that was never
+ * deployed — a green tick for having run nothing, confirmed by an evaluation that mistyped one.
+ */
+const nothingMatched = (filter) => (filter
+  ? ToolError.not_found('NO_TESTS_MATCHED',
+    `No test path contains '${filter}', so nothing ran. Names are matched as substrings, and a test file's path must end with _test. List them with ${LIST_TESTS}`,
+    { filter, matched: 0 })
+  : ToolError.project('NO_TESTS',
+    `This instance has no test files, so nothing ran. A test is a partial whose path ends with _test. List them with ${LIST_TESTS}`,
+    { matched: 0 }));
 
 const testsRunTool = {
-  description: 'Run tests on an instance and wait for the result. name is required because running every test times out; to run the whole suite, use tests-run-async.',
+  description: 'Run tests on an instance and wait for the result. Omit name to run every test. A failed assertion is a completed run: ok:true with passed:false, and tests[].errors names the assertion.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
       ...authProperties,
-      // tests@1.3.5 filters on `name` alone (a `contains` match) and ignores `path` — TASK-51.
-      path: { type: 'string', description: 'Ignored by the current tests module; narrow a run with name instead.' },
       name: { type: 'string', description: 'Any part of a test path, matched as a substring, e.g. create_user_test or users/. Test files live under app/lib and their path must end with _test; a deploy silently discards app/tests.' }
-    },
-    // `env` is not required: resolveAuth also accepts url+email+token, MPKIT_* env
-    // vars, or falls back to the first .pos environment.
-    required: ['name']
+    }
+    // `name` is not required: the runner takes no filter as "every test". `env` is not required
+    // either — resolveAuth also accepts url+email+token, MPKIT_*, or the single .pos entry.
   },
   handler: async (params, ctx = {}) => {
-    log.debug('tool:unit-tests-run invoked', { env: params?.env, path: params?.path });
+    log.debug('tool:unit-tests-run invoked', { env: params?.env, name: params?.name });
 
     const auth = await resolveAuth(params, ctx);
 
-    // Build the URL with query parameters
-    let testUrl = testsUrl(auth.url, '/_tests/run?formatter=text');
-    if (params?.path) {
-      testUrl += `&path=${encodeURIComponent(params.path)}`;
-    }
-    if (params?.name) {
-      testUrl += `&name=${encodeURIComponent(params.name)}`;
-    }
+    // `.js` explicitly. `/_tests/run` happens to serve the same page today, but that is platformOS
+    // choosing a format for us; the parser here only reads one, so it asks for the one it reads.
+    const testUrl = testsUrl(auth.url, '/_tests/run.js')
+      + (params?.name ? `?name=${encodeURIComponent(params.name)}` : '');
 
-    log.debug('Requesting tests', { url: testUrl });
-
-    // Make the request
     const requestFn = ctx.request || makeRequest;
     const response = await requestFn({ method: 'GET', uri: testUrl, headers: testAuthHeaders(auth.token) });
 
-    const statusCode = response.statusCode;
-    const body = response.body;
+    const { statusCode, body } = response;
+    const parsed = asObject(body);
+    const run = asRun(parsed);
 
-    // The test endpoints answer with a status rather than throwing, so nothing reaches the
-    // invoker to classify: the kind is decided here from the same status it would have read.
-    if (statusCode >= 400) {
-      throw (await missingTestsModule(statusCode, auth, ctx))
-        ?? new ToolError(kindForStatus(statusCode), 'HTTP_ERROR', `Request failed with status ${statusCode}`, { statusCode, body });
+    // Before the status, deliberately: see the module note above.
+    if (run) {
+      const matched = count(run.total_tests);
+      if (matched === 0) throw nothingMatched(params?.name);
+
+      return {
+        passed: count(run.total_errors) === 0,
+        matched,
+        assertions: count(run.total_assertions),
+        failures: count(run.total_errors),
+        durationMs: count(run.duration_ms),
+        // Empty on a tests module older than the one that fixed its own JSON report, while the
+        // counters above are right — so an agent reads the counts and the detail separately.
+        tests: (Array.isArray(run.tests) ? run.tests : []).map(leanTest),
+        url: testUrl
+      };
     }
 
-    // A run whose assertions failed is a run that happened: the failures are the answer, not an
-    // error. Only a run that could not be made fails the call.
-    const parsed = parseTestResponse(body);
+    if (statusCode === 404) {
+      // The path is static, so with the module installed a 404 can only be a module too old to
+      // have this endpoint — `/_tests/run.js` arrived in tests 1.1.0.
+      throw (await missingTestsModule(statusCode, auth, ctx))
+        ?? ToolError.project('TESTS_MODULE_OUTDATED',
+          'The tests module is installed but serves no /_tests/run.js, which tests 1.1.0 added.',
+          {
+            remedy: {
+              command: 'pos-cli modules update tests && pos-cli deploy <env>',
+              runBy: 'a person, or an agent with a shell: it changes the project and needs a deploy'
+            }
+          });
+    }
 
-    return {
-      tests: parsed.tests,
-      summary: parsed.summary,
-      passed: parsed.summary.failed === 0,
-      totalTests: parsed.tests.length,
-      raw: body,
-      url: testUrl
-    };
+    if (statusCode >= 400) {
+      throw new ToolError(kindForStatus(statusCode), 'HTTP_ERROR', `Request failed with status ${statusCode}`, { statusCode, body });
+    }
+
+    // 200, and not a run. The runner refuses outside staging and development, and says so in JSON.
+    if (typeof parsed?.error === 'string') {
+      throw ToolError.project('TESTS_NOT_AVAILABLE', parsed.error, { statusCode });
+    }
+
+    throw ToolError.instance('TESTS_UNREADABLE',
+      'The test runner answered with something that is not a run.', { statusCode, body });
   }
 };
 
 export default testsRunTool;
-export { parseTestResponse, extractJsonObjects };

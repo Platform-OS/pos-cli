@@ -241,8 +241,14 @@ describe('required relaxations', () => {
     expect(registry.get('data-validate').inputSchema.required).toBeUndefined();
   });
 
-  test('unit-tests-run requires only name', () => {
-    expect(registry.get('unit-tests-run').inputSchema.required).toEqual(['name']);
+  /**
+   * `name` was required, with the description sending a whole-suite run to `tests-run-async` — a
+   * tool that answers MISSING_ID against tests@1.3.5 while the suite runs anyway. The runner takes
+   * no filter as "every test", measured against 38 of them, so the requirement only stood between
+   * an agent and the run it wanted.
+   */
+  test('unit-tests-run requires nothing: no filter means every test', () => {
+    expect(registry.get('unit-tests-run').inputSchema.required).toBeUndefined();
   });
 
   test.each([

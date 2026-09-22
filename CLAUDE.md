@@ -361,6 +361,25 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   `properties`, so it cannot travel inside the shared object and would have to be spread into
   twenty-one schemas by hand, which is the drift `authProperties` exists to prevent.
 
+- **A test run is read before its status is judged.** The tests module answers `/_tests/run.js` with
+  one JSON shape for a pass, a failure and an empty selection, and returns **HTTP 500 when an
+  assertion failed** — deliberate, documented there, and how it signals a red build to CI. Read
+  status-first that is `kind: unavailable`, "the same call may work later", so an agent following
+  the server instructions retries a red build for as long as it stays red. `unit-tests-run` parses
+  the body first and reports a failing run as `ok: true` with `passed: false`; only a body that is
+  not a run lets the status decide. It asks for `.js` explicitly rather than `/_tests/run`, which
+  happens to serve the same page today — that is platformOS choosing a format, and the reader here
+  understands one. The `?formatter=text` it used to send was never honoured at all, so ~180 lines
+  of text parser ran against JSON and made a test out of every non-indented line.
+
+- **No tests ran is not a pass.** Zero tests means zero failures, which answered `passed: true` for
+  a mistyped name or a suite that was never deployed — the same class of silent success as a
+  discarded deploy file. A filter that matches nothing is `NO_TESTS_MATCHED` (`not_found`), an
+  instance with no test files is `NO_TESTS` (`project`), and both carry the `admin_liquid_partials`
+  query that lists the test files, because no tool does. Per-test failures are bounded per message
+  (`MAX_MESSAGE_LENGTH`): `should.equal` renders both compared values into its message, so one test
+  comparing two large objects produced a 103 KB result and 4.8 KB after the cap, on the same suite.
+
 - **A field an agent branches on is named for what it holds.** `check-run` answered `fileCount`
   beside `filesChecked`, so a clean run read as "nothing was checked"; it is `filesWithOffenses`.
   `job-status` answers with two vocabularies on purpose — `state` is ours (`running` | `completed` |
