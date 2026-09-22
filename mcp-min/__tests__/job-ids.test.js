@@ -6,7 +6,6 @@ import { describe, test, expect, vi } from 'vitest';
 import dataImport from '../data/import.js';
 import dataExport from '../data/export.js';
 import dataClean from '../data/clean.js';
-import testsRunAsync from '../tests/run-async.js';
 import jobStatus from '../jobs/status.js';
 import { parse } from '../jobs/handle.js';
 import { runTool } from '../run-tool.js';
@@ -50,16 +49,6 @@ describe('data-clean', () => {
 
     expect(result.ok, JSON.stringify(result.error)).toBe(true);
     expect(parse(result.data.job_id).job).toEqual({ kind: 'data-clean', id: 'cln-1', origin: ORIGIN, flags: {} });
-  });
-});
-
-describe('tests-run-async', () => {
-  test('returns a job_id for the run it triggered', async () => {
-    const request = async () => ({ statusCode: 200, body: JSON.stringify({ id: 'run-1', status: 'pending' }) });
-
-    const result = await runTool(testsRunAsync, AUTH, { request });
-
-    expect(parse(result.data.job_id).job).toEqual({ kind: 'test-run', id: 'run-1', origin: ORIGIN, flags: {} });
   });
 });
 

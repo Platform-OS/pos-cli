@@ -1022,7 +1022,7 @@ Every tool definition the server exposes is sent to the AI model with each reque
 
 - `--profile <name>` — the starting set:
   - `full` — every tool. The default.
-  - `dev` — what a coding agent uses to edit, check, deploy and verify: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-dry-run`, `deploy-start`, `job-status`, `unit-tests-run`, `tests-run-async`. Its definitions are about a third of the size of `full`'s.
+  - `dev` — what a coding agent uses to edit, check, deploy and verify: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-dry-run`, `deploy-start`, `job-status`, `unit-tests-run`. Its definitions are about a third of the size of `full`'s.
   - `none` — no tools; name them with `--include-tools`.
 - `--include-tools <names>` adds tools to the profile. This is not an allowlist, unlike Gemini CLI's `includeTools` setting; for an allowlist, use `--profile none --include-tools …`.
 - `--exclude-tools <names>` removes tools.
@@ -1092,7 +1092,7 @@ The MCP server has 30+ tools across these categories; `--profile dev` exposes th
 - **Liquid**: `liquid-exec`
 - **Data**: `data-import`, `data-export`, `data-clean`, `data-validate`
 - **Migrations**: `migrations-list`, `migrations-generate`, `migrations-run`
-- **Tests**: `unit-tests-run`, `tests-run-async`
+- **Tests**: `unit-tests-run`
 - **Constants**: `constants-list`, `constants-set`, `constants-unset`
 - **Generators**: `generators-list`, `generators-help`, `generators-run`
 - **Code quality**: `check-run`
@@ -1101,7 +1101,7 @@ The MCP server has 30+ tools across these categories; `--profile dev` exposes th
 
 #### Asynchronous Operations
 
-Five tools start work that outlives the call: `deploy-start`, `data-import`, `data-export`, `data-clean` and `tests-run-async`. Each returns a `job_id` alongside its own fields, and `job-status` reads it back:
+Four tools start work that outlives the call: `deploy-start`, `data-import`, `data-export` and `data-clean`. Each returns a `job_id` alongside its own fields, and `job-status` reads it back:
 
     job-status { "job_id": "pjob1_…" }
     job-status { "job_id": "pjob1_…", "wait_ms": 30000 }
@@ -1122,7 +1122,7 @@ The server writes to stderr and to `~/.pos-cli/logs/mcp-min.log` (`MCP_MIN_LOG_F
 To see which tools the server exposes, and why each of the others is not exposed:
 
     pos-cli mcp-config
-    pos-cli mcp-config --profile dev --exclude-tools tests-run-async
+    pos-cli mcp-config --profile dev --exclude-tools deploy-start
 
 It takes the same `--profile`, `--include-tools` and `--exclude-tools` options as the server, reports exactly what the server would expose with them, and refuses the same mistakes with the same messages. `--json` prints that report as JSON — `config`, `profile`, `include`, `exclude`, `exposed` and `hidden` (each with a `reason`: `profile`, `excluded` or `disabled`); it used to print the raw configuration file.
 
@@ -1134,16 +1134,32 @@ For scripting and CI pipelines that need logs in a structured format, use `fetch
 
     pos-cli fetch-logs [environment]
 
-This outputs logs as newline-delimited JSON (NDJSON), one log entry per line:
+This outputs logs as newline-delimited JSON (NDJSON), one log entry per line, oldest first:
 
 ```json
-{"id":"1001","message":"Hello","type":"debug","created_at":"2026-01-01T12:00:00Z"}
-{"id":"1002","message":"World","type":"info","created_at":"2026-01-01T12:00:01Z"}
+{"id":"1790097410.8077228","message":"probe: boom page reached","error_type":"probe_marker","created_at":"2026-09-22T17:16:50.807Z"}
+{"id":"1790097411.2168736","message":"Liquid error (views/pages/boom.liquid:4)","error_type":"Liquid error","created_at":"2026-09-22T17:16:51.216Z"}
 ```
 
-Each entry contains an `id` field. Pass the highest `id` from a previous run to `--last-log-id` to fetch only newer logs on the next poll:
+Each entry contains an `id`: a microsecond epoch of the same instant `created_at` names. Pass the
+last one back to `--last-log-id` to fetch only newer entries on the next poll:
 
-    pos-cli fetch-logs staging --last-log-id 1002
+    pos-cli fetch-logs staging --last-log-id 1790097411.2168736
+
+**Pass the `id` back exactly as it was printed.** It is a decimal string, not an integer — the
+server treats it as a strict greater-than, so rounding it re-delivers every entry from that
+instant and truncating it to whole seconds re-delivers the whole second.
+
+Other options:
+
+| Option | Effect |
+| --- | --- |
+| `-q, --quiet` | Suppress everything on stderr — errors and warnings. The NDJSON on stdout is unaffected. |
+| `--endpoint <url>` | Send the request to this API base URL instead of the environment's. **Your stored instance token is sent to the URL you name**, so only point it at a host you trust; the command prints where it is sending it. To use a different instance's credentials instead, set `MPKIT_URL`, `MPKIT_EMAIL` and `MPKIT_TOKEN`, or name another environment. |
+
+The command exits when the instance returns no entries newer than the cursor. If it answers with
+entries but none newer — which means paging cannot continue — the output so far is valid but
+incomplete, and a `Stopped early at <id>` line is written to stderr.
 
 ## Development
 

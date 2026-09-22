@@ -10,7 +10,7 @@
 
 import log from '../log.js';
 
-export const JOB_KINDS = Object.freeze(['deploy', 'data-import', 'data-export', 'data-clean', 'test-run']);
+export const JOB_KINDS = Object.freeze(['deploy', 'data-import', 'data-export', 'data-clean']);
 
 const PREFIX = 'pjob1_';
 

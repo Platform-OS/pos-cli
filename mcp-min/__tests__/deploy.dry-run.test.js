@@ -112,7 +112,7 @@ describe('deploy-dry-run applies nothing', () => {
     expect(calls.sendManifest).toHaveLength(1);
     expect(calls.sendManifest[0].releaseId).toBe('rel-1');
     expect(result.data.assets.state).toBe('validated');
-    expect(result.data.byCategory.Asset.upserted.count).toBe(1);
+    expect(result.data.byCategory.Asset.upserted).toBe(1);
   });
 
   // The call context takes one named object and refuses anything else. This tool reported three
@@ -153,8 +153,48 @@ describe('what it reports', () => {
     expect(data.deleted.files).toEqual(['pages/old.liquid', 'queries/gone.graphql']);
     expect(data.upserted.count).toBe(2);
     expect(data.skipped.count).toBe(1);
-    // Per category too, so an agent can say which kind of file is going.
-    expect(data.byCategory.GraphQL.deleted.files).toEqual(['queries/gone.graphql']);
+    // Per category as counts, so an agent can still say which kind of file is going.
+    expect(data.byCategory).toEqual({
+      Liquid: { upserted: 2, deleted: 1, skipped: 0 },
+      GraphQL: { upserted: 0, deleted: 1, skipped: 1 }
+    });
+  });
+
+  /**
+   * Every name in `byCategory` was already in the flat lists, byte for byte — measured against a
+   * live instance, the two sets were identical and together were 88% of a dry run where nothing
+   * changed. The names are kept once, where the tool's own description promises them.
+   */
+  test('no file name is printed twice', async () => {
+    const { Fake } = gatewayFake({
+      report: {
+        Liquid: { upserted: ['pages/a.liquid'], deleted: ['pages/old.liquid'], skipped: ['pages/same.liquid'] },
+        GraphQL: { upserted: [], deleted: [], skipped: ['queries/same.graphql'] }
+      }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    const payload = JSON.stringify(data);
+    for (const name of ['pages/a.liquid', 'pages/old.liquid']) {
+      expect(payload.split(name).length - 1, `${name} appears more than once`).toBe(1);
+    }
+  });
+
+  /**
+   * A path that is not changing is the one thing nobody asked this tool about, and there were 80 of
+   * them in 3,428 bytes on a project of 82 files — twice over. The count stays, because "nothing
+   * else changed" is the reassurance; the names go.
+   */
+  test('skipped is counted, not named', async () => {
+    const { Fake } = gatewayFake({
+      report: { Liquid: { upserted: [], deleted: [], skipped: ['pages/untouched.liquid', 'pages/also.liquid'] } }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.skipped).toEqual({ count: 2 });
+    expect(JSON.stringify(data)).not.toContain('untouched');
   });
 
   // The API answers some categories with a count instead of the paths.
@@ -364,7 +404,8 @@ describe('what the dry run reports', () => {
     const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
 
     expect(data.deleted).toEqual({ count: 1, files: ['views/pages/doomed.liquid'] });
-    expect(data.byCategory.Pages.upserted.files).toEqual(['views/pages/new.liquid']);
+    expect(data.upserted.files).toEqual(['views/pages/new.liquid']);
+    expect(data.byCategory.Pages).toEqual({ upserted: 1, deleted: 1, skipped: 0 });
     expect(data.verdict).toBe('would_succeed');
   });
 

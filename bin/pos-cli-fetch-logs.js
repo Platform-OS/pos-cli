@@ -3,12 +3,13 @@
 import { program } from 'commander';
 import Gateway from '../lib/proxy.js';
 import { fetchSettings } from '../lib/settings.js';
+import { newerOf } from '../lib/logRowId.js';
 
 program
   .name('pos-cli fetch-logs')
   .argument('[environment]', 'name of environment. Example: staging')
   .option('--last-log-id <id>', 'return logs after provided id')
-  .option('--endpoint <url>', 'override API base url')
+  .option('--endpoint <url>', 'send the request to this API base url instead of the environment\'s; your stored instance token is sent to it')
   .option('-q, --quiet', 'suppress non-log output')
   .action(async (environment, options) => {
     try {
@@ -19,21 +20,17 @@ program
       }
 
       if (options.endpoint) {
+        // The stored token travels with the request, so say where it is going.
+        if (!options.quiet) console.error(`Sending your stored instance token to ${options.endpoint}`);
         authData.url = options.endpoint;
       }
 
       const gateway = new Gateway(authData);
 
-      let lastId = options.lastLogId || options.lastLogId === 0 ? options.lastLogId : (options.lastLogId || options.lastLogId === 0 ? options.lastLogId : (options.lastLogId || options.lastLogId === 0 ? options.lastLogId : (options.lastLogId)));
-      // commander converts option name to camelCase: lastLogId
-      lastId = options.lastLogId || options.lastLogId === 0 ? options.lastLogId : (options.lastLogId);
-      // fallback to the provided --last-log-id
-      if (!lastId && options['last-log-id']) lastId = options['last-log-id'];
-
-      // ensure lastId is either undefined or a number/string
-      if (lastId !== undefined && lastId !== null) {
-        lastId = String(lastId);
-      }
+      // commander camel-cases the option, so `--last-log-id` arrives as `lastLogId`.
+      const lastId = options.lastLogId === undefined || options.lastLogId === null
+        ? undefined
+        : String(options.lastLogId);
 
       // fetch loop - call gateway.logs until no new logs are returned
       let seen = new Set();
@@ -47,25 +44,35 @@ program
         }
 
         let maxId = latestId;
+        let wroteRow = false;
         for (let i = 0; i < logs.length; i++) {
           const row = logs[i];
           if (seen.has(row.id)) continue;
           seen.add(row.id);
+          wroteRow = true;
           // Print each log as a JSON line
           process.stdout.write(JSON.stringify(row) + '\n');
-          if (!isNaN(Number(row.id)) && Number(row.id) > Number(maxId)) {
-            maxId = row.id;
-          }
+          maxId = newerOf(maxId, row.id);
         }
 
-        if (maxId === latestId) break;
+        if (maxId === latestId) {
+          // Rows we had not seen, none of them newer than the cursor: the instance is not honouring
+          // it, so the output is short rather than complete. A page of only already-seen rows is
+          // just an inclusive `last_id` repeating the cursor row, which is the end of the log.
+          if (wroteRow && !options.quiet) {
+            console.error(`Stopped early at ${latestId}: the instance returned no row newer than the cursor.`);
+          }
+          break;
+        }
         latestId = maxId;
       }
 
       process.exit(0);
     }
     catch (err) {
-      if (!program.quiet) console.error('Error fetching logs:', err.message || err);
+      // The parsed options, not the commander program: `program.quiet` is always undefined here,
+      // so `-q` never suppressed anything.
+      if (!options.quiet) console.error('Error fetching logs:', err.message || err);
       process.exit(2);
     }
   });

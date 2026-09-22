@@ -70,10 +70,18 @@ const SECTIONS = [
   // already say which arguments are paths.
   () => 'Paths: a relative path in any argument resolves against the directory this server was started in.',
 
+  // Where a file has to sit for the deploy converter to recognise it. No tool description says
+  // this and none should: it is true of the project rather than of any one tool, and an agent
+  // needs it before its first deploy — an evaluation guessed the layout from prior platformOS
+  // knowledge and used deploy-dry-run as an oracle, a round trip to the instance per guess.
+  // Categories observed on a live deploy: Pages, Partials, Asset, Tables, GraphQL, Translations.
+  () => 'Layout: deployable source lives under app/ — views/pages, views/partials, views/layouts, '
+    + 'assets, schema, graphql, lib — and a path matching none of it is not deployed.',
+
   // Each starter's description already says it returns a job_id. What no single one of them can
   // say is which calls share the pattern, or that waiting is done with wait_ms rather than a loop.
   (tools) => {
-    const starters = only(tools, ['deploy-start', 'data-import', 'data-export', 'data-clean', 'tests-run-async']);
+    const starters = only(tools, ['deploy-start', 'data-import', 'data-export', 'data-clean']);
     if (!tools.has('job-status') || starters.length === 0) return null;
     return `Long operations: ${list(starters)} ${starters.length === 1 ? 'answers' : 'answer'} before the work is done, `
       + 'returning a job_id. Give it back to job-status exactly as received, and use wait_ms to wait for the result '

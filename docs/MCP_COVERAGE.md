@@ -60,13 +60,13 @@ rather than a synchronous answer.
 | `generate run` | exposed | `generators-run` | |
 | `init` | never | — | Interactive project scaffolding wizard. |
 | `logs` | exposed | `logs-fetch` | |
-| `logsv2 search` | expose | TASK-28 | `logs-fetch` takes only `lastId` and `limit`: no text match, no time range, no severity filter, so finding one error means paging every row since it. This searches the log store with SQL. Needs credentials; reads only; synchronous. |
+| `logsv2 search` | later | TASK-28 | Searches the log store with SQL. `logs-fetch` gained `since`, `errorType` and `contains` in TASK-57, which covers the common case, but it matches in the tool: the instance still reads every row in between, and there is no aggregation and no newest-first order. Needs credentials; reads only; synchronous. **Moved from `expose` to `later` on 2026-09-22: the capability does not currently work at all — see the note below.** |
 | `logsv2 searchAround` | later | — | Returns the rows surrounding one row, so it is meaningless without an id from a search. Depends on TASK-28 landing first. |
 | `logsv2 alerts list` | later | — | Read-only, but of little use while add, rm and trigger are all `never`. |
 | `logsv2 alerts add` | never | — | Creates Slack destinations and alert rules on shared observability configuration, outside the application being developed. |
 | `logsv2 alerts rm` | never | — | Deletes them; same reason. |
 | `logsv2 alerts trigger` | never | — | Fires a real alert into a real channel, which people receive. |
-| `logsv2 reports` | expose | TASK-29 | Canned `r-4xx`, `r-slow` and `r-slow-by-count` over the `requests` stream — HTTP access logs with status codes and response times, which no MCP tool can reach today. Fixed report names, so no model-authored SQL. Needs credentials; reads only; synchronous. |
+| `logsv2 reports` | later | TASK-29 | Canned `r-4xx`, `r-slow` and `r-slow-by-count` over the `requests` stream — HTTP access logs with status codes and response times, which no MCP tool can reach today. Fixed report names, so no model-authored SQL. Needs credentials; reads only; synchronous. **Moved from `expose` to `later` on 2026-09-22: same dead proxy as `logsv2 search`.** |
 | `lsp` | never | — | A Language Server Protocol server for editors. A second protocol nested inside MCP, speaking to a client that is not the model. |
 | `mcp` | never | — | This server. |
 | `mcp-config` | never | — | Introspects this server's own selection. The client already receives `tools/list` and the server instructions. |
@@ -89,7 +89,7 @@ rather than a synchronous answer.
 | `modules show` | later | TASK-26 | See TASK-26. |
 | `pull` | later | — | Downloads the whole application as a zip. An agent is working in a checkout and already has the code. |
 | `sync` | exposed | `sync-file` | Partial, deliberately. `sync-file` sends one file; the CLI's file watcher is not exposed, because the agent is the thing making the edits and a watcher would race with it. |
-| `test run` | exposed | `unit-tests-run` | `tests-run-async` covers the same capability without holding the call open. |
+| `test run` | exposed | `unit-tests-run` | Omitting `name` runs the whole suite. `tests-run-async` was removed in 6.6.0: the tests module answers `/_tests/run_async` with a `test_name` and no id, and the `/_tests/results/:id` it polled has never existed there, so it ran the suite on the instance and then dropped the handle. Rebuilding it on the module's own contract — the run's summary arrives in the log, typed `<test_name> SUMMARY` — is a separate decision. |
 | `uploads push` | exposed | `uploads-push` | |
 | `fetch-logs` | exposed | `logs-fetch` | The scripting front end for the same capability as `logs`. |
 
@@ -128,6 +128,48 @@ worth writing down.
   opens, so it does not prove the page is live. It is in `--profile dev` because that profile is
   named for edit → check → deploy → **verify**, and verify was the step an agent had to take
   outside this server.
+
+- **Everything under `logsv2` is unreachable, so nothing built on it can be exposed yet.** Measured
+  2026-09-22. `pos-cli logsv2 search <env>` fails with `Request failed with status 404`: the
+  instance lookup succeeds and returns its uuid, then the request to the log proxy 404s.
+
+  It is not one instance being unprovisioned, and there is no flag that turns it on. `LOGS_PROXY_URL`
+  (`lib/swagger-client.js`) is the only configuration point — nothing per-environment in `.pos`, no
+  config entry — and its default host answers Go's stock `404 page not found` on **every** path
+  including `/healthz`, to authenticated and unauthenticated callers alike, for a real org uuid and
+  a bogus one. Its TLS certificate is a wildcard for the parent domain, so DNS and TLS answering say
+  nothing about a service being deployed there, and `git log -S` shows the hostname was written once
+  when the feature landed and never changed.
+
+  **The CLI and the GUI are the same route, not two.** `lib/server.js` calls `gateway.logsv2()`,
+  `Gateway.logsv2` delegates to `this.client`, and `bin/pos-cli-gui-serve.js` sets that from
+  `SwaggerProxy.client`. So `logsv2 search`, `searchAround`, `reports`, `alerts` and the GUI's
+  Network panel all fail together — confirmed independently: the panel does not work either.
+
+  Whether the service is retired, moved or simply unreachable from outside the platform is not
+  determinable from here, and that question has to be answered before TASK-28 or TASK-29 is worth
+  starting: exposing either today would add MCP tools that 404 on every call, which is exactly the
+  defect `tests-run-async` was removed for. If a live host exists, `LOGS_PROXY_URL` already accepts
+  it and only the default needs changing.
+
+- **A `job-status` miss polluting the instance's error log — investigated, not reproduced.** An agent
+  evaluation reported that asking about a release id the instance does not have left three
+  `LowLevelError` rows (`Couldn't find MarketplaceRelease with 'id'="999999"`) in the customer's own
+  error log, retried three times. Reproduced on 2026-09-22 against the same instance with a
+  fabricated id: `JOB_NOT_FOUND` in 2.8 s and **no rows at all**, with zero `LowLevelError` rows in
+  the whole retained log. The double-ask that would cause it is deliberate — the default `wait_ms`
+  is 0, and reporting a deploy that was briefly slow as one that never existed is the worse error —
+  so nothing was changed on one observation that does not reproduce. Recorded so it is not
+  re-investigated from scratch; if it recurs, the count to chase is two requests, not three.
+
+- **Recovering a lost `job_id` — not worth a parameter.** The same evaluation noted that a `job_id`
+  is returned exactly once, and a deploy whose handle is lost to context compaction becomes
+  unobservable. The obvious fix — letting `job-status` take `{kind, id}` instead — was measured and
+  dropped: `RootQuery` exposes 36 queries and **none of them lists releases** (`admin_versions` is a
+  different entity entirely, ids in the millions against releases in the tens of thousands), and
+  `deploy-start` returns `id` and `job_id` in the same result, so they are lost in the same breath.
+  The parameters would add surface to a `--profile dev` tool for a recovery path that cannot be
+  reached. Revisit if the platform ever exposes a release listing.
 
 - **Downloading a release archive — later.** `job-status` passes the instance's release record
   through verbatim, `downloadable: false` included, and nothing here acts on it. The field is the

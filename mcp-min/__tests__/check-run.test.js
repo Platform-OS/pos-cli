@@ -82,6 +82,57 @@ describe('platformos.check-run', () => {
     }
   });
 
+  /**
+   * `autoFixed: false` on its own could mean "nothing here is auto-fixable" or "the pass did not
+   * run", and an agent had to diff its own working tree to tell them apart — on the one tool here
+   * that writes to disk. `fixable` answers it, and is computed whether or not fixing was asked
+   * for: gated on `autoFix`, a lint that was never asked to fix anything would have reported that
+   * nothing was fixable.
+   */
+  describe('what autoFix did, and what it could have done', () => {
+    const offending = (body) => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-fix-'));
+      const pages = path.join(dir, 'app', 'views', 'pages');
+      fs.mkdirSync(pages, { recursive: true });
+      fs.writeFileSync(path.join(pages, 'a.liquid'), body, 'utf8');
+      return dir;
+    };
+
+    let dir;
+    beforeAll(() => { dir = offending("{% include 'nope' %}\n{% assign unused = 1 %}\n"); });
+    afterAll(() => { if (dir) fs.rmSync(dir, { recursive: true, force: true }); });
+
+    test.each([[false], [true]])('fixable is reported with autoFix: %s', async (autoFix) => {
+      const result = await runTool(checkRunTool, { appPath: dir, autoFix });
+      if (!result.ok) return; // linter not installed; covered above
+
+      expect(result.data.offenseCount).toBeGreaterThan(0);
+      expect(typeof result.data.fixable, 'fixable must be reported in both modes').toBe('number');
+    });
+
+    test('a run that wrote nothing carries no fixedFiles', async () => {
+      const result = await runTool(checkRunTool, { appPath: dir, autoFix: true });
+      if (!result.ok) return;
+
+      expect(result.data.autoFixed).toBe(false);
+      expect(result.data).not.toHaveProperty('fixedFiles');
+    });
+
+    /**
+     * A canary on the dependency, not on us. Not one of platformos-check's 54 checks builds a fix
+     * today, so `autoFix` cannot write anything whatever it is pointed at — which is the real
+     * answer to "did the fix pass not run, or was nothing fixable". If this ever fails, upstream
+     * has started shipping correctors: `autoFix` has become real, and the tool's description and
+     * docs should stop describing it as a parameter with nothing to do.
+     */
+    test('the linter still ships no auto-corrections at all', async () => {
+      const { allChecks } = await import('@platformos/platformos-check-node');
+      const correcting = allChecks.filter(check => /addFix/.test(String(check.run)));
+
+      expect(correcting.map(check => check.meta?.code)).toEqual([]);
+    });
+  });
+
   test('returns structured file data when dependency is available', async () => {
     const result = await runTool(checkRunTool, { appPath: testAppPath });
 

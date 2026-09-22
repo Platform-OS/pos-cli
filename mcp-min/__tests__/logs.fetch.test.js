@@ -15,7 +15,7 @@
 import { describe, test, expect } from 'vitest';
 import { runTool } from '../run-tool.js';
 import { rejectionFor } from '../validate-params.js';
-import tool from '../logs/fetch.js';
+import tool, { MAX_SCAN } from '../logs/fetch.js';
 
 const AUTH = { url: 'https://x.example.com', email: 'e@example.com', token: 't' };
 
@@ -297,25 +297,346 @@ describe('the description answers what an agent cannot find out for itself', () 
 
   test.each([
     ['the tool names the stream it reads', () => tool.description, /error log/i],
-    ['the tool names what does not reach it', () => tool.description, /liquid-exec/],
+    ['the tool says what a liquid-exec render contributes', () => tool.description, /liquid-exec/],
     ['limit says which end it counts from', () => property('limit'), /oldest|newest/i],
     ['lastId says it goes back unchanged', () => property('lastId'), /unchanged|verbatim|as given/i]
   ])('%s', (_label, text, pattern) => {
     expect(text()).toMatch(pattern);
   });
 
-  /**
-   * The claim this replaced was wrong, and wrongly general: it said the stream "does not carry
-   * `{% log %}` output", measured only through `liquid-exec`. Round 2 of the evaluation opened with
-   * `{% log %}` rows from a deployed page — the tests module's own — and sized its expectations by
-   * a sentence that was false.
-   *
-   * Measured against the verification instance on 2026-09-22: a bare `{% log %}`, a `type:`-tagged
-   * one and a genuine Liquid error, all rendered through `liquid-exec`, produced **no rows at all**,
-   * re-polled a minute later. The execution context decides it, not the form of the log, so the
-   * description must not generalise from one context to the tag.
-   */
-  test('it does not claim {% log %} is absent, which is only true of the liquid-exec context', () => {
-    expect(tool.description).not.toMatch(/does not carry \{% log %\}/);
+  // Two wrong claims have been made here, so both are pinned: that the log carries no `{% log %}`
+  // at all, and that a liquid-exec render never reaches it. A liquid-exec render's Liquid errors do
+  // reach it; only its `{% log %}` does not.
+  test('it does not deny what a liquid-exec render contributes', () => {
+    expect(tool.description).not.toMatch(/does not carry \{% log %\}|never appears here/);
   });
+});
+
+// Filtering (TASK-57). `/logs` cannot narrow anything, so the matching is here — and the two
+// things that go wrong when it is are a cursor that does not move over the rejected rows, and a
+// scan with no end.
+//
+// Rows copied from the verification instance on 2026-09-22.
+const TYPED = [
+  { id: '1790097410.8077228', created_at: '2026-09-22T17:16:50.807Z', error_type: 'probe_marker', message: 'probe: boom page reached' },
+  { id: '1790097410.8762364', created_at: '2026-09-22T17:16:50.876Z', error_type: 'Liquid error', message: 'Liquid error (views/pages/boom.liquid:4): GraphQL' },
+  { id: '1790097411.199142', created_at: '2026-09-22T17:16:51.199Z', error_type: 'probe_marker', message: 'probe: boom page reached' },
+  { id: '1790097411.2168736', created_at: '2026-09-22T17:16:51.216Z', error_type: 'Liquid error', message: 'Liquid error (views/pages/boom.liquid:4): GraphQL' },
+  { id: '1790097485.2637658', created_at: '2026-09-22T17:18:05.263Z', error_type: 'Liquid error', message: 'Liquid error (line 1): undefined filter upcasess' }
+];
+
+/** An instance that never runs out and whose rows are all alike, for the scan bound. */
+const endlessNoise = ({ message = 'nothing to see', pageSize = 100 } = {}) => {
+  let served = 0;
+  class Endless {
+    async logs({ lastId }) {
+      const start = Math.floor(Number(lastId)) || 1790000000;
+      const logs = Array.from({ length: pageSize }, (_, k) => ({ id: `${start + k + 1}.0000001`, error_type: 'noise', message }));
+      served += logs.length;
+      return { logs };
+    }
+  }
+  return { Gateway: Endless, served: () => served };
+};
+
+describe('errorType and contains narrow what comes back', () => {
+  const idsOf = (res) => res.data.logs.map(row => row.id);
+
+  test.each([
+    ['an exact error_type', { errorType: 'probe_marker' }, ['1790097410.8077228', '1790097411.199142']],
+    ['part of one, in another case', { errorType: 'LIQUID' }, ['1790097410.8762364', '1790097411.2168736', '1790097485.2637658']],
+    ['part of a message, in another case', { contains: 'UPCASESS' }, ['1790097485.2637658']],
+    ['a lower-case needle in a mixed-case message', { contains: 'graphql' }, ['1790097410.8762364', '1790097411.2168736']],
+    ['both together, as an and', { errorType: 'liquid', contains: 'boom.liquid' }, ['1790097410.8762364', '1790097411.2168736']],
+    ['a filter nothing matches', { contains: 'no such text' }, []]
+  ])('%s', async (_label, filter, expected) => {
+    const res = await callAsClient(filter, instanceWith(TYPED).Gateway);
+
+    expect(idsOf(res)).toEqual(expected);
+    expect(res.data.count).toBe(expected.length);
+  });
+
+  // `pos-cli logs --filter error` does not match a row typed `Liquid error`. That trap is why this
+  // one is a substring.
+  test('a substring matches where the CLI\'s exact filter would not', async () => {
+    const res = await callAsClient({ errorType: 'error' }, instanceWith(TYPED).Gateway);
+
+    expect(res.data.count).toBe(3);
+    expect(res.data.logs.every(row => row.error_type === 'Liquid error')).toBe(true);
+  });
+
+  // `pos-cli logs` renders a message that is not a string, so one can arrive.
+  test('a message that is not a string is searched as the text it renders to', async () => {
+    const rows = [{ id: '1790097410.8077228', error_type: 'job', message: { error: 'timed out', job: 'import' } }];
+
+    const res = await callAsClient({ contains: 'timed out' }, instanceWith(rows).Gateway);
+
+    expect(res.data.count).toBe(1);
+  });
+
+  // The unfiltered call passes one straight through; a filter cannot say anything about it.
+  test('a row that is not an object matches no filter', async () => {
+    class Odd { async logs({ lastId }) { return { logs: lastId === '0' ? ['not-an-object'] : [] }; } }
+
+    const res = await callAsClient({ contains: 'not' }, Odd);
+
+    expect(res.data.logs).toEqual([]);
+  });
+
+  // An empty filter would mean "match everything" here and "match nothing" to whoever wrote it.
+  test.each(['errorType', 'contains'])('an empty %s is refused by the published schema', async (name) => {
+    const res = await callAsClient({ [name]: '' }, instanceWith(TYPED).Gateway);
+
+    expect(res.rejected).toBeTruthy();
+  });
+
+  test('scanned is reported only when a filter was applied', async () => {
+    const filtered = await callAsClient({ errorType: 'probe_marker' }, instanceWith(TYPED).Gateway);
+    const plain = await callAsClient({}, instanceWith(TYPED).Gateway);
+
+    expect(filtered.data.scanned).toBe(5);
+    expect(plain.data).not.toHaveProperty('scanned');
+  });
+});
+
+// A time converts into a cursor the instance honours, so the skipping happens there and no row is
+// fetched to be thrown away.
+describe('since starts the read without fetching what it skips', () => {
+  test('the instance is asked for the cursor the time converts to', async () => {
+    const { Gateway, asked } = instanceWith(TYPED);
+
+    const res = await callAsClient({ since: '2026-09-22T17:16:51.216Z' }, Gateway);
+
+    expect(asked).toEqual(['1790097411.216', '1790097485.2637658']);
+    expect(res.data.logs.map(row => row.id)).toEqual(['1790097411.2168736', '1790097485.2637658']);
+  });
+
+  // Dividing the milliseconds by 1000 turns `.007` into `.7` — 693 ms later, skipping the rows in
+  // between.
+  test('milliseconds below 100 keep their leading zeros', async () => {
+    const { Gateway, asked } = instanceWith(TYPED);
+
+    await callAsClient({ since: '2026-09-22T17:16:51.007Z' }, Gateway);
+
+    expect(asked[0]).toBe('1790097411.007');
+  });
+
+  test('a time on the second boundary is still a full cursor', async () => {
+    const { Gateway, asked } = instanceWith(TYPED);
+
+    await callAsClient({ since: '2026-09-22T17:16:51Z' }, Gateway);
+
+    expect(asked[0]).toBe('1790097411.000');
+  });
+
+  // Before the epoch there is no id to convert to, and the pattern this tool publishes has no sign.
+  test('a time before the epoch reads from the oldest row kept', async () => {
+    const { Gateway, asked } = instanceWith(TYPED);
+
+    await callAsClient({ since: '1969-07-20T20:17:00Z' }, Gateway);
+
+    expect(asked[0]).toBe('0');
+  });
+
+  test('the cursor it returns is a row id, not the time it was given', async () => {
+    const res = await callAsClient({ since: '2026-09-22T17:16:51.216Z' }, instanceWith(TYPED).Gateway);
+
+    expect(res.data.lastId).toBe('1790097485.2637658');
+    expect(rejectionFor('logs-fetch', tool, { ...AUTH, lastId: res.data.lastId })).toBeNull();
+  });
+
+  // What a model actually types.
+  test.each(['yesterday', '2026-09-22 17:16:51', 'now-1h'])('the published schema refuses %s', async (since) => {
+    const res = await callAsClient({ since }, instanceWith(TYPED).Gateway);
+
+    expect(res.rejected).toBeTruthy();
+  });
+
+  // Reached the way a lib caller would, since `runTool` does not validate. Without the guard the
+  // cursor is the string `NaN.NaN`.
+  test('a handler called without the gate refuses an unreadable time rather than building a cursor', async () => {
+    const { Gateway, asked } = instanceWith(TYPED);
+
+    const res = await runTool(tool, { ...AUTH, since: 'yesterday' }, { Gateway });
+
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatchObject({ kind: 'input', code: 'INVALID_SINCE' });
+    expect(asked).toEqual([]);
+  });
+});
+
+// Two starting points, one read: choosing between them silently is the failure.
+describe('since and lastId together are refused', () => {
+  test('the refusal is an input error, and nothing is asked of the instance', async () => {
+    const { Gateway, asked } = instanceWith(TYPED);
+
+    const res = await callAsClient({ since: '2026-09-22T17:16:51.216Z', lastId: '1790097410.8077228' }, Gateway);
+
+    expect(res.rejected).toBeUndefined();
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatchObject({ kind: 'input', code: 'SINCE_AND_LAST_ID' });
+    expect(res.error.message).toMatch(/since|lastId/);
+    expect(asked).toEqual([]);
+  });
+
+  test('either one alone is fine', async () => {
+    const bySince = await callAsClient({ since: '2026-09-22T17:16:51.216Z' }, instanceWith(TYPED).Gateway);
+    const byCursor = await callAsClient({ lastId: '1790097411.216' }, instanceWith(TYPED).Gateway);
+
+    expect(bySince.ok).toBe(true);
+    expect(byCursor.ok).toBe(true);
+    expect(byCursor.data.logs.map(row => row.id)).toEqual(bySince.data.logs.map(row => row.id));
+  });
+});
+
+// The cursor is the failure that stays invisible until someone resumes.
+describe('a filtered read is bounded, and resumable from where it stopped', () => {
+  const MIXED = [
+    { id: '1790000001.000001', error_type: 'noise', message: 'nothing' },
+    { id: '1790000002.000001', error_type: 'noise', message: 'nothing' },
+    { id: '1790000003.000001', error_type: 'wanted', message: 'first hit' },
+    { id: '1790000004.000001', error_type: 'noise', message: 'nothing' },
+    { id: '1790000005.000001', error_type: 'wanted', message: 'second hit' },
+    { id: '1790000006.000001', error_type: 'noise', message: 'nothing' }
+  ];
+
+  test('limit counts the rows it returns, not the rows it read', async () => {
+    const res = await callAsClient({ errorType: 'wanted', limit: 1 }, instanceWith(MIXED).Gateway);
+
+    expect(res.data.count).toBe(1);
+    expect(res.data.scanned).toBe(3);
+  });
+
+  // The last row does not match, so a cursor moving only over returned rows stops on the second
+  // hit and reads the rest again.
+  test('the cursor stops on the last row read, not on the last row returned', async () => {
+    const res = await callAsClient({ errorType: 'wanted' }, instanceWith(MIXED).Gateway);
+
+    expect(res.data.logs.map(row => row.id)).toEqual(['1790000003.000001', '1790000005.000001']);
+    expect(res.data.lastId).toBe('1790000006.000001');
+  });
+
+  test('resuming from the cursor reads on from there, with no row read twice', async () => {
+    const first = await callAsClient({ errorType: 'wanted', limit: 1 }, instanceWith(MIXED).Gateway);
+    expect(first.data.lastId).toBe('1790000003.000001');
+
+    const second = await callAsClient({ errorType: 'wanted', lastId: first.data.lastId }, instanceWith(MIXED).Gateway);
+
+    expect(second.data.logs.map(row => row.id)).toEqual(['1790000005.000001']);
+    expect(second.data.scanned).toBe(3);
+  });
+
+  // Nothing matched, but six rows were read.
+  test('a read that matched nothing still advances past what it read', async () => {
+    const res = await callAsClient({ contains: 'no such text' }, instanceWith(MIXED).Gateway);
+
+    expect(res.data).toMatchObject({ count: 0, scanned: 6, lastId: '1790000006.000001' });
+    expect(res.data).not.toHaveProperty('scanLimitReached');
+  });
+
+  // Without the bound, a filter that matches nothing pages a busy instance for as long as the
+  // client waits; this fake hands out rows for ever.
+  test('a filter that matches nothing stops at the scan bound and says so', async () => {
+    const { Gateway, served } = endlessNoise();
+
+    const res = await callAsClient({ contains: 'needle' }, Gateway);
+
+    expect(res.data).toMatchObject({ count: 0, scanned: MAX_SCAN, scanLimitReached: true });
+    expect(MAX_SCAN).toBe(10000);
+    expect(served()).toBe(MAX_SCAN);
+    expect(res.data.lastId).not.toBe('0');
+  }, 30000);
+
+  // Stopping because the caller asked for five rows is not stopping because the scan ran out.
+  test('a read that filled its limit does not claim the scan bound', async () => {
+    const { Gateway } = endlessNoise({ message: 'needle in here' });
+
+    const res = await callAsClient({ contains: 'needle', limit: 5 }, Gateway);
+
+    expect(res.data).toMatchObject({ count: 5, scanned: 5 });
+    expect(res.data).not.toHaveProperty('scanLimitReached');
+  });
+
+  // 100 rows a page divides 10,000 exactly, so a page always ends on the bound and the check
+  // inside the loop never has to fire. 30 does not divide it, so this one stops mid-page.
+  test('the bound stops a scan in the middle of a page', async () => {
+    const { Gateway } = endlessNoise({ pageSize: 30 });
+
+    const res = await callAsClient({ contains: 'needle' }, Gateway);
+
+    expect(res.data).toMatchObject({ count: 0, scanned: MAX_SCAN, scanLimitReached: true });
+  }, 30000);
+
+  // Both bounds hit at once. The flag says why the read stopped, and here that is the limit.
+  test('a limit as large as the scan bound is still the limit that stopped it', async () => {
+    const { Gateway } = endlessNoise({ message: 'needle in here' });
+
+    const res = await callAsClient({ contains: 'needle', limit: MAX_SCAN }, Gateway);
+
+    expect(res.data).toMatchObject({ count: MAX_SCAN, scanned: MAX_SCAN });
+    expect(res.data).not.toHaveProperty('scanLimitReached');
+  }, 30000);
+});
+
+/**
+ * The guards against a row or a response that is not shaped as expected. Mutation testing found
+ * every one of these unexercised: each mutant that removed the guard survived, because no test
+ * ever sent the shape it protects against. A filter reaching one of them throws a TypeError, which
+ * reaches the caller as INTERNAL_ERROR rather than as "this row does not match".
+ */
+describe('a filter survives a row that is missing what it filters on', () => {
+  const RIGHT = { id: '1790000002.000001', error_type: 'wanted', message: 'hit' };
+
+  test('a row with no error_type does not match, and does not throw', async () => {
+    const rows = [{ id: '1790000001.000001', message: 'no type here' }, RIGHT];
+
+    const res = await callAsClient({ errorType: 'wanted' }, instanceWith(rows).Gateway);
+
+    expect(res.ok).toBe(true);
+    expect(res.data.logs.map(row => row.id)).toEqual([RIGHT.id]);
+  });
+
+  test('a row with no message does not match, and does not throw', async () => {
+    const rows = [{ id: '1790000001.000001', error_type: 'wanted' }, RIGHT];
+
+    const res = await callAsClient({ contains: 'hit' }, instanceWith(rows).Gateway);
+
+    expect(res.ok).toBe(true);
+    expect(res.data.logs.map(row => row.id)).toEqual([RIGHT.id]);
+  });
+
+  // `lean` already treats a null row as possible, so the matcher has to as well.
+  test('a null row does not match, and does not throw', async () => {
+    class WithNull {
+      async logs({ lastId }) { return { logs: lastId === '0' ? [null, RIGHT] : [] }; }
+    }
+
+    const res = await callAsClient({ errorType: 'wanted' }, WithNull);
+
+    expect(res.ok).toBe(true);
+    expect(res.data.logs).toEqual([RIGHT]);
+  });
+
+  test('a response carrying no logs at all ends the call cleanly', async () => {
+    class NoLogs { async logs() { return {}; } }
+
+    const res = await callAsClient({}, NoLogs);
+
+    expect(res.ok).toBe(true);
+    expect(res.data).toMatchObject({ logs: [], count: 0, lastId: '0' });
+  });
+});
+
+// The epoch itself: `ms <= 0` and `ms < 0` differ only here.
+test('a since of exactly the epoch reads from the oldest row kept', async () => {
+  const { Gateway, asked } = instanceWith(TYPED);
+
+  await callAsClient({ since: '1970-01-01T00:00:00.000Z' }, Gateway);
+
+  expect(asked[0]).toBe('0');
+});
+
+// An agent that does not know the cost reads a slow call as a hung one.
+test('the description says the matching happens here rather than on the instance', () => {
+  expect(tool.description).toMatch(/matched here, not by the instance/);
 });

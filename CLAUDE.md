@@ -284,11 +284,11 @@ server.registerTool(name, { description, inputSchema: fromJsonSchema(tool.inputS
   async (args, ctx) => { /* rejectionFor → isError, then tool.handler(args, { signal, sendProgress, … }) */ });
 ```
 
-Tools include: envs-list, env-add, job-status, deploy-dry-run, deploy-start, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, unit-tests-run, tests-run-async, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, and the Partner Portal tools (instance-create, partners-list, partner-get, endpoints-list).
+Tools include: envs-list, env-add, job-status, deploy-dry-run, deploy-start, sync-file, logs-fetch, graphql-exec, liquid-exec, data-import/export/clean/validate, migrations-list/generate/run, unit-tests-run, constants-list/set/unset, generators-list/help/run, check-run, uploads-push, and the Partner Portal tools (instance-create, partners-list, partner-get, endpoints-list).
 
 #### 3a. Asynchronous operations: one `job-status`, and what a `job_id` may decide
 
-Five tools start work that outlives the call (`deploy-start`, `data-import`, `data-export`, `data-clean`, `tests-run-async`). Each returns a `job_id` and `job-status` (`mcp-min/jobs/`) reads any of them back. Keep these when touching `mcp-min/jobs/` or a starter:
+Four tools start work that outlives the call (`deploy-start`, `data-import`, `data-export`, `data-clean`). Each returns a `job_id` and `job-status` (`mcp-min/jobs/`) reads any of them back. Keep these when touching `mcp-min/jobs/` or a starter:
 
 - **The handle is self-contained, and untrusted.** `mint`/`parse` (`jobs/handle.js`) encode the kind, the remote id, the instance origin and a per-kind flag allowlist. It is not a key into a table in this process: MCP clients restart stdio servers while the agent keeps its conversation, and a table would make every restart an "unknown job". Because it travels through the model, `parse` is strict — unknown kind, an id outside `^[A-Za-z0-9_-]{1,128}$`, an origin that is not exactly `new URL(o).origin`, an unexpected field or a flag the kind does not have are all `INVALID_JOB_ID`.
 - **Nothing in a handle chooses credentials or a URL.** `authForJob` (`jobs/auth-for-job.js`) resolves credentials the way every tool does, then *compares* origins: equal → use them; the caller named an instance that does not match → `JOB_INSTANCE_MISMATCH`; nothing named and exactly one `.pos` environment points at the job's instance → use that one; otherwise refuse. The refusal happens before any request, which is what the mismatch tests assert. A forged origin therefore cannot point this machine's token anywhere.
@@ -387,9 +387,22 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   `deploy-start` also returns — and `docs/MCP_TOOLS.md` says so where both appear.
 
 - **An upstream record is forwarded whole; a row is trimmed only where it is provably empty.** The
-  two look alike and are not. `job-status` passes the release record verbatim (815 bytes against
-  566 for what is read) because an allowlist has to be maintained and a field the platform adds
-  goes silently missing — which is how a discarded file stayed invisible for a release. `logs-fetch`
+  two look alike and are not. `job-status` passes the release record verbatim — all sixteen fields,
+  including ones nothing here knows about — because an allowlist has to be maintained and a field
+  the platform adds goes silently missing, which is how a discarded file stayed invisible for a
+  release. **`report` and `asset_report` are the one exception, and it is a measurement rather than
+  a change of mind**: on a deploy where nothing changed they were 3,660 of the answer's 4,438 bytes
+  while the whole of the rest of the record was 427, and what they hold is the list of files that
+  did *not* change, after the deploy, when nothing can be done about them. They are counted, not
+  listed. One named field with a number behind it is not an allowlist.
+
+- **A name is printed once.** `deploy-dry-run` published the changed and unchanged paths as flat
+  lists and then repeated every one of them under `byCategory` — the same strings, verified
+  identical, 6,820 of a 7,770-byte answer on a project of 82 files where nothing changed. `files`
+  now lives on `upserted`, `deleted` and `discarded` only; `byCategory` is counts, and `skipped` is
+  a count with no names, because a path that is not changing is the one thing nobody asked this
+  tool about. The same dry run is 575 bytes, and a non-partial one still names every file it would
+  delete — which is the promise in its own description. `logs-fetch`
   drops `data` when null and `updated_at` when it equals `created_at`, per row and only when empty,
   which cannot lose anything the instance meant and saves 16% of a row on a tool whose `limit` is
   10,000. Cheap and lossless is worth doing; cheap and lossy is not.
@@ -451,13 +464,12 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   pattern is what refuses a cursor smuggling its own query parameters; `Gateway.logs` encodes it as
   well, so neither guard stands alone. Nothing between the instance and the caller may parse the id.
 
-  **What reaches that log is decided by where the code ran, not by how it logged.** The description
-  said the stream "does not carry `{% log %}` output" — generalised from a measurement taken only
-  through `liquid-exec`, and an agent evaluation opened on `{% log %}` rows written by a deployed
-  page. Measured again on 2026-09-22: a bare `{% log %}`, a `type:`-tagged one and a failing filter,
-  all rendered through `liquid-exec`, produce no rows at all. Deployed code writes there; an
-  `/api/liquid` render never does — which is the useful half, since it means debugging a template
-  with `liquid-exec` leaves no trace to go looking for.
+  **What reaches that log.** Deployed code writes there, `{% log %}` included; a `liquid-exec`
+  render's **Liquid errors** are written too, and only its `{% log %}` is not — so a template
+  debugged that way reports its failures in the log and leaves no trace of its own logging. This
+  has been described wrongly twice, in opposite directions, each time from a measurement with no
+  positive control beside it. A claim about which renders reach the log needs one: emit something
+  that is known to be recorded in the same request, or the absence proves nothing.
 
 - **`liquid-exec` binds its own locals, on one line.** The endpoint renders in a context where
   nothing the caller sends is a variable — measured on 2026-09-22, the whole request body lands at

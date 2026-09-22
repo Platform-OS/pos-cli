@@ -21,7 +21,6 @@ const DEV_TOOLS = Object.freeze([
   // non-partial deploy deletes by deploying. deploy-start's description names it, too.
   'deploy-dry-run',
   'unit-tests-run',
-  'tests-run-async',
   // The only way to read back anything a starter began; the six per-operation status tools it
   // replaced are gone (6.6.0).
   'job-status'

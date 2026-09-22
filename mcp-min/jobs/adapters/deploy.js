@@ -52,6 +52,43 @@ const listOf = (values) => (values.length > MAX_LISTED
 const warningEntries = (warning) =>
   (warning !== null && typeof warning === 'object' && !Array.isArray(warning) ? Object.entries(warning) : []);
 
+/** The platform answers a report category with either the paths or a number, so both are counted. */
+export const toCount = (value) =>
+  (Array.isArray(value) ? value.length : (typeof value === 'number' ? value : 0));
+
+/**
+ * A file report reduced to its counts.
+ *
+ * The release record is otherwise forwarded verbatim, and stays that way: an allowlist has to be
+ * maintained and a field the platform adds goes silently missing, which is how a discarded file
+ * stayed invisible for a release. This is not an allowlist — it is one named field whose cost was
+ * measured. On a deploy where **nothing changed**, `result.release.report` is 3,660 of the answer's
+ * 4,438 bytes; the whole of the rest of the record is 427. What it holds is the list of files that
+ * did not change, after the deploy, when nothing can be done about them — `deploy-dry-run` reports
+ * the same paths *before* the deploy, which is when they are worth reading.
+ */
+export const reportCounts = (report) => {
+  if (report === null || typeof report !== 'object' || Array.isArray(report)) return report;
+
+  return Object.fromEntries(Object.entries(report).map(([category, data]) => [
+    category,
+    (data !== null && typeof data === 'object' && !Array.isArray(data))
+      ? Object.fromEntries(Object.entries(data).map(([key, value]) => [key, toCount(value)]))
+      : data
+  ]));
+};
+
+/** The record as it goes out: everything the platform sent, with the two file reports counted. */
+const forwarded = (response) => {
+  if (response === null || typeof response !== 'object') return response;
+
+  return {
+    ...response,
+    ...(response.report !== undefined && { report: reportCounts(response.report) }),
+    ...(response.asset_report !== undefined && { asset_report: reportCounts(response.asset_report) })
+  };
+};
+
 /**
  * Everything the instance warned about, as sentences beside `state` rather than four levels inside
  * the release record — a discarded file used to read as an unqualified success on every field an
@@ -87,7 +124,7 @@ function assetPhase(response, { origin, id }) {
 
   const { asset_error, asset_report, asset_status } = response ?? {};
   if (asset_error) return { phase: 'failed', error: `asset deploy failed: ${asset_error.error ?? asset_error}` };
-  if (asset_report) return { phase: 'done', report: asset_report };
+  if (asset_report) return { phase: 'done', report: reportCounts(asset_report) };
   if (asset_status === 'in_progress') return { phase: 'processing' };
   return local.phase === 'done' ? { phase: 'done' } : { phase: 'unknown' };
 }
@@ -109,10 +146,10 @@ export default {
     const status = response?.status;
 
     const release = releaseState(status);
-    if (release === 'running') return { state: 'running', status, result: { release: response } };
+    if (release === 'running') return { state: 'running', status, result: { release: forwarded(response) } };
     if (release === 'failed') {
       const warnings = releaseWarnings(response);
-      return { state: 'failed', status, error: releaseError(response), ...(warnings && { warnings }), result: { release: response } };
+      return { state: 'failed', status, error: releaseError(response), ...(warnings && { warnings }), result: { release: forwarded(response) } };
     }
 
     // A deploy that carried no assets is finished here; the handle's `assets: false` is the only
@@ -125,7 +162,7 @@ export default {
       status,
       ...(assets.error && { error: assets.error }),
       ...(warnings && { warnings }),
-      result: { release: response, assets }
+      result: { release: forwarded(response), assets }
     };
   }
 };

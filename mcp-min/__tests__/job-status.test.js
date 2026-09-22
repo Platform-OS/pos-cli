@@ -289,6 +289,59 @@ describe('deploy', () => {
     });
   });
 
+  /**
+   * The release record is forwarded whole — an allowlist has to be maintained and a field the
+   * platform adds goes silently missing, which is how a discarded file stayed invisible for a
+   * release. `report` is the one exception, and it is a measurement rather than a change of mind:
+   * on a deploy where **nothing changed** it was 3,660 of the answer's 4,438 bytes, while the whole
+   * of the rest of the record was 427. What it holds is the list of files that did not change,
+   * after the deploy, when nothing can be done about them; `deploy-dry-run` names the same paths
+   * before it, which is when they are worth reading.
+   */
+  describe('the release record it forwards', () => {
+    const released = (report) => deploy(async () => ({
+      status: 'success',
+      id: 23302,
+      options: { partial_deployment: true },
+      downloadable: 'https://example.com/release.zip',
+      some_field_added_later: 'kept',
+      report
+    }));
+
+    test('the file report is counted, not listed', async () => {
+      const result = await released({
+        Pages: { upserted: ['pages/a.liquid'], deleted: [], skipped: ['pages/b.liquid', 'pages/c.liquid'] },
+        Partials: { upserted: [], deleted: [], skipped: 66 }
+      });
+
+      expect(result.data.result.release.report).toEqual({
+        Pages: { upserted: 1, deleted: 0, skipped: 2 },
+        Partials: { upserted: 0, deleted: 0, skipped: 66 }
+      });
+      expect(JSON.stringify(result.data)).not.toContain('pages/b.liquid');
+    });
+
+    // The half that must not move: everything else travels as the platform sent it, including a
+    // field nothing here knows about.
+    test('every other field is still passed through untouched', async () => {
+      const result = await released({ Pages: { upserted: [], deleted: [], skipped: [] } });
+
+      expect(result.data.result.release).toMatchObject({
+        id: 23302,
+        options: { partial_deployment: true },
+        downloadable: 'https://example.com/release.zip',
+        some_field_added_later: 'kept'
+      });
+    });
+
+    // A report shape nothing here recognises is left alone rather than counted into nonsense.
+    test('a report that is not an object is passed through as it came', async () => {
+      const result = await released('nothing to report');
+
+      expect(result.data.result.release.report).toBe('nothing to report');
+    });
+  });
+
   test('a release id this instance does not have is JOB_NOT_FOUND, not a failed deploy', async () => {
     const result = await deploy(async () => { throw Object.assign(new Error('Not Found'), { statusCode: 404 }); });
 
@@ -430,66 +483,6 @@ describe('data jobs', () => {
     expect(plain.calls.gateway.find(c => c.name === 'dataExportStatus').args).toEqual(['9', false]);
     expect(asZip.data.result).toEqual({ zip: true, zipFileUrl: 'https://cdn.example.com/e.zip' });
     expect(asJson.data.result).toEqual({ zip: false, exportedData: { users: [{ id: 1 }], transactables: [], models: [] } });
-  });
-});
-
-describe('test runs', () => {
-  const run = body => context({ request: async () => ({ statusCode: 200, body: JSON.stringify(body) }) });
-
-  test.each([
-    ['pending', 'running', false],
-    ['success', 'completed', true],
-    ['failed', 'completed', true],
-    ['error', 'failed', true]
-  ])('a run reading %s → %s', async (status, state, done) => {
-    const { ctx } = run({ id: 9, status, total_assertions: '4', total_errors: '1' });
-
-    const result = await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
-
-    expect(result.data).toMatchObject({ kind: 'test-run', state, done, status });
-  });
-
-  // Assertions that failed are a finished test run, not a failed job: the run did its work.
-  test('failing assertions are a completed run, with its counters', async () => {
-    const { ctx } = run({ id: 9, status: 'failed', total_assertions: '12', total_errors: '3', tests: [{ name: 'a' }] });
-
-    const result = await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
-
-    expect(result.data.state).toBe('completed');
-    expect(result.data.result).toMatchObject({ total_assertions: 12, total_errors: 3, passed: false, done: true, tests: [{ name: 'a' }] });
-  });
-
-  test('a runner that crashed is a failed job, with its message', async () => {
-    const { ctx } = run({ id: 9, status: 'error', error_message: 'runner died' });
-
-    const result = await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
-
-    expect(result.data).toMatchObject({ state: 'failed', error: 'runner died' });
-  });
-
-  test.each([
-    ['a 404', { statusCode: 404, body: '' }],
-    ['the runner\'s own not_found', { statusCode: 200, body: JSON.stringify({ error: 'not_found' }) }]
-  ])('%s is JOB_NOT_FOUND', async (_label, response) => {
-    const { ctx } = context({ request: async () => response });
-
-    const result = await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
-
-    expect(result.ok).toBe(false);
-    expect(result.error.code).toBe('JOB_NOT_FOUND');
-  });
-
-  test('the results request carries the instance token and goes to the resolved instance', async () => {
-    const { ctx, calls } = run({ id: 9, status: 'success' });
-
-    await runTool(jobStatus, { job_id: handle('test-run', '9'), env: 'staging' }, ctx);
-
-    expect(calls.request).toEqual([{
-      method: 'GET',
-      // The .pos URL ends in a slash; the request must not carry it into the path.
-      uri: `${ORIGIN}/api-root/_tests/results/9`,
-      headers: { Authorization: 'Token staging-token', UserTemporaryToken: 'staging-token' }
-    }]);
   });
 });
 
@@ -747,17 +740,11 @@ describe('a 5xx: the job is not there, or the instance is unwell', () => {
     expect(result.error.message).toContain(kind);
   });
 
-  // The test runner is not an app_builder endpoint, so it reaches the same decision by its own
-  // route — which is why the health probe is instance-wide rather than per kind.
-  test('test-run: a persistent 503 on a live instance is JOB_NOT_FOUND', async () => {
-    const { ctx, calls } = context({ request: async () => ({ statusCode: 503, body: OOPS }), getInstance: answering });
-
-    const result = await runTool(jobStatus, { job_id: handle('test-run', '999999999'), env: 'staging' }, ctx);
-
-    expect(result.error).toMatchObject({ kind: 'not_found', code: 'JOB_NOT_FOUND' });
-    expect(calls.request).toHaveLength(2);
-    expect(probes(calls)).toBe(1);
-  });
+  // That the probe is `getInstance` — instance-wide, not the job's own endpoint — is asserted by
+  // every `probes(calls)` check in this block. What is no longer exercised is narrower: a kind
+  // whose status does not come through the Gateway at all. `test-run` was the only one, over
+  // `/_tests/*`, and it was removed in 6.6.0. A future kind like that inherits the behaviour, and
+  // nothing here would notice if it stopped working.
 
   // The instance says what this 503 was: the Partner Portal, the only thing that can validate a
   // token, did not answer. Nothing was decided about the job, and the advice for it is to wait.

@@ -2,7 +2,7 @@
 
 Complete reference guide for all platformOS Model Context Protocol (MCP) tools available in pos-cli MCP server.
 
-**Total Tools**: 31
+**Total Tools**: 30
 
 ---
 
@@ -96,7 +96,7 @@ exposed = (tools of --profile  ∪  --include-tools)  −  --exclude-tools  − 
 
 | Option | Effect |
 | --- | --- |
-| `--profile <name>` | Starting set. `full` (default): every tool. `dev`: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-dry-run`, `deploy-start`, `job-status`, `unit-tests-run`, `tests-run-async`. `none`: no tools. |
+| `--profile <name>` | Starting set. `full` (default): every tool. `dev`: `check-run`, `logs-fetch`, `liquid-exec`, `graphql-exec`, `envs-list`, `deploy-dry-run`, `deploy-start`, `job-status`, `unit-tests-run`. `none`: no tools. |
 | `--include-tools <names>` | Adds tools to the profile — not an allowlist, unlike Gemini CLI's `includeTools`. For an allowlist: `--profile none --include-tools a,b`. |
 | `--exclude-tools <names>` | Removes tools. Excluding a tool the profile does not contain is allowed, so one exclude list works with any profile. |
 
@@ -117,7 +117,7 @@ curl -s http://localhost:5910/tools | jq '.tools[].id'
 
 The server returns an `instructions` string on `initialize` and on `server/discover`, which clients generally place in the model's system prompt. It carries the rules that span tools and that no single tool description can state: how credentials resolve, that every tool answers with `ok` and reports failure as `ok:false` in the body rather than as a failed call, that a relative path resolves against the directory the server was started in, and that a call returning a `job_id` is polled with `job-status` and `wait_ms`.
 
-It is built from the tools the server actually exposes, so a section about a tool is absent when that tool is — `--profile dev` is told about `deploy-start` and `tests-run-async`, not about `data-clean`. It names no tool from another MCP server. `pos-cli mcp-config` prints the exact string a given selection produces.
+It is built from the tools the server actually exposes, so a section about a tool is absent when that tool is — `--profile dev` is told about `deploy-start` and `job-status`, not about `data-clean`. It names no tool from another MCP server. `pos-cli mcp-config` prints the exact string a given selection produces.
 
 ---
 
@@ -196,7 +196,7 @@ All tools (except `envs-list` and generator tools) support multiple authenticati
 
 ### job-status
 
-The status of anything `deploy-start`, `data-import`, `data-export`, `data-clean` or `tests-run-async` started. Each of those returns a `job_id` beside its own fields; this reads it back.
+The status of anything `deploy-start`, `data-import`, `data-export` or `data-clean` started. Each of those returns a `job_id` beside its own fields; this reads it back.
 
 The only way to read back anything a starter began. It replaced six per-operation status tools — one each for a deploy, a deploy wait, a data import, export and clean, and an async test run — which it removed in 6.6.0.
 
@@ -322,15 +322,16 @@ List all configured environments from `.pos` configuration file.
 
 ### logs-fetch
 
-Fetch rows from the instance **error log** — the stream `pos-cli logs` tails. Only deployed code
-writes to it: a page, a partial or a test run reaches it, including their `{% log %}` output, and
-nothing rendered through `liquid-exec` does — not even that render's own Liquid errors (measured
-against a live instance on 2026-09-22: a bare `{% log %}`, a `type:`-tagged one and a failing
-filter all produced no rows). HTTP access logs are not here either; those live in the logsv2 store,
-which no tool reaches yet.
+Fetch rows from the instance **error log** — the stream `pos-cli logs` tails. Deployed code writes
+to it: a page, a partial or a test run reaches it, including their `{% log %}` output. A render
+through `liquid-exec` contributes its **Liquid errors** but not its `{% log %}` output, so a
+template debugged that way reports its failures here and leaves no trace of its own logging. HTTP
+access logs are not here either; those live in the logsv2 store, which no tool reaches yet.
 
-An earlier version of this page said `{% log %}` output was simply absent. That was generalised
-from the `liquid-exec` context alone and is wrong for deployed code.
+**A failing `{% background %}` job is visible only here.** Its work happens after the render
+returns, so the call that queued it answers `ok: true` with an empty result and no error — the log
+is the only place that failure exists, whether the job was queued by a deployed page or by
+`liquid-exec`.
 
 **Tool Name**: `logs-fetch`
 
@@ -340,7 +341,10 @@ from the `liquid-exec` context alone and is wrong for deployed code.
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
 - `lastId` *(string, optional)*: a `lastId` this tool returned, passed back unchanged. Omit to start at the oldest row kept (default: `'0'`)
-- `limit` *(integer, optional)*: stop after this many rows, counting from the **oldest** one after `lastId` (1–10000)
+- `since` *(string, optional)*: an ISO-8601 timestamp to read from, instead of `lastId`. Passing both is refused (`SINCE_AND_LAST_ID`)
+- `errorType` *(string, optional)*: keep only rows whose `error_type` contains this, ignoring case
+- `contains` *(string, optional)*: keep only rows whose `message` contains this, ignoring case
+- `limit` *(integer, optional)*: stop after this many **matching** rows, counting from the **oldest** one after the starting cursor (1–10000)
 
 **Response Format**:
 ```javascript
@@ -352,7 +356,9 @@ from the `liquid-exec` context alone and is wrong for deployed code.
       { id: "1790008926.7639065", created_at: "2026-09-21T16:42:06.763Z", error_type: "LowLevelError", message: "..." }
     ],
     lastId: "1790008926.7639065",
-    count: 2
+    count: 2,
+    scanned: 2,            // only when a filter was used: how many rows were read to find those
+    scanLimitReached: true // only when the scan bound, not the filter or the limit, ended the read
   },
   meta: {
     startedAt: "2025-01-23T10:30:00Z",
@@ -373,8 +379,27 @@ truncating it to whole seconds, re-delivers every row written in that second; go
 skips them. The tool returns it as the string the instance sent, and the schema accepts that string,
 so the resume is a straight round trip.
 
+**Filtering happens in this tool, not on the instance.** `/logs` cannot narrow anything: measured
+on 2026-09-22, it answers `error_type`, `q`, `search`, `order` and `limit` byte-identically to a
+parameter it has never heard of. So `errorType` and `contains` are matched after the rows arrive —
+the transfer cost stays between the server and the instance, and only the matches reach the
+caller's context, but a narrow search over a large log still reads every row in between and takes
+as long as that implies.
+
+`since` is the exception, and it is free: a row id is a microsecond epoch of the same instant
+`created_at` names (`1790097411.2168736` ↔ `2026-09-22T17:16:51.216Z`), and `last_id` is a strict
+greater-than, so a timestamp converts straight into a cursor and the **instance** skips everything
+older. Nothing is fetched to be thrown away.
+
+A call reads at most 10,000 rows, the same ceiling as `limit`'s maximum. A read that stopped there
+answers `scanLimitReached: true`, which is how "nothing matched" is told apart from "stopped
+looking"; pass the returned `lastId` back to carry on. The cursor advances over every row that was
+read, not only the ones returned, so a filtered read resumes after the rows it rejected rather than
+in front of them.
+
 Reading forward from the oldest end is all the API offers, so there is no "most recent N" here: to
-tail, call once to get a `lastId`, then keep passing it back.
+tail, call once to get a `lastId`, then keep passing it back. To pick up recent rows without paging
+from the beginning, start with `since`.
 
 **Example Usage**:
 Fetch first 100 logs:
@@ -399,6 +424,21 @@ Fetch next batch starting from previous lastId:
     "env": "staging",
     "limit": 100,
     "lastId": "1790008926.7639065"
+  }
+}
+```
+
+Find the GraphQL failures from the last hour, without reading anything else:
+
+```json
+{
+  "name": "logs-fetch",
+  "arguments": {
+    "env": "staging",
+    "since": "2026-09-22T16:16:51Z",
+    "errorType": "liquid",
+    "contains": "graphql",
+    "limit": 20
   }
 }
 ```
@@ -480,6 +520,13 @@ that only exists on the instance:
 | `admin_assets` | `name`, `url`, `content_type`, `file_size` |
 | `admin_graphql`, `admin_model_schemas`, `admin_forms`, `admin_authorization_policies`, `admin_liquid_layouts`, `admin_tables` | the rest of the deployed surface |
 | `admin_current_instance`, `admin_versions` | what the instance is |
+
+**The field names are not guessable, and they do not have to be.** The instance answers GraphQL
+introspection, so `{ __type(name: "LiquidPartial") { fields { name } } }` lists a type's fields.
+An agent evaluation lost its first call to `Field 'name' doesn't exist on type 'LiquidPartial'`
+(the field is `path`) and recovered only because it thought to try `__type` unprompted — so the
+tool description now says so, in 90 bytes, rather than naming more families that were already
+reachable.
 
 ```json
 {
@@ -1377,7 +1424,7 @@ Run the platformos-check linter over an app directory and report offences groupe
 
 **Input Parameters**:
 - `appPath` *(string, optional)*: Path to the platformOS app directory to check (default: current directory)
-- `autoFix` *(boolean, optional, default: false)*: Fix what can be fixed, then re-check and return what remains
+- `autoFix` *(boolean, optional, default: false)*: Fix what can be fixed, then re-check and return what remains. See the note below: no check currently ships a correction, so this writes nothing today.
 
 **Response**:
 ```json
@@ -1391,6 +1438,7 @@ Run the platformos-check linter over an app directory and report offences groupe
     "infoCount": 0,
     "filesChecked": 128,
     "autoFixed": false,
+    "fixable": 0,
     "files": [
       {
         "path": "app/views/pages/index.liquid",
@@ -1439,7 +1487,19 @@ Lint a specific app directory and fix what can be fixed:
 }
 ```
 
-**Use Case**: Find violations before deploying, and fix the mechanical ones. `autoFix` writes to the files it fixes, so the positions in a previous result no longer apply afterwards.
+**What `autoFix` did, and what it could have done.** `autoFixed: false` on its own could mean
+"nothing here is auto-fixable" or "the pass did not run", and an agent had to diff its own working
+tree to tell them apart — on the one tool here that writes to disk. `fixable` is how many of the
+reported offenses could be corrected automatically, and it is computed **whether or not `autoFix`
+was asked for**, so a plain lint tells you what a fixing run would be worth. `fixedFiles` names the
+files that were written, and is absent when none were.
+
+**Today that number is always 0.** Not one of platformos-check's 54 checks builds a correction, so
+`autoFix` cannot write anything whatever it is pointed at. The plumbing is kept because the fix is
+upstream's to ship, and a test fails if it ever does — at which point this note should go.
+
+**Use Case**: Find violations before deploying. When `autoFix` becomes real it writes to the files
+it fixes, so the positions in a previous result no longer apply afterwards.
 
 ---
 
@@ -2215,7 +2275,7 @@ by `mcp-min/__tests__/cli-coverage.test.js`.
 | Jobs | `job-status` (dev) |
 | Deployment | `deploy-dry-run` (dev), `deploy-start` (dev) |
 | Data | `data-import`, `data-export`, `data-clean`, `data-validate` |
-| Testing | `unit-tests-run` (dev), `tests-run-async` (dev) |
+| Testing | `unit-tests-run` (dev) |
 | Linting | `check-run` (dev) |
 | File sync | `sync-file` |
 | Property uploads | `uploads-push` |

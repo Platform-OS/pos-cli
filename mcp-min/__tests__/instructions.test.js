@@ -183,7 +183,16 @@ describe('instructions are paid for on every session', () => {
   // Not raised again for TASK-40, which added the three kinds the list was missing: the
   // refresh-token sentence it replaced said in advance what `details.remedy` now says on the error
   // that needs it, and one general rule about remedies is shorter than one announcement per remedy.
-  const BUDGET = 1400;
+  //
+  // 1400 → 1550 in 6.6.0 for the layout line (round 2, F8): where deployable source has to sit for
+  // the converter to recognise it. The one place an agent evaluation said it came close to needing
+  // pos-cli's source — it guessed the layout from prior platformOS knowledge and confirmed each
+  // guess with a `deploy-dry-run`, which is a round trip to the instance, a result to read and a
+  // release id consumed, per guess. No tool description can own it: it is true of the project
+  // rather than of any one tool, so putting it there means repeating it across tools and paying on
+  // every request instead of once a session. 156 bytes, and full lands at 1502 — the same ~50 of
+  // headroom this ceiling has always kept, so it still fails on growth rather than on a rewording.
+  const BUDGET = 1550;
 
   test.each([['full', {}], ['dev', { profile: 'dev' }]])('%s fits the budget', (_label, options) => {
     const size = Buffer.byteLength(buildInstructions(resolve(options)));

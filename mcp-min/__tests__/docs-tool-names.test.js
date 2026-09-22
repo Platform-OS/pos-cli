@@ -7,6 +7,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { describe, test, expect } from 'vitest';
 import registry from '../tools.js';
+import { REMOVED_TOOLS } from '../tools-config.js';
 
 const REPO = path.resolve(import.meta.dirname, '../..');
 
@@ -54,12 +55,25 @@ const mentionedIn = (text) => {
 };
 
 describe('tool names in the documentation', () => {
-  test.each(DOCS)('%s names only registered tools', (file) => {
+  /**
+   * A tool that was removed may still be named: the documentation has to say what became of it,
+   * which is what `docs/MCP_COVERAGE.md` is for. The tombstone list in `tools-config.js` is the
+   * source of truth for that, so it is read rather than restated — a name that is neither
+   * registered nor tombstoned is a mistake.
+   */
+  test.each(DOCS)('%s names only registered or tombstoned tools', (file) => {
     const text = fs.readFileSync(path.join(REPO, file), 'utf8');
 
-    const unknown = mentionedIn(text).filter(name => !registry.has(name) && !NOT_TOOLS.has(name));
+    const unknown = mentionedIn(text)
+      .filter(name => !registry.has(name) && !REMOVED_TOOLS.has(name) && !NOT_TOOLS.has(name));
 
     expect(unknown, `${file} names tools that mcp-min/tools.js does not register`).toEqual([]);
+  });
+
+  // Without this the rule above would pass for a tombstone list that had quietly become the
+  // registry's equal, which is the one way "removed" stops meaning anything.
+  test('the tombstone list and the registry do not overlap', () => {
+    expect([...REMOVED_TOOLS.keys()].filter(name => registry.has(name))).toEqual([]);
   });
 
   // The other direction: a tool nobody documents is one nobody finds.

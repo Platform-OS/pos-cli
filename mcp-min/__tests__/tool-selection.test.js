@@ -37,14 +37,14 @@ const PRE_PROFILES_TOOLS = [
   'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'page-fetch', 'generators-list', 'generators-help', 'generators-run',
   'migrations-list', 'migrations-generate', 'migrations-run', 'job-status', 'deploy-dry-run', 'deploy-start',
   'data-import', 'data-export', 'data-clean',
-  'data-validate', 'unit-tests-run', 'tests-run-async', 'check-run', 'sync-file',
+  'data-validate', 'unit-tests-run', 'check-run', 'sync-file',
   'uploads-push', 'constants-list', 'constants-set', 'constants-unset', 'instance-create', 'partners-list',
   'partner-get', 'endpoints-list', 'env-add'
 ];
 
 const DEV_TOOLS_IN_REGISTRY_ORDER = [
   'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'page-fetch', 'job-status', 'deploy-dry-run',
-  'deploy-start', 'unit-tests-run', 'tests-run-async', 'check-run'
+  'deploy-start', 'unit-tests-run', 'check-run'
 ];
 
 describe('resolveTools', () => {
@@ -284,7 +284,7 @@ describe('findTool', () => {
 
 test('describeSelection names what was exposed and why', () => {
   expect(describeSelection(selectTools({ profile: 'dev', include: ['sync-file'], exclude: ['job-status'], env: {} })))
-    .toBe(`mcp-min: exposing 11 of ${registry.size} tools (profile dev; --include-tools sync-file; --exclude-tools job-status)`);
+    .toBe(`mcp-min: exposing 10 of ${registry.size} tools (profile dev; --include-tools sync-file; --exclude-tools job-status)`);
   expect(describeSelection(selectTools({ env: {} })))
     .toBe(`mcp-min: exposing ${registry.size} of ${registry.size} tools (profile full; --include-tools (none); --exclude-tools (none))`);
 });

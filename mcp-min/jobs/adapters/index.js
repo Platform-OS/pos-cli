@@ -7,10 +7,9 @@ import deploy from './deploy.js';
 import dataImport from './data-import.js';
 import dataExport from './data-export.js';
 import dataClean from './data-clean.js';
-import testRun from './test-run.js';
 import { JOB_KINDS } from '../handle.js';
 
-const adapters = new Map([deploy, dataImport, dataExport, dataClean, testRun].map(a => [a.kind, a]));
+const adapters = new Map([deploy, dataImport, dataExport, dataClean].map(a => [a.kind, a]));
 
 // A kind a handle can carry but nothing can read would be minted and then never answerable.
 const missing = JOB_KINDS.filter(kind => !adapters.has(kind));

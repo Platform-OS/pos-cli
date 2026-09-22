@@ -18,11 +18,11 @@ import {
 
 const DEV_TOOLS = [
   'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'page-fetch', 'job-status', 'deploy-dry-run',
-  'deploy-start', 'unit-tests-run', 'tests-run-async', 'check-run'
+  'deploy-start', 'unit-tests-run', 'check-run'
 ];
 
 // The profile exists to keep this payload small, so growth past the budget needs a deliberate
-// bump rather than a quiet one. Currently 9,146 bytes over stdio, plus the server instructions
+// bump rather than a quiet one. Currently 9,243 bytes over stdio, plus the server instructions
 // (budgeted separately in instructions.test.js, since a client is charged for each once).
 //
 // Two kinds of growth, argued differently. **Prose** — a description that was wrong, a parameter
@@ -54,7 +54,21 @@ const DEV_TOOLS = [
 // No raise for round 2's F10/F13: correcting them *returned* 126 bytes. page-fetch stopped
 // publishing `email` and `token`, which it never sent, and logs-fetch spent 53 of the saving on
 // saying which renders reach the error log instead of a claim that was wrong.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 9600;
+//
+// 9,600 → 9,000 because three corrections in a row gave bytes back (F10/F13, F1/F3/F4, F2) and a
+// budget sitting a kilobyte above the actual has stopped being one: it would let the next change
+// spend the whole of the TASK-45 raise again without anyone arguing for it. Lowering a ceiling is
+// not a saving and is not counted as one; it is what keeps the ceiling load-bearing.
+//
+// 9,000 → 9,400  TASK-57 (481 B). logs-fetch gained `since`, `errorType` and `contains`. Argued
+//                as a capability rather than as prose: round 2 of the evaluation was set "find one
+//                error in the logs without reading everything" and could only do it because that
+//                instance held five rows. The instance cannot narrow anything — measured
+//                2026-09-22, `/logs` answers error_type, q, search, order and limit identically to
+//                a nonsense parameter — so the choice was these three parameters or a second log
+//                tool, and the one TASK-28 planned needs logsv2, which is unreachable (TASK-56).
+//                A tool would have been 450–900 B and a second log tool to pick wrongly between.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 9400;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -68,13 +82,15 @@ const PRE_PROFILES_TOOLS = [
 // Each a deliberate widening of what a bare `pos-cli-mcp` exposes, and the reason the byte count
 // below moves.
 const ADDED_SINCE_PROFILES = ['job-status', 'deploy-dry-run', 'page-fetch'];
-// The six per-operation status tools job-status replaced, removed in 6.6.0. Listed rather than
-// deleted from PRE_PROFILES_TOOLS so this file still records what 6.5.1 shipped and what became
-// of it: an agent on a 6.x server saw these, and a config or a launch flag naming one now has to
-// be answered (tools-config.js keeps a tombstone for each).
+// Removed in 6.6.0: the six per-operation status tools job-status replaced, and tests-run-async,
+// which could not work — the tests module answers /_tests/run_async with a test_name and no id,
+// and the /_tests/results/:id it polled has never existed there. Listed rather than deleted from
+// PRE_PROFILES_TOOLS so this file still records what 6.5.1 shipped and what became of it: an agent
+// on a 6.x server saw these, and a config or a launch flag naming one now has to be answered
+// (tools-config.js keeps a tombstone for each).
 const REMOVED_IN_7 = [
   'deploy-status', 'deploy-wait', 'data-import-status', 'data-export-status', 'data-clean-status',
-  'tests-run-async-result'
+  'tests-run-async-result', 'tests-run-async'
 ];
 
 const BARE_TOOLS = [
@@ -116,7 +132,24 @@ const BARE_TOOLS = [
 //         which renders reach the error log (F13) — a correction that gave 126 B back
 // 22,504  unit-tests-run dropped `path`, which the tests module never read, and stopped sending
 //         a whole-suite run to tests-run-async (round 2, F1/F3/F4)
-const BARE_TOOLS_LIST_BYTES = 22504;
+// 22,593  graphql-exec said the schema is introspectable (round 2, F12) — 90 B, against the round
+//         trip an evaluation lost to `Field 'name' doesn't exist on type 'LiquidPartial'` on its
+//         first call. Prose, so it comes out of the tool payload the same release gave back.
+// 21,978  tests-run-async removed (round 2, F2). Not a saving that was sought: the tool could not
+//         work at all, and 615 B is what a broken one costs every agent on every request.
+// 22,026  check-run's autoFix points at `fixable` (round 2, F9), which is what tells a caller
+//         whether the pass had anything to do — 48 B, out of the 615 the line above returned.
+// 22,099  deploy-dry-run says some categories carry a count and no paths (round 2, F7) — 73 B,
+//         against an evaluation that read the mismatch as a bug and spent an admin_assets query
+//         checking. The layout that went with it is in the instructions, not here: it belongs to
+//         the project rather than to a tool, and is charged once a session instead of per request.
+// 22,580  logs-fetch gained since, errorType and contains (TASK-57) — 481 B on the one tool that
+//         changed, the same 481 B the dev profile pays, where the argument for them is made.
+// 22,601  logs-fetch says what a liquid-exec render contributes (21 B). It had claimed such a
+//         render "never appears here, not even its errors", which is false: the errors are
+//         recorded, only the render's own `{% log %}` is not. A description that sends an agent
+//         away from the place its answer is costs more than the 21 bytes.
+const BARE_TOOLS_LIST_BYTES = 22601;
 
 const HANG_MS = 15000;
 
@@ -235,7 +268,7 @@ describe('which tools are listed', () => {
     ['the same allowlist as repeated flags', ['--profile', 'none', '--include-tools', 'graphql-exec', '--include-tools', 'envs-list'], ['envs-list', 'graphql-exec']],
     ['dev plus one tool minus another', ['--profile', 'dev', '--include-tools', 'sync-file', '--exclude-tools', 'job-status,check-run'],
       ['envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'page-fetch', 'deploy-dry-run', 'deploy-start',
-        'unit-tests-run', 'tests-run-async', 'sync-file']],
+        'unit-tests-run', 'sync-file']],
     ['full minus a group', ['--exclude-tools', 'data-import,data-export,data-clean'],
       BARE_TOOLS.filter(name => !['data-import', 'data-export', 'data-clean'].includes(name))]
   ])('%s', async (_label, args, expected) => {

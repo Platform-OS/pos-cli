@@ -38,11 +38,13 @@ this.lastId = row.id;                                   // line 78, now a string
 After the first row, both sides are strings, so `<=` is **lexicographic**. That is right only while the fractions are the same length. They are not:
 
 ```
-"1790008926.76"  <=  "1790008926.7639065"   → true  (a prefix sorts first)
- 1790008926.76   <=   1790008926.7639065    → false (it is 0.0000935 s newer)
+"1790008926.76"  <=  "1790008926.7600000"   → true  (a prefix sorts first)
+ 1790008926.76   <=   1790008926.7600000    → true, and they are the *same instant*
 ```
 
-So a row at `.76` arriving after one at `.7639065` reads as already-seen and its log line is dropped from a test run's output.
+**Correction (2026-09-22):** an earlier version of this task illustrated the problem with `.76` against `.7639065` and claimed `.76` was the newer of the two. That is wrong — `0.76 < 0.7639065`, so string and numeric ordering agree there. Comparing fraction digits left to right *is* numeric comparison; the one case where it diverges is when a fraction is a **prefix** of the other, as above, where the shorter string sorts first while the two name the same instant. A `<=` guard then reads an already-handled row as newer and emits it twice; a `>` guard drops it.
+
+`lib/logRowId.js` (added in TASK-58) has the correct comparison — it pads the shorter fraction before comparing, and never parses an id into a number. `isNewer`/`newerOf` are what this task should use if it keeps a comparison at all; dropping the comparison for a `Set`, as described below, removes the question entirely and is still the preferred fix.
 
 **How bad, honestly: latent, not active.** `/logs?last_id=` is a strict greater-than (measured 2026-09-22), so every row in a response is already newer than the cursor and this guard should never fire. It is redundant belt-and-braces that is wrong in the one situation it exists for — a response that repeats or reorders rows. Filed because the luck is the server's, not ours, and because a dropped line in a test run looks like a test that did not log rather than a client that hid it.
 

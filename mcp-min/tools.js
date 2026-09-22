@@ -33,7 +33,6 @@ import dataCleanTool from './data/clean.js';
 import dataValidateTool from './data/validate-tool.js';
 
 import testsRunTool from './tests/run.js';
-import testsRunAsyncTool from './tests/run-async.js';
 
 import checkRunTool from './check/run.js';
 
@@ -80,7 +79,7 @@ const tools = {
   'migrations-generate': migrationsGenerateTool,
   'migrations-run': migrationsRunTool,
 
-  // The status of anything deploy-start, data-* or tests-run-async started.
+  // The status of anything deploy-start or data-* started.
   'job-status': jobStatusTool,
 
   'deploy-dry-run': deployDryRunTool,
@@ -92,7 +91,6 @@ const tools = {
   'data-validate': dataValidateTool,
 
   'unit-tests-run': testsRunTool,
-  'tests-run-async': testsRunAsyncTool,
 
   'check-run': checkRunTool,
 

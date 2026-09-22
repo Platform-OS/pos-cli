@@ -37,7 +37,7 @@ Tool selection
 - `pos-cli mcp-config` takes the same options and shows what they expose.
 
 Jobs
-- Five starters (deploy-start, data-import, data-export, data-clean, tests-run-async) return a job_id; job-status reads any of them back.
+- Four starters (deploy-start, data-import, data-export, data-clean) return a job_id; job-status reads any of them back.
 - The job_id encodes kind, remote id, instance origin and per-kind flags; it is parsed strictly and never decides credentials or the request URL.
 - state: running | completed | failed; completed means the operation finished (failing assertions still count), failed means it did not.
 - wait_ms (≤ 120 s) polls with backoff, reports progress, honours ctx.signal, and returns done:false at the deadline.

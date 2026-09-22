@@ -52,7 +52,7 @@ const checkRunTool = {
       },
       autoFix: {
         type: 'boolean',
-        description: 'Fix what can be fixed, then report what is left.',
+        description: 'Fix what can be fixed, then report what is left. fixable says how much that was, in either mode.',
         default: false
       }
     }
@@ -105,11 +105,19 @@ const checkRunTool = {
     // fix to a partial's `{% doc %}` params changes that partial's contract, so it can
     // resolve a caller's offense in a file autofix never wrote. It is also what keeps
     // positions honest, since every offense after a fix in the same file shifts.
-    const fixable = autoFix ? offenses.filter((o) => 'fix' in o && !!o.fix) : [];
-    let autoFixed = false;
-    if (fixable.length > 0) {
+    const fixableIn = (list) => list.filter((o) => 'fix' in o && !!o.fix);
+    const relativeTo = (uri) => normalize(path.relative(checkPath, uriToPath(uri)));
+
+    // Computed whether or not fixing was asked for. It used to be gated on `autoFix`, which is
+    // fine while it only decides whether to run the pass and wrong the moment it is reported: a
+    // lint that was never asked to fix anything would have answered "nothing here is fixable".
+    const toFix = fixableIn(offenses);
+    let fixedFiles = [];
+    if (autoFix && toFix.length > 0) {
       await platformosCheck.autofix(result.app, offenses);
-      autoFixed = true;
+      // The files autofix wrote: `toFix` is filtered on the same predicate it applies internally,
+      // so these are its writes rather than a guess at them.
+      fixedFiles = [...new Set(toFix.map(offense => relativeTo(offense.uri)))].sort();
 
       // Re-run check after autofix
       const recheck = await platformosCheck.appCheckRun(checkPath, configPath);
@@ -158,7 +166,18 @@ const checkRunTool = {
       warningCount: totalCounts.warnings,
       infoCount: totalCounts.info,
       filesChecked,
-      autoFixed,
+      /**
+       * The three questions a caller had no way to answer. `autoFixed: false` alone could mean
+       * "nothing here is auto-fixable" or "the pass did not run", and an agent had to diff its own
+       * working tree to find out which — on the one tool here that writes to disk.
+       *
+       * `fixable` is how many of the offenses above could be written automatically: before a fix
+       * pass it is the offer, after one it is what the pass could not apply. `fixedFiles` names
+       * what was written, and is absent when nothing was.
+       */
+      autoFixed: fixedFiles.length > 0,
+      fixable: fixableIn(offenses).length,
+      ...(fixedFiles.length > 0 && { fixedFiles }),
       files,
       // Which directory was actually linted, resolved: it used to sit in the tool's own meta,
       // which runTool now owns, and a caller that passed a relative path still wants to know.

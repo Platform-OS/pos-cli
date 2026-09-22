@@ -26,7 +26,11 @@ export const REMOVED_TOOLS = new Map([
   ['data-import-status', 'removed in 6.6.0; use job-status with the job_id data-import returned'],
   ['data-export-status', 'removed in 6.6.0; use job-status with the job_id data-export returned'],
   ['data-clean-status', 'removed in 6.6.0; use job-status with the job_id data-clean returned'],
-  ['tests-run-async-result', 'removed in 6.6.0; use job-status with the job_id tests-run-async returned']
+  ['tests-run-async-result', 'removed in 6.6.0; use job-status with the job_id tests-run-async returned'],
+  // Removed rather than fixed: the tests module answers /_tests/run_async with a test_name and no
+  // id, and the /_tests/results/:id this polled has never existed in it. The tool ran the suite
+  // on the instance and then dropped the handle, every time.
+  ['tests-run-async', 'removed in 6.6.0; unit-tests-run runs the whole suite when name is omitted']
 ]);
 
 export function toolsConfigLocation(env) {

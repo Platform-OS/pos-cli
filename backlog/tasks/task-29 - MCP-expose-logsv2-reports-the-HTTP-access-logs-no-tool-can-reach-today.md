@@ -4,6 +4,7 @@ title: 'MCP: expose logsv2 reports — the HTTP access logs no tool can reach to
 status: To Do
 assignee: []
 created_date: '2026-09-18 22:45'
+updated_date: '2026-09-22 16:49'
 labels:
   - mcp
   - agent-facing
@@ -51,3 +52,15 @@ column order is worth keeping: it is the order a person reading a slow-endpoint 
 - [ ] #5 A proxy that is unreachable and a rejected token are classified the way TASK-28 classifies them
 - [ ] #6 Adding a report JSON to lib/reports/ does not require editing the tool, or if it does, a test fails when the two disagree
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+**BLOCKED as of 2026-09-22, for the same reason as TASK-28: the whole `logsv2` stack is unreachable.**
+
+`pos-cli logsv2 search` 404s at the proxy, and `reports` goes through the same client, so it cannot work either. Full evidence is in TASK-28's notes and in `docs/MCP_COVERAGE.md`; the short version is that `LOGS_PROXY_URL` is the only configuration point, its default host answers Go's stock `404 page not found` on every path including `/healthz`, the hostname has never changed since the feature landed, and the GUI's Network panel fails the same way because it uses the same client.
+
+The coverage row moved from `expose` to `later`. Exposing this today would ship an MCP tool that 404s on every call.
+
+Unblocking is the same question: is the proxy retired, moved, or only reachable from inside the platform? If a live host exists, only the `LOGS_PROXY_URL` default needs changing.
+<!-- SECTION:NOTES:END -->

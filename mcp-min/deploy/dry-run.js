@@ -30,7 +30,7 @@ import { makeArchive } from '../../lib/archive.js';
 import { manifestGenerate } from '../../lib/assets/manifest.js';
 import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
-import { releaseState, filesNotMatched } from '../jobs/adapters/deploy.js';
+import { releaseState, filesNotMatched, toCount } from '../jobs/adapters/deploy.js';
 import { makeWorkDir, removeWorkDir } from './work-dir.js';
 
 const POLL_MS = 1000;
@@ -46,12 +46,11 @@ const timing = (ctx) => ({
 });
 
 const toList = (value) => (Array.isArray(value) ? value : []);
-const toCount = (value) => (Array.isArray(value) ? value.length : (typeof value === 'number' ? value : 0));
 
 /**
- * The API answers a category with either the file paths or just a count, so both are reported and
- * `count` is always right even when `files` is empty. An agent branches on `count`; `files` is
- * what it shows a person.
+ * The API answers a category with either the file paths or just a count, so both are kept and
+ * `count` is right even when `files` is empty — `Asset` and `Translations` are counted-only, and
+ * a count with no names is the platform's answer rather than a gap here.
  */
 const category = (data) => ({
   upserted: { count: toCount(data?.upserted), files: toList(data?.upserted) },
@@ -60,6 +59,16 @@ const category = (data) => ({
 });
 
 const sumOver = (categories, key) => Object.values(categories).reduce((n, c) => n + c[key].count, 0);
+
+const flat = (categories, key) => ({
+  count: sumOver(categories, key),
+  files: Object.values(categories).flatMap(c => c[key].files)
+});
+
+/** The per-category breakdown, as counts: the names are already in the lists above, once. */
+const countsByCategory = (categories) => Object.fromEntries(
+  Object.entries(categories).map(([name, c]) => [name, { upserted: c.upserted.count, deleted: c.deleted.count, skipped: c.skipped.count }])
+);
 
 /**
  * Polls for the asset phase's verdict. `waitForAssetReport` in lib/ does this for the CLI, but it
@@ -118,7 +127,7 @@ const validationError = (release) => {
 };
 
 const dryRunDeployTool = {
-  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start would be refused too, and error names the files. discarded names files a deploy would drop while still reporting success.',
+  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start would be refused too, and error names the files. discarded names files a deploy would drop while still reporting success. Some categories report a count with no paths, so count can exceed files.',
   annotations: { destructiveHint: false },
   inputSchema: {
     type: 'object',
@@ -238,10 +247,14 @@ const dryRunDeployTool = {
       // Always present, so an agent branches on the count without having to tell "nothing was
       // dropped" from "this tool does not say".
       discarded: { count: discarded.length, files: discarded },
-      deleted: { count: sumOver(categories, 'deleted'), files: Object.values(categories).flatMap(c => c.deleted.files) },
-      upserted: { count: sumOver(categories, 'upserted'), files: Object.values(categories).flatMap(c => c.upserted.files) },
-      skipped: { count: sumOver(categories, 'skipped'), files: Object.values(categories).flatMap(c => c.skipped.files) },
-      byCategory: categories,
+      deleted: flat(categories, 'deleted'),
+      upserted: flat(categories, 'upserted'),
+      // Counted, not named. On a dry run where nothing changes these were 88% of the whole answer,
+      // listed twice — and a path that is not changing is the one thing nobody asked about. What
+      // *is* changing is named above; `archive.fileCount` says how many went in altogether.
+      skipped: { count: sumOver(categories, 'skipped') },
+      // Counts only: every name here was already in the three lists above, byte for byte.
+      byCategory: countsByCategory(categories),
       assets,
       // No path: the archive is already removed by here.
       archive: { fileCount: numberOfFiles }
