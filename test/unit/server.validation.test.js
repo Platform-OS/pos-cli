@@ -122,11 +122,24 @@ describe('/api/liquid', () => {
 });
 
 describe('GET /api/logs', () => {
-  test('coerces the cursor to a number', async () => {
+  test('passes the cursor through as the row id it is', async () => {
     const res = await agent.get('/api/logs').query({ lastId: '42' });
 
     expect(res.status).toBe(200);
-    expect(forwarded.logs.at(-1).lastId).toBe(42);
+    expect(forwarded.logs.at(-1).lastId).toBe('42');
+  });
+
+  /**
+   * The cursor the Logs page actually sends. It polls with `logs.at(-1).id`, and a row id is a
+   * microsecond epoch — so while this field was declared `integer`, the second poll after any row
+   * arrived was a 400 and the tail stopped advancing. Truncating it is not a fix: `last_id` is a
+   * strict greater-than, so a cursor without its fraction re-delivers every row from that second.
+   */
+  test('accepts a real row id, which is what the Logs page polls with', async () => {
+    const res = await agent.get('/api/logs').query({ lastId: '1790008926.7639065' });
+
+    expect(res.status).toBe(200);
+    expect(forwarded.logs.at(-1).lastId).toBe('1790008926.7639065');
   });
 
   // 0 is the "from the beginning" sentinel. Before the schema supplied it as a default,
@@ -135,21 +148,22 @@ describe('GET /api/logs', () => {
     const res = await agent.get('/api/logs');
 
     expect(res.status).toBe(200);
-    expect(forwarded.logs.at(-1).lastId).toBe(0);
+    expect(forwarded.logs.at(-1).lastId).toBe('0');
   });
 
   // gui/next up to this change built the query with `args.last ?? null`, so every first
-  // poll sent the literal string "null". Ajv will not coerce that to an integer, which
-  // made the admin Logs page 400 on load. Installed GUI builds still send it.
+  // poll sent the literal string "null". It satisfies neither the old integer type nor the
+  // row-id shape, which made the admin Logs page 400 on load. Installed GUI builds still send it.
   test.each(['null', '', 'undefined'])('accepts the cursor an older gui/next sends: %p', async value => {
     const res = await agent.get('/api/logs').query({ lastId: value });
 
     expect(res.status).toBe(200);
-    expect(forwarded.logs.at(-1).lastId).toBe(0);
+    expect(forwarded.logs.at(-1).lastId).toBe('0');
   });
 
-  // Gateway.logs interpolates the cursor into the request URL, so a value carrying its
-  // own query parameters must not reach it.
+  // The cursor reaches a request URL, so a value carrying its own query parameters must not get
+  // there. The shape is what refuses it — `Gateway.logs` encodes the value as well, so this is
+  // the outer of two guards rather than the only one.
   test('rejects a cursor that smuggles extra query parameters', async () => {
     const before = forwarded.logs.length;
     const res = await agent.get('/api/logs').query({ lastId: '1&admin=true' });

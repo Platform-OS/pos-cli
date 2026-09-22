@@ -22,7 +22,7 @@ const DEV_TOOLS = [
 ];
 
 // The profile exists to keep this payload small, so growth past the budget needs a deliberate
-// bump rather than a quiet one. Currently 6,485 bytes over stdio, plus the server instructions
+// bump rather than a quiet one. Currently 6,680 bytes over stdio, plus the server instructions
 // (budgeted separately in instructions.test.js, since a client is charged for each once).
 //
 // Raised from 6,000 for `deploy-dry-run` (TASK-25), which costs 739 bytes of it. The bump was
@@ -31,11 +31,14 @@ const DEV_TOOLS = [
 // that out by causing it. `deploy-start`'s own description names the dry run, and a description
 // may not point at a tool its profile hides — so the two travel together or neither does.
 //
-// Raised to 6,600 for `liquid-exec`'s `locals` (TASK-41), which fits 6,500 at 6,485 — and fifteen
-// bytes is the ceiling failing on a reworded clause rather than on the growth it exists to catch,
-// which is how a budget teaches the next person to raise it without thinking. The 102 bytes buy a
-// parameter description that is true: the old one described a binding the endpoint does not do.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 6600;
+// Raised to 6,800 for TASK-41 and TASK-42 together, which cost 297 bytes between them. Both are
+// the same purchase: an agent-perspective evaluation found two of this profile's descriptions
+// saying things that were not true, and each wasted more of that agent's context on a detour than
+// the correction costs every agent for a release. `liquid-exec` promised locals the endpoint does
+// not bind; `logs-fetch` documented a resume whose cursor its own schema rejected, and said
+// nothing about which end `limit` reads from or that the stream has no `{% log %}` output in it.
+// A description that is wrong is not cheaper than one that is longer.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 6800;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -104,7 +107,12 @@ const BARE_TOOLS = [
 // 17,962 once `liquid-exec`'s `locals` said where the values actually are (TASK-41). The old
 // sentence was 102 bytes shorter and wrong, which cost an evaluation a whole detour: values
 // rendered blank with `ok: true`, and the only way out was reading pos-cli's source.
-const BARE_TOOLS_LIST_BYTES = 17962;
+//
+// 18,157 once `logs-fetch` said which stream it reads, which end `limit` takes from, and that a
+// lastId is handed back unchanged (TASK-42). Its schema used to reject the cursor it returned, so
+// the resume it documented had no input that worked at all; 33 of those bytes are the row-id
+// pattern, which is what now refuses a cursor carrying its own query parameters.
+const BARE_TOOLS_LIST_BYTES = 18157;
 
 const HANG_MS = 15000;
 

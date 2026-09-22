@@ -291,7 +291,9 @@ List all configured environments from `.pos` configuration file.
 
 ### logs-fetch
 
-Fetch recent logs from a platformOS instance in batches. Pagination supported via `lastId`.
+Fetch rows from the instance **error log** — the stream `pos-cli logs` tails. Application output
+from `{% log %}` is not in it, and neither are HTTP access logs; those live in the logsv2 store,
+which no tool reaches yet.
 
 **Tool Name**: `logs-fetch`
 
@@ -300,25 +302,37 @@ Fetch recent logs from a platformOS instance in batches. Pagination supported vi
 - `url` *(string, optional)*: Instance URL (alternative to `env`)
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `lastId` *(string, optional)*: Starting log ID for pagination (default: `'0'`)
-- `limit` *(integer, optional)*: Maximum logs to fetch (1-10000)
+- `lastId` *(string, optional)*: a `lastId` this tool returned, passed back unchanged. Omit to start at the oldest row kept (default: `'0'`)
+- `limit` *(integer, optional)*: stop after this many rows, counting from the **oldest** one after `lastId` (1–10000)
 
 **Response Format**:
 ```javascript
 {
-  logs: [
-    { id: "1001", timestamp: "2025-01-23T10:30:45Z", level: "info", message: "..." },
-    { id: "1002", timestamp: "2025-01-23T10:31:00Z", level: "error", message: "..." }
-  ],
-  lastId: "1002",
+  ok: true,
+  data: {
+    logs: [
+      { id: "1790008519.397928", created_at: "2026-09-21T16:35:19.397Z", error_type: "LowLevelError", message: "..." },
+      { id: "1790008926.7639065", created_at: "2026-09-21T16:42:06.763Z", error_type: "LowLevelError", message: "..." }
+    ],
+    lastId: "1790008926.7639065",
+    count: 2
+  },
   meta: {
     startedAt: "2025-01-23T10:30:00Z",
     finishedAt: "2025-01-23T10:31:30Z",
-    count: 2,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
   }
 }
 ```
+
+**On `lastId`**: a row id is a microsecond epoch — `"1790008926.7639065"` — and the instance treats
+`last_id` as a strict greater-than. Hand back exactly what the tool returned. Rounding it, or
+truncating it to whole seconds, re-delivers every row written in that second; going one second up
+skips them. The tool returns it as the string the instance sent, and the schema accepts that string,
+so the resume is a straight round trip.
+
+Reading forward from the oldest end is all the API offers, so there is no "most recent N" here: to
+tail, call once to get a `lastId`, then keep passing it back.
 
 **Example Usage**:
 Fetch first 100 logs:

@@ -183,38 +183,41 @@ describe('required relaxations', () => {
 
 // logs-fetch documents `lastId` as the cursor to hand back on the next call, so what it returns
 // has to satisfy the schema it accepts, or paging fails with -32602.
+/**
+ * The published schema has to accept the value the tool publishes — the narrowest case of "what is
+ * published is what is enforced", and the one a caller hits on every second call.
+ *
+ * This check existed while `logs-fetch` was broken and passed anyway, because its rows were
+ * `{ id: 41 }`: an integer survives `Number()` and satisfies an `integer` schema, so the fixture
+ * agreed with the bug. A real row id is a microsecond epoch the instance sends as a string, and
+ * nothing here may be spelled more conveniently than the instance spells it.
+ */
 describe('logs-fetch cursor round-trips', () => {
-  test('the returned cursor is accepted as the next request cursor', async () => {
-    const rows = [{ id: 41, message: 'a' }, { id: 42, message: 'b' }];
+  const ROWS = [{ id: '1790008519.397928', message: 'a' }, { id: '1790008926.7639065', message: 'b' }];
+
+  const fetched = (rows) => {
     let call = 0;
     class MockGateway {
-      async logs() {
-        call += 1;
-        return { logs: call === 1 ? rows : [] };
-      }
+      async logs() { return { logs: ++call === 1 ? rows : [] }; }
     }
-
-    const result = await runTool(registry.get('logs-fetch'), 
+    return runTool(registry.get('logs-fetch'),
       { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
       { Gateway: MockGateway }
     );
+  };
+
+  test('the returned cursor is accepted as the next request cursor', async () => {
+    const result = await fetched(ROWS);
 
     expect(result.ok).toBe(true);
-    expect(result.data.lastId).toBe(42);
+    expect(result.data.lastId).toBe('1790008926.7639065');
     expect(check('logs-fetch', { lastId: result.data.lastId }).valid).toBe(true);
   });
 
   test('the default cursor is also a valid next cursor', async () => {
-    class MockGateway {
-      async logs() { return { logs: [] }; }
-    }
+    const result = await fetched([]);
 
-    const result = await runTool(registry.get('logs-fetch'), 
-      { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
-      { Gateway: MockGateway }
-    );
-
-    expect(result.data.lastId).toBe(0);
+    expect(result.data.lastId).toBe('0');
     expect(check('logs-fetch', { lastId: result.data.lastId }).valid).toBe(true);
   });
 });

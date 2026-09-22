@@ -350,6 +350,16 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   one an id that does not exist gets, so asking the wrong way reports a finished job as a missing
   one. `data-export` carries the flag in its handle; `data-import` always passes `true` because it
   always uploads a ZIP.
+- **A log cursor is a string, and the same string everywhere.** A row id is a microsecond epoch
+  (`"1790008926.7639065"`) and `/logs?last_id=` is a strict greater-than — measured 2026-09-22, so a
+  cursor that loses its fraction re-delivers every row from that second and one rounded up skips
+  them. `logs-fetch` returned `Number(id)` while its schema said `integer`, which left the resume it
+  documents with no value that worked; the GUI's `logsRequestSchema` said `integer` too, so the
+  admin Logs page 400'd on every poll after the first rows arrived. Both now take `ROW_ID`
+  (`lib/validation/schemas/gui.js`), one exported pattern, so the two cannot drift again. The
+  pattern is what refuses a cursor smuggling its own query parameters; `Gateway.logs` encodes it as
+  well, so neither guard stands alone. Nothing between the instance and the caller may parse the id.
+
 - **`liquid-exec` binds its own locals, on one line.** The endpoint renders in a context where
   nothing the caller sends is a variable — measured on 2026-09-22, the whole request body lands at
   `context.params` and nowhere else — so `Hello {{ name }}` with `locals: {name}` rendered `Hello `
