@@ -331,11 +331,16 @@ describe('every command this server offers an agent says who runs it', () => {
     return text.slice(start);
   };
 
+  // Forward slashes whatever the platform, the rule every path that is compared or reported in
+  // this repository follows (CLAUDE.md). Without it this listed `tests\\module-check.js` on
+  // Windows and the assertion below failed there and nowhere else.
+  const relative = (file) => path.relative(MCP_MIN, file).split(path.sep).join('/');
+
   /** Every command this server offers, with the object it is offered in. */
   const offers = () => sources().flatMap((file) => {
     const text = code(fs.readFileSync(file, 'utf8'));
     return [...text.matchAll(/(?<![\w.])command:/g)]
-      .map(({ index }) => ({ file: path.relative(MCP_MIN, file), body: enclosing(text, index) }));
+      .map(({ index }) => ({ file: relative(file), body: enclosing(text, index) }));
   });
 
   test('the scan finds the ones there are, so it is not passing on an empty list', () => {
