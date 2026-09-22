@@ -33,40 +33,33 @@ function releaseError(response) {
 }
 
 /**
- * Paths in the build that matched no part of the platformOS layout. The deploy converter drops
- * them and the release still reports `status: 'success'` — measured against a live instance on
- * 2026-09-22, a file at `app/tests/…` is discarded exactly this way.
- *
- * Exported because `deploy-dry-run` answers the same question before the deploy, and one reader of
- * the platform's shape is the point.
+ * Paths in the build that matched no part of the platformOS layout. The converter drops them and
+ * the release still reports `status: 'success'`. Exported: `deploy-dry-run` answers the same
+ * question before the deploy, from one reader of the platform's shape.
  */
 export const filesNotMatched = (release) =>
   (Array.isArray(release?.warning?.files_not_matched) ? release.warning.files_not_matched : []);
 
-// A misplaced directory drops every file under it, so the readable form is bounded. The whole
-// record stays on `result.release.warning` for anyone who wants all of it.
+// A misplaced directory drops every file under it, so the readable form is bounded; the whole
+// record stays on `result.release.warning`.
 const MAX_LISTED = 10;
 
 const listOf = (values) => (values.length > MAX_LISTED
   ? `${values.slice(0, MAX_LISTED).join(', ')}, and ${values.length - MAX_LISTED} more`
   : values.join(', '));
 
+// `Object.entries` over a string yields one entry per character, so only a real object is walked.
+const warningEntries = (warning) =>
+  (warning !== null && typeof warning === 'object' && !Array.isArray(warning) ? Object.entries(warning) : []);
+
 /**
  * Everything the instance warned about, as sentences beside `state` rather than four levels inside
- * the release record.
- *
- * This is the whole of TASK-43: the platform *does* report a file it discarded, and every field
- * above it said the deploy succeeded — `ok`, `state`, `status` and `done` — so an agent making any
- * reasonable check concluded the file was on the instance. `state` is still `completed`, because it
- * is: the deploy finished and the converter's verdict is a fact about the project, not a failed
- * operation. What changes is that the fact is no longer reachable only by walking into the record.
- *
- * A key this does not recognise is passed through rather than dropped, so the next one the platform
- * adds is not invisible for a release.
+ * the release record — a discarded file used to read as an unqualified success on every field an
+ * agent would check. An unrecognised key is passed through, so the next one is not invisible.
  */
 const releaseWarnings = (response) => {
   const discarded = filesNotMatched(response);
-  const other = Object.entries(response?.warning ?? {})
+  const other = warningEntries(response?.warning)
     .filter(([key]) => key !== 'files_not_matched')
     .map(([key, value]) => `${key}: ${Array.isArray(value) ? listOf(value) : JSON.stringify(value)}`);
 
@@ -126,8 +119,6 @@ export default {
     // way a process that did not start it can tell that from "an upload I cannot see". An absent
     // flag is the starter saying it never found out, which is that second case, not this one.
     const assets = flags.assets === false ? { phase: 'none' } : assetPhase(response, { origin, id });
-    // Beside `state`, not under `result`: a deploy that discarded a file reads as an unqualified
-    // success on every other field here.
     const warnings = releaseWarnings(response);
     return {
       state: ASSET_STATES[assets.phase],

@@ -52,16 +52,15 @@ const SECTIONS = [
   // ok:false" — because the migrations tools answered `{ status }` and their failures reached
   // clients as successful calls.
   // The kinds are ERROR_KINDS (tool-error.js), phrased for the model rather than for the table's
-  // own reader; `instructions.test.js` derives the required set from it, so a kind cannot join the
-  // closed set without being described here. A list of kinds, never of statuses: what to do about
-  // one status is advice, and advice rides on the error that needs it.
+  // own reader; `instructions.test.js` derives the required set from it. Kinds, never statuses:
+  // what to do about one status is advice, and advice rides on the error that needs it.
   () => 'Results: every tool answers with ok. A failure is ok:false with an error carrying a kind and a code; '
     + 'the kind says what to do next — input: fix the arguments; not_found: what you named is not there; '
     + 'auth: re-authenticate, do not retry; project: the project or machine is not ready; '
     + 'instance: the instance refused it, so read the message rather than retrying unchanged; '
     + 'unavailable: the same call may work later; internal: a pos-cli defect; cancelled: the client stopped it. '
-    // Replaces the refresh-token sentence this used to carry in the credentials section: that was
-    // one remedy announced in advance, and every remedy now arrives on the error that needs it.
+    // Replaces the refresh-token sentence the credentials section used to carry: one remedy
+    // announced in advance does not scale past the first.
     + 'An error may carry details.remedy: the command that fixes it, and who runs it — '
     + 'do not run one marked for a person. '
     + 'A call that answered is not a call that worked.',

@@ -151,7 +151,9 @@ const checkRunTool = {
 
     return {
       offenseCount: offenses.length,
-      fileCount: Object.keys(grouped).length,
+      // Named for what it counts: as `fileCount` beside `filesChecked`, a clean run answered
+      // `fileCount: 0, filesChecked: 2`, which reads as "nothing was checked".
+      filesWithOffenses: Object.keys(grouped).length,
       errorCount: totalCounts.errors,
       warningCount: totalCounts.warnings,
       infoCount: totalCounts.info,

@@ -106,11 +106,8 @@ async function resolve(params, ctx) {
   throw ToolError.auth('AUTH_MISSING', 'Provide url, email and token, or configure .pos / MPKIT_* environment variables');
 }
 
-/**
- * This is already the error path: a `.pos` that cannot be read must not replace a name the caller
- * can act on with a failure about the file. An unreadable file has no names to offer, which is the
- * same position as an empty one.
- */
+// Already the error path: an unreadable `.pos` has no names to offer, which is where an empty one
+// leaves us too, and neither may replace the error the caller can actually act on.
 function readConfig(filesModule) {
   try {
     return filesModule?.getConfig?.() || {};
@@ -120,14 +117,11 @@ function readConfig(filesModule) {
 }
 
 /**
- * A name that is not in `.pos`, answered with the names that are — the model cannot read the file,
- * and `ENV_REQUIRED` already answers this way, so leaving them out only bought an `envs-list` round
- * trip the caller may not even have the tool for.
+ * A name that is not in `.pos`, answered with the names that are: the model cannot read the file,
+ * and `ENV_REQUIRED` already answers this way.
  *
- * The command is named only when there is nothing to choose between. With environments configured
- * the list is the fix and the caller makes it in one more call; offering `env add` as well would
- * put a remedy on every typo, which is how a field an agent should act on becomes one it skips.
- * `--url` is required and no one here knows it, so it stays a placeholder a person fills in.
+ * A remedy only when there is nothing to choose between — with environments configured the list is
+ * the fix, and a remedy on every typo is how a field an agent should act on becomes one it skips.
  */
 function envNotFound(name, filesModule) {
   const configured = Object.keys(readConfig(filesModule));

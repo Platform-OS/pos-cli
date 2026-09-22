@@ -12,9 +12,8 @@ const DEV_TOOLS = Object.freeze([
   'logs-fetch',
   'liquid-exec',
   'graphql-exec',
-  // The verify half of the loop. graphql-exec reads what is on the instance; this one asks the
-  // instance for the page a visitor gets, which is the only check that covers routing, the layout
-  // and the policies between the source and the URL.
+  // The verify half of the loop: the only check that covers routing, the layout and the policies
+  // between the source and the URL.
   'page-fetch',
   'envs-list',
   'deploy-start',

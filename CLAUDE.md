@@ -350,6 +350,31 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   one an id that does not exist gets, so asking the wrong way reports a finished job as a missing
   one. `data-export` carries the flag in its handle; `data-import` always passes `true` because it
   always uploads a ZIP.
+- **A byte in `authProperties` is paid twenty-one times.** It is spread into every tool that
+  authenticates, and each publishes its own copy in `tools/list`, so the three credential
+  descriptions are 3,420 bytes of the bare surface and 1,524 of `--profile dev` — measured, not
+  estimated. That is the reason `env` says what the parameter is and not what omitting it does, and
+  why the full precedence lives in `mcp-min/instructions.js`, which is sent once. What is in the
+  schema is what cannot wait for the instructions because it is read while the argument is being
+  filled in: the three go together, and they are used instead of `env`. The grouping is prose
+  rather than `dependentRequired`, which expresses it exactly and compiles — but it is a sibling of
+  `properties`, so it cannot travel inside the shared object and would have to be spread into
+  twenty-one schemas by hand, which is the drift `authProperties` exists to prevent.
+
+- **A field an agent branches on is named for what it holds.** `check-run` answered `fileCount`
+  beside `filesChecked`, so a clean run read as "nothing was checked"; it is `filesWithOffenses`.
+  `job-status` answers with two vocabularies on purpose — `state` is ours (`running` | `completed` |
+  `failed`, the same three for every kind) and `status` is the instance's own word, which
+  `deploy-start` also returns — and `docs/MCP_TOOLS.md` says so where both appear.
+
+- **An upstream record is forwarded whole; a row is trimmed only where it is provably empty.** The
+  two look alike and are not. `job-status` passes the release record verbatim (815 bytes against
+  566 for what is read) because an allowlist has to be maintained and a field the platform adds
+  goes silently missing — which is how a discarded file stayed invisible for a release. `logs-fetch`
+  drops `data` when null and `updated_at` when it equals `created_at`, per row and only when empty,
+  which cannot lose anything the instance meant and saves 16% of a row on a tool whose `limit` is
+  10,000. Cheap and lossless is worth doing; cheap and lossy is not.
+
 - **`page-fetch` is the only tool that makes an arbitrary HTTP request, and the host is never the
   caller's.** `path` is checked twice: the schema requires one leading slash and no second
   (`^/(?!/).*$`), and the URL built from it must still have the credentials' origin — the same
@@ -361,7 +386,10 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   with `status: 404`; `ok: false` is for a call that could not be made. The body is capped at
   `MAX_BODY_BYTES` and cut with a streaming `TextDecoder`, because `Buffer.subarray().toString()`
   emits U+FFFD at the cut — three bytes where one was dropped, so the bounded body came back both
-  corrupt and *over* the ceiling it was enforcing. It is not `readOnlyHint`: a GET runs the page's
+  corrupt and *over* the ceiling it was enforcing. A response that is not text is described rather
+  than returned, so a declared `content-length` is the whole answer and the body is released unread
+  rather than pulled in to be counted. The 3xx field is `isRedirect`, not `redirected`: on a Fetch
+  `Response` that name means the redirect *was* followed, which is the opposite of what this says. It is not `readOnlyHint`: a GET runs the page's
   Liquid and nothing here can know what that does.
 
 - **Reading an instance back is `graphql-exec`, not a tool of its own.** The `admin_*` queries —
@@ -383,7 +411,9 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   what the converter kept is a fact about the project, not a failed operation — `running |
   completed | failed` is shared by five job kinds and a fourth member would cost all of them. The
   readable list is capped at ten paths, the record keeps all of them, and an unrecognised warning
-  key is passed through so the next one the platform adds is not invisible for a release.
+  key is passed through so the next one the platform adds is not invisible for a release — while a
+  `warning` that is not an object is ignored, since `Object.entries` over a string would yield one
+  warning per character.
 
 - **A log cursor is a string, and the same string everywhere.** A row id is a microsecond epoch
   (`"1790008926.7639065"`) and `/logs?last_id=` is a strict greater-than — measured 2026-09-22, so a

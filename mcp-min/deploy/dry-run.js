@@ -185,8 +185,7 @@ const dryRunDeployTool = {
     // it travels in the result — where the description tells the agent to read it.
     let verdict = 'not_known';
     let error;
-    // Files the converter matched no rule for. A deploy drops them and still reports success, so
-    // this is the one place an agent can find out before it happens rather than after.
+    // Files the converter matched no rule for: a deploy drops them and still reports success.
     let discarded = [];
 
     const clock = timing(ctx);
@@ -236,10 +235,8 @@ const dryRunDeployTool = {
       // and `error` says which files the instance refused.
       verdict,
       ...(error && { error }),
-      // The question an agent is asking, answered before the detail: a non-partial deploy deletes
-      // everything missing from the build, and this is that list.
-      // Beside the three the report names, and always present, so an agent branches on the count
-      // without having to tell "nothing was dropped" from "this tool does not say".
+      // Always present, so an agent branches on the count without having to tell "nothing was
+      // dropped" from "this tool does not say".
       discarded: { count: discarded.length, files: discarded },
       deleted: { count: sumOver(categories, 'deleted'), files: Object.values(categories).flatMap(c => c.deleted.files) },
       upserted: { count: sumOver(categories, 'upserted'), files: Object.values(categories).flatMap(c => c.upserted.files) },

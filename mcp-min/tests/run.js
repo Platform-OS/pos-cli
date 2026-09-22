@@ -247,8 +247,7 @@ const testsRunTool = {
     additionalProperties: false,
     properties: {
       ...authProperties,
-      // Measured against tests@1.3.5 on 2026-09-22: the module filters on `name` alone
-      // (`context.params.name`, a `contains` match), and ignores `path` entirely — see TASK-51.
+      // tests@1.3.5 filters on `name` alone (a `contains` match) and ignores `path` — TASK-51.
       path: { type: 'string', description: 'Ignored by the current tests module; narrow a run with name instead.' },
       name: { type: 'string', description: 'Any part of a test path, matched as a substring, e.g. create_user_test or users/. Test files live under app/lib and their path must end with _test; a deploy silently discards app/tests.' }
     },

@@ -228,6 +228,20 @@ The only way to read back anything a starter began. It replaced six per-operatio
 
 `completed` means the operation finished, even if what it produced reports failures: a test run with failing assertions is `completed`, because the run did its work. `failed` means the operation itself failed.
 
+**Two words, on purpose.** `state` is this server's — `running`, `completed`, `failed`, the same three
+whatever was started. `status` is the instance's own word for the same moment (`ready_for_import`,
+`in_progress`, `success`, `error`), passed through unchanged, and `deploy-start` returns that same
+`status` when it answers. Branch on `state`; read `status` when you want to know what the instance
+called it.
+
+**`result.release` is the release record verbatim**, 815 bytes of it on a measured deploy against
+566 for the fields anything here reads. The 249 is a deliberate cost: an allowlist would have to be
+maintained, and a field the platform adds — a second kind of `warning`, say — would go silently
+missing, which is the failure this tool has already had once. Two of those fields are worth knowing
+about rather than reading: `name` is always `"User import"` and has nothing to do with the deploy,
+and `module_deployment` tracked `options.partial_deployment` exactly across eight sampled releases,
+so it appears to say "this was a partial deploy" and not anything about modules.
+
 **A completed deploy is not always an unqualified one.** The deploy converter discards a file whose
 path matches no part of the platformOS layout — anything under `app/tests`, for instance — and the
 release still reports `status: "success"`. Every field above would otherwise say the deploy landed,
@@ -342,6 +356,11 @@ which no tool reaches yet.
 }
 ```
 
+**Rows carry what the instance said and no more.** `data` is omitted when it is null, and
+`updated_at` when it repeats `created_at` — 52 bytes of a measured 322-byte row, which `limit:
+10000` would otherwise pay ten thousand times. Both are dropped per row and only when empty, so a
+row that does carry `data`, or that was updated after it was written, keeps them.
+
 **On `lastId`**: a row id is a microsecond epoch — `"1790008926.7639065"` — and the instance treats
 `last_id` as a strict greater-than. Hand back exactly what the tool returned. Rounding it, or
 truncating it to whole seconds, re-delivers every row written in that second; going one second up
@@ -373,7 +392,7 @@ Fetch next batch starting from previous lastId:
   "arguments": {
     "env": "staging",
     "limit": 100,
-    "lastId": "1002"
+    "lastId": "1790008926.7639065"
   }
 }
 ```
@@ -468,6 +487,11 @@ that only exists on the instance:
 
 It answers what is on the instance, not whether a URL works — `page-fetch` is that.
 
+**On `data.data`.** The outer `data` is this server's result envelope; the inner one is GraphQL's,
+and it travels beside `errors` when a document has any. Unwrapping it would either lose `errors` or
+make the shape depend on whether the query succeeded, so the two stay, and every path into a result
+is `data.data.<field>`.
+
 ---
 
 ### page-fetch
@@ -490,7 +514,7 @@ the authorization policies and every partial the page renders all sit between th
   data: {
     url: "https://staging.example.com/eval-page",
     status: 200,
-    redirected: false,
+    isRedirect: false,
     headers: { "content-type": "text/html; charset=utf-8" },
     contentBytes: 80,
     body: "<h1>pos-cli MCP eval</h1>…",
@@ -509,7 +533,9 @@ of that.
 
 **No credentials are sent.** A page that only renders for a holder of the instance API token is not
 a page that is live, and a redirect — reported, never followed — therefore cannot carry a credential
-anywhere. A `3xx` comes back with `redirected: true` and `headers.location`.
+anywhere. A `3xx` comes back with `isRedirect: true` and `headers.location`. The field is
+`isRedirect` rather than `redirected` because on a Fetch `Response` that name means the opposite —
+that the redirect *was* followed.
 
 A `404` is `ok: true` with `status: 404`: the agent asked whether the page is live, and the answer
 is that it is not. `ok: false` is reserved for a call that could not be made — an unreachable
@@ -518,13 +544,14 @@ instance, a path off the instance.
 The body is capped at 16 KB, cut on a character boundary, with `contentBytes` giving the real size
 and `truncated` saying it was cut. A response that is not text is described in `bodyOmitted` rather
 than returned: an image or an archive is megabytes of noise to a model, and says nothing its status
-and size do not.
+and size do not. Where such a response declares a `content-length`, that is the whole answer, so the
+body is released unread rather than pulled into the server to be counted and thrown away.
 
 It is **not** `readOnlyHint`. A GET on a platformOS page runs that page's Liquid, and this tool
 cannot know what that does; MCP reads a missing hint as "may change things", which is the honest
 answer.
 
-**Use Case**: Execute custom GraphQL queries and mutations for data operations.
+**Use Case**: Confirm a deploy is live; check what a visitor actually gets from a URL.
 
 ---
 
@@ -1361,7 +1388,7 @@ Run the platformos-check linter over an app directory and report offences groupe
   "ok": true,
   "data": {
     "offenseCount": 3,
-    "fileCount": 2,
+    "filesWithOffenses": 2,
     "errorCount": 1,
     "warningCount": 2,
     "infoCount": 0,

@@ -64,17 +64,30 @@ describe('the host comes from the credentials and nowhere else', () => {
 
   /**
    * The check the pattern cannot make, and the one that actually holds the rule: whatever the path
-   * resolved to, the origin has to be the instance's. Belt to the schema's braces, and the same
-   * comparison `authForJob` makes before it will poll a job.
+   * resolved to, the origin has to be the instance's — the same comparison `authForJob` makes.
+   *
+   * The last two are the ones that matter. They satisfy `^/(?!/)`, so a client that validates
+   * against the published schema and then calls would send them: `new URL` reads a backslash as a
+   * second slash in a special scheme, and strips a tab outright, so both name another host.
    */
-  test('a path that resolves off the instance is refused before any request', async () => {
+  test.each([
+    ['a protocol-relative host', '//evil.example.com/x'],
+    ['a backslash the schema accepts', '/\\evil.example.com/x'],
+    ['a tab the schema accepts', '/\t/evil.example.com/x']
+  ])('%s is refused before any request', async (_label, path) => {
     const { fetch, asked } = instance();
 
-    const result = await runTool(tool, { ...AUTH, path: '//evil.example.com/x' }, { fetch });
+    const result = await runTool(tool, { ...AUTH, path }, { fetch });
 
     expect(result.error).toMatchObject({ kind: 'input', code: 'PATH_NOT_ON_INSTANCE' });
     expect(result.error.message).toContain('evil.example.com');
     expect(asked).toEqual([]);
+  });
+
+  // Pinned because it is the premise of the two cases above: the schema alone does not catch them.
+  test('the schema does not catch a backslash or a tab on its own', () => {
+    expect(validate({ path: '/\\evil.example.com/x' })).toBeNull();
+    expect(validate({ path: '/\t/evil.example.com/x' })).toBeNull();
   });
 
   // A `.pos` url with a trailing slash or a path on it is ordinary; the origin is what counts.
@@ -161,7 +174,7 @@ describe('what it reports', () => {
 
     const { data } = await call({ path: '/old' }, { fetch });
 
-    expect(data).toMatchObject({ status: 301, redirected: true });
+    expect(data).toMatchObject({ status: 301, isRedirect: true });
     expect(data.headers.location).toBe('https://elsewhere.example.com/');
   });
 
@@ -170,7 +183,7 @@ describe('what it reports', () => {
 
     const { data } = await call({ path: '/a' }, { fetch });
 
-    expect(data.redirected).toBe(false);
+    expect(data.isRedirect).toBe(false);
   });
 });
 
@@ -213,6 +226,39 @@ describe('what comes back is bounded', () => {
     expect(data.body).toBeUndefined();
     expect(data.bodyOmitted).toContain(contentType ?? 'no content-type');
     expect(data.contentBytes).toBe(6);
+  });
+
+  /**
+   * And it is not read. Nothing here returns an asset's bytes, so pulling them into a long-lived
+   * server to count them is work with no answer in it — an agent can aim this at any path, and a
+   * declared length says the size without the transfer.
+   */
+  test('an asset that declares its length is never read', async () => {
+    let released = false;
+    const fetch = async () => new Response(
+      new ReadableStream({
+        pull(controller) { controller.enqueue(new Uint8Array(8)); controller.close(); },
+        cancel() { released = true; }
+      }),
+      { status: 200, headers: { 'content-type': 'application/zip', 'content-length': '10485760' } }
+    );
+
+    const { data } = await runTool(tool, { ...AUTH, path: '/a.zip' }, { fetch });
+
+    expect(data.contentBytes).toBe(10485760);
+    expect(data.bodyOmitted).toContain('application/zip');
+    // A body read to its end is never cancelled, so this is false the moment the bytes are pulled.
+    expect(released).toBe(true);
+  });
+
+  // Without one there is nothing to report but what arrives, so it is still read and counted.
+  test('an asset with no declared length is still measured', async () => {
+    const { fetch } = instance({ headers: { 'content-type': 'application/zip' }, body: 'BINARY' });
+
+    const { data } = await call({ path: '/a.zip' }, { fetch });
+
+    expect(data.contentBytes).toBe(6);
+    expect(data.body).toBeUndefined();
   });
 
   test.each([

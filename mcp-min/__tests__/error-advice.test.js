@@ -1,16 +1,12 @@
 /**
  * What a failure tells the agent it can do about it.
  *
- * The CLI routes every API failure through `lib/ServerError.js`, which has a handler per status and
- * a sentence of advice in each: the 50MB limit behind a 413, that a 5xx is already reported, which
- * host did not resolve, and that a Partner Portal outage says nothing about the token. `classify`
- * replaced that — it has to, since `ServerError` prints and exits — and kept the kind while
- * dropping the advice, so the same failures reached a model as a status code and `fetch failed`.
+ * `classify` replaced the per-status advice in `lib/ServerError.js` — it has to, since that prints
+ * and exits — and kept the kind while dropping the advice, so those failures reached a model as a
+ * status code and `fetch failed`.
  *
- * Everything here goes through `runTool`, which is the only thing a client ever sees, and asserts
- * the field rather than the sentence: a code, a host, a remedy, a retry hint. Where the message is
- * the only place the advice can live it is the substance that is checked — the number, the host —
- * not the phrasing around it.
+ * Everything here goes through `runTool`, which is all a client ever sees, and asserts the field
+ * rather than the sentence: a code, a host, a remedy, a retry hint.
  */
 import fs from 'fs';
 import path from 'path';
@@ -289,15 +285,12 @@ describe('a name that is not in .pos says which names are', () => {
 });
 
 /**
- * There are three places that build a remedy — a rejected `.pos` token, a name that is not in
- * `.pos`, and a missing tests module — and there will be more. `runBy` is the half that is easy to
- * leave off and the half that matters: without it the obvious move for an agent holding a shell is
- * to run a command that stops on a password prompt, which is the whole reason `refresh-token` is
- * not a tool.
+ * Three places build a remedy today and there will be more. `runBy` is the half that is easy to
+ * leave off and the half that matters: without it, an agent holding a shell runs a command that
+ * stops on a password prompt — the whole reason `refresh-token` is not a tool.
  *
- * Found by the `command` a remedy offers rather than by the `remedy:` key it is sometimes stored
- * under — `refreshTokenRemedy` returns one and names it nothing — so a fourth producer is covered
- * by being written rather than by being added here.
+ * Found by `command:` rather than by a `remedy:` key, which `refreshTokenRemedy` does not use, so a
+ * fourth producer is covered by being written.
  */
 describe('every command this server offers an agent says who runs it', () => {
   const MCP_MIN = path.resolve(import.meta.dirname, '..');

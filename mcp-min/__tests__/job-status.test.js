@@ -266,6 +266,15 @@ describe('deploy', () => {
       expect(result.data.warnings).toEqual(['deprecated_syntax: old.liquid']);
     });
 
+    // And it may not arrive as an object at all. `Object.entries` over a string yields one entry
+    // per character, which would turn a one-line warning into a warning per letter.
+    test('a warning that is not an object is reported once, not per character', async () => {
+      const result = await deploy(async () => ({ status: 'success', warning: 'deploy ran against a stale cache' }));
+
+      expect(result.data.warnings ?? []).toHaveLength(0);
+      expect(JSON.stringify(result.data.warnings ?? [])).not.toContain('"0: ');
+    });
+
     // A failed release can carry both, and one must not hide the other.
     test('a failure keeps its own warnings and gains the discarded files', async () => {
       const result = await deploy(async () => ({

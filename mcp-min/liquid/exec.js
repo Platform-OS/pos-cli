@@ -14,24 +14,15 @@ const RESERVED = new Set(['context']);
 const bindable = (name) => LIQUID_NAME.test(name) && !RESERVED.has(name);
 
 /**
- * Makes `locals` what its name says: top-level Liquid variables.
+ * Makes `locals` what its name says: top-level Liquid variables. The endpoint puts the whole request
+ * body at `context.params` and nowhere else, so `Hello {{ name }}` rendered `Hello ` with
+ * `ok: true` — a silent wrong answer an agent cannot tell from its own bad Liquid.
  *
- * The endpoint renders in a context where nothing the caller sends is a variable — measured against
- * a live instance on 2026-09-22, the whole request body lands at `context.params` and nowhere else,
- * so a template written the way this tool's own description showed (`Hello {{ name }}`) rendered
- * `Hello ` with `ok: true` and no error. Silently, which costs an agent more than a failure: it
- * cannot tell "the value did not arrive" from "my Liquid is wrong" from "the data is empty".
+ * Only the path is written into the template, never the value, so nothing needs escaping and
+ * objects and arrays arrive as themselves.
  *
- * So each local is bound by referring to where the instance put it. The value is never written into
- * the template — only the path is — so nothing has to be escaped and objects, arrays and booleans
- * arrive as themselves rather than as their JSON.
- *
- * **One line, no newline after it.** Liquid errors carry the line they happened on
- * (`Liquid error (line 3)`, and `diagnostic.stack[].line`), and those are the caller's only way to
- * find a fault in its own template. A prefix ending in a newline shifts every one of them by one.
- *
- * A template's own `assign` of the same name still wins, since it runs after. With no locals the
- * template is passed through untouched.
+ * **One line, and no newline after it.** Liquid reports the line a failure happened on, which is
+ * the caller's only way to find a fault in its own template; a trailing newline shifts every one.
  */
 const bindLocals = (template, locals) => {
   const names = Object.keys(locals ?? {});
@@ -69,10 +60,8 @@ const execLiquidTool = {
 
     const { content, unbound } = bindLocals(params.template, params.locals);
 
-    // `locals` still travels as itself: it is what the bindings read through, and it is the only
-    // way an unbindable key can be reached at all. The instance's own parameter wrapping copies the
-    // whole body a second time under `liquid_exec` — that duplication is the platform's and is not
-    // sent twice from here.
+    // `locals` still travels as itself: it is what the bindings read through, and the only way an
+    // unbindable key can be reached at all.
     const resp = await gateway.liquid({ content, locals: params.locals || {} });
 
     // The endpoint answers 200 with a Liquid error payload, so a failure has to be read out of the
@@ -92,7 +81,6 @@ const execLiquidTool = {
 
     // The endpoint's own `error` is not returned: it is null on every call that gets this far, and
     // a field that is always null invites a check that never fires. A real one is thrown above.
-    // `unboundLocals` appears only when there is one, so the ordinary call pays nothing for it.
     return { result: rendered, ...(unbound.length > 0 && { unboundLocals: unbound }) };
   }
 };

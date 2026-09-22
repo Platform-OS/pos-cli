@@ -22,47 +22,35 @@ const DEV_TOOLS = [
 ];
 
 // The profile exists to keep this payload small, so growth past the budget needs a deliberate
-// bump rather than a quiet one. Currently 7,843 bytes over stdio, plus the server instructions
+// bump rather than a quiet one. Currently 9,367 bytes over stdio, plus the server instructions
 // (budgeted separately in instructions.test.js, since a client is charged for each once).
 //
-// Two kinds of growth, and they are not argued the same way. **Prose** — a description that was
-// wrong, a parameter that needed explaining — comes out of existing text, because the profile has
-// no claim on more bytes for saying the same things at greater length. **A tool** is a surface
-// decision: it is argued on what an agent cannot otherwise do, and it moves the budget when the
-// answer is that it should exist here. The entries below are in that order.
+// Two kinds of growth, argued differently. **Prose** — a description that was wrong, a parameter
+// that needed explaining — comes out of existing text: the profile has no claim on more bytes for
+// saying the same things at greater length. **A tool** is a surface decision, argued on what an
+// agent cannot otherwise do, and it may move the budget.
 //
-// 6,000 → 6,500 for `deploy-dry-run` (TASK-25), which costs 739 bytes of it. Argued rather than
-// assumed: `deploy-start` is in this profile and a deploy that is not partial deletes every file
-// missing from the build, so without the dry run an agent here can only find that out by causing
-// it. `deploy-start`'s own description names the dry run, and a description may not point at a tool
-// its profile hides — so the two travel together or neither does.
-//
-// 6,500 → 7,000 across TASK-41, 42 and 43, which cost 411 bytes between them. One bump for three,
-// because they are one purchase: an agent-perspective evaluation found four of this profile's
-// descriptions stating things that were not true — locals the endpoint does not bind, a resume
-// whose cursor the schema rejected, a log stream that is not the one you would guess, and a test
-// path the deploy discards. Each cost that agent more context in one session than the correction
-// costs every agent for a release, and two of them ended in a wrong conclusion rather than a
-// retry. A description that is wrong is not cheaper than one that is longer.
-//
-// That is the prose argument spent: a further *description* here comes out of existing text.
-//
-// 7,000 → 8,000 for TASK-44, which is one decision with two halves: `page-fetch` at 720 bytes, and
-// 128 more naming the `admin_*` family in `graphql-exec`'s description. The second is prose by the
-// rule above, and is bought anyway because it is not the same thing said at greater length — it is
-// the only way an agent learns that reading an instance back was already possible. A capability
-// nobody can find is one the profile is paying for and not getting.
-//
-// The tool half. A surface decision, not prose. This
-// profile is named for the loop edit → check → deploy → **verify**, and the verify step was the one
-// an agent could not take without leaving the server: `graphql-exec` reads an instance's source
-// back, which proves the file arrived and nothing about whether the URL works — routing, the
-// layout, the authorization policies and every partial the page renders all sit in between. An
-// evaluation of this server checked its own deploy with an outside fetch, which is the whole of the
-// argument. The alternative considered and rejected was a read-back tool wrapping the admin
-// GraphQL API: 450–900 bytes to duplicate what `graphql-exec` already does, where naming the
-// `admin_*` family in one clause of its description costs about ninety.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 8000;
+// 6,000 → 6,500  deploy-dry-run (TASK-25, 739 B). deploy-start is here, and a non-partial deploy
+//                deletes every file missing from the build; without this an agent learns that by
+//                causing it. deploy-start's description names it, and a description may not point
+//                at a tool its profile hides.
+// 6,500 → 7,000  TASK-41/42/43 (411 B). One purchase: four descriptions in this profile stated
+//                things that were not true, and two of them ended in a wrong conclusion rather
+//                than a retry. A wrong description is not cheaper than a longer one. The prose
+//                argument is spent here — a further description comes out of existing text.
+// 7,000 → 8,000  TASK-44. page-fetch (720 B), the verify step of edit → check → deploy → verify,
+//                which an agent could not take without leaving the server; plus 128 B naming the
+//                admin_* family on graphql-exec, bought because a capability nobody can find is
+//                one the profile pays for and does not get. A wrapper tool for that family would
+//                have been 450–900 B to duplicate what graphql-exec already does.
+// 8,000 → 9,600  TASK-45 (1,524 B). The largest raise with the least text behind it: three short
+//                sentences on url/email/token, spread into nine of this profile's tools, each
+//                publishing its own copy. The multiplication is the cost — even empty descriptions
+//                would be about a thousand of it. Bought because those parameters decide which
+//                instance a call reaches, they sit on deploy-start, and they are read while the
+//                argument is being filled in, which the instructions (a fifteenth of the price)
+//                are not.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 9600;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -94,62 +82,33 @@ const BARE_TOOLS = [
   ...PRE_PROFILES_TOOLS.slice(PRE_PROFILES_TOOLS.indexOf('deploy-start'))
 ].filter(name => !REMOVED_IN_7.includes(name));
 
-// The bare surface pays for every tool it lists.
+// The bare surface pays for every tool it lists. Each figure is what a bare `pos-cli-mcp` sent
+// after the change beside it; the reasoning for the recent ones is in CHANGELOG.md.
 //
-// 25,764 before the descriptions were rewritten against one standard; 25,694 once check-run
-// stopped naming a pos-cli dependency as though the caller had to install it; 20,799 once `env`
-// and the auth triple moved into schemas/auth.js and stopped being restated per tool, and the
-// tool descriptions were cut to what a model can act on; 20,109 once the credential precedence
-// moved into the server instructions, which say it once a session rather than in every schema;
-// 20,848 with deploy-dry-run.
-//
-// 21,444 once the schemas declared the defaults their handlers were already applying, the three
-// parameters with no description at all got one, and `data-validate` said which field to branch
-// on. All three are the same bargain: a description rule here forbids restating a default in prose
-// *because the schema carries it*, and for twelve parameters it did not — `strictTypes` reads as
-// off when the handler has it on. A parameter the model has to guess at costs more than the bytes
-// that would have explained it.
-//
-// 21,492 once the descriptions were reviewed for *selection* rather than only for accuracy: two
-// tools that overlapped now say which to reach for. `partners-list` lost the `partner_id` branch
-// that duplicated `partner-get` (a saving), and `liquid-exec` names `graphql-exec` for queries,
-// since it can run them itself and nothing said which was meant.
-//
-// 17,997 once the six per-operation status tools were removed (6.6.0) — 3,495 bytes, 16% of what
-// a bare server sent, for tools whose own descriptions told the model not to use them. The cost
-// was never only tokens: two of them answer with less than the truth. `deploy-status` reports the
-// release and ignores the asset phase, and `deploy-wait` returns as soon as the release settles,
-// so a deploy still uploading assets reads as finished on both.
-//
-// 17,727 once `env` stopped saying "the first entry if omitted" on all eighteen tools that take
-// it. That was a warning the model had to remember; TASK-31 made it a refusal it receives at the
-// moment it matters, so the parameter can just say what it is.
-//
-// 17,860 once deploy-dry-run's description gained `verdict`. It reads the release the dry run
-// creates rather than the push response, so it can now say whether the deploy would be refused at
-// all — and an agent that does not know to look at that field is back to the failure the field
-// exists for.
-//
-// 17,962 once `liquid-exec`'s `locals` said where the values actually are (TASK-41). The old
-// sentence was 102 bytes shorter and wrong, which cost an evaluation a whole detour: values
-// rendered blank with `ok: true`, and the only way out was reading pos-cli's source.
-//
-// 18,157 once `logs-fetch` said which stream it reads, which end `limit` takes from, and that a
-// lastId is handed back unchanged (TASK-42). Its schema used to reject the cursor it returned, so
-// the resume it documented had no input that worked at all; 33 of those bytes are the row-id
-// pattern, which is what now refuses a cursor carrying its own query parameters.
-//
-// 18,471 once `job-status` said to read `warnings` on a completed job, `deploy-dry-run` gained
-// `discarded`, and `unit-tests-run` said where a test file has to live and which of its two
-// parameters the tests module actually applies (TASK-43). The deploy converter drops a file it
-// matches no rule for and the release still reports success, so every field an agent would check
-// said the file was on the instance.
-//
-// 19,305 with `page-fetch` and the `admin_*` pointer (TASK-44). The tool is 720 of those bytes and the first tool here that
-// makes an arbitrary HTTP request. The admin GraphQL API can read an instance's source back —
-// `graphql-exec` has always been able to — but nothing could ask the instance for the page a
-// visitor gets, so the last step of the loop this server is built around had to be taken outside it.
-const BARE_TOOLS_LIST_BYTES = 19305;
+// 25,764  before the descriptions were written against one standard
+// 25,694  check-run stopped naming a pos-cli dependency as though the caller had to install it
+// 20,799  `env` and the auth triple moved into schemas/auth.js instead of being restated per tool
+// 20,109  the credential precedence moved into the server instructions, said once a session
+// 20,848  deploy-dry-run
+// 21,444  schemas declared the defaults their handlers already applied, and three undescribed
+//         parameters got descriptions — a parameter a model has to guess at costs more than the
+//         bytes that would have explained it
+// 21,492  descriptions reviewed for *selection*: two overlapping tools now say which to reach for
+// 17,997  the six per-operation status tools removed (6.6.0) — 3,495 B, 16% of the surface, for
+//         tools whose own descriptions told the model not to use them, two of which also answered
+//         with less than the truth
+// 17,727  `env` stopped warning "the first entry if omitted" on eighteen tools; TASK-31 made that
+//         a refusal received at the moment it matters
+// 17,860  deploy-dry-run's description gained `verdict`
+// 17,962  liquid-exec's `locals` said where the values actually are (TASK-41)
+// 18,157  logs-fetch said which stream it reads and how its cursor resumes (TASK-42); 33 B of it
+//         is the row-id pattern that refuses a cursor carrying its own query parameters
+// 18,471  job-status said to read `warnings` on a completed job, deploy-dry-run gained
+//         `discarded`, unit-tests-run said where a test file has to live (TASK-43)
+// 19,305  page-fetch (720 B) and the admin_* pointer (TASK-44)
+// 22,725  url, email and token carried descriptions (TASK-45) — 3,420 B for three sentences,
+//         because twenty-one tools spread `authProperties` and each publishes its own copy
+const BARE_TOOLS_LIST_BYTES = 22725;
 
 const HANG_MS = 15000;
 

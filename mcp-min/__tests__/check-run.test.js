@@ -94,7 +94,7 @@ describe('platformos.check-run', () => {
     expect(typeof result.data.errorCount).toBe('number');
     expect(typeof result.data.warningCount).toBe('number');
     expect(typeof result.data.infoCount).toBe('number');
-    expect(typeof result.data.fileCount).toBe('number');
+    expect(typeof result.data.filesWithOffenses).toBe('number');
 
     // Verify each file entry structure
     for (const file of result.data.files) {

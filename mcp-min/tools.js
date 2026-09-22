@@ -69,8 +69,7 @@ const tools = {
   'logs-fetch': fetchLogsTool,
   'liquid-exec': execLiquidTool,
   'graphql-exec': execGraphqlTool,
-  // Beside graphql-exec, which reads an instance's source back: this is the half that proves the
-  // page a visitor gets actually renders.
+  // Beside graphql-exec, which reads the source back: this is the half that proves the URL works.
   'page-fetch': pageFetchTool,
 
   'generators-list': generatorsListTool,

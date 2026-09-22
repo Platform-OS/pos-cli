@@ -6,6 +6,7 @@ import fg from 'fast-glob';
 import registry from '../tools.js';
 import { validateToolParams, TOOL_SCHEMA_DIALECT } from '../validate-params.js';
 import { runTool } from '../run-tool.js';
+import { authProperties } from '../schemas/auth.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -121,6 +122,28 @@ describe('authentication params stay accepted', () => {
     }
   );
 
+  // The three credential parameters shipped undescribed on every tool that authenticates, one of
+  // which deploys. Checked on the shared object because that is the only copy: a description
+  // dropped from it goes quiet on all twenty-one at once.
+  test.each(['env', 'url', 'email', 'token'])('the shared %s property is published with a description', (name) => {
+    const property = authProperties[name];
+
+    expect(property, `authProperties.${name}`).toBeDefined();
+    expect(typeof property.description, `authProperties.${name}.description`).toBe('string');
+    expect(property.description.length).toBeGreaterThan(8);
+  });
+
+  // The rule an agent cannot infer from three separate parameters, and the reason `url` carries
+  // more words than the other two: it is the one filled in first.
+  test('the credential triple says it is a triple, and that it beats env', () => {
+    const said = ['url', 'email', 'token'].map(name => authProperties[name].description).join(' ');
+
+    expect(said).toMatch(/with email and token/);
+    expect(said).toMatch(/with url and token/);
+    expect(said).toMatch(/with url and email/);
+    expect(authProperties.url.description).toMatch(/instead of env/);
+  });
+
   const requiredExtras = {
     'constants-set': { name: 'A', value: '1' },
     'constants-unset': { name: 'A' },
@@ -182,16 +205,13 @@ describe('required relaxations', () => {
   });
 });
 
-// logs-fetch documents `lastId` as the cursor to hand back on the next call, so what it returns
-// has to satisfy the schema it accepts, or paging fails with -32602.
 /**
- * The published schema has to accept the value the tool publishes — the narrowest case of "what is
- * published is what is enforced", and the one a caller hits on every second call.
+ * `logs-fetch` documents `lastId` as the cursor to hand back, so the schema it publishes has to
+ * accept the value it returns, or paging fails with -32602.
  *
- * This check existed while `logs-fetch` was broken and passed anyway, because its rows were
+ * This check existed while the tool was broken and passed anyway, because its rows were
  * `{ id: 41 }`: an integer survives `Number()` and satisfies an `integer` schema, so the fixture
- * agreed with the bug. A real row id is a microsecond epoch the instance sends as a string, and
- * nothing here may be spelled more conveniently than the instance spells it.
+ * agreed with the bug. A real row id is a microsecond epoch the instance sends as a string.
  */
 describe('logs-fetch cursor round-trips', () => {
   const ROWS = [{ id: '1790008519.397928', message: 'a' }, { id: '1790008926.7639065', message: 'b' }];

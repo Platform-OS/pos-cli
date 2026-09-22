@@ -91,19 +91,15 @@ const fromCauses = (err, field, depth = 0) => {
 
 const UNREACHABLE = new Set(['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN']);
 
-// The one distinction among those that leads somewhere different: a name that does not resolve is
-// a URL to check, and everything else is a host that is there and did not answer. Which of the two
-// it was is already in the code; what the message adds is the host.
+// The one distinction that leads somewhere different: a name that did not resolve is a URL to
+// check, and everything else is a host that is there and did not answer.
 const NAME_DID_NOT_RESOLVE = new Set(['ENOTFOUND', 'EAI_AGAIN']);
 
 /**
  * The host a failed request was for. `apiRequest` wraps the fetch failure, whose message is
- * `fetch failed` and names nothing, so without this an unreachable instance and an unreachable
- * Partner Portal are the same three words — which is what `lib/ServerError.addressNotFound` and
- * `connectionRefused` exist to put back.
- *
- * The origin, not the URI: a query string is a tool's to build, and this ends up in the model's
- * context whatever is in it.
+ * `fetch failed` and names nothing, so an unreachable instance and an unreachable Partner Portal
+ * are otherwise the same three words. The origin, not the URI: a query string is a tool's to
+ * build, and this reaches the model on every failure.
  */
 const unreachableHost = (err) => {
   const uri = err?.options?.uri;
@@ -128,16 +124,14 @@ const networkFailure = (err, code, message, details) => {
 };
 
 /**
- * What `lib/ServerError.js` tells an operator at a status, reduced to the part a model can act on
- * and carried as a field rather than printed. Only the statuses where pos-cli knows something the
- * response does not say — nothing here restates a status code the caller already has, and a status
- * that is missing from this table keeps the bare message on purpose.
+ * What `lib/ServerError.js` tells an operator at a status, as a field rather than printed prose.
+ * Only the statuses where pos-cli knows something the response does not say; one that is missing
+ * keeps the bare message, because restating a code the caller already has is tokens for nothing.
  */
 const ALREADY_REPORTED = 'platformOS has been notified about it, so there is nothing to report and nothing to work around';
 
 const STATUS_ADVICE = new Map([
-  // `entityTooLarge`. The instance answers a 413 with a page, so the limit is the whole of what
-  // this failure has to say.
+  // `entityTooLarge`: the instance answers with a page, so the limit is all this failure can say.
   [413, { code: 'PAYLOAD_TOO_LARGE', note: 'the request body is over the 50MB limit; deploy fewer files, or keep large assets out of the release' }],
   [500, { note: ALREADY_REPORTED }],
   [502, { note: ALREADY_REPORTED }],
@@ -145,11 +139,10 @@ const STATUS_ADVICE = new Map([
 ]);
 
 /**
- * The one 503 an instance explains, and the one whose obvious next move is wrong: it could not
- * reach the Partner Portal, the only thing that can verify an API token, so the token was never
- * judged. `runTool` attaches the refresh-token remedy to `auth` alone and this is `unavailable`,
- * which keeps it off — but the message has to say so too, or an agent reads a failure that mentions
- * a token and has someone refresh a working one (`lib/utils/partnerPortal.js`).
+ * The one 503 an instance explains, and the one whose obvious next move is wrong: the Portal is the
+ * only thing that can verify an API token, so an unreachable one means the token was never judged.
+ * `unavailable` keeps the refresh-token remedy off; the message has to say so as well, or an agent
+ * reads a failure that mentions a token and has someone refresh a working one.
  */
 const portalOutage = (err, details) => ToolError.unavailable(
   'PARTNER_PORTAL_UNAVAILABLE',
@@ -213,9 +206,9 @@ export function classify(err) {
   const details = status ? { statusCode: status, ...(err?.response?.body !== undefined && { body: err.response.body }) } : undefined;
   const message = String(err?.message || err);
 
-  if (err?.name === 'RequestError' || (code && UNREACHABLE.has(code))) {
-    const unreachable = code && UNREACHABLE.has(code) ? code : UNCLASSIFIED.unavailable;
-    return networkFailure(err, unreachable, message, details);
+  const unreachable = code && UNREACHABLE.has(code);
+  if (err?.name === 'RequestError' || unreachable) {
+    return networkFailure(err, unreachable ? code : UNCLASSIFIED.unavailable, message, details);
   }
   // Only a status decides a kind here; without one there is nothing to read, and a guess would be
   // a worse answer than "we do not know what this is".
@@ -223,8 +216,7 @@ export function classify(err) {
     if (isPartnerPortalUnavailable(err)) return portalOutage(err, details);
 
     const kind = kindForStatus(status);
-    // A Map, so a status arriving as a string cannot reach Object.prototype and turn a refusal
-    // into `undefined` advice.
+    // A Map, so a status arriving as a string cannot reach Object.prototype.
     const advice = STATUS_ADVICE.get(Number(status));
     return new ToolError(kind, advice?.code ?? UNCLASSIFIED[kind], advice ? `${message}: ${advice.note}` : message, details);
   }

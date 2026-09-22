@@ -1,22 +1,17 @@
 /**
  * page-fetch — request a path on the instance over HTTP and report what came back.
  *
- * The one thing the admin GraphQL API cannot answer. `admin_pages { content }` proves the source is
- * on the instance; it does not prove the URL works, because routing, the layout, the authorization
- * policies and every partial the page renders sit between the two. "I deployed — is it live?" is
- * the commonest question after a deploy, and an evaluation of this server had to leave it to
- * answer that.
+ * The one thing the admin GraphQL API cannot answer: `admin_pages { content }` proves the source is
+ * on the instance, not that the URL works, because routing, the layout, the authorization policies
+ * and every partial the page renders sit between the two.
  *
- * **The instance is the resolved credentials' host and nothing else.** `path` is a path, checked
- * twice: it must begin with a single `/`, and the URL built from it must still have the same origin
- * the credentials do. That second check is the one that matters — it is the same comparison
- * `authForJob` makes — because a protocol-relative `//elsewhere.example.com` or an embedded scheme
- * is a path to a reader and another host to `new URL`. No argument may move a request
- * (`__tests__/request-target.test.js`); this one takes the strictest available reading of that.
+ * **The instance is the resolved credentials' host and nothing else.** `path` is checked twice: it
+ * must begin with a single `/`, and the URL built from it must still have the credentials' origin.
+ * The second check is the one that holds the rule — `//host`, `/\host` and `/<tab>/host` all read as
+ * paths and are other hosts to `new URL`.
  *
- * **No credentials are sent.** A visitor is what this is asking about: a page that only renders for
- * a holder of the instance API token is not a page that is live. It also means a redirect, which is
- * reported rather than followed, cannot carry a credential anywhere.
+ * **No credentials are sent.** A page that renders only for a holder of the instance token is not a
+ * page that is live, and a redirect — reported, never followed — cannot carry one off the instance.
  */
 import log from '../log.js';
 import { resolveAuth } from '../auth.js';
@@ -27,15 +22,10 @@ import { cancelled } from '../cancellation.js';
 /** A path, not a URL: one leading slash, and no scheme. `//host` is neither. */
 const PATH = '^/(?!/).*$';
 
-/**
- * What comes back is for a model to read, so it is bounded and it is text or it is not returned.
- * A platformOS page is HTML and an agent is checking for a marker in it; 16 KB holds a page's
- * worth of that without letting a bundled asset become the answer.
- */
+/** A page's worth of markup, without letting a bundled asset become the answer. */
 export const MAX_BODY_BYTES = 16 * 1024;
 
-// Anything else — an image, a zip, a font — is described rather than returned. `charset` and
-// `+json`/`+xml` suffixes are why this is a test rather than a set.
+// `charset` and `+json`/`+xml` suffixes are why this is a test rather than a set.
 const TEXTUAL = /^(text\/|application\/(json|xml|javascript|x-www-form-urlencoded)|[^;]*\+(json|xml)\b)/i;
 
 const isTextual = (contentType) => TEXTUAL.test(String(contentType ?? '').trim());
@@ -47,14 +37,20 @@ const headersOf = (response) => Object.fromEntries(
   REPORTED_HEADERS.map(name => [name, response.headers.get(name)]).filter(([, value]) => value !== null)
 );
 
+// `Number(null)` is 0, so an absent header would otherwise report a body of no bytes.
+const declaredBytes = (response) => {
+  const header = response.headers.get('content-length');
+  const value = Number(header);
+  return header && Number.isInteger(value) && value >= 0 ? value : null;
+};
+
 const bodyOf = (text) => {
   const bytes = Buffer.byteLength(text);
   if (bytes <= MAX_BODY_BYTES) return { body: text, bytes, truncated: false };
 
-  // Cut by bytes, so the bound means what it says on a page that is not ASCII — and decoded with
-  // `stream: true`, which holds back an incomplete sequence at the cut instead of replacing it.
-  // `toString('utf8')` on the same slice emits U+FFFD, which is three bytes where one was dropped:
-  // the result was both corrupt and *larger* than the ceiling it was enforcing.
+  // Cut by bytes, and decoded with `stream: true` so an incomplete sequence at the cut is held back
+  // rather than replaced: `toString('utf8')` emits U+FFFD there, three bytes where one was dropped,
+  // which left the bounded body both corrupt and over the ceiling it was enforcing.
   const decoder = new TextDecoder('utf-8');
   return { body: decoder.decode(Buffer.from(text).subarray(0, MAX_BODY_BYTES), { stream: true }), bytes, truncated: true };
 };
@@ -76,8 +72,8 @@ const pageFetchTool = {
 
     const origin = new URL(auth.url).origin;
     const target = new URL(params.path, origin);
-    // The check the pattern cannot make. A `path` that resolved somewhere else is a redirected
-    // request, which is the one thing no argument here is allowed to do.
+    // The check the pattern cannot make, and the one no argument may defeat: a path that resolved
+    // somewhere else is a redirected request.
     if (target.origin !== origin) {
       throw ToolError.input('PATH_NOT_ON_INSTANCE', `path must stay on ${origin}; that one resolves to ${target.origin}`);
     }
@@ -96,20 +92,30 @@ const pageFetchTool = {
 
     const contentType = response.headers.get('content-type');
     const textual = isTextual(contentType);
-    // Read either way: an unread body leaves the socket open, and the length is worth reporting.
-    const text = await response.text();
-    const { body, bytes, truncated } = bodyOf(text);
-
-    return {
+    // `redirect: 'manual'` means a 3xx arrives here instead of being chased off the instance;
+    // `headers.location` says where it points. Named `isRedirect` because `redirected` on a
+    // Response means the opposite — that one *was* followed.
+    const common = {
       url: target.href,
       status: response.status,
-      // `redirect: 'manual'` means a 3xx arrives here instead of being chased off the instance.
-      // `headers.location` says where it points; following it is the caller's decision to make.
-      redirected: response.status >= 300 && response.status < 400,
-      headers: headersOf(response),
-      contentBytes: bytes,
-      ...(textual ? { body, truncated } : { bodyOmitted: `not text (${contentType ?? 'no content-type'})` })
+      isRedirect: response.status >= 300 && response.status < 400,
+      headers: headersOf(response)
     };
+    // An image, a zip or a font is described rather than returned.
+    const omitted = { bodyOmitted: `not text (${contentType ?? 'no content-type'})` };
+
+    // Its size is then the whole answer, so a declared length means those bytes need never be
+    // pulled into this process at all.
+    const declared = textual ? null : declaredBytes(response);
+    if (declared !== null) {
+      await response.body?.cancel().catch(() => {});
+      return { ...common, contentBytes: declared, ...omitted };
+    }
+
+    // Read either way: an unread body leaves the socket open, and the length is worth reporting.
+    const { body, bytes, truncated } = bodyOf(await response.text());
+
+    return { ...common, contentBytes: bytes, ...(textual ? { body, truncated } : omitted) };
   }
 };
 

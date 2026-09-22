@@ -3,9 +3,25 @@ import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
 import { cancelled } from '../cancellation.js';
-// The cursor's shape, from where the GUI's own logs schema keeps it: the two enforce one type for
-// one identifier, which is the property that was claimed while they disagreed.
+// One pattern for one identifier, shared with the GUI's logs schema so the two cannot drift.
 import { ROW_ID } from '../../lib/validation/schemas/gui.js';
+
+/**
+ * A row with the two fields that carry nothing taken off it: 16% of a 322-byte row, on a tool whose
+ * `limit` goes to 10,000. Per row and only when empty, never by an allowlist — a row that does
+ * carry `data`, or that was updated after it was written, keeps both — so nothing the instance
+ * meant can be lost.
+ */
+const lean = (row) => {
+  if (row === null || typeof row !== 'object') return row;
+
+  const { data, updated_at: updatedAt, ...rest } = row;
+  return {
+    ...rest,
+    ...(data !== null && data !== undefined && { data }),
+    ...(updatedAt !== undefined && updatedAt !== rest.created_at && { updated_at: updatedAt })
+  };
+};
 
 const fetchLogsTool = {
   description: 'Fetch rows from the instance error log — the stream pos-cli logs tails, which does not carry {% log %} output. Reads forward from lastId, oldest first, and returns the next lastId.',
@@ -15,11 +31,9 @@ const fetchLogsTool = {
     additionalProperties: false,
     properties: {
       ...authProperties,
-      // A row id as the instance writes it: a microsecond epoch, `"1790008926.7639065"`, a string
-      // in every row it sends. `integer` rejected that outright and `number` would round it, so the
-      // resume this tool documents had no value that worked at all. The shape is the one
-      // `logsRequestSchema` (lib/validation/schemas/gui.js) enforces, so the cursor has one type
-      // wherever it travels — the property that comment has always claimed and this one broke.
+      // A row id as the instance writes it: a microsecond epoch, `"1790008926.7639065"`. `integer`
+      // rejected that outright and `number` would round it, so the resume this tool documents had
+      // no value that worked at all.
       lastId: { type: 'string', pattern: ROW_ID, description: 'A lastId this tool returned, passed back unchanged; only newer rows come back. Omit for the oldest kept.', default: '0' },
       limit: { type: 'integer', minimum: 1, maximum: 10000, description: 'Stop after this many rows, oldest first.' }
     }
@@ -34,8 +48,7 @@ const fetchLogsTool = {
     const gateway = new GatewayCtor({ url: baseUrl, token: auth.token, email: auth.email });
 
     // A string from here on, never a number: the ids are microsecond epochs at the edge of what a
-    // double holds. `String()` rather than a plain read because the schema is what rejects a
-    // non-string, and a handler called directly must not turn a stray number into `"[object ...]"`.
+    // double holds.
     let latestId = (params && (params.lastId !== undefined && params.lastId !== null) ? String(params.lastId) : '0');
     const seen = new Set();
     const out = [];
@@ -69,12 +82,9 @@ const fetchLogsTool = {
     }
 
     return {
-      logs: out,
-      // The string the paging loop carries, and the string the instance gave us. It used to be
-      // `Number(latestId)`, which the schema then refused on the way back in — so the resume this
-      // tool documents had no correct input at all. Truncating to the integer part is not a
-      // workaround either: measured against a live instance, `last_id` is a strict greater-than, so
-      // a truncated cursor re-delivers every row from the same second.
+      logs: out.map(lean),
+      // The string the instance gave us, unchanged: `last_id` is a strict greater-than, so a
+      // cursor that lost its fraction re-delivers every row from the same second.
       lastId: latestId,
       count: out.length
     };

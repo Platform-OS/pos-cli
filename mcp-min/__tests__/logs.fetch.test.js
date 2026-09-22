@@ -223,6 +223,66 @@ describe('the ends of the stream', () => {
 });
 
 /**
+ * What each row costs. `limit` goes to 10,000, so a field that carries nothing on every row is paid
+ * ten thousand times — measured against a live instance on 2026-09-22, `data` is null and
+ * `updated_at` repeats `created_at`, which is 52 bytes of a 322-byte row.
+ *
+ * Dropped per row and only when empty, rather than by an allowlist: this cannot lose something the
+ * instance meant by it, which an allowlist eventually would.
+ */
+describe('a row carries what the instance actually said', () => {
+  const rowsFrom = async (rows) => (await callAsClient({}, instanceWith(rows).Gateway)).data.logs;
+
+  const FULL = {
+    id: '1790008519.397928',
+    message: 'boom',
+    error_type: 'LowLevelError',
+    created_at: '2026-09-21T16:35:19.397Z',
+    updated_at: '2026-09-21T16:35:19.397Z',
+    data: null
+  };
+
+  test('an empty data and an updated_at that repeats created_at are not sent on', async () => {
+    const [row] = await rowsFrom([FULL]);
+
+    expect(row).toEqual({
+      id: FULL.id, message: 'boom', error_type: 'LowLevelError', created_at: FULL.created_at
+    });
+  });
+
+  test('a row that does carry data keeps it', async () => {
+    const [row] = await rowsFrom([{ ...FULL, data: { request_id: 'abc' } }]);
+
+    expect(row.data).toEqual({ request_id: 'abc' });
+  });
+
+  test('a row updated after it was written keeps both timestamps', async () => {
+    const [row] = await rowsFrom([{ ...FULL, updated_at: '2026-09-21T16:40:00.000Z' }]);
+
+    expect(row.updated_at).toBe('2026-09-21T16:40:00.000Z');
+    expect(row.created_at).toBe(FULL.created_at);
+  });
+
+  // The measurement the decision rests on, pinned so it cannot quietly stop being true.
+  test('the saving is real on a row shaped like the instance sends', async () => {
+    const [row] = await rowsFrom([FULL]);
+
+    const before = Buffer.byteLength(JSON.stringify(FULL));
+    const after = Buffer.byteLength(JSON.stringify(row));
+    expect(before - after).toBeGreaterThanOrEqual(40);
+  });
+
+  // Nothing here parses a row, so a shape this did not expect has to travel intact.
+  test('a row that is not an object is passed through untouched', async () => {
+    class Odd { async logs() { return { logs: ['not-an-object'] } ; } }
+
+    const res = await callAsClient({}, Odd);
+
+    expect(res.data.logs).toEqual(['not-an-object']);
+  });
+});
+
+/**
  * The questions the description has to answer, because an evaluation lost time to both: it wrote
  * thirteen rows with `{% log %}` and got two unrelated rows from three hours earlier, and it had no
  * way to know which end `limit` reads from.
