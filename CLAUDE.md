@@ -350,6 +350,21 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   one an id that does not exist gets, so asking the wrong way reports a finished job as a missing
   one. `data-export` carries the flag in its handle; `data-import` always passes `true` because it
   always uploads a ZIP.
+- **`liquid-exec` binds its own locals, on one line.** The endpoint renders in a context where
+  nothing the caller sends is a variable — measured on 2026-09-22, the whole request body lands at
+  `context.params` and nowhere else — so `Hello {{ name }}` with `locals: {name}` rendered `Hello `
+  and answered `ok: true`. A silent wrong answer, which an agent cannot tell from its own bad
+  Liquid. `bindLocals` (`liquid/exec.js`) prefixes one `{% assign <name> = context.params.locals.<name> %}`
+  per key, so both spellings work. Only the path is written in, never the value, so nothing needs
+  escaping and objects and arrays arrive as themselves. **The prefix must stay on one line**: Liquid
+  reports the line a failure happened on (`Liquid error (line 3)`, `diagnostic.stack[].line`), which
+  is the caller's only way to find a fault in its own template, and a trailing newline shifts every
+  one of them — measured, and pinned by a test. With no locals the template is passed through
+  untouched. A key that is not a Liquid name, or that would shadow `context`, is left at
+  `context.params.locals` and named in `data.unboundLocals` rather than dropped. The instance's own
+  parameter wrapping copies the body a second time under `liquid_exec`; that duplicate is the
+  platform's and nothing here sends it.
+
 - **No tool takes an argument that moves the request.** Eight did (`logs-fetch`, `graphql-exec`, `liquid-exec`, `migrations-list/generate/run` and the two deploy status tools since removed): `endpoint` replaced the URL while the `.pos` token was still sent, so a name a model read somewhere could redirect this machine's credentials. The URL comes from the resolved credentials, full stop. `request-target.test.js` checks every registered tool for a redirecting parameter by name and scans the sources for `params.endpoint`, so a new tool inherits the rule. Calling another instance is the explicit-credentials path (`url` + `email` + `token`), where the caller brings the credential with the host.
 
 #### 4. File Watching Pattern - Sync Mode

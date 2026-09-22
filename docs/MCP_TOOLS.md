@@ -429,13 +429,15 @@ Render Liquid templates on a platformOS instance.
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
 - `template` *(string, required)*: Liquid template string
-- `locals` *(object, optional)*: Template variables
+- `locals` *(object, optional)*: values the template reads as top-level Liquid variables
 
 **Response Format**:
 ```javascript
 {
-  success: true,
-  result: "Hello Alice! Your score is 42.",
+  ok: true,
+  data: {
+    result: "Hello Alice! Your score is 42."
+  },
   meta: {
     startedAt: "2025-01-23T10:30:00Z",
     finishedAt: "2025-01-23T10:30:01Z",
@@ -443,6 +445,19 @@ Render Liquid templates on a platformOS instance.
   }
 }
 ```
+
+**On `locals`**: the endpoint renders in a context where nothing the caller sends is a variable —
+the whole request body arrives at `context.params` and nowhere else. So the tool binds each local
+for you, by prefixing the template with one `{% assign <name> = context.params.locals.<name> %}`
+per key. Both spellings therefore work, `{{ name }}` and `{{ context.params.locals.name }}`, and
+only the path is written into the template, never the value: objects, arrays and booleans arrive as
+themselves rather than as their JSON. The prefix adds no line, so a `Liquid error (line N)` still
+names the line you wrote.
+
+A key that is not a Liquid name (`[A-Za-z_][A-Za-z0-9_]*`), or that would shadow `context`, cannot
+be bound. It is left where the instance put it — reachable as `context.params.locals["content-type"]`
+— and named back in `data.unboundLocals`, which is absent when there are none. The template's own
+`{% assign %}` of the same name still wins, since it runs after the prefix.
 
 **Error Response**:
 ```javascript

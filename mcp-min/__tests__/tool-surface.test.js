@@ -22,16 +22,20 @@ const DEV_TOOLS = [
 ];
 
 // The profile exists to keep this payload small, so growth past the budget needs a deliberate
-// bump rather than a quiet one. Currently 6,228 bytes over stdio, plus 1,101 of server
-// instructions (budgeted separately in instructions.test.js, since a client is charged for each
-// once).
+// bump rather than a quiet one. Currently 6,485 bytes over stdio, plus the server instructions
+// (budgeted separately in instructions.test.js, since a client is charged for each once).
 //
 // Raised from 6,000 for `deploy-dry-run` (TASK-25), which costs 739 bytes of it. The bump was
 // argued rather than assumed: `deploy-start` is in this profile and a deploy that is not partial
 // deletes every file missing from the build, so without the dry run an agent here can only find
 // that out by causing it. `deploy-start`'s own description names the dry run, and a description
 // may not point at a tool its profile hides — so the two travel together or neither does.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 6500;
+//
+// Raised to 6,600 for `liquid-exec`'s `locals` (TASK-41), which fits 6,500 at 6,485 — and fifteen
+// bytes is the ceiling failing on a reworded clause rather than on the growth it exists to catch,
+// which is how a budget teaches the next person to raise it without thinking. The 102 bytes buy a
+// parameter description that is true: the old one described a binding the endpoint does not do.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 6600;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -96,7 +100,11 @@ const BARE_TOOLS = [
 // creates rather than the push response, so it can now say whether the deploy would be refused at
 // all — and an agent that does not know to look at that field is back to the failure the field
 // exists for.
-const BARE_TOOLS_LIST_BYTES = 17860;
+//
+// 17,962 once `liquid-exec`'s `locals` said where the values actually are (TASK-41). The old
+// sentence was 102 bytes shorter and wrong, which cost an evaluation a whole detour: values
+// rendered blank with `ok: true`, and the only way out was reading pos-cli's source.
+const BARE_TOOLS_LIST_BYTES = 17962;
 
 const HANG_MS = 15000;
 
