@@ -350,6 +350,29 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   one an id that does not exist gets, so asking the wrong way reports a finished job as a missing
   one. `data-export` carries the flag in its handle; `data-import` always passes `true` because it
   always uploads a ZIP.
+- **`page-fetch` is the only tool that makes an arbitrary HTTP request, and the host is never the
+  caller's.** `path` is checked twice: the schema requires one leading slash and no second
+  (`^/(?!/).*$`), and the URL built from it must still have the credentials' origin — the same
+  comparison `authForJob` makes, and the one that actually holds the rule, since
+  `//elsewhere.example.com` reads as a path and is a different host to `new URL`. A path that
+  resolves away is `PATH_NOT_ON_INSTANCE` before any request. **No credentials are sent**: a page
+  that renders only for a holder of the instance token is not a page that is live, and a redirect —
+  reported, never followed — therefore cannot carry one off the instance. A `404` is `ok: true`
+  with `status: 404`; `ok: false` is for a call that could not be made. The body is capped at
+  `MAX_BODY_BYTES` and cut with a streaming `TextDecoder`, because `Buffer.subarray().toString()`
+  emits U+FFFD at the cut — three bytes where one was dropped, so the bounded body came back both
+  corrupt and *over* the ceiling it was enforcing. It is not `readOnlyHint`: a GET runs the page's
+  Liquid and nothing here can know what that does.
+
+- **Reading an instance back is `graphql-exec`, not a tool of its own.** The `admin_*` queries —
+  `admin_pages` (with `content`), `admin_liquid_partials` (with `body`), `admin_assets`, the
+  schemas, forms and policies — return what is deployed, source included, and `graphql-exec` has
+  always reached all of it. An evaluation reported the capability as missing because nothing named
+  it, so its description does now. That clause is 128 bytes once; a wrapper tool is 450–900 on
+  every request for every agent, to duplicate what is already there. `docs/MCP_COVERAGE.md` records
+  both decisions, in prose rather than the table — that table is derived from `bin/`, and a row for
+  something no CLI command does fails its own test.
+
 - **A deploy that discarded a file is not an unqualified success.** The converter drops a path that
   matches no part of the platformOS layout — `app/tests/**` does, `app/lib/**` does not, both
   measured 2026-09-22 — and the release still reports `status: 'success'`. The instance names them

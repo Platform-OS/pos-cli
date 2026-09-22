@@ -2,7 +2,7 @@
 
 Complete reference guide for all platformOS Model Context Protocol (MCP) tools available in pos-cli MCP server.
 
-**Total Tools**: 30
+**Total Tools**: 31
 
 ---
 
@@ -401,8 +401,8 @@ Execute GraphQL queries and mutations on a platformOS instance.
 **Response Format**:
 ```javascript
 {
-  success: true,
-  result: {
+  ok: true,
+  data: {
     data: {
       users: [
         { id: "1", name: "Alice", email: "alice@example.com" },
@@ -443,6 +443,86 @@ Mutation with variables:
   }
 }
 ```
+
+**Reading the instance back.** The `admin_*` queries return what is actually deployed, source
+included — this is how to see what a non-partial deploy would delete, and how to recover a file
+that only exists on the instance:
+
+| query | carries |
+|---|---|
+| `admin_pages` | `slug`, `physical_file_path`, `content`, `format`, `layout`, `deleted_at` |
+| `admin_liquid_partials` | `path`, `body` |
+| `admin_assets` | `name`, `url`, `content_type`, `file_size` |
+| `admin_graphql`, `admin_model_schemas`, `admin_forms`, `admin_authorization_policies`, `admin_liquid_layouts`, `admin_tables` | the rest of the deployed surface |
+| `admin_current_instance`, `admin_versions` | what the instance is |
+
+```json
+{
+  "name": "graphql-exec",
+  "arguments": {
+    "env": "staging",
+    "query": "{ admin_pages(per_page: 100) { total_entries results { slug physical_file_path } } }"
+  }
+}
+```
+
+It answers what is on the instance, not whether a URL works — `page-fetch` is that.
+
+---
+
+### page-fetch
+
+Fetch a path on an instance over HTTP, as a visitor gets it. This is how to confirm a deploy is
+live: reading the source back with `graphql-exec` proves the file arrived, and routing, the layout,
+the authorization policies and every partial the page renders all sit between that and the URL.
+
+**Tool Name**: `page-fetch`
+
+**Input Parameters**:
+- `env` *(string, optional)*: Environment name
+- `url` / `email` / `token` *(string, optional)*: Explicit credentials
+- `path` *(string, required)*: path on the instance, starting with `/`
+
+**Response Format**:
+```javascript
+{
+  ok: true,
+  data: {
+    url: "https://staging.example.com/eval-page",
+    status: 200,
+    redirected: false,
+    headers: { "content-type": "text/html; charset=utf-8" },
+    contentBytes: 80,
+    body: "<h1>pos-cli MCP eval</h1>…",
+    truncated: false
+  },
+  meta: { … }
+}
+```
+
+**The host is the resolved credentials' host and nothing else.** `path` is a path, checked twice:
+the schema requires a single leading `/`, and the URL built from it must still have the instance's
+origin. The second check is the one that holds the rule — `//elsewhere.example.com` reads as a path
+and is another host to `new URL` — and a path that resolves away answers `PATH_NOT_ON_INSTANCE`
+before any request is made. No argument here may move a request; this takes the strictest reading
+of that.
+
+**No credentials are sent.** A page that only renders for a holder of the instance API token is not
+a page that is live, and a redirect — reported, never followed — therefore cannot carry a credential
+anywhere. A `3xx` comes back with `redirected: true` and `headers.location`.
+
+A `404` is `ok: true` with `status: 404`: the agent asked whether the page is live, and the answer
+is that it is not. `ok: false` is reserved for a call that could not be made — an unreachable
+instance, a path off the instance.
+
+The body is capped at 16 KB, cut on a character boundary, with `contentBytes` giving the real size
+and `truncated` saying it was cut. A response that is not text is described in `bodyOmitted` rather
+than returned: an image or an archive is megabytes of noise to a model, and says nothing its status
+and size do not.
+
+It is **not** `readOnlyHint`. A GET on a platformOS page runs that page's Liquid, and this tool
+cannot know what that does; MCP reads a missing hint as "may change things", which is the honest
+answer.
 
 **Use Case**: Execute custom GraphQL queries and mutations for data operations.
 

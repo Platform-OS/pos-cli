@@ -132,6 +132,7 @@ describe('authentication params stay accepted', () => {
 
     'migrations-generate': { name: 'add_thing' },
     'liquid-exec': { template: '{{ 1 }}' },
+    'page-fetch': { path: '/' },
     'graphql-exec': { query: '{ a }' },
     'sync-file': { filePath: 'app/views/a.liquid' }
   };

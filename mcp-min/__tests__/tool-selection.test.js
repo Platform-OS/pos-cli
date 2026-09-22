@@ -31,10 +31,10 @@ const refusal = (options, context) => {
 
 const PROTOTYPE_NAMES = ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'];
 
-// What a bare pos-cli-mcp exposes: 6.5.1's set, plus job-status and deploy-dry-run, minus the six
-// per-operation status tools job-status replaced (removed in 6.6.0).
+// What a bare pos-cli-mcp exposes: 6.5.1's set, plus job-status, deploy-dry-run and page-fetch,
+// minus the six per-operation status tools job-status replaced (removed in 6.6.0).
 const PRE_PROFILES_TOOLS = [
-  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'generators-list', 'generators-help', 'generators-run',
+  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'page-fetch', 'generators-list', 'generators-help', 'generators-run',
   'migrations-list', 'migrations-generate', 'migrations-run', 'job-status', 'deploy-dry-run', 'deploy-start',
   'data-import', 'data-export', 'data-clean',
   'data-validate', 'unit-tests-run', 'tests-run-async', 'check-run', 'sync-file',
@@ -43,7 +43,7 @@ const PRE_PROFILES_TOOLS = [
 ];
 
 const DEV_TOOLS_IN_REGISTRY_ORDER = [
-  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'job-status', 'deploy-dry-run',
+  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'page-fetch', 'job-status', 'deploy-dry-run',
   'deploy-start', 'unit-tests-run', 'tests-run-async', 'check-run'
 ];
 
@@ -284,7 +284,7 @@ describe('findTool', () => {
 
 test('describeSelection names what was exposed and why', () => {
   expect(describeSelection(selectTools({ profile: 'dev', include: ['sync-file'], exclude: ['job-status'], env: {} })))
-    .toBe(`mcp-min: exposing 10 of ${registry.size} tools (profile dev; --include-tools sync-file; --exclude-tools job-status)`);
+    .toBe(`mcp-min: exposing 11 of ${registry.size} tools (profile dev; --include-tools sync-file; --exclude-tools job-status)`);
   expect(describeSelection(selectTools({ env: {} })))
     .toBe(`mcp-min: exposing ${registry.size} of ${registry.size} tools (profile full; --include-tools (none); --exclude-tools (none))`);
 });

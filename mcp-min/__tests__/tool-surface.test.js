@@ -17,13 +17,19 @@ import {
 } from './helpers/server-process.js';
 
 const DEV_TOOLS = [
-  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'job-status', 'deploy-dry-run',
+  'envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'page-fetch', 'job-status', 'deploy-dry-run',
   'deploy-start', 'unit-tests-run', 'tests-run-async', 'check-run'
 ];
 
 // The profile exists to keep this payload small, so growth past the budget needs a deliberate
-// bump rather than a quiet one. Currently 6,896 bytes over stdio, plus the server instructions
+// bump rather than a quiet one. Currently 7,843 bytes over stdio, plus the server instructions
 // (budgeted separately in instructions.test.js, since a client is charged for each once).
+//
+// Two kinds of growth, and they are not argued the same way. **Prose** — a description that was
+// wrong, a parameter that needed explaining — comes out of existing text, because the profile has
+// no claim on more bytes for saying the same things at greater length. **A tool** is a surface
+// decision: it is argued on what an agent cannot otherwise do, and it moves the budget when the
+// answer is that it should exist here. The entries below are in that order.
 //
 // 6,000 → 6,500 for `deploy-dry-run` (TASK-25), which costs 739 bytes of it. Argued rather than
 // assumed: `deploy-start` is in this profile and a deploy that is not partial deletes every file
@@ -39,9 +45,24 @@ const DEV_TOOLS = [
 // costs every agent for a release, and two of them ended in a wrong conclusion rather than a
 // retry. A description that is wrong is not cheaper than one that is longer.
 //
-// That is the argument spent. The next addition here comes out of existing text, not out of a
-// fourth raise: at 7,000 the dev profile is already 38% of the full surface it exists to avoid.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 7000;
+// That is the prose argument spent: a further *description* here comes out of existing text.
+//
+// 7,000 → 8,000 for TASK-44, which is one decision with two halves: `page-fetch` at 720 bytes, and
+// 128 more naming the `admin_*` family in `graphql-exec`'s description. The second is prose by the
+// rule above, and is bought anyway because it is not the same thing said at greater length — it is
+// the only way an agent learns that reading an instance back was already possible. A capability
+// nobody can find is one the profile is paying for and not getting.
+//
+// The tool half. A surface decision, not prose. This
+// profile is named for the loop edit → check → deploy → **verify**, and the verify step was the one
+// an agent could not take without leaving the server: `graphql-exec` reads an instance's source
+// back, which proves the file arrived and nothing about whether the URL works — routing, the
+// layout, the authorization policies and every partial the page renders all sit in between. An
+// evaluation of this server checked its own deploy with an outside fetch, which is the whole of the
+// argument. The alternative considered and rejected was a read-back tool wrapping the admin
+// GraphQL API: 450–900 bytes to duplicate what `graphql-exec` already does, where naming the
+// `admin_*` family in one clause of its description costs about ninety.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 8000;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -54,7 +75,7 @@ const PRE_PROFILES_TOOLS = [
 ];
 // Each a deliberate widening of what a bare `pos-cli-mcp` exposes, and the reason the byte count
 // below moves.
-const ADDED_SINCE_PROFILES = ['job-status', 'deploy-dry-run'];
+const ADDED_SINCE_PROFILES = ['job-status', 'deploy-dry-run', 'page-fetch'];
 // The six per-operation status tools job-status replaced, removed in 6.6.0. Listed rather than
 // deleted from PRE_PROFILES_TOOLS so this file still records what 6.5.1 shipped and what became
 // of it: an agent on a 6.x server saw these, and a config or a launch flag naming one now has to
@@ -65,7 +86,9 @@ const REMOVED_IN_7 = [
 ];
 
 const BARE_TOOLS = [
-  ...PRE_PROFILES_TOOLS.slice(0, PRE_PROFILES_TOOLS.indexOf('deploy-start')),
+  ...PRE_PROFILES_TOOLS.slice(0, PRE_PROFILES_TOOLS.indexOf('generators-list')),
+  'page-fetch',
+  ...PRE_PROFILES_TOOLS.slice(PRE_PROFILES_TOOLS.indexOf('generators-list'), PRE_PROFILES_TOOLS.indexOf('deploy-start')),
   'job-status',
   'deploy-dry-run',
   ...PRE_PROFILES_TOOLS.slice(PRE_PROFILES_TOOLS.indexOf('deploy-start'))
@@ -121,7 +144,12 @@ const BARE_TOOLS = [
 // parameters the tests module actually applies (TASK-43). The deploy converter drops a file it
 // matches no rule for and the release still reports success, so every field an agent would check
 // said the file was on the instance.
-const BARE_TOOLS_LIST_BYTES = 18471;
+//
+// 19,305 with `page-fetch` and the `admin_*` pointer (TASK-44). The tool is 720 of those bytes and the first tool here that
+// makes an arbitrary HTTP request. The admin GraphQL API can read an instance's source back —
+// `graphql-exec` has always been able to — but nothing could ask the instance for the page a
+// visitor gets, so the last step of the loop this server is built around had to be taken outside it.
+const BARE_TOOLS_LIST_BYTES = 19305;
 
 const HANG_MS = 15000;
 
@@ -239,7 +267,7 @@ describe('which tools are listed', () => {
     ['an allowlist', ['--profile', 'none', '--include-tools', 'graphql-exec,envs-list'], ['envs-list', 'graphql-exec']],
     ['the same allowlist as repeated flags', ['--profile', 'none', '--include-tools', 'graphql-exec', '--include-tools', 'envs-list'], ['envs-list', 'graphql-exec']],
     ['dev plus one tool minus another', ['--profile', 'dev', '--include-tools', 'sync-file', '--exclude-tools', 'job-status,check-run'],
-      ['envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'deploy-dry-run', 'deploy-start',
+      ['envs-list', 'logs-fetch', 'liquid-exec', 'graphql-exec', 'page-fetch', 'deploy-dry-run', 'deploy-start',
         'unit-tests-run', 'tests-run-async', 'sync-file']],
     ['full minus a group', ['--exclude-tools', 'data-import,data-export,data-clean'],
       BARE_TOOLS.filter(name => !['data-import', 'data-export', 'data-clean'].includes(name))]

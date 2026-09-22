@@ -103,6 +103,38 @@ These exist only over MCP, and are not omissions in the other direction:
 - `instance-create`, `partners-list`, `partner-get`, `endpoints-list` — Partner Portal operations.
 - `deploy-dry-run` — what a deploy would change, which the CLI has as `deploy --dry-run`.
 
+## Reading an instance back
+
+Not a CLI capability, so not a row above — the decision table is derived from `bin/` and a row for
+something no command does would fail its own test. Recorded here because an evaluation of this
+server (2026-09-21) reported that nothing could read an instance back, which was wrong in a way
+worth writing down.
+
+- **Reading files back from an instance — exposed, via `graphql-exec`.** The instance serves an
+  admin read API over GraphQL, and `graphql-exec` has always been able to reach all of it:
+  `admin_pages` (with `slug`, `physical_file_path` and `content`), `admin_liquid_partials` (`path`,
+  `body`), `admin_assets` (`name`, `url`, `content_type`, `file_size`), plus `admin_graphql`,
+  `admin_model_schemas`, `admin_forms`, `admin_authorization_policies`, `admin_liquid_layouts`,
+  `admin_tables`, `admin_current_instance` and `admin_versions`. Verified live on 2026-09-22.
+
+  So an agent can enumerate an instance before a non-partial deploy deletes anything on it, and
+  can read a file's source back. The gap was never capability; it was that nothing said so.
+  `graphql-exec`'s description now names the family, which costs 128 bytes once against the
+  450–900 a wrapper tool would cost on every request to duplicate it.
+
+- **Fetching a page by path — exposed, as `page-fetch`.** The one thing the admin API cannot
+  answer. `admin_pages { content }` proves the source is on the instance; routing, the layout, the
+  authorization policies and every partial the page renders sit between that and a URL a visitor
+  opens, so it does not prove the page is live. It is in `--profile dev` because that profile is
+  named for edit → check → deploy → **verify**, and verify was the step an agent had to take
+  outside this server.
+
+- **Downloading a release archive — later.** `job-status` passes the instance's release record
+  through verbatim, `downloadable: false` included, and nothing here acts on it. The field is the
+  platform's, and cherry-picking a record we forward is worse than carrying a field that is
+  currently always false; `pull` is the capability that would use it, and it is `later` above for
+  its own reasons. If `downloadable` ever comes back true, that row is where the decision changes.
+
 ## What this audit changed
 
 - **`pos-cli logsv2 search` did not work at all.** `lib/swagger-client.js` assigned to an undeclared

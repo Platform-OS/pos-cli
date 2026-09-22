@@ -13,6 +13,7 @@ import singleFileTool from './sync/single-file.js';
 import fetchLogsTool from './logs/fetch.js';
 import execLiquidTool from './liquid/exec.js';
 import execGraphqlTool from './graphql/exec.js';
+import pageFetchTool from './page/fetch.js';
 import generatorsListTool from './generators/list.js';
 import generatorsHelpTool from './generators/help.js';
 import generatorsRunTool from './generators/run.js';
@@ -68,6 +69,9 @@ const tools = {
   'logs-fetch': fetchLogsTool,
   'liquid-exec': execLiquidTool,
   'graphql-exec': execGraphqlTool,
+  // Beside graphql-exec, which reads an instance's source back: this is the half that proves the
+  // page a visitor gets actually renders.
+  'page-fetch': pageFetchTool,
 
   'generators-list': generatorsListTool,
   'generators-help': generatorsHelpTool,

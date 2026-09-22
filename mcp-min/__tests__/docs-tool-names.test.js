@@ -29,7 +29,7 @@ const DOCS = [...markdownIn('.'), ...markdownIn('docs'), 'mcp-min/README.md'];
 
 // A hyphenated word starting with one of these reads as a tool name to anyone skimming, which is
 // what makes a wrong one misleading.
-const TOOL_PREFIXES = /^(envs?|logs|liquid|graphql|generators|migrations|job|deploy|data|unit|tests|check|sync|uploads|constants|instance|partners?|endpoints)-/;
+const TOOL_PREFIXES = /^(envs?|logs|liquid|graphql|page|generators|migrations|job|deploy|data|unit|tests|check|sync|uploads|constants|instance|partners?|endpoints)-/;
 
 // Hyphenated words that start like a tool name but are not one. Each needs a reason: this list is
 // the only way a genuine mistake can hide from this test.
