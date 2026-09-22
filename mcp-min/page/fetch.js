@@ -10,8 +10,11 @@
  * The second check is the one that holds the rule — `//host`, `/\host` and `/<tab>/host` all read as
  * paths and are other hosts to `new URL`.
  *
- * **No credentials are sent.** A page that renders only for a holder of the instance token is not a
- * page that is live, and a redirect — reported, never followed — cannot carry one off the instance.
+ * **No credentials are sent**, so none are asked for. A page that renders only for a holder of the
+ * instance token is not a page that is live, and a redirect — reported, never followed — cannot
+ * carry one off the instance. `url` therefore stands alone here rather than with `email` and
+ * `token`: this is the one tool whose schema does not spread `authProperties` whole, because the
+ * shared `url` says "with email and token", which on this tool would be false.
  */
 import log from '../log.js';
 import { resolveAuth } from '../auth.js';
@@ -61,13 +64,14 @@ const pageFetchTool = {
     type: 'object',
     additionalProperties: false,
     properties: {
-      ...authProperties,
-      path: { type: 'string', pattern: PATH, description: 'Path on the instance, starting with /, e.g. /eval-page. The host comes from the credentials.' }
+      env: authProperties.env,
+      url: { type: 'string', format: 'uri', description: 'Instance URL, used instead of env. Needs no email or token: this tool sends none.' },
+      path: { type: 'string', pattern: PATH, description: 'Path on the instance, starting with /, e.g. /eval-page.' }
     },
     required: ['path']
   },
   handler: async (params, ctx = {}) => {
-    const auth = await resolveAuth(params, ctx);
+    const auth = await resolveAuth(params, ctx, { anonymous: true });
     log.debug('tool:page-fetch invoked', { env: params?.env, path: params?.path });
 
     const origin = new URL(auth.url).origin;

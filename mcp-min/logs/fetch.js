@@ -24,7 +24,7 @@ const lean = (row) => {
 };
 
 const fetchLogsTool = {
-  description: 'Fetch rows from the instance error log — the stream pos-cli logs tails, which does not carry {% log %} output. Reads forward from lastId, oldest first, and returns the next lastId.',
+  description: 'Fetch rows from the instance error log, the stream pos-cli logs tails. Only deployed code writes to it: a liquid-exec render never appears here, not even its errors. Reads forward from lastId, oldest first, and returns the next lastId.',
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',

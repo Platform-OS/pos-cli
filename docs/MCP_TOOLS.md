@@ -322,9 +322,15 @@ List all configured environments from `.pos` configuration file.
 
 ### logs-fetch
 
-Fetch rows from the instance **error log** — the stream `pos-cli logs` tails. Application output
-from `{% log %}` is not in it, and neither are HTTP access logs; those live in the logsv2 store,
+Fetch rows from the instance **error log** — the stream `pos-cli logs` tails. Only deployed code
+writes to it: a page, a partial or a test run reaches it, including their `{% log %}` output, and
+nothing rendered through `liquid-exec` does — not even that render's own Liquid errors (measured
+against a live instance on 2026-09-22: a bare `{% log %}`, a `type:`-tagged one and a failing
+filter all produced no rows). HTTP access logs are not here either; those live in the logsv2 store,
 which no tool reaches yet.
+
+An earlier version of this page said `{% log %}` output was simply absent. That was generalised
+from the `liquid-exec` context alone and is wrong for deployed code.
 
 **Tool Name**: `logs-fetch`
 
@@ -504,7 +510,9 @@ the authorization policies and every partial the page renders all sit between th
 
 **Input Parameters**:
 - `env` *(string, optional)*: Environment name
-- `url` / `email` / `token` *(string, optional)*: Explicit credentials
+- `url` *(string, optional)*: Instance URL, used instead of `env`. **No `email` or `token`** — this
+  is the one tool whose schema does not take them, because it sends none. A closed schema means
+  passing either is refused, so an instance you have a URL for and no account on is reachable.
 - `path` *(string, required)*: path on the instance, starting with `/`
 
 **Response Format**:

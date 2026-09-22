@@ -15,7 +15,12 @@ import { runTool } from '../run-tool.js';
 import { rejectionFor } from '../validate-params.js';
 import tool, { MAX_BODY_BYTES } from '../page/fetch.js';
 
-const AUTH = { url: 'https://staging.example.com', email: 'e@example.com', token: 'tok' };
+// A url and nothing else: this tool sends no credentials, so its schema publishes none to send.
+const AUTH = { url: 'https://staging.example.com' };
+
+/** A .pos that does carry a token, for the cases about what must not travel with the request. */
+const DOT_POS = { staging: { url: 'https://staging.example.com', email: 'e@example.com', token: 'tok' } };
+const fromDotPos = (seam) => ({ ...seam, files: { getConfig: () => DOT_POS }, settings: { settingsFromDotPos: name => DOT_POS[name] } });
 
 /** Records what was asked for, and answers what the case under test wants. */
 const instance = ({ status = 200, headers = { 'content-type': 'text/html; charset=utf-8' }, body = '<h1>ok</h1>' } = {}) => {
@@ -94,21 +99,79 @@ describe('the host comes from the credentials and nowhere else', () => {
   test('the instance url is reduced to its origin', async () => {
     const { fetch, asked } = instance();
 
-    await call({ path: '/a' }, { fetch, settings: {}, files: {} });
+    await call({ path: '/a' }, { fetch });
     await runTool(tool, { ...AUTH, url: 'https://staging.example.com/sub/dir/', path: '/a' }, { fetch });
 
     expect(asked.map(a => a.url)).toEqual(['https://staging.example.com/a', 'https://staging.example.com/a']);
   });
 });
 
-describe('what it sends', () => {
-  // A page that only renders for a holder of the instance API token is not a page that is live.
-  // It also means a redirect, reported rather than followed, cannot carry a credential anywhere.
-  test('no credentials, under any header', async () => {
+/**
+ * It sends no credentials, so it asks for none. Round 2 of the agent evaluation was refused here:
+ * `page-fetch { url, token }` → `INCOMPLETE_CREDENTIALS: missing email`, on a tool whose
+ * description says no credentials are sent. The triple is never checked against anything, so
+ * requiring it blocked the honest caller — an instance you have a URL for and no account on — and
+ * stopped nobody.
+ */
+describe('the instance can be named without an account on it', () => {
+  test('a bare url is enough, and reaches that host', async () => {
     const { fetch, asked } = instance();
 
-    await call({ path: '/eval-page' }, { fetch });
+    const result = await runTool(tool, { url: 'https://anon.example.com', path: '/a' }, { fetch });
 
+    expect(result.ok).toBe(true);
+    expect(asked[0].url).toBe('https://anon.example.com/a');
+  });
+
+  // The resolver still refuses an incomplete set everywhere else: the relaxation is this tool's,
+  // not a hole in resolveAuth.
+  test('every other tool still needs the triple together', async () => {
+    const { rejectionFor } = await import('../validate-params.js');
+    const graphql = (await import('../graphql/exec.js')).default;
+
+    const result = await runTool(graphql, { url: 'https://anon.example.com', query: '{ a }' }, {});
+
+    expect(result.error).toMatchObject({ code: 'INCOMPLETE_CREDENTIALS' });
+    expect(rejectionFor).toBeTypeOf('function');
+  });
+
+  // Nothing about the relaxation may reach the request: a host resolved without a token must not
+  // acquire one, and meta must not claim a credential that was never resolved.
+  test('no token is resolved, so none can be reported or sent', async () => {
+    const { fetch, asked } = instance();
+
+    const result = await runTool(tool, { url: 'https://anon.example.com', path: '/a' }, { fetch });
+
+    expect(result.meta.auth).toEqual({ url: 'https://anon.example.com', source: 'params' });
+    expect(JSON.stringify(asked[0])).not.toContain('tok');
+  });
+
+  // `env` is untouched: a named environment still resolves through .pos exactly as before, and the
+  // url it carries is the one used.
+  test('a named environment still names the instance', async () => {
+    const { fetch, asked } = instance();
+
+    await runTool(tool, { env: 'staging', path: '/a' }, fromDotPos({ fetch }));
+
+    expect(asked[0].url).toBe('https://staging.example.com/a');
+  });
+});
+
+describe('what it sends', () => {
+  /**
+   * A page that only renders for a holder of the instance API token is not a page that is live.
+   * It also means a redirect, reported rather than followed, cannot carry a credential anywhere.
+   *
+   * Driven through `env`, because that is now the only path that resolves a token at all: the
+   * schema refuses an explicit one. So this asserts the thing that could still go wrong — a
+   * credential the resolver found in `.pos` reaching the request.
+   */
+  test('no credentials, under any header, even when .pos has one', async () => {
+    const { fetch, asked } = instance();
+
+    const result = await runTool(tool, { env: 'staging', path: '/eval-page' }, fromDotPos({ fetch }));
+
+    expect(result.ok).toBe(true);
     const headers = asked[0].options?.headers;
     expect(headers === undefined || Object.keys(headers).length === 0).toBe(true);
     expect(JSON.stringify(asked[0])).not.toContain('tok');

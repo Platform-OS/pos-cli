@@ -49,23 +49,34 @@ export function refreshTokenRemedy(auth) {
  * `ctx.mayChangeInstance` guards step 4 only (see `requireNamedInstance`). `runTool` sets it from
  * the tool's own annotations, so no tool decides this for itself.
  *
- * @returns {Promise<{url, email, token, source}>}
+ * `options.anonymous` relaxes step 1 alone, for a tool that sends no credentials: see `resolve`.
+ * Every other step, and the guard, are unchanged.
+ *
+ * @returns {Promise<{url, email?, token?, source}>}
  */
-export async function resolveAuth(params, ctx = {}) {
-  const auth = await resolve(params, ctx);
+export async function resolveAuth(params, ctx = {}, options = {}) {
+  const auth = await resolve(params, ctx, options);
   // `runTool` builds meta.auth from this. Recording it here is what lets a tool stop assembling
   // the same masked block itself, and keeps it out of the thirteen that used to.
   ctx.resolvedAuth = auth;
   return auth;
 }
 
-async function resolve(params, ctx) {
+async function resolve(params, ctx, { anonymous = false } = {}) {
   const settingsModule = ctx.settings || settings;
   const filesModule = ctx.files || files;
 
   // Priority 1: Explicit params
   if (params?.url && params?.email && params?.token) {
     return { url: params.url, email: params.email, token: params.token, source: 'params' };
+  }
+
+  // A tool that sends no credentials needs the host and nothing else. Demanding the other two of
+  // it was ceremony that stopped nothing — they are never checked against anything, so any three
+  // strings satisfied it — while blocking the honest case: pointing `page-fetch` at an instance
+  // you have a URL for and no account on.
+  if (anonymous && params?.url) {
+    return { url: params.url, source: 'params' };
   }
 
   // Two of the three would otherwise name one instance and resolve a different one from `.pos`.

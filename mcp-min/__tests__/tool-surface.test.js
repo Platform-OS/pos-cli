@@ -22,7 +22,7 @@ const DEV_TOOLS = [
 ];
 
 // The profile exists to keep this payload small, so growth past the budget needs a deliberate
-// bump rather than a quiet one. Currently 9,367 bytes over stdio, plus the server instructions
+// bump rather than a quiet one. Currently 9,241 bytes over stdio, plus the server instructions
 // (budgeted separately in instructions.test.js, since a client is charged for each once).
 //
 // Two kinds of growth, argued differently. **Prose** — a description that was wrong, a parameter
@@ -50,6 +50,10 @@ const DEV_TOOLS = [
 //                instance a call reaches, they sit on deploy-start, and they are read while the
 //                argument is being filled in, which the instructions (a fifteenth of the price)
 //                are not.
+//
+// No raise for round 2's F10/F13: correcting them *returned* 126 bytes. page-fetch stopped
+// publishing `email` and `token`, which it never sent, and logs-fetch spent 53 of the saving on
+// saying which renders reach the error log instead of a claim that was wrong.
 const DEV_TOOLS_LIST_BYTE_BUDGET = 9600;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
@@ -108,7 +112,9 @@ const BARE_TOOLS = [
 // 19,305  page-fetch (720 B) and the admin_* pointer (TASK-44)
 // 22,725  url, email and token carried descriptions (TASK-45) — 3,420 B for three sentences,
 //         because twenty-one tools spread `authProperties` and each publishes its own copy
-const BARE_TOOLS_LIST_BYTES = 22725;
+// 22,599  page-fetch stopped publishing `email` and `token` (round 2, F10) and logs-fetch said
+//         which renders reach the error log (F13) — a correction that gave 126 B back
+const BARE_TOOLS_LIST_BYTES = 22599;
 
 const HANG_MS = 15000;
 

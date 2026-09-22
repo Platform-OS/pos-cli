@@ -283,9 +283,9 @@ describe('a row carries what the instance actually said', () => {
 });
 
 /**
- * The questions the description has to answer, because an evaluation lost time to both: it wrote
- * thirteen rows with `{% log %}` and got two unrelated rows from three hours earlier, and it had no
- * way to know which end `limit` reads from.
+ * The questions the description has to answer, because two evaluations lost time to them: one
+ * wrote thirteen rows with `{% log %}` and got two unrelated rows from three hours earlier, and
+ * neither could tell which end `limit` reads from.
  *
  * Checked per field rather than over the whole blob, so the answer has to be where the reader of
  * that field is: a direction stated only in the tool description does not help someone filling in
@@ -297,10 +297,25 @@ describe('the description answers what an agent cannot find out for itself', () 
 
   test.each([
     ['the tool names the stream it reads', () => tool.description, /error log/i],
-    ['the tool says {% log %} output is not in it', () => tool.description, /\{% log %\}/],
+    ['the tool names what does not reach it', () => tool.description, /liquid-exec/],
     ['limit says which end it counts from', () => property('limit'), /oldest|newest/i],
     ['lastId says it goes back unchanged', () => property('lastId'), /unchanged|verbatim|as given/i]
   ])('%s', (_label, text, pattern) => {
     expect(text()).toMatch(pattern);
+  });
+
+  /**
+   * The claim this replaced was wrong, and wrongly general: it said the stream "does not carry
+   * `{% log %}` output", measured only through `liquid-exec`. Round 2 of the evaluation opened with
+   * `{% log %}` rows from a deployed page — the tests module's own — and sized its expectations by
+   * a sentence that was false.
+   *
+   * Measured against the verification instance on 2026-09-22: a bare `{% log %}`, a `type:`-tagged
+   * one and a genuine Liquid error, all rendered through `liquid-exec`, produced **no rows at all**,
+   * re-polled a minute later. The execution context decides it, not the form of the log, so the
+   * description must not generalise from one context to the tag.
+   */
+  test('it does not claim {% log %} is absent, which is only true of the liquid-exec context', () => {
+    expect(tool.description).not.toMatch(/does not carry \{% log %\}/);
   });
 });

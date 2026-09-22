@@ -380,9 +380,16 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   (`^/(?!/).*$`), and the URL built from it must still have the credentials' origin — the same
   comparison `authForJob` makes, and the one that actually holds the rule, since
   `//elsewhere.example.com` reads as a path and is a different host to `new URL`. A path that
-  resolves away is `PATH_NOT_ON_INSTANCE` before any request. **No credentials are sent**: a page
-  that renders only for a holder of the instance token is not a page that is live, and a redirect —
-  reported, never followed — therefore cannot carry one off the instance. A `404` is `ok: true`
+  resolves away is `PATH_NOT_ON_INSTANCE` before any request. **No credentials are sent, so none are
+  asked for**: a page that renders only for a holder of the instance token is not a page that is
+  live, and a redirect — reported, never followed — therefore cannot carry one off the instance.
+  It is the one tool whose schema does not spread `authProperties` whole — `url` stands alone,
+  since the shared wording says "with email and token", which here would be false. Demanding the
+  triple refused an anonymous GET against an instance the caller has no account on, while stopping
+  nobody, because the three are never checked against anything. `resolveAuth`'s `anonymous` option
+  relaxes step 1 alone; the named environment, `MPKIT_*`, the single-`.pos` default and
+  `requireNamedInstance` are untouched, and `__tests__/validate-params.test.js` derives which tools
+  may publish the narrower set from the call each one makes, so a mis-derivation fails closed. A `404` is `ok: true`
   with `status: 404`; `ok: false` is for a call that could not be made. The body is capped at
   `MAX_BODY_BYTES` and cut with a streaming `TextDecoder`, because `Buffer.subarray().toString()`
   emits U+FFFD at the cut — three bytes where one was dropped, so the bounded body came back both
@@ -424,6 +431,14 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   (`lib/validation/schemas/gui.js`), one exported pattern, so the two cannot drift again. The
   pattern is what refuses a cursor smuggling its own query parameters; `Gateway.logs` encodes it as
   well, so neither guard stands alone. Nothing between the instance and the caller may parse the id.
+
+  **What reaches that log is decided by where the code ran, not by how it logged.** The description
+  said the stream "does not carry `{% log %}` output" — generalised from a measurement taken only
+  through `liquid-exec`, and an agent evaluation opened on `{% log %}` rows written by a deployed
+  page. Measured again on 2026-09-22: a bare `{% log %}`, a `type:`-tagged one and a failing filter,
+  all rendered through `liquid-exec`, produce no rows at all. Deployed code writes there; an
+  `/api/liquid` render never does — which is the useful half, since it means debugging a template
+  with `liquid-exec` leaves no trace to go looking for.
 
 - **`liquid-exec` binds its own locals, on one line.** The endpoint renders in a context where
   nothing the caller sends is a variable — measured on 2026-09-22, the whole request body lands at

@@ -106,21 +106,50 @@ describe('authentication params stay accepted', () => {
     expect(authenticatingFiles.length).toBeGreaterThanOrEqual(18);
   });
 
-  test.each(authenticatingFiles.map((file, i) => [path.relative(repoRoot, file), i]))(
-    '%s declares url, email and token on a closed schema',
-    (_label, index) => {
+  /**
+   * A tool that sends no credentials resolves a host and nothing else, so it declares `url` alone
+   * — `page-fetch`, where the shared `url` description ("with email and token") would be false and
+   * demanding the other two blocked the anonymous GET the tool exists to make.
+   *
+   * Derived from the call the tool makes, not from a list of names. If that call is ever
+   * reformatted past this pattern the tool falls back into the stricter set and fails here, which
+   * is the safe direction for a test to be wrong in.
+   */
+  const ANONYMOUS_AUTH = /\bresolveAuth\([^;]*anonymous:\s*true/;
+  const sendsCredentials = (file) => !ANONYMOUS_AUTH.test(fs.readFileSync(file, 'utf8'));
+
+  test.each(authenticatingFiles.map((file, i) => [path.relative(repoRoot, file), i, file]))(
+    '%s declares the credentials it resolves, on a closed schema',
+    (_label, index, file) => {
       const schema = authTools[index]?.inputSchema;
 
       // Only closed schemas can reject unknown properties, so only they can make the
-      // explicit-credentials path unreachable by omitting these three.
+      // explicit-credentials path unreachable by omitting these.
       if (!schema || schema.additionalProperties !== false) return;
 
-      for (const property of ['url', 'email', 'token']) {
-        expect(Object.keys(schema.properties || {}), `${_label} inputSchema.properties`)
-          .toContain(property);
+      const published = Object.keys(schema.properties || {});
+      const required = sendsCredentials(file) ? ['url', 'email', 'token'] : ['url'];
+
+      for (const property of required) {
+        expect(published, `${_label} inputSchema.properties`).toContain(property);
       }
     }
   );
+
+  // Without this the split above is vacuous in both directions: every tool could be anonymous, or
+  // none could be, and the loop would pass either way.
+  test('the split is real: most tools send credentials, and the anonymous one does not publish them', () => {
+    const anonymous = authenticatingFiles.filter(file => !sendsCredentials(file));
+    const credentialed = authenticatingFiles.filter(sendsCredentials);
+
+    expect(credentialed.length, 'tools that resolve full credentials').toBeGreaterThan(15);
+    expect(anonymous.map(file => path.relative(repoRoot, file))).toEqual(['mcp-min/page/fetch.js']);
+
+    const schema = authTools[authenticatingFiles.indexOf(anonymous[0])].inputSchema;
+    // The point of the relaxation: a tool that sends nothing must not ask for a token either.
+    expect(Object.keys(schema.properties)).not.toContain('token');
+    expect(Object.keys(schema.properties)).not.toContain('email');
+  });
 
   // The three credential parameters shipped undescribed on every tool that authenticates, one of
   // which deploys. Checked on the shared object because that is the only copy: a description
@@ -166,12 +195,34 @@ describe('authentication params stay accepted', () => {
   const authSchemas = new Set(authTools.map(tool => tool?.inputSchema).filter(Boolean));
   const registeredAuthTools = [...registry].filter(([, tool]) => authSchemas.has(tool.inputSchema)).map(([name]) => name);
 
-  test.each(registeredAuthTools)('%s accepts explicit url/email/token without env', name => {
+  // page-fetch is the exception and has its own pair below: it publishes no `email` or `token`, so
+  // a closed schema refuses them — which is the point, not an oversight.
+  const credentialedTools = registeredAuthTools.filter(name => name !== 'page-fetch');
+
+  test.each(credentialedTools)('%s accepts explicit url/email/token without env', name => {
     const params = { url: 'https://example.com', email: 'a@b.c', token: 'tok', ...requiredExtras[name] };
     const result = check(name, params);
 
     expect(result.errors ?? []).toEqual([]);
     expect(result.valid).toBe(true);
+  });
+
+  /**
+   * The tool that sends no credentials takes a bare `url`. Round 2 of the agent evaluation stopped
+   * here: `page-fetch { url, token }` answered `INCOMPLETE_CREDENTIALS: missing email`, so pointing
+   * it at an instance you have a URL for and no account on was impossible — on a tool whose own
+   * description says no credentials are sent. The triple was never checked against anything, so it
+   * refused the honest caller and stopped nobody.
+   */
+  test('page-fetch accepts a url with no email or token', () => {
+    const result = check('page-fetch', { url: 'https://example.com', path: '/' });
+
+    expect(result.errors ?? []).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  test('page-fetch refuses a token, rather than taking one it will not send', () => {
+    expect(check('page-fetch', { url: 'https://example.com', token: 'tok', path: '/' }).valid).toBe(false);
   });
 
   test.each(registeredAuthTools)('%s accepts env alone', name => {
