@@ -4,6 +4,7 @@ import { resolveAuth } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
 import { ToolError, kindForStatus } from '../tool-error.js';
 import makeRequest, { testAuthHeaders, testsUrl } from './request.js';
+import { missingTestsModule } from './module-check.js';
 
 /**
  * Parse the text response from /_tests/run?formatter=text
@@ -279,7 +280,8 @@ const testsRunTool = {
     // The test endpoints answer with a status rather than throwing, so nothing reaches the
     // invoker to classify: the kind is decided here from the same status it would have read.
     if (statusCode >= 400) {
-      throw new ToolError(kindForStatus(statusCode), 'HTTP_ERROR', `Request failed with status ${statusCode}`, { statusCode, body });
+      throw (await missingTestsModule(statusCode, auth, ctx))
+        ?? new ToolError(kindForStatus(statusCode), 'HTTP_ERROR', `Request failed with status ${statusCode}`, { statusCode, body });
     }
 
     // A run whose assertions failed is a run that happened: the failures are the answer, not an

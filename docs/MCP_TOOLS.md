@@ -787,6 +787,7 @@ archive a concurrent `deploy-start` is streaming).
       Asset:  { upserted: {...}, deleted: {...}, skipped: {...} }
     },
     assets: { state: "validated", count: 42 },
+    verdict: "would_succeed",
     archive: { fileCount: 156 }
   },
   meta: { ... }
@@ -797,6 +798,13 @@ archive a concurrent `deploy-start` is streaming).
 `data.deleted.count` without walking the report. Each carries `count` and `files` separately
 because the API answers some categories with a count rather than the paths; `count` is right either
 way, and `files` is empty when it was not given them.
+
+`verdict` is `would_succeed`, `would_fail` or `not_known`. The instance evaluates the dry run and
+can refuse the deploy outright — a table that still holds records cannot be dropped, for one — and
+`would_fail` means `deploy-start` would be refused in the same way; `error.files` names what it
+objected to. `not_known` means the release had not settled within the timeout, so the counts below
+are incomplete rather than zero. The file report is read from the release once it settles, not from
+the upload response, which carries none.
 
 Each call writes its archive into a directory of its own under `tmp/pos-cli-mcp-deploy/` and
 removes it when the call is done, so two deploys started close together cannot pack over each

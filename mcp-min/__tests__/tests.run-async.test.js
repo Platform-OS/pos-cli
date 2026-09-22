@@ -149,3 +149,19 @@ describe('tests-run-async tool', () => {
     expect(result.data.result_url).toBe('/_tests/results/77');
   });
 });
+
+// The same 404 on the trigger endpoint means the same thing; both tools ask the same question.
+describe('tests-run-async on an instance with no test runner', () => {
+  let testsRunAsyncTool;
+  beforeAll(async () => { testsRunAsyncTool = (await import('../tests/run-async.js')).default; });
+
+  test('names the missing module rather than the status', async () => {
+    const request = vi.fn().mockResolvedValue({ statusCode: 404, body: '<!DOCTYPE html><html><title>Aw, Snap!</title></html>' });
+    const NoTests = class { async listModules() { return { data: ['core'] }; } };
+
+    const result = await runTool(testsRunAsyncTool, { env: 'staging' }, { request, Gateway: NoTests });
+
+    expect(result.error).toMatchObject({ kind: 'project', code: 'TESTS_MODULE_MISSING' });
+    expect(result.error.details.remedy.command).toContain('modules install tests');
+  });
+});

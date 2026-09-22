@@ -386,3 +386,70 @@ Assertions: 5. Failed: 2. Time: 150ms`
     });
   });
 });
+
+/**
+ * The runner ships in the `tests` module, so an instance without it has no `/_tests/*` at all and
+ * answers 404 — the same 404 a test name the runner does not know would get. An evaluating agent
+ * spent four calls and a deploy cycle telling the two apart, and got ~1,100 tokens of HTML error
+ * page for its trouble. `lib/test-runner` asks before every CLI run; this asks only after a 404.
+ */
+describe('a 404 from an instance with no test runner', () => {
+  let testsRunTool;
+  beforeAll(async () => { testsRunTool = (await import('../tests/run.js')).default; });
+
+  const notFound = () => vi.fn().mockResolvedValue({
+    statusCode: 404,
+    body: '<!DOCTYPE html><html><head><title>Aw, Snap!</title></head><body>page not found</body></html>'
+  });
+
+  const withModules = (installed, onCall = () => {}) => class {
+    async listModules() { onCall(); return { data: installed }; }
+  };
+
+  test('says the module is missing, and what installs it', async () => {
+    const result = await runTool(testsRunTool,
+      { env: 'staging', name: 'some_test' },
+      { request: notFound(), Gateway: withModules(['core']) }
+    );
+
+    expect(result.error).toMatchObject({ kind: 'project', code: 'TESTS_MODULE_MISSING' });
+    expect(result.error.details.remedy.command).toContain('modules install tests');
+    // The HTML page was the whole of the old answer, and none of its signal.
+    expect(JSON.stringify(result.error)).not.toContain('DOCTYPE');
+  });
+
+  test('with the module installed, a 404 really is the test name', async () => {
+    const result = await runTool(testsRunTool,
+      { env: 'staging', name: 'some_test' },
+      { request: notFound(), Gateway: withModules(['core', 'tests']) }
+    );
+
+    expect(result.error.code).toBe('HTTP_ERROR');
+    expect(result.error.details.statusCode).toBe(404);
+  });
+
+  // Asked only when something already failed, and only for the status that is ambiguous.
+  test('a 500 is not a missing module, and costs no extra request', async () => {
+    const asked = vi.fn();
+    const request = vi.fn().mockResolvedValue({ statusCode: 500, body: 'boom' });
+
+    const result = await runTool(testsRunTool,
+      { env: 'staging', name: 'some_test' },
+      { request, Gateway: withModules(['core'], asked) }
+    );
+
+    expect(result.error.code).toBe('HTTP_ERROR');
+    expect(asked).not.toHaveBeenCalled();
+  });
+
+  test('an instance that will not say which modules it has keeps the original error', async () => {
+    const Unreadable = class { async listModules() { throw new Error('nope'); } };
+
+    const result = await runTool(testsRunTool,
+      { env: 'staging', name: 'some_test' },
+      { request: notFound(), Gateway: Unreadable }
+    );
+
+    expect(result.error.code).toBe('HTTP_ERROR');
+  });
+});

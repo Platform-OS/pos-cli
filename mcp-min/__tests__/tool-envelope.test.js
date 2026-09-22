@@ -212,22 +212,54 @@ describe('an upstream error body is bounded, and stays readable', () => {
     }
   });
 
-  test('a page far larger than the ceiling is cut, and says how much was dropped', async () => {
-    const page = `<!DOCTYPE html><html><head><title>Oops (503)</title></head><body>${'x'.repeat(40000)}</body></html>`;
+  test('a body far larger than the ceiling is cut, and says how much was dropped', async () => {
+    const backtrace = `NoMethodError: ${'x'.repeat(40000)}`;
 
-    const { error } = await runTool(failing(page), {});
+    const { error } = await runTool(failing(backtrace), {});
 
-    expect(error.details.body.length).toBeLessThan(page.length);
+    expect(error.details.body.length).toBeLessThan(backtrace.length);
     expect(error.details.body).toMatch(/… \(\d+ more characters\)$/);
   });
 
   test('what it keeps is the head, which is where the reason is', async () => {
-    const page = `<!DOCTYPE html><html><head><title>Oops (503)</title></head><body>${'x'.repeat(40000)}</body></html>`;
+    const backtrace = `NoMethodError: undefined method 'id'\n${'x'.repeat(40000)}`;
+
+    const { error } = await runTool(failing(backtrace), {});
+
+    expect(error.details.body).toContain("undefined method 'id'");
+    expect(error.details.statusCode).toBe(503);
+  });
+
+  /**
+   * The two error pages this API serves are 1,430 and 2,062 bytes whose entire content is their
+   * title; an evaluation measured a pair of them at 12% of everything it spent on the server. Both
+   * sit under the truncation ceiling, so bounding alone never touched them.
+   */
+  test('an HTML error page is reduced to its title', async () => {
+    const page = `<!DOCTYPE html>\n<html>\n<head>\n  <meta charset='utf-8'>\n  <title>Oops (503)</title>\n</head>\n<body><style>.a{}</style></body>\n</html>`;
 
     const { error } = await runTool(failing(page), {});
 
-    expect(error.details.body).toContain('Oops (503)');
-    expect(error.details.statusCode).toBe(503);
+    expect(error.details.body).toBe(`HTML error page: Oops (503) (${page.length} bytes, not shown)`);
+    expect(error.details.body.length).toBeLessThan(page.length / 2);
+  });
+
+  test('an HTML page with no title still says what it was', async () => {
+    const { error } = await runTool(failing('<html><body>nothing useful</body></html>'), {});
+
+    expect(error.details.body).toMatch(/^HTML error page \(\d+ bytes, not shown\)$/);
+  });
+
+  // The `/_tests/*` endpoints answer with a status rather than throwing, so they build their own
+  // error rather than going through `classify`. The bound is in `toResult`, so they get it too.
+  test('a body a tool put in details itself is bounded the same way', async () => {
+    const page = `<!DOCTYPE html><html><head><title>Aw, Snap!</title></head><body>${'z'.repeat(1400)}</body></html>`;
+    const tool = { handler: async () => { throw ToolError.not_found('HTTP_ERROR', 'Request failed with status 404', { statusCode: 404, body: page }); } };
+
+    const { error } = await runTool(tool, {});
+
+    expect(error.details.body).toContain('Aw, Snap!');
+    expect(error.details.body).not.toContain('zzz');
   });
 
   test('a body within the ceiling is untouched, which is every one measured', async () => {

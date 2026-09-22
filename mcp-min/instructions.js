@@ -42,9 +42,10 @@ const SECTIONS = [
   // above all when writing", which is also on the parameter itself, where the argument is filled
   // in. Stated only when an exposed tool actually authenticates.
   (tools) => ([...tools.values()].some(tool => tool.inputSchema?.properties?.env)
-    ? 'Credentials: name the instance with env. Omit it and a call that only reads uses the first .pos entry, '
-      + 'while a call that could change an instance is refused and the error lists the environments to choose '
-      + 'from. An env that is not in .pos is an error, never a fall back to another instance. '
+    ? 'Credentials: name the instance with env. Without it a call uses the first .pos entry; a call that '
+      + 'could change an instance is refused there only when .pos holds more than one, and the error lists '
+      + 'them — with a single entry the change lands on it with nothing asked. An env that is not in .pos is '
+      + 'an error, never a fall back to another instance. '
       // Who and why; the command with the environment filled in is on the error itself.
       + 'A rejected stored token needs a person to run pos-cli env refresh-token; no tool here can, '
       + 'and the error names the command.'

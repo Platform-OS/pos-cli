@@ -305,6 +305,18 @@ Five tools start work that outlives the call (`deploy-start`, `data-import`, `da
   one that never existed is the worse of the two errors. A probe that fails for any reason leaves
   the error exactly as it was, and a 503 the instance explains as `partner_portal_unavailable` is
   never read this way.
+- **A dry run's answer is on the release, not on the push.** The push answers `ready_for_import`
+  with `report: null`; the file report and any validation error appear on the release a second or
+  two later. `deploy-dry-run` read the push response, so it reported `deleted: 0` for deploys that
+  delete and never surfaced a deploy the instance had already refused. It polls the release to
+  settlement and reports `verdict` — `would_succeed` / `would_fail` / `not_known` — beside the
+  per-category paths.
+- **An upstream body is bounded once, in `toResult`.** `classify` is not the only thing that puts
+  an upstream `body` in `details`: the `/_tests/*` tools build their own errors, because those
+  endpoints answer with a status rather than throwing. Bounding at each thrower is a rule the next
+  one will not know about, so it lives where every error becomes a result — the same reason
+  redaction lives in `log.js`. An HTML page is reduced to its `<title>`: the two this API serves
+  are all markup and no signal.
 - **A deploy finishes twice.** The release import and the asset upload are reported independently, so `jobs/adapters/deploy.js` combines them, taking the phase from `local-phases.js` first (only the process that started an upload can see it) and then from the release record. `unknown` is a real answer after a restart; reporting `running` forever would be worse. `deploy/assets-task.js` waits for the release to settle before sending the manifest, as `lib/push.js` + `directAssetsUploadStrategy` do — sending one mid-import is untested against the API.
 - **Where the assets travel is decided before the archive is built.** An instance with no object
   storage configured cannot presign an upload and answers `501` (`isDirectUploadUnavailable`);

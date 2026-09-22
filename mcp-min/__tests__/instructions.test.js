@@ -95,6 +95,20 @@ describe('instructions claim nothing this server cannot do', () => {
   });
 });
 
+/**
+ * The refusal is conditional — `requireNamedInstance` stands aside for a single `.pos` entry
+ * (`env-required.test.js`) — and the instructions stated it unconditionally, so an agent that read
+ * them believed a forgotten `env` could not do damage. Prose an agent acts on has to be true.
+ */
+describe('what the instructions promise about env is what the guard does', () => {
+  test('the refusal is stated as conditional, not absolute', () => {
+    const text = buildInstructions(resolve());
+
+    expect(text).toMatch(/more than one/);
+    expect(text).not.toMatch(/could change an instance is refused and/);
+  });
+});
+
 describe('instructions are paid for on every session', () => {
   // Charged like the tool definitions are, and bounded for the same reason. Kept apart from the
   // tools/list budget so that each can be read on its own.

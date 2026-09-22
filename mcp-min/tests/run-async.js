@@ -5,6 +5,7 @@ import { mintFor } from '../jobs/handle.js';
 import { authProperties } from '../schemas/auth.js';
 import { ToolError, kindForStatus } from '../tool-error.js';
 import makeRequest, { testAuthHeaders, testsUrl } from './request.js';
+import { missingTestsModule } from './module-check.js';
 
 const testsRunAsyncTool = {
   description: 'Start a test run on an instance and return at once with a job_id to poll with job-status. To run one test and wait for it, use unit-tests-run.',
@@ -33,12 +34,13 @@ const testsRunAsyncTool = {
 
     // The endpoint answers with a status rather than throwing, so the kind is decided here.
     if (triggerResponse.statusCode >= 400) {
-      throw new ToolError(
-        kindForStatus(triggerResponse.statusCode),
-        'HTTP_ERROR',
-        `Trigger request failed with status ${triggerResponse.statusCode}`,
-        { statusCode: triggerResponse.statusCode, body: triggerResponse.body }
-      );
+      throw (await missingTestsModule(triggerResponse.statusCode, auth, ctx))
+        ?? new ToolError(
+          kindForStatus(triggerResponse.statusCode),
+          'HTTP_ERROR',
+          `Trigger request failed with status ${triggerResponse.statusCode}`,
+          { statusCode: triggerResponse.statusCode, body: triggerResponse.body }
+        );
     }
 
     let runInfo;

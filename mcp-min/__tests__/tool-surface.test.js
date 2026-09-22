@@ -91,7 +91,12 @@ const BARE_TOOLS = [
 // 17,727 once `env` stopped saying "the first entry if omitted" on all eighteen tools that take
 // it. That was a warning the model had to remember; TASK-31 made it a refusal it receives at the
 // moment it matters, so the parameter can just say what it is.
-const BARE_TOOLS_LIST_BYTES = 17727;
+//
+// 17,860 once deploy-dry-run's description gained `verdict`. It reads the release the dry run
+// creates rather than the push response, so it can now say whether the deploy would be refused at
+// all — and an agent that does not know to look at that field is back to the failure the field
+// exists for.
+const BARE_TOOLS_LIST_BYTES = 17860;
 
 const HANG_MS = 15000;
 

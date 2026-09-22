@@ -43,9 +43,9 @@ export class ToolError extends Error {
     if (details !== undefined) this.details = details;
   }
 
-  /** The body a client receives. */
+  /** The body a client receives, with any upstream body bounded — see `boundedDetails`. */
   toResult() {
-    return { kind: this.kind, code: this.code, message: this.message, ...(this.details !== undefined && { details: this.details }) };
+    return { kind: this.kind, code: this.code, message: this.message, ...(this.details !== undefined && { details: boundedDetails(this.details) }) };
   }
 }
 
@@ -91,24 +91,42 @@ const UNREACHABLE = new Set(['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRES
 
 /**
  * A ceiling on an upstream body that is not JSON, which the model pays for in tokens while it is
- * already dealing with a failure.
- *
- * `apiRequest` parses the body as JSON when it can, so a string here means the instance or
- * something in front of it answered with a page instead. Measured against a real instance: an
- * error page is 1,430 bytes (404) to 2,062 bytes (503), and a JSON or plain-text error is 10 to 27
- * — so nothing observed reaches this, and it exists for the tail we cannot measure from one
- * instance, such as a CDN's 502 or an application backtrace. Parsed JSON is never cut: it is small
- * and structured, and it is what carries the file path a failed deploy names.
- *
- * The head is kept rather than the tail because that is where the reason is — `<title>Oops
- * (503)</title>` sits in the first 200 bytes of both pages measured.
+ * already dealing with a failure. `apiRequest` parses JSON when it can, so a string here means the
+ * instance, or something in front of it, answered with a page. Parsed JSON is never cut: it is
+ * small, structured, and carries the file paths a failed deploy names.
  */
 export const MAX_ERROR_BODY_LENGTH = 4096;
 
-const boundedBody = (body) => {
-  if (typeof body !== 'string' || body.length <= MAX_ERROR_BODY_LENGTH) return body;
+const HTML_PAGE = /^\s*(?:<!doctype\s+html|<html[\s>])/i;
+const HTML_TITLE = /<title[^>]*>([\s\S]*?)<\/title>/i;
+
+/**
+ * An HTML error page is all markup and no signal: the two this API serves are 1,430 and 2,062
+ * bytes whose only content is `<title>Aw, Snap!</title>` and `<title>Oops (503)</title>`. An
+ * evaluation measured a pair of them at 12% of everything it spent on this server. So the title is
+ * kept and the markup is not.
+ */
+export const upstreamBody = (body) => {
+  if (typeof body !== 'string') return body;
+
+  if (HTML_PAGE.test(body)) {
+    const title = HTML_TITLE.exec(body)?.[1]?.trim();
+    return `HTML error page${title ? `: ${title}` : ''} (${body.length} bytes, not shown)`;
+  }
+
+  if (body.length <= MAX_ERROR_BODY_LENGTH) return body;
   return `${body.slice(0, MAX_ERROR_BODY_LENGTH)}… (${body.length - MAX_ERROR_BODY_LENGTH} more characters)`;
 };
+
+/**
+ * Bounded here rather than at each thrower, for the reason redaction lives in `log.js`: doing it
+ * at call sites is a rule the next one will not know about. `classify` and the three `/_tests/*`
+ * throwers all put an upstream `body` in `details`, and a new one is covered by construction.
+ */
+const boundedDetails = (details) =>
+  (details !== null && typeof details === 'object' && typeof details.body === 'string')
+    ? { ...details, body: upstreamBody(details.body) }
+    : details;
 
 /**
  * What a thrown error means, when whatever threw it did not say. It lives here rather than with
@@ -123,7 +141,7 @@ export function classify(err) {
 
   const status = err?.statusCode ?? err?.status;
   const code = networkCode(err);
-  const details = status ? { statusCode: status, ...(err?.response?.body !== undefined && { body: boundedBody(err.response.body) }) } : undefined;
+  const details = status ? { statusCode: status, ...(err?.response?.body !== undefined && { body: err.response.body }) } : undefined;
   const message = String(err?.message || err);
 
   if (err?.name === 'RequestError' || (code && UNREACHABLE.has(code))) {

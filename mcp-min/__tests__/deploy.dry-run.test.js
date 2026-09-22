@@ -24,25 +24,35 @@ const makeProject = () => {
   return dir;
 };
 
-/** Records every call, and answers the shapes the API really sends. */
-const gatewayFake = ({ report, assetStatuses = [] } = {}) => {
+/**
+ * Records every call, and answers the shapes the API really sends: the push carries no report at
+ * all (measured — it answers `ready_for_import` with `report: null`), and the file report and any
+ * validation error appear on the release once it settles.
+ */
+const gatewayFake = ({ report = null, releaseStatus = 'success', error = null, assetStatuses = [] } = {}) => {
   const calls = { push: [], sendManifest: [], getStatus: [] };
-  let statusIndex = 0;
+  let assetIndex = 0;
   class Fake {
     constructor(auth) { calls.constructedWith = auth; }
     async push(formData) {
       // The stream keeps the temp directory busy if it is never read; recording the keys is enough.
       calls.push.push(Object.fromEntries(Object.entries(formData).map(([k, v]) => [k, typeof v === 'object' ? '<stream>' : v])));
-      return { id: 'rel-1', status: 'dry_run', report };
+      return { id: 'rel-1', status: 'ready_for_import' };
     }
     async sendManifest(manifest, releaseId) { calls.sendManifest.push({ manifest, releaseId }); return {}; }
     async getStatus(id) {
       calls.getStatus.push(id);
-      return assetStatuses[Math.min(statusIndex++, assetStatuses.length - 1)] ?? {};
+      const release = { status: releaseStatus, report, error };
+      // The first poll settles the release; the asset script runs on the polls after it.
+      if (calls.getStatus.length === 1) return release;
+      return { ...release, ...(assetStatuses[Math.min(assetIndex++, assetStatuses.length - 1)] ?? {}) };
     }
   }
   return { Fake, calls };
 };
+
+/** Milliseconds, so the release and asset loops are decided rather than slept. */
+const FAST = { pollIntervalMs: 5, phaseTimeoutMs: 500 };
 
 beforeEach(() => {
   cwd = process.cwd();
@@ -60,7 +70,7 @@ describe('deploy-dry-run applies nothing', () => {
   test('every request it sends carries dry_run', async () => {
     const { Fake, calls } = gatewayFake({ report: { Liquid: { upserted: ['a.liquid'], deleted: ['gone.liquid'] } } });
 
-    const result = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake });
+    const result = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
 
     expect(result.ok, JSON.stringify(result.error)).toBe(true);
     expect(calls.push).toHaveLength(1);
@@ -81,7 +91,7 @@ describe('deploy-dry-run applies nothing', () => {
   ])('%s still sends dry_run', async (_label, extra) => {
     const { Fake, calls } = gatewayFake({ report: {} });
 
-    await runTool(dryRunTool, { ...AUTH, ...extra }, { Gateway: Fake });
+    await runTool(dryRunTool, { ...AUTH, ...extra }, { Gateway: Fake, ...FAST });
 
     expect(calls.push).toHaveLength(1);
     expect(calls.push[0]['marketplace_builder[dry_run]']).toBe('true');
@@ -95,7 +105,7 @@ describe('deploy-dry-run applies nothing', () => {
       assetStatuses: [{ asset_status: 'in_progress' }, { asset_report: { upserted: ['assets/app.css'], deleted: [] } }]
     });
 
-    const result = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake });
+    const result = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
 
     expect(result.ok).toBe(true);
     // The manifest is described to the API; the bytes never leave.
@@ -114,7 +124,7 @@ describe('deploy-dry-run applies nothing', () => {
     const { Fake } = gatewayFake({ report: {}, assetStatuses: [{ asset_report: { upserted: [], deleted: [] } }] });
     const sendProgress = vi.fn();
 
-    await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, sendProgress });
+    await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, sendProgress, ...FAST });
 
     expect(sendProgress).toHaveBeenCalledTimes(1);
     const [report, ...extra] = sendProgress.mock.calls[0];
@@ -137,7 +147,7 @@ describe('what it reports', () => {
       }
     });
 
-    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake });
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
 
     expect(data.deleted.count).toBe(2);
     expect(data.deleted.files).toEqual(['pages/old.liquid', 'queries/gone.graphql']);
@@ -151,7 +161,7 @@ describe('what it reports', () => {
   test('a category that reports counts rather than paths still counts', async () => {
     const { Fake } = gatewayFake({ report: { Liquid: { upserted: 12, deleted: 3, skipped: 0 } } });
 
-    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake });
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
 
     expect(data.deleted.count).toBe(3);
     expect(data.deleted.files).toEqual([]);
@@ -163,7 +173,7 @@ describe('what it reports', () => {
     fs.writeFileSync(path.join(workDir, 'app', 'assets', 'app.css'), 'body{}');
     const { Fake } = gatewayFake({ report: {}, assetStatuses: [{ asset_error: { error: 'manifest rejected' } }] });
 
-    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake });
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
 
     expect(data.assets).toMatchObject({ state: 'failed', error: 'manifest rejected' });
   });
@@ -177,7 +187,7 @@ describe('what it reports', () => {
       async sendManifest() { throw new Error('must not be called without a release'); }
     }
 
-    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: NoReleaseId });
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: NoReleaseId, ...FAST });
 
     expect(data.assets).toEqual({ state: 'not_reported', count: 1 });
   });
@@ -185,7 +195,7 @@ describe('what it reports', () => {
   test('a project with no assets says so rather than omitting them', async () => {
     const { Fake, calls } = gatewayFake({ report: {} });
 
-    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake });
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
 
     expect(data.assets).toEqual({ state: 'none', count: 0 });
     expect(calls.sendManifest).toHaveLength(0);
@@ -199,7 +209,7 @@ describe('its failures', () => {
     try {
       const { Fake, calls } = gatewayFake({ report: {} });
 
-      const result = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake });
+      const result = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
 
       expect(result.ok).toBe(false);
       expect(result.error.kind).toBe('project');
@@ -217,7 +227,7 @@ describe('its failures', () => {
       async push() { throw Object.assign(new Error('Unprocessable'), { statusCode: 422 }); }
     }
 
-    const result = await runTool(dryRunTool, { ...AUTH }, { Gateway: Refuses });
+    const result = await runTool(dryRunTool, { ...AUTH }, { Gateway: Refuses, ...FAST });
 
     expect(result.ok).toBe(false);
     expect(result.error).toMatchObject({ kind: 'instance', details: { statusCode: 422 } });
@@ -255,7 +265,7 @@ describe('the archive directory a dry run writes into', () => {
   test('is removed when the dry run answers', async () => {
     const { Fake } = gatewayFake({ report: { Liquid: { upserted: ['a.liquid'] } } });
 
-    const result = await runTool(dryRunTool, AUTH, { Gateway: Fake });
+    const result = await runTool(dryRunTool, AUTH, { Gateway: Fake, ...FAST });
 
     expect(result.ok).toBe(true);
     expect(result.data.archive).toEqual({ fileCount: 1 });
@@ -267,7 +277,7 @@ describe('the archive directory a dry run writes into', () => {
     fs.rmSync(path.join(workDir, 'app', 'views'), { recursive: true, force: true });
     const { Fake, calls } = gatewayFake({});
 
-    const result = await runTool(dryRunTool, AUTH, { Gateway: Fake });
+    const result = await runTool(dryRunTool, AUTH, { Gateway: Fake, ...FAST });
 
     expect(result).toMatchObject({ ok: false, error: { code: 'EMPTY_ARCHIVE' } });
     expect(calls.push).toEqual([]);
@@ -279,9 +289,94 @@ describe('the archive directory a dry run writes into', () => {
       async push() { throw Object.assign(new Error('Request failed with status 422'), { statusCode: 422 }); }
     }
 
-    const result = await runTool(dryRunTool, AUTH, { Gateway: Fake });
+    const result = await runTool(dryRunTool, AUTH, { Gateway: Fake, ...FAST });
 
     expect(result.ok).toBe(false);
     expect(leftBehind()).toEqual([]);
+  });
+});
+
+/**
+ * The report is read off the settled release, not the push. Measured against a live instance: the
+ * push answers `ready_for_import` with `report: null`, and the report — and any validation error —
+ * appear a second or two later. Reading the push response gave every dry run `byCategory: {}`, so
+ * the only thing left in it was the asset phase and the tool answered `deleted: 0` for deploys
+ * that delete. An agent that ran the documented pre-flight check still destroyed files.
+ */
+describe('what the dry run reports', () => {
+  test('names the files a non-partial deploy would delete', async () => {
+    const { Fake } = gatewayFake({
+      report: { Pages: { upserted: ['views/pages/new.liquid'], deleted: ['views/pages/doomed.liquid'] } }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.deleted).toEqual({ count: 1, files: ['views/pages/doomed.liquid'] });
+    expect(data.byCategory.Pages.upserted.files).toEqual(['views/pages/new.liquid']);
+    expect(data.verdict).toBe('would_succeed');
+  });
+
+  // The push response never carries one, so a tool that reads it there reports nothing at all.
+  test('does not take the report from the push response', async () => {
+    class PushCarriesAReport {
+      async push() { return { id: 'rel-1', status: 'ready_for_import', report: { Pages: { deleted: ['ignored.liquid'] } } }; }
+      async getStatus() { return { status: 'success', report: { Pages: { deleted: ['views/pages/real.liquid'] } } }; }
+      async sendManifest() { return {}; }
+    }
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: PushCarriesAReport, ...FAST });
+
+    expect(data.deleted.files).toEqual(['views/pages/real.liquid']);
+  });
+
+  /**
+   * The instance evaluates the deploy and can refuse it outright — a table with records still in
+   * it cannot be dropped, for one. That verdict is the answer to the question this tool is asked,
+   * and it used to be invisible: the tool never looked at the release.
+   */
+  test('a deploy the instance would refuse is reported as would_fail, with the files', async () => {
+    const { Fake } = gatewayFake({
+      releaseStatus: 'error',
+      error: {
+        error: 'Validation failed:\nschema/note.yml: cannot be deleted — 1 record(s) still exist.',
+        details: [{ file: 'schema/note.yml', errors: ['cannot be deleted — 1 record(s) still exist.'] }]
+      }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('would_fail');
+    expect(data.error.message).toMatch(/cannot be deleted/);
+    expect(data.error.files).toEqual([{ file: 'schema/note.yml', errors: ['cannot be deleted — 1 record(s) still exist.'] }]);
+  });
+
+  // Nothing to validate a manifest against, and waiting on one would spend the timeout to find out.
+  test('a refused release does not then wait on the asset phase', async () => {
+    const { Fake, calls } = gatewayFake({ releaseStatus: 'error', error: { error: 'nope' } });
+
+    await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(calls.sendManifest).toEqual([]);
+  });
+
+  // An unfinished answer, not an error: the archive was built and the push accepted.
+  test('a release that never settles is not_known rather than a guess', async () => {
+    const { Fake } = gatewayFake({ releaseStatus: 'in_progress' });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('not_known');
+    expect(data.deleted).toEqual({ count: 0, files: [] });
+  });
+
+  test('a cancelled call stops polling the release', async () => {
+    const controller = new AbortController();
+    const { Fake, calls } = gatewayFake({ releaseStatus: 'in_progress' });
+
+    const running = runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST, signal: controller.signal });
+    await vi.waitFor(() => expect(calls.getStatus.length).toBeGreaterThan(0));
+    controller.abort();
+
+    expect(await running).toMatchObject({ ok: false, error: { kind: 'cancelled' } });
   });
 });

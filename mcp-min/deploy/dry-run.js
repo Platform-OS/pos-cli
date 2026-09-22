@@ -30,13 +30,20 @@ import { makeArchive } from '../../lib/archive.js';
 import { manifestGenerate } from '../../lib/assets/manifest.js';
 import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
+import { releaseState } from '../jobs/adapters/deploy.js';
 import { makeWorkDir, removeWorkDir } from './work-dir.js';
 
-const ASSET_POLL_MS = 1000;
-// The release report comes back with the upload; only the asset validation is polled. A minute is
-// far more than the usual few seconds, and timing out is reported as an unfinished answer rather
-// than an error, so the file report is never lost to a slow asset phase.
-const ASSET_TIMEOUT_MS = 60_000;
+const POLL_MS = 1000;
+// Both phases are validation only — no import, no S3 — and settle in a second or two. A minute is
+// far more than that, and timing out is reported as an unfinished answer rather than an error, so
+// what did come back is never lost to a slow phase.
+const PHASE_TIMEOUT_MS = 60_000;
+
+/** Seams, as `job-status` has: tests drive the loops rather than sleep them. */
+const timing = (ctx) => ({
+  pollMs: ctx.pollIntervalMs ?? POLL_MS,
+  timeoutMs: ctx.phaseTimeoutMs ?? PHASE_TIMEOUT_MS
+});
 
 const toList = (value) => (Array.isArray(value) ? value : []);
 const toCount = (value) => (Array.isArray(value) ? value.length : (typeof value === 'number' ? value : 0));
@@ -60,8 +67,8 @@ const sumOver = (categories, key) => Object.values(categories).reduce((n, c) => 
  * `null` both for "no assets to report on" and "the asset phase failed" — a distinction this tool
  * has to keep, or a failure is reported as an absence.
  */
-const waitForAssets = async (gateway, releaseId, signal) => {
-  const deadline = Date.now() + ASSET_TIMEOUT_MS;
+const waitForAssets = async (gateway, releaseId, signal, { pollMs, timeoutMs }) => {
+  const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
     if (signal?.aborted) throw cancelled();
@@ -72,14 +79,46 @@ const waitForAssets = async (gateway, releaseId, signal) => {
     // An API that does not report on assets sends no status at all; there is nothing to wait for.
     if (asset_status !== 'in_progress') return { state: 'not_reported' };
 
-    await abortableDelay(ASSET_POLL_MS, signal);
+    await abortableDelay(pollMs, signal);
   }
 
   return { state: 'still_validating' };
 };
 
+/**
+ * The file report exists only once the release has settled: the push answers `ready_for_import`
+ * with `report: null`, and the report — and any validation error — appear on the release a second
+ * or two later. Reading it off the push response gave every dry run an empty report, so the tool
+ * answered `deleted: 0` for deploys that delete, and said nothing at all about a deploy the
+ * instance had already rejected.
+ */
+const waitForRelease = async (gateway, releaseId, signal, { pollMs, timeoutMs }) => {
+  const deadline = Date.now() + timeoutMs;
+
+  for (;;) {
+    if (signal?.aborted) throw cancelled();
+
+    const release = (await gateway.getStatus(releaseId)) || {};
+    // No status is not a settled release; `releaseState` would read it as finished.
+    const state = release.status === undefined ? 'running' : releaseState(release.status);
+    if (state !== 'running') return { state, release };
+    if (Date.now() + pollMs > deadline) return { state: 'running', release };
+
+    await abortableDelay(pollMs, signal);
+  }
+};
+
+/** What the instance refused, per file where it said. */
+const validationError = (release) => {
+  const body = release?.error ?? {};
+  return {
+    message: body.error || 'the instance rejected this deploy',
+    ...(Array.isArray(body.details) && { files: body.details })
+  };
+};
+
 const dryRunDeployTool = {
-  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first.',
+  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start would be refused too, and error names the files.',
   annotations: { destructiveHint: false },
   inputSchema: {
     type: 'object',
@@ -141,15 +180,33 @@ const dryRunDeployTool = {
     }
 
     const releaseId = pushResponse?.id ?? null;
-    const categories = Object.fromEntries(
-      Object.entries(pushResponse?.report ?? {}).map(([name, data]) => [name, category(data)])
-    );
+    let categories = {};
+    // `would_fail` is the answer to the question this tool is asked, not a failure of the call, so
+    // it travels in the result — where the description tells the agent to read it.
+    let verdict = 'not_known';
+    let error;
+
+    const clock = timing(ctx);
+
+    if (releaseId) {
+      const { state, release } = await waitForRelease(gateway, releaseId, ctx.signal, clock);
+      categories = Object.fromEntries(
+        Object.entries(release.report ?? {}).map(([name, data]) => [name, category(data)])
+      );
+      if (state === 'done') verdict = 'would_succeed';
+      if (state === 'failed') {
+        verdict = 'would_fail';
+        error = validationError(release);
+      }
+    }
 
     // The manifest is sent, never the files: the release is a dry run, so the API validates the
     // manifest against it instead of applying it, and nothing reaches S3.
     const assetFiles = await files.getAssets();
     let assets = { state: 'none', count: 0 };
-    if (assetFiles.length > 0) {
+    // A release the instance has already rejected has nothing for a manifest to be validated
+    // against, and waiting on one would spend a minute to learn that.
+    if (assetFiles.length > 0 && verdict !== 'would_fail') {
       // `none` means the project has none. Without a release id there is nothing to validate a
       // manifest against, which is a different answer and has to read as one.
       assets = { state: 'not_reported', count: assetFiles.length };
@@ -161,7 +218,7 @@ const dryRunDeployTool = {
 
         // The report goes to `byCategory` with the rest of the file report, so it is read the same
         // way; what stays here is the verdict on the asset phase itself.
-        const { report, ...outcome } = await waitForAssets(gateway, releaseId, ctx.signal);
+        const { report, ...outcome } = await waitForAssets(gateway, releaseId, ctx.signal, clock);
         assets = { ...outcome, count: assetFiles.length };
         if (report) categories.Asset = category(report);
       }
@@ -171,6 +228,10 @@ const dryRunDeployTool = {
       applied: false,
       releaseId,
       partial,
+      // The verdict before the detail: `would_fail` means deploy-start would not succeed either,
+      // and `error` says which files the instance refused.
+      verdict,
+      ...(error && { error }),
       // The question an agent is asking, answered before the detail: a non-partial deploy deletes
       // everything missing from the build, and this is that list.
       deleted: { count: sumOver(categories, 'deleted'), files: Object.values(categories).flatMap(c => c.deleted.files) },

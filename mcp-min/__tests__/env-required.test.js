@@ -166,3 +166,28 @@ describe('the policy belongs to the tool, not to the caller', () => {
     expect(auth.source).toBe('.pos(prod)');
   });
 });
+
+/**
+ * The exception, and the reason the server instructions have to state it. One `.pos` entry is not
+ * a guess — there is nothing to choose between — so the guard stands aside and a write lands on
+ * it. The instructions promised an unconditional refusal for two releases, which is how an
+ * evaluating agent came to believe a forgotten `env` was safe on a non-partial deploy.
+ */
+describe('one environment is not a guess', () => {
+  const ONE = { verification: { url: 'https://only.example.com', email: 'e@x', token: 'only-token' } };
+
+  test('a call that could change an instance is allowed to land on it', async () => {
+    const result = await runTool(registry.get('constants-set'), { name: 'X', value: '1' }, context(ONE));
+
+    expect(result.error?.code).not.toBe('ENV_REQUIRED');
+    expect(result.meta.auth.source).toBe('.pos(verification)');
+  });
+
+  test('adding a second environment is what turns the guard on', async () => {
+    const two = { ...ONE, other: { url: 'https://other.example.com', email: 'e@x', token: 'other-token' } };
+
+    const result = await runTool(registry.get('constants-set'), { name: 'X', value: '1' }, context(two));
+
+    expect(result.error.code).toBe('ENV_REQUIRED');
+  });
+});
