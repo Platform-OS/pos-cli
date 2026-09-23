@@ -1174,12 +1174,31 @@ cleared the moment response headers arrive, so reading a slow body is never cut 
 `AbortSignal.timeout` would have been a whole-response deadline, which aborts precisely the
 transfers that are working.
 
-A request that sends a file gets `UPLOAD_TIMEOUT_MS` (15 min) instead, because its headers cannot
-arrive until the upload has gone up. `carriesAFile` must keep matching the body-building beside it:
-a file part, a `FormData` the caller built (a presigned S3 POST) and raw bytes (a presigned PUT) are
-all uploads, and the last two have no `path` to recognise them by. A caller that knows its endpoint
-passes `timeout` — the Partner Portal and the presign service answer JSON in milliseconds, so
-`lib/portal.js` and `lib/presignUrl.js` set 30s rather than wait five minutes on a stalled one.
+A request that sends a file asks for `UPLOAD_TIMEOUT_MS` (15 min) instead, because its headers
+cannot arrive until the upload has gone up. `carriesAFile` must keep matching the body-building
+beside it: a file part, a `FormData` the caller built (a presigned S3 POST) and raw bytes (a
+presigned PUT) are all uploads, and the last two have no `path` to recognise them by. A caller that
+knows its endpoint passes `timeout` — the Partner Portal and the presign service answer JSON in
+milliseconds, so `lib/portal.js` and `lib/presignUrl.js` set 30s rather than wait five minutes on a
+stalled one.
+
+**That 15 minutes is asked for and not granted, and an upload is capped at five.** Node's global
+fetch applies undici's `headersTimeout` (300s) to the whole send, and it does not reset as bytes
+move — measured 2026-09-24 on Node 25.6: a healthy 96MB upload into a peer reading a steady 256KB/s
+was killed at 300.9s with `UND_ERR_HEADERS_TIMEOUT`, after 64MB had arrived, and a send into a peer
+that read nothing failed at 301.4s with the same error. So any upload needing more than five minutes
+fails today whatever bound this file names: 50MB needs 1.4 Mbit/s sustained, 500MB needs 13. The
+ceiling is movable, and moving it is the whole fix: the same 96MB upload at the same rate was
+killed at 300.9s under the default and answered **200 at 384.8s** with `headersTimeout` raised to
+15 min through a per-request `dispatcher`. That means taking `undici` on as a direct dependency,
+which it is not today (`node:https`, which has no default timeout, is the alternative). Until one
+of those lands, `UPLOAD_TIMEOUT_MS` is what pos-cli asks for and not what applies (TASK to raise
+it), and an upload needing over five minutes cannot succeed.
+
+`RESPONSE_TIMEOUT_MS` is the same 300s as undici's default, so for an ordinary call the two bounds
+race; ours wins only because its timer starts a few milliseconds earlier, before the connect. That
+is what makes the failure the classified `ETIMEDOUT` rather than a bare `fetch failed`, so the
+margin is worth widening rather than relying on.
 
 This is a backstop, not a latency target — a full 39-test suite answers in 2.4s. It exists because
 the MCP server is long-lived and answers concurrently, and its `ctx.signal` fires only when the
