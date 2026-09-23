@@ -834,6 +834,96 @@ describe('apiRequest', () => {
       );
     });
   });
+
+  // Without a deadline these inherit undici's five-minute defaults, which reach an operator
+  // as a command that stopped rather than a request that failed.
+  describe('request deadline', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    // A fetch that answers only when its signal is aborted: the stalled connection the
+    // deadline exists for.
+    const stalledFetch = () =>
+      global.fetch.mockImplementation((_uri, options) => new Promise((_resolve, reject) => {
+        options.signal.addEventListener('abort', () => {
+          reject(Object.assign(new Error('This operation was aborted'), { name: 'AbortError' }));
+        });
+      }));
+
+    test('rejects a request that runs out of time as a network failure', async () => {
+      stalledFetch();
+
+      const promise = apiRequest({ uri: 'https://partners.platformos.com/api/pos_modules', timeout: 3000 });
+      // ServerError reads .name to pick a handler and walks to .code for the message, so a
+      // deadline has to arrive shaped like every other network failure, not as an AbortError.
+      const rejection = expect(promise).rejects.toMatchObject({
+        name: 'RequestError',
+        code: 'ETIMEDOUT',
+        options: { uri: 'https://partners.platformos.com/api/pos_modules' }
+      });
+
+      await vi.advanceTimersByTimeAsync(3000);
+      await rejection;
+    });
+
+    test('leaves a request that answers in time alone', async () => {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('{"id":1540}')
+      });
+
+      await expect(apiRequest({ uri: 'https://partners.platformos.com/api/x', timeout: 3000 }))
+        .resolves.toEqual({ id: 1540 });
+
+      // The deadline is cleared on the way out; an armed timer would outlive the command.
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    // A deadline used to be opt-in, and a call that asked for none was handed to fetch with no
+    // signal at all. Every request is bounded now; `timeout` only shortens the default, which is
+    // what the endpoints with a known answer time do. What that default is, and that it is not
+    // reached early, is in 'a request that gets no response' below.
+    test('bounds a request that asks for no timeout of its own', async () => {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('{}')
+      });
+
+      await apiRequest({ uri: 'https://partners.platformos.com/api/x' });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://partners.platformos.com/api/x',
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
+      );
+      // Cleared on the way out all the same: an armed timer would outlive the command.
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    test("does not mistake the caller's own abort for a deadline", async () => {
+      stalledFetch();
+      const caller = new AbortController();
+
+      const failure = apiRequest({ uri: 'https://partners.platformos.com/api/x', timeout: 60000, signal: caller.signal })
+        .catch((e) => e);
+
+      caller.abort();
+      await vi.advanceTimersByTimeAsync(0);
+
+      const error = await failure;
+      expect(error.name).toBe('RequestError');
+      expect(error.message).toMatch(/aborted/);
+      // Not ETIMEDOUT: the deadline had not passed, and saying it had would send an
+      // operator looking for a slow server instead of the code that cancelled the call.
+      expect(error.code).toBeUndefined();
+    });
+  });
 });
 
 /**
@@ -916,6 +1006,42 @@ describe('a request that gets no response', () => {
     silent();
     let done = false;
     apiRequest({ method: 'POST', uri: 'https://x.example.com/releases', formData: { file: { path: '/tmp/release.zip' } } })
+      .catch(() => { done = true; });
+
+    await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS + 1000);
+    expect(done, 'an upload must not be cut off at the ordinary bound').toBe(false);
+
+    await vi.advanceTimersByTimeAsync(UPLOAD_TIMEOUT_MS);
+    expect(done).toBe(true);
+  });
+
+  /**
+   * The two shapes an upload to object storage takes: a presigned PUT, whose body is the file's
+   * bytes, and a presigned POST, whose body is a FormData the caller built around them. Neither
+   * has a `path` to recognise, so both read as an ordinary JSON call and were cut off at five
+   * minutes — on precisely the uploads the longer bound exists for.
+   */
+  test('a raw body of bytes is an upload, not an ordinary call', async () => {
+    silent();
+    let done = false;
+    apiRequest({ method: 'PUT', uri: 'https://s3.example.com/assets.zip', body: Buffer.from('zip'), json: false })
+      .catch(() => { done = true; });
+
+    await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS + 1000);
+    expect(done, 'an upload must not be cut off at the ordinary bound').toBe(false);
+
+    await vi.advanceTimersByTimeAsync(UPLOAD_TIMEOUT_MS);
+    expect(done).toBe(true);
+  });
+
+  test("a FormData the caller built is an upload too", async () => {
+    silent();
+    const formData = new FormData();
+    formData.append('key', 'assets/${filename}');
+    formData.append('file', new Blob(['zip']), 'assets.zip');
+
+    let done = false;
+    apiRequest({ method: 'POST', uri: 'https://s3.example.com/bucket', formData, json: false })
       .catch(() => { done = true; });
 
     await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS + 1000);

@@ -1174,9 +1174,12 @@ cleared the moment response headers arrive, so reading a slow body is never cut 
 `AbortSignal.timeout` would have been a whole-response deadline, which aborts precisely the
 transfers that are working.
 
-A request whose body is a file gets `UPLOAD_TIMEOUT_MS` (15 min) instead, because its headers
-cannot arrive until the upload has gone up; `carriesAFile` must keep matching what `buildFormData`
-turns into a file part. A caller that knows better passes `timeoutMs`.
+A request that sends a file gets `UPLOAD_TIMEOUT_MS` (15 min) instead, because its headers cannot
+arrive until the upload has gone up. `carriesAFile` must keep matching the body-building beside it:
+a file part, a `FormData` the caller built (a presigned S3 POST) and raw bytes (a presigned PUT) are
+all uploads, and the last two have no `path` to recognise them by. A caller that knows its endpoint
+passes `timeout` — the Partner Portal and the presign service answer JSON in milliseconds, so
+`lib/portal.js` and `lib/presignUrl.js` set 30s rather than wait five minutes on a stalled one.
 
 This is a backstop, not a latency target — a full 39-test suite answers in 2.4s. It exists because
 the MCP server is long-lived and answers concurrently, and its `ctx.signal` fires only when the
@@ -1186,8 +1189,9 @@ reaches a tool as `kind: unavailable` with the host named — the same as a refu
 distinguishable from the caller cancelling, which is reported as itself.
 
 `page-fetch` shares the helper rather than carrying its own: it runs a page's Liquid, so it is the
-likeliest request in the system to hang. `waitForUnpack` and the S3 upload use `fetch` directly and
-are bounded by their own loops.
+likeliest request in the system to hang. `waitForUnpack` (`lib/assets.js`) is the one caller still
+using `fetch` directly: each CDN check carries its own 10s `AbortSignal.timeout` inside a 90s
+budget, which is a poll rather than a request.
 
 ## Node.js Version
 

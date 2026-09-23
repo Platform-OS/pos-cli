@@ -23,9 +23,15 @@ beforeEach(() => {
   filePath = path.join(tmpDir, 'assets.zip');
   fs.writeFileSync(filePath, 'zip');
 
+  // The shape apiRequest reads: these calls go through it rather than a bare fetch, so that a
+  // refusal arrives as the StatusCodeError ServerError and isDirectUploadUnavailable understand.
   vi.stubGlobal('fetch', async (url, options) => {
     calls.push({ url: String(url), headers: options.headers });
-    return { ok: true, json: async () => ({ url: 'https://s3.example.com/put', accessUrl: 'https://cdn.example.com/a.zip' }) };
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ url: 'https://s3.example.com/put', accessUrl: 'https://cdn.example.com/a.zip' })
+    };
   });
 
   vi.stubEnv('MARKETPLACE_URL', 'https://from-the-environment.example.com');

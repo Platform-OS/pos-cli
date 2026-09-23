@@ -217,6 +217,117 @@ describe('waitForStatus', () => {
     );
   });
 
+  test('rejects on a failure status the caller named', async () => {
+    // The portal's module pipeline ends on `rejected`, which is not `failed` and never
+    // becomes `accepted`. Left unnamed it took the "unknown status" branch below and was
+    // polled forever.
+    const statusCheck = vi.fn()
+      .mockResolvedValueOnce({ status: 'pending' })
+      .mockResolvedValue({ status: 'rejected', error_message: 'archive structure is wrong' });
+
+    const promise = waitForStatus(statusCheck, ['pending'], 'done', 1000, null, { failureStatus: ['rejected'] });
+    promise.catch(() => {});
+
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(promise).rejects.toEqual({ status: 'rejected', error_message: 'archive structure is wrong' });
+    expect(statusCheck).toHaveBeenCalledTimes(2);
+  });
+
+  test('rejects once the timeout elapses and stops polling', async () => {
+    const statusCheck = vi.fn().mockResolvedValue({ status: 'pending' });
+
+    const promise = waitForStatus(statusCheck, ['pending'], 'done', 1000, null, { timeout: 5000 });
+    promise.catch(() => {});
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await expect(promise).rejects.toThrow(/Timed out after 5s.*last status: pending/);
+
+    const pollsWhenTimedOut = statusCheck.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(statusCheck).toHaveBeenCalledTimes(pollsWhenTimedOut);
+  });
+
+  test('uses the caller\'s timeout message when given one', async () => {
+    const statusCheck = vi.fn().mockResolvedValue({ status: 'pending' });
+
+    const promise = waitForStatus(statusCheck, ['pending'], 'done', 1000, null, {
+      timeout: 2000,
+      timeoutMessage: 'The portal never finished processing this release.'
+    });
+    promise.catch(() => {});
+
+    await vi.advanceTimersByTimeAsync(2000);
+    await expect(promise).rejects.toThrow('The portal never finished processing this release.');
+  });
+
+  test('does not time out a poll that succeeds in time', async () => {
+    const statusCheck = vi.fn()
+      .mockResolvedValueOnce({ status: 'pending' })
+      .mockResolvedValue({ status: 'done' });
+
+    const promise = waitForStatus(statusCheck, ['pending'], 'done', 1000, null, { timeout: 60000 });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(promise).resolves.toEqual({ status: 'done' });
+  });
+
+  // A failed check is not a verdict: 504 is a proxy saying it gave up waiting for the
+  // server, and the work being polled for is very likely still running behind it.
+  const gatewayTimeout = () => Object.assign(new Error('Request failed with status 504'), {
+    name: 'StatusCodeError',
+    statusCode: 504
+  });
+
+  const isServerSideFailure = (error) => error?.statusCode >= 500;
+
+  test('keeps polling through a failed check the caller calls transient', async () => {
+    const statusCheck = vi.fn()
+      .mockRejectedValueOnce(gatewayTimeout())
+      .mockResolvedValue({ status: 'done' });
+
+    const promise = waitForStatus(statusCheck, ['pending'], 'done', 1000, null, { isTransient: isServerSideFailure });
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(promise).resolves.toEqual({ status: 'done' });
+    expect(statusCheck).toHaveBeenCalledTimes(2);
+    // Once, however long the outage lasts -- a line per poll would bury the one that mattered.
+    expect(logger.Warn).toHaveBeenCalledTimes(1);
+    expect(logger.Warn).toHaveBeenCalledWith(expect.stringContaining('HTTP 504'));
+  });
+
+  test('still fails on a check the caller does not call transient', async () => {
+    const unauthorized = Object.assign(new Error('Request failed with status 401'), {
+      name: 'StatusCodeError',
+      statusCode: 401
+    });
+    const statusCheck = vi.fn().mockRejectedValue(unauthorized);
+
+    const promise = waitForStatus(statusCheck, ['pending'], 'done', 1000, null, { isTransient: isServerSideFailure });
+    promise.catch(() => {});
+
+    await vi.advanceTimersByTimeAsync(0);
+
+    await expect(promise).rejects.toBe(unauthorized);
+    expect(statusCheck).toHaveBeenCalledTimes(1);
+  });
+
+  test('names the last failed check when the deadline passes', async () => {
+    const statusCheck = vi.fn().mockRejectedValue(gatewayTimeout());
+
+    const promise = waitForStatus(statusCheck, ['pending'], 'done', 1000, null, {
+      timeout: 5000,
+      isTransient: isServerSideFailure
+    });
+    promise.catch(() => {});
+
+    await vi.advanceTimersByTimeAsync(5000);
+
+    await expect(promise).rejects.toThrow(/last check failed with.*504/s);
+  });
+
   test('continues polling for unknown status', async () => {
     const statusCheck = vi.fn()
       .mockResolvedValueOnce({ status: 'unknown' })

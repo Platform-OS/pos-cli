@@ -54,7 +54,8 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('image/jpeg');
       global.fetch.mockResolvedValue({
         ok: true,
-        status: 200
+        status: 200,
+        text: vi.fn().mockResolvedValue('')
       });
 
       const result = await uploadFile(fileName, s3Url);
@@ -62,14 +63,14 @@ describe('s3UploadFile', () => {
       expect(fs.statSync).toHaveBeenCalledWith(fileName);
       expect(fs.readFileSync).toHaveBeenCalledWith(fileName);
       expect(mime.getType).toHaveBeenCalledWith(fileName);
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, {
+      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
         method: 'PUT',
         headers: {
           'Content-Length': fileSize.toString(),
           'Content-Type': 'image/jpeg'
         },
         body: fileBuffer
-      });
+      }));
       expect(result).toBe(s3Url);
     });
 
@@ -85,7 +86,8 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('video/mp4');
       global.fetch.mockResolvedValue({
         ok: true,
-        status: 200
+        status: 200,
+        text: vi.fn().mockResolvedValue('')
       });
 
       const result = await uploadFile(fileName, s3Url);
@@ -112,7 +114,9 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('image/jpeg');
       global.fetch.mockResolvedValue({
         ok: false,
-        status: 403
+        status: 403,
+        headers: new Headers(),
+        text: vi.fn().mockResolvedValue('')
       });
 
       // statusCode lets callers (sendAsset) detect an expired upload authorization and retry
@@ -131,7 +135,9 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('image/jpeg');
       global.fetch.mockResolvedValue({
         ok: false,
-        status: 500
+        status: 500,
+        headers: new Headers(),
+        text: vi.fn().mockResolvedValue('')
       });
 
       await expect(uploadFile(fileName, s3Url)).rejects.toThrow('Upload failed with status 500');
@@ -159,19 +165,20 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockResolvedValue({
         ok: true,
-        status: 200
+        status: 200,
+        text: vi.fn().mockResolvedValue('')
       });
 
       const result = await uploadFile(fileName, s3Url);
 
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, {
+      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
         method: 'PUT',
         headers: {
           'Content-Length': '0',
           'Content-Type': 'text/plain'
         },
         body: emptyBuffer
-      });
+      }));
       expect(result).toBe(s3Url);
     });
 
@@ -190,7 +197,7 @@ describe('s3UploadFile', () => {
         fs.statSync.mockReturnValue({ size: testCase.size });
         fs.readFileSync.mockReturnValue(buffer);
         mime.getType.mockReturnValue(testCase.mimeType);
-        global.fetch.mockResolvedValue({ ok: true, status: 200 });
+        global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
         await uploadFile(testCase.fileName, s3Url);
 
@@ -215,21 +222,92 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('application/javascript');
       global.fetch.mockResolvedValue({
         ok: true,
-        status: 200
+        status: 200,
+        text: vi.fn().mockResolvedValue('')
       });
 
       const result = await uploadFile(fileName, s3Url);
 
       expect(mime.getType).toHaveBeenCalledWith(fileName);
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, {
+      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
         method: 'PUT',
         headers: {
           'Content-Length': fileSize.toString(),
           'Content-Type': 'application/javascript'
         },
         body: fileBuffer
-      });
+      }));
       expect(result).toBe(s3Url);
+    });
+  });
+
+  // Object storage answers a refusal in an XML body and pos-cli used to throw it away,
+  // leaving an operator with a bare 403 for anything from an expired signature to a clock
+  // that is off.
+  describe('what S3 said', () => {
+    const s3Refusal = (status, body) => ({
+      ok: false,
+      status,
+      headers: new Headers(),
+      text: vi.fn().mockResolvedValue(body)
+    });
+
+    test('puts the reason S3 gave into the error', async () => {
+      fs.statSync.mockReturnValue({ size: 10 });
+      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      mime.getType.mockReturnValue('application/zip');
+      global.fetch.mockResolvedValue(s3Refusal(403,
+        '<?xml version="1.0" encoding="UTF-8"?>\n<Error><Code>AccessDenied</Code>' +
+        '<Message>Request has expired</Message><RequestId>ABC</RequestId></Error>'));
+
+      await expect(uploadFile('/tmp/release.zip', 'https://s3.example.com/bucket/release.zip'))
+        .rejects.toMatchObject({
+          message: 'Upload failed with status 403: AccessDenied: Request has expired',
+          statusCode: 403
+        });
+    });
+
+    test('keeps the status when the body explains nothing', async () => {
+      fs.statSync.mockReturnValue({ size: 10 });
+      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      mime.getType.mockReturnValue('application/zip');
+      global.fetch.mockResolvedValue(s3Refusal(500, '<html>500 Internal Server Error</html>'));
+
+      await expect(uploadFile('/tmp/release.zip', 'https://s3.example.com/bucket/release.zip'))
+        .rejects.toMatchObject({ message: 'Upload failed with status 500', statusCode: 500 });
+    });
+
+    // A refused connection or a name that does not resolve is not S3 answering, and
+    // ServerError explains those correctly -- so they must not be flattened into an
+    // "upload failed" with a status that never existed.
+    test('passes a transport failure through as a network error', async () => {
+      fs.statSync.mockReturnValue({ size: 10 });
+      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      mime.getType.mockReturnValue('application/zip');
+      global.fetch.mockRejectedValue(Object.assign(new Error('fetch failed'), { cause: { code: 'ENOTFOUND' } }));
+
+      const error = await uploadFile('/tmp/release.zip', 'https://s3.example.com/bucket/release.zip')
+        .catch((e) => e);
+
+      expect(error.name).toBe('RequestError');
+      // Not relabelled as an upload failure with a status nothing ever returned.
+      expect(error.statusCode).toBeUndefined();
+    });
+
+    test('sets no deadline of its own, and takes the long one apiRequest gives an upload', async () => {
+      fs.statSync.mockReturnValue({ size: 10 });
+      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      mime.getType.mockReturnValue('application/zip');
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
+
+      await uploadFile('/tmp/release.zip', 'https://s3.example.com/bucket/release.zip');
+
+      // A transfer takes as long as the operator's uplink takes, so nothing here picks a ceiling:
+      // a body of bytes is recognised as an upload in apiRequest and gets UPLOAD_TIMEOUT_MS, which
+      // is a backstop against a dead socket rather than a limit on a slow upload that is working.
+      // Callers who know their payload is small still pass their own.
+      expect(global.fetch.mock.calls[0][1].timeout).toBeUndefined();
+      expect(global.fetch.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
     });
   });
 
@@ -251,17 +329,19 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('application/pdf');
       global.fetch.mockResolvedValue({
         ok: true,
-        status: 200
+        status: 200,
+        text: vi.fn().mockResolvedValue('')
       });
 
       const result = await uploadFileFormData(filePath, data);
 
       expect(fs.readFileSync).toHaveBeenCalledWith(filePath);
       expect(mime.getType).toHaveBeenCalledWith(filePath);
-      expect(global.fetch).toHaveBeenCalledWith(data.url, {
+      expect(global.fetch).toHaveBeenCalledWith(data.url, expect.objectContaining({
         method: 'POST',
+        headers: {},
         body: expect.any(FormData)
-      });
+      }));
       expect(result).toBe(true);
     });
 
@@ -276,7 +356,7 @@ describe('s3UploadFile', () => {
 
       fs.readFileSync.mockReturnValue(Buffer.from('image'));
       mime.getType.mockReturnValue('image/png');
-      global.fetch.mockResolvedValue({ ok: true, status: 200 });
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
       await uploadFileFormData(filePath, data);
 
@@ -308,7 +388,7 @@ describe('s3UploadFile', () => {
 
       fs.readFileSync.mockReturnValue(largeBuffer);
       mime.getType.mockReturnValue('application/zip');
-      global.fetch.mockResolvedValue({ ok: true, status: 200 });
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
       const result = await uploadFileFormData(filePath, data);
 
@@ -327,7 +407,9 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockResolvedValue({
         ok: false,
-        status: 403
+        status: 403,
+        headers: new Headers(),
+        text: vi.fn().mockResolvedValue('')
       });
 
       await expect(uploadFileFormData(filePath, data)).rejects.toMatchObject({
@@ -366,15 +448,16 @@ describe('s3UploadFile', () => {
 
       fs.readFileSync.mockReturnValue(Buffer.from('content'));
       mime.getType.mockReturnValue('text/plain');
-      global.fetch.mockResolvedValue({ ok: true, status: 200 });
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
       await uploadFileFormData(filePath, data);
 
       // Verify fetch was called with FormData
-      expect(global.fetch).toHaveBeenCalledWith(data.url, {
+      expect(global.fetch).toHaveBeenCalledWith(data.url, expect.objectContaining({
         method: 'POST',
+        headers: {},
         body: expect.any(FormData)
-      });
+      }));
     });
 
     test('handles various MIME types correctly', async () => {
@@ -394,7 +477,7 @@ describe('s3UploadFile', () => {
 
         fs.readFileSync.mockReturnValue(Buffer.from('content'));
         mime.getType.mockReturnValue(testCase.mimeType);
-        global.fetch.mockResolvedValue({ ok: true, status: 200 });
+        global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
         await uploadFileFormData(testCase.filePath, data);
 
@@ -413,7 +496,7 @@ describe('s3UploadFile', () => {
 
       fs.readFileSync.mockReturnValue(Buffer.from('content'));
       mime.getType.mockReturnValue('text/plain');
-      global.fetch.mockResolvedValue({ ok: true, status: 200 });
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
       const result = await uploadFileFormData(filePath, data);
 
@@ -430,7 +513,7 @@ describe('s3UploadFile', () => {
 
       fs.readFileSync.mockReturnValue(emptyBuffer);
       mime.getType.mockReturnValue('text/plain');
-      global.fetch.mockResolvedValue({ ok: true, status: 200 });
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
       const result = await uploadFileFormData(filePath, data);
 
@@ -454,7 +537,8 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('image/png');
       const fetchCall = {
         ok: true,
-        status: 200
+        status: 200,
+        text: vi.fn().mockResolvedValue('')
       };
       global.fetch.mockResolvedValue(fetchCall);
 
@@ -495,7 +579,7 @@ describe('s3UploadFile', () => {
 
       fs.readFileSync.mockReturnValue(fileBuffer);
       mime.getType.mockReturnValue('image/png');
-      global.fetch.mockResolvedValue({ ok: true, status: 200 });
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
       await uploadFileFormData(filePath, data);
 
@@ -520,7 +604,7 @@ describe('s3UploadFile', () => {
 
       fs.statSync.mockReturnValue({ size: fileBuffer.length });
       fs.readFileSync.mockReturnValue(fileBuffer);
-      global.fetch.mockResolvedValue({ ok: true, status: 200 });
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
       await uploadFile(fileName, s3Url);
 
@@ -539,7 +623,7 @@ describe('s3UploadFile', () => {
 
       fs.readFileSync.mockReturnValue(fileBuffer);
       mime.getType.mockReturnValue('text/plain');
-      global.fetch.mockResolvedValue({ ok: true, status: 200 });
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
       await uploadFileFormData(filePath, data);
 
@@ -586,7 +670,9 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('image/jpeg');
       global.fetch.mockResolvedValue({
         ok: false,
-        status: 403
+        status: 403,
+        headers: new Headers(),
+        text: vi.fn().mockResolvedValue('')
       });
 
       await expect(uploadFile(fileName, s3Url)).rejects.toMatchObject({
@@ -606,7 +692,9 @@ describe('s3UploadFile', () => {
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockResolvedValue({
         ok: false,
-        status: 400
+        status: 400,
+        headers: new Headers(),
+        text: vi.fn().mockResolvedValue('')
       });
 
       await expect(uploadFileFormData(filePath, data)).rejects.toThrow('Upload failed with status 400');
