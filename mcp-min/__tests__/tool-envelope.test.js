@@ -16,7 +16,7 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import registry from '../tools.js';
 import { runTool } from '../run-tool.js';
 import { resolveAuth } from '../auth.js';
-import { ToolError, ERROR_KINDS, MAX_ERROR_BODY_LENGTH } from '../tool-error.js';
+import { ToolError, ERROR_KINDS, MAX_DETAILS_STRING_LENGTH } from '../tool-error.js';
 
 const MCP_MIN = path.resolve(import.meta.dirname, '..');
 
@@ -273,11 +273,43 @@ describe('an upstream error body is bounded, and stays readable', () => {
   // Parsed JSON is small, structured, and carries what a failed deploy names — the file it
   // objected to. Cutting it would leave the model a string that no longer parses.
   test('a JSON body is never cut, however long', async () => {
-    const body = { error: 'deploy failed', details: { file_path: 'app/views/pages/index.liquid' }, noise: 'y'.repeat(MAX_ERROR_BODY_LENGTH * 2) };
+    const body = { error: 'deploy failed', details: { file_path: 'app/views/pages/index.liquid' }, noise: 'y'.repeat(MAX_DETAILS_STRING_LENGTH * 2) };
 
     const { error } = await runTool(failing(body), {});
 
     expect(error.details.body).toEqual(body);
+  });
+
+  // `body` was the only field bounded, so `liquid-exec` — which forwards the whole endpoint
+  // response — sent a rendered page through `details.result` untouched.
+  test('every other string in details is capped too', async () => {
+    const page = 'p'.repeat(MAX_DETAILS_STRING_LENGTH * 3);
+    const tool = { handler: async () => { throw ToolError.instance('LIQUID_EXEC_ERROR', 'Liquid error (line 3)', { result: page, error: null }); } };
+
+    const { error } = await runTool(tool, {});
+
+    expect(error.details.result).toHaveLength(MAX_DETAILS_STRING_LENGTH + '… (8192 more characters)'.length);
+    expect(error.details.result.startsWith('p'.repeat(MAX_DETAILS_STRING_LENGTH))).toBe(true);
+    expect(error.details.result).toMatch(/… \(8192 more characters\)$/);
+  });
+
+  // A capped string would be a worse answer than the value itself for anything that is not text,
+  // and a nested record is what `job-status` and a parsed body rely on arriving whole.
+  test('what is not a top-level string is passed through', async () => {
+    const diagnostic = { type: 'Liquid::UndefinedFilter', stack: [{ path: null, line: 3 }] };
+    const tool = { handler: async () => { throw ToolError.instance('X', 'm', { statusCode: 422, retryAfterSeconds: 30, diagnostic, environments: ['a', 'b'] }); } };
+
+    const { error } = await runTool(tool, {});
+
+    expect(error.details).toEqual({ statusCode: 422, retryAfterSeconds: 30, diagnostic, environments: ['a', 'b'] });
+  });
+
+  test('a string within the ceiling is left exactly as it was', async () => {
+    const tool = { handler: async () => { throw ToolError.instance('X', 'm', { result: 'Hello world' }); } };
+
+    const { error } = await runTool(tool, {});
+
+    expect(error.details.result).toBe('Hello world');
   });
 });
 

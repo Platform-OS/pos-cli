@@ -13,6 +13,26 @@ const RESERVED = new Set(['context']);
 
 const bindable = (name) => LIQUID_NAME.test(name) && !RESERVED.has(name);
 
+/** At most this many distinct rendered error lines reach the message; the first locate the fault. */
+const MAX_REPORTED_ERRORS = 10;
+
+/**
+ * Where a rendered error ends: the next newline, the next tag, or 200 characters, whichever comes
+ * first. Rendered HTML is frequently one long line, so stopping only at a newline took the rest of
+ * the document with it. Used with `.match` only — the `g` flag would make `.test` stateful.
+ */
+const LIQUID_ERRORS = /Liquid error[^\n<]{0,200}/gi;
+
+/**
+ * The error lines a render left in its own output. A template that fails partway leaves
+ * `Liquid error (line N): …` in the page it had built, and when the endpoint's own `error` is null
+ * that line is the only statement of what went wrong — so it is lifted out rather than the page
+ * being passed on as the message. Distinct lines only: one failing partial in a loop renders the
+ * same line once per iteration.
+ */
+const errorsInOutput = (rendered) =>
+  [...new Set(rendered.match(LIQUID_ERRORS) ?? [])].slice(0, MAX_REPORTED_ERRORS);
+
 /**
  * Makes `locals` what its name says: top-level Liquid variables. The endpoint puts the whole request
  * body at `context.params` and nowhere else, so `Hello {{ name }}` rendered `Hello ` with
@@ -64,18 +84,15 @@ const execLiquidTool = {
     // unbindable key can be reached at all.
     const resp = await gateway.liquid({ content, locals: params.locals || {} });
 
-    // The endpoint answers 200 with a Liquid error payload, so a failure has to be read out of the
-    // body. The instance rendered it and refused: its judgement, not a broken call.
-    //
-    // The marker, not the word: this looked for `error` anywhere in the output, so a template that
-    // rendered the word — a page about errors, a message saying there was none — came back as a
-    // failed call with its own output as the message. A real failure renders `Liquid error`, and
-    // it is matched anywhere in the output because a template can fail after partly rendering.
+    // The endpoint answers 200 with the failure in the body, so it has to be read out of it. The
+    // marker, not the word: looking for `error` anywhere in the output failed a template that
+    // merely rendered it — a page about error handling, a message saying there was none.
     const respError = resp && (resp.error || resp.errors);
     const rendered = typeof resp?.result === 'string' ? resp.result : '';
+    const inOutput = errorsInOutput(rendered);
 
-    if (respError || /liquid error/i.test(rendered)) {
-      const message = String(resp?.error || resp?.errors || resp?.result || 'Liquid execution failed');
+    if (respError || inOutput.length > 0) {
+      const message = String(resp?.error || resp?.errors || inOutput.join('\n') || 'Liquid execution failed');
       throw ToolError.instance('LIQUID_EXEC_ERROR', message, resp);
     }
 

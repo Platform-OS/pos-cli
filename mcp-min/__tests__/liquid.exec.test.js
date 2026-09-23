@@ -197,6 +197,67 @@ describe('what the result says about failure', () => {
     expect(res.error.details.diagnostic.stack[0].line).toBe(3);
   });
 
+  /**
+   * A template that fails partway renders `Liquid error (line N): …` into the page it had built and
+   * leaves the response's own `error` null, so the whole page used to become both the message and
+   * `details.result`. The page reached the model twice, while it was already handling a failure.
+   */
+  describe('a failure rendered into the output', () => {
+    const page = () => `<!DOCTYPE html><html><body>${'x'.repeat(20000)}Liquid error (line 7): undefined filter nosuchfilter</body></html>`;
+
+    test('the message is the error line, not the page it was rendered into', async () => {
+      const res = await call({ template: 'T' }, recording({ result: page(), error: null }).Gateway);
+
+      expect(res.ok).toBe(false);
+      expect(res.error.message).toBe('Liquid error (line 7): undefined filter nosuchfilter');
+    });
+
+    test('the output is kept, bounded', async () => {
+      const res = await call({ template: 'T' }, recording({ result: page(), error: null }).Gateway);
+
+      expect(res.error.details.result.length).toBeLessThan(5000);
+      expect(res.error.details.result.startsWith('<!DOCTYPE html>')).toBe(true);
+    });
+
+    // One failing partial rendered in a loop repeats the same line once per iteration.
+    test('identical lines are reported once', async () => {
+      const rendered = Array(500).fill('Liquid error (line 2): undefined variable row').join('\n');
+
+      const res = await call({ template: 'T' }, recording({ result: rendered }).Gateway);
+
+      expect(res.error.message).toBe('Liquid error (line 2): undefined variable row');
+    });
+
+    test('distinct lines are reported, and their number is bounded', async () => {
+      const rendered = Array.from({ length: 40 }, (_v, i) => `Liquid error (line ${i}): bad`).join('\n');
+
+      const res = await call({ template: 'T' }, recording({ result: rendered }).Gateway);
+
+      expect(res.error.message.split('\n')).toHaveLength(10);
+      expect(res.error.message).toContain('Liquid error (line 0): bad');
+    });
+
+    // Rendered HTML is frequently one long line, so an error line that stops only at a newline
+    // takes the rest of the document with it — which is the payload this is here to avoid.
+    test('an error in unbroken output does not drag the rest of the page along', async () => {
+      const rendered = `Liquid error (line 7): undefined filter nosuchfilter${' and then '.repeat(2000)}`;
+
+      const res = await call({ template: 'T' }, recording({ result: rendered }).Gateway);
+
+      expect(res.error.message.length).toBeLessThan(250);
+      expect(res.error.message).toContain('undefined filter nosuchfilter');
+    });
+
+    // The endpoint saying what went wrong is better than anything read out of the output.
+    test('the response error still wins when there is one', async () => {
+      const answer = { result: page(), error: 'Liquid error (line 7): undefined filter nosuchfilter (from error field)' };
+
+      const res = await call({ template: 'T' }, recording(answer).Gateway);
+
+      expect(res.error.message).toMatch(/from error field/);
+    });
+  });
+
   test('an instance that refused is reported as the instance refusing', async () => {
     class Refusing { async liquid() { throw Object.assign(new Error('Unprocessable'), { statusCode: 422 }); } }
 

@@ -665,6 +665,12 @@ be bound. It is left where the instance put it — reachable as `context.params.
 }
 ```
 
+A render can also fail *after* building most of a page, in which case the endpoint's own `error` is
+null and `Liquid error (line N): …` is rendered into the output instead. The `message` is then the
+error lines lifted out of that output — distinct lines only, at most ten — rather than the page
+they were found in. `details` carries the endpoint's response, including the output it managed to
+render, with every string in it capped at 4,096 characters.
+
 **Example Usage**:
 Simple template:
 

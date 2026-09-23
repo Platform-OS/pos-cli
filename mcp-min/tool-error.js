@@ -45,7 +45,7 @@ export class ToolError extends Error {
     if (details !== undefined) this.details = details;
   }
 
-  /** The body a client receives, with any upstream body bounded — see `boundedDetails`. */
+  /** The body a client receives, with the text in `details` bounded — see `boundedDetails`. */
   toResult() {
     return { kind: this.kind, code: this.code, message: this.message, ...(this.details !== undefined && { details: boundedDetails(this.details) }) };
   }
@@ -152,21 +152,25 @@ const portalOutage = (err, details) => ToolError.unavailable(
 );
 
 /**
- * A ceiling on an upstream body that is not JSON, which the model pays for in tokens while it is
- * already dealing with a failure. `apiRequest` parses JSON when it can, so a string here means the
- * instance, or something in front of it, answered with a page. Parsed JSON is never cut: it is
- * small, structured, and carries the file paths a failed deploy names.
+ * A ceiling on the text in `details`, which the model pays for in tokens while it is already
+ * dealing with a failure.
  */
-export const MAX_ERROR_BODY_LENGTH = 4096;
+export const MAX_DETAILS_STRING_LENGTH = 4096;
+
+const capped = (text) => (text.length <= MAX_DETAILS_STRING_LENGTH
+  ? text
+  : `${text.slice(0, MAX_DETAILS_STRING_LENGTH)}… (${text.length - MAX_DETAILS_STRING_LENGTH} more characters)`);
 
 const HTML_PAGE = /^\s*(?:<!doctype\s+html|<html[\s>])/i;
 const HTML_TITLE = /<title[^>]*>([\s\S]*?)<\/title>/i;
 
 /**
- * An HTML error page is all markup and no signal: the two this API serves are 1,430 and 2,062
- * bytes whose only content is `<title>Aw, Snap!</title>` and `<title>Oops (503)</title>`. An
- * evaluation measured a pair of them at 12% of everything it spent on this server. So the title is
- * kept and the markup is not.
+ * `body` has a rule of its own. `apiRequest` parses JSON when it can, so a string here means the
+ * instance, or something in front of it, answered with a page; an HTML error page is all markup
+ * and no signal — the two this API serves are 1,430 and 2,062 bytes whose only content is
+ * `<title>Aw, Snap!</title>` and `<title>Oops (503)</title>`, and an evaluation measured a pair of
+ * them at 12% of everything it spent on this server. Parsed JSON is never cut: it is small,
+ * structured, and carries the file paths a failed deploy names.
  */
 export const upstreamBody = (body) => {
   if (typeof body !== 'string') return body;
@@ -176,19 +180,27 @@ export const upstreamBody = (body) => {
     return `HTML error page${title ? `: ${title}` : ''} (${body.length} bytes, not shown)`;
   }
 
-  if (body.length <= MAX_ERROR_BODY_LENGTH) return body;
-  return `${body.slice(0, MAX_ERROR_BODY_LENGTH)}… (${body.length - MAX_ERROR_BODY_LENGTH} more characters)`;
+  return capped(body);
 };
 
 /**
  * Bounded here rather than at each thrower, for the reason redaction lives in `log.js`: doing it
- * at call sites is a rule the next one will not know about. `classify` and the three `/_tests/*`
- * throwers all put an upstream `body` in `details`, and a new one is covered by construction.
+ * at call sites is a rule the next one will not know about.
+ *
+ * Every string is capped, not just `body`: `liquid-exec` forwards the whole endpoint response, so
+ * its `result` — a page a template rendered before failing — travelled whole, and naming the
+ * fields to cap is an allowlist the next thrower will not know about either. Nested values are
+ * left alone, which is what keeps a parsed JSON `body` and any other structured upstream record
+ * intact.
  */
-const boundedDetails = (details) =>
-  (details !== null && typeof details === 'object' && typeof details.body === 'string')
-    ? { ...details, body: upstreamBody(details.body) }
-    : details;
+const boundedDetails = (details) => {
+  if (typeof details === 'string') return capped(details);
+  if (details === null || typeof details !== 'object' || Array.isArray(details)) return details;
+
+  return Object.fromEntries(Object.entries(details).map(
+    ([key, value]) => [key, key === 'body' ? upstreamBody(value) : (typeof value === 'string' ? capped(value) : value)]
+  ));
+};
 
 /**
  * What a thrown error means, when whatever threw it did not say. It lives here rather than with
