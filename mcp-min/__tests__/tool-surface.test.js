@@ -149,7 +149,9 @@ const BARE_TOOLS = [
 //         render "never appears here, not even its errors", which is false: the errors are
 //         recorded, only the render's own `{% log %}` is not. A description that sends an agent
 //         away from the place its answer is costs more than the 21 bytes.
-const BARE_TOOLS_LIST_BYTES = 22601;
+// 22,598  graphql-exec calls a bad document an input failure rather than an instance one (TASK-54),
+//         which is what it now answers: 3 B back, and the sentence stops contradicting the `kind`.
+const BARE_TOOLS_LIST_BYTES = 22598;
 
 const HANG_MS = 15000;
 

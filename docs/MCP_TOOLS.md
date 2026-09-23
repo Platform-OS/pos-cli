@@ -483,6 +483,20 @@ Execute GraphQL queries and mutations on a platformOS instance.
 }
 ```
 
+**Two kinds of failure, told apart by the response rather than by the message.** GraphQL omits
+`data` from a response whose request failed before execution and includes it, `null` included, once
+execution has begun, so a document the schema refused is distinguishable from one the instance ran
+and refused:
+
+| What happened | `kind` | `code` | `details` |
+| --- | --- | --- | --- |
+| The document did not parse, or the schema refused it — a syntax error, an unknown field or argument, a variable given an invalid value, several operations with none named | `input` | `GRAPHQL_DOCUMENT_ERROR` | `errors` |
+| It ran and the instance refused it, on its own data or permission rules | `instance` | `GRAPHQL_EXEC_ERROR` | `errors`, `data` |
+
+An `input` failure is one the caller can correct and send again; `instance` means read the message
+rather than retrying unchanged. Both keep the instance's own message, `locations` and `path`, which
+is what names the line and column to fix. A document error carries no `data`, because nothing ran.
+
 **Example Usage**:
 Query users:
 
@@ -669,7 +683,7 @@ A render can also fail *after* building most of a page, in which case the endpoi
 null and `Liquid error (line N): …` is rendered into the output instead. The `message` is then the
 error lines lifted out of that output — distinct lines only, at most ten — rather than the page
 they were found in. `details` carries the endpoint's response, including the output it managed to
-render, with every string in it capped at 4,096 characters.
+render, with each of its top-level strings capped at 4,096 characters.
 
 **Example Usage**:
 Simple template:
@@ -992,6 +1006,7 @@ the archive is written under `tmp/` (in a directory of its own per call, describ
     applied: false,
     releaseId: "rel-1",
     partial: false,
+    appPath: "/home/you/projects/my-app",
     discarded: { count: 1, files: ["tests/eval/simple_test.liquid"] },
     deleted:  { count: 2, files: ["views/pages/old.liquid", "graphql/gone.graphql"] },
     upserted: { count: 12, files: ["views/pages/index.liquid", "..."] },
@@ -1007,6 +1022,25 @@ the archive is written under `tmp/` (in a directory of its own per call, describ
   meta: { ... }
 }
 ```
+
+**A preview leaves a release behind.** `dry_run=true` is not a request the API answers without
+recording: it allocates a release id, validates the archive against it, and keeps the record —
+`status: success`, `deleted_at: null`, one id per preview, measured 2026-09-23. Previews therefore
+outnumber deploys in an instance's release history, since a dry run is the recommended step before
+every deploy.
+
+That is intended rather than accidental, and the evidence is in the record: a preview is stamped
+`options.dry_run: "true"`, where a real deploy's is `null`. Anything reading the history can tell
+the two apart on that field — `status` alone cannot, because both say `success`. pos-cli does not
+try to delete or hide these records; they are the platform's, and the marker is what makes them
+readable.
+
+**`appPath` is the project these paths came from.** Both deploy tools resolve `app/`,
+`marketplace_builder/` and `modules/` against the server's own working directory, and no argument
+can name a different one — an MCP server is started by an editor, so its directory is whatever
+launched it. A delete list is only meaningful once you know which project it is for, so both tools
+report the directory they archived, the same way `check-run` reports the one it linted. If it is
+not the project you meant, the fix is to start the server there; nothing in the call can move it.
 
 `deleted`, `upserted` and `skipped` are totals across every category, so an agent can branch on
 `data.deleted.count` without walking the report. Each carries `count` and `files` separately
@@ -1066,6 +1100,7 @@ no second phase to wait for, and `job-status` reports the deploy finished when t
   ok: true,
   data: {
     id: "abc123def456",
+    appPath: "/home/you/projects/my-app",
     job_id: "...",
     status: "processing",
     archive: { fileCount: 156, assetsIncluded: false },

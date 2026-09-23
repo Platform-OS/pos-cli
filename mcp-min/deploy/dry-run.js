@@ -14,9 +14,13 @@
  *    behind a prompt; gating the dry run the same way would defeat it.
  *
  * `destructiveHint: false` and NOT `readOnlyHint`: nothing on the instance is created, updated or
- * deleted, but the call is not free of effects — the API records a release, and the archive is
- * written under tmp/. Claiming read-only would overstate it, and MCP reads a missing
- * `readOnlyHint` as "may change things", which is the honest default.
+ * deleted, but the call is not free of effects — the API records a release, one id per preview,
+ * and the archive is written under tmp/. Claiming read-only would overstate it, and MCP reads a
+ * missing `readOnlyHint` as "may change things", which is the honest default.
+ *
+ * The release is kept, `status: success` like any other, and stamped `options.dry_run: "true"` —
+ * measured 2026-09-23 against a real deploy, whose `options.dry_run` is null. That marker is the
+ * platform keeping the record on purpose, so nothing here tries to clean one up (TASK-49).
  */
 import fs from 'fs';
 import path from 'path';
@@ -240,6 +244,9 @@ const dryRunDeployTool = {
       applied: false,
       releaseId,
       partial,
+      // The project these paths came from. `deploy-start` reports the same field, so a delete list
+      // can be checked against the project it is for before it is applied.
+      appPath: process.cwd(),
       // The verdict before the detail: `would_fail` means deploy-start would not succeed either,
       // and `error` says which files the instance refused.
       verdict,

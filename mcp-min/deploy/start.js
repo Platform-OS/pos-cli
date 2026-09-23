@@ -53,6 +53,10 @@ const startDeployTool = {
     additionalProperties: false,
     properties: {
       ...authProperties,
+      // `false` matches `pos-cli deploy`, so a deploy means the same thing on both surfaces. It is
+      // also the mode that deletes, reached by omission: what stands in for a deliberate choice is
+      // `deploy-dry-run`, which names the delete list first, and `appPath` in the answer, which
+      // names the project the files came from.
       partial: { type: 'boolean', description: 'Leave files that are missing from the build in place.', default: false }
     }
   },
@@ -137,6 +141,10 @@ const startDeployTool = {
 
     return {
       id: releaseId,
+      // Which project this deployed. Nothing in the call can choose it — the directories are
+      // resolved against the server's own working directory — so the answer is where a caller
+      // finds out, rather than inferring it from `check-run`, the one tool that happened to say.
+      appPath: process.cwd(),
       // `assets` is whether there is a separate phase to wait for, which a server that did not
       // start this deploy cannot know. Assets inside the release are not one.
       job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: { assets: plan.mode === 'direct' } }),

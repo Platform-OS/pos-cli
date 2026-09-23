@@ -165,12 +165,10 @@ const HTML_PAGE = /^\s*(?:<!doctype\s+html|<html[\s>])/i;
 const HTML_TITLE = /<title[^>]*>([\s\S]*?)<\/title>/i;
 
 /**
- * `body` has a rule of its own. `apiRequest` parses JSON when it can, so a string here means the
- * instance, or something in front of it, answered with a page; an HTML error page is all markup
- * and no signal — the two this API serves are 1,430 and 2,062 bytes whose only content is
- * `<title>Aw, Snap!</title>` and `<title>Oops (503)</title>`, and an evaluation measured a pair of
- * them at 12% of everything it spent on this server. Parsed JSON is never cut: it is small,
- * structured, and carries the file paths a failed deploy names.
+ * `body` has a rule of its own. An HTML error page is all markup and no signal — the two this API
+ * serves are 1,430 and 2,062 bytes whose only content is `<title>Aw, Snap!</title>` and
+ * `<title>Oops (503)</title>`, measured at 12% of what one evaluation spent here. Parsed JSON is
+ * never cut: it is small, structured, and carries the file paths a failed deploy names.
  */
 export const upstreamBody = (body) => {
   if (typeof body !== 'string') return body;
@@ -185,16 +183,11 @@ export const upstreamBody = (body) => {
 
 /**
  * Bounded here rather than at each thrower, for the reason redaction lives in `log.js`: doing it
- * at call sites is a rule the next one will not know about.
- *
- * Every string is capped, not just `body`: `liquid-exec` forwards the whole endpoint response, so
- * its `result` — a page a template rendered before failing — travelled whole, and naming the
- * fields to cap is an allowlist the next thrower will not know about either. Nested values are
- * left alone, which is what keeps a parsed JSON `body` and any other structured upstream record
- * intact.
+ * at call sites is a rule the next one will not know about. Every string, not only `body` — naming
+ * the fields to cap is that same rule again — but only at the top level, so a parsed JSON `body`
+ * and any other structured upstream record still arrive whole.
  */
 const boundedDetails = (details) => {
-  if (typeof details === 'string') return capped(details);
   if (details === null || typeof details !== 'object' || Array.isArray(details)) return details;
 
   return Object.fromEntries(Object.entries(details).map(

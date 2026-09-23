@@ -16,19 +16,14 @@ const bindable = (name) => LIQUID_NAME.test(name) && !RESERVED.has(name);
 /** At most this many distinct rendered error lines reach the message; the first locate the fault. */
 const MAX_REPORTED_ERRORS = 10;
 
-/**
- * Where a rendered error ends: the next newline, the next tag, or 200 characters, whichever comes
- * first. Rendered HTML is frequently one long line, so stopping only at a newline took the rest of
- * the document with it. Used with `.match` only — the `g` flag would make `.test` stateful.
- */
+// Ends at the next newline, the next tag or 200 characters: rendered HTML is frequently one long
+// line, so stopping only at a newline took the rest of the document with it.
 const LIQUID_ERRORS = /Liquid error[^\n<]{0,200}/gi;
 
 /**
- * The error lines a render left in its own output. A template that fails partway leaves
- * `Liquid error (line N): …` in the page it had built, and when the endpoint's own `error` is null
- * that line is the only statement of what went wrong — so it is lifted out rather than the page
- * being passed on as the message. Distinct lines only: one failing partial in a loop renders the
- * same line once per iteration.
+ * The error lines a render left in its own output, which is the only statement of what went wrong
+ * when the endpoint's own `error` is null — so they are lifted out rather than the page they are
+ * buried in becoming the message. Distinct: one failing partial in a loop repeats its line.
  */
 const errorsInOutput = (rendered) =>
   [...new Set(rendered.match(LIQUID_ERRORS) ?? [])].slice(0, MAX_REPORTED_ERRORS);

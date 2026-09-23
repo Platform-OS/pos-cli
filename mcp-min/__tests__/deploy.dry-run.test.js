@@ -139,6 +139,23 @@ describe('deploy-dry-run applies nothing', () => {
 });
 
 describe('what it reports', () => {
+  /**
+   * Which project the paths belong to. Nothing in the call chooses it — the deployable directories
+   * are resolved against the server's own working directory — so a caller reading a delete list
+   * had no way to tell whether it was for the project it meant. `check-run` echoed a resolved
+   * path and the two deploy tools did not, so the only way to answer it was to call a neighbour.
+   */
+  test('it names the project the paths came from', async () => {
+    const { Fake } = gatewayFake({
+      report: { Liquid: { upserted: [], deleted: ['pages/someone-elses.liquid'], skipped: [] } }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.appPath).toBe(fs.realpathSync(workDir));
+    expect(data.deleted.files).toEqual(['pages/someone-elses.liquid']);
+  });
+
   test('separates what would be deleted from what would be added', async () => {
     const { Fake } = gatewayFake({
       report: {

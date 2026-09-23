@@ -6,7 +6,7 @@ import { authProperties } from '../schemas/auth.js';
 import { ToolError } from '../tool-error.js';
 
 const execGraphqlTool = {
-  description: 'Run a GraphQL query or mutation against a live instance. A mutation run to test a document has already written its data. Errors in the document come back as an instance failure carrying them in details. admin_* queries read the instance itself back, source and all: admin_pages, admin_liquid_partials, admin_assets. The schema is introspectable, so __type gives a type\'s fields rather than guessing them.',
+  description: 'Run a GraphQL query or mutation against a live instance. A mutation run to test a document has already written its data. Errors in the document come back as an input failure carrying them in details. admin_* queries read the instance itself back, source and all: admin_pages, admin_liquid_partials, admin_assets. The schema is introspectable, so __type gives a type\'s fields rather than guessing them.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -30,15 +30,20 @@ const execGraphqlTool = {
 
     const resp = await gateway.graph(body);
 
-    // The instance ran the document and refused it. The errors are what the caller acts on, so
-    // they travel in the details, where this tool's description says they are.
+    // The errors are what the caller acts on, so they travel in the details, where this tool's
+    // description says they are.
     const errors = graphQLErrors(resp);
     if (errors) {
-      throw ToolError.instance(
-        'GRAPHQL_EXEC_ERROR',
-        `GraphQLError: ${formatGraphQLErrors(errors) || 'GraphQL execution error'}`,
-        { errors, data: resp.data ?? null }
-      );
+      const message = `GraphQLError: ${formatGraphQLErrors(errors) || 'GraphQL execution error'}`;
+
+      // Nothing ran, so the document is what has to change — `input`, not `instance`, which would
+      // tell the caller to read the message and not to rewrite the query. `data` is the signal:
+      // GraphQL omits it when a request fails before execution and sends it, null included, once
+      // execution has begun. `extensions` cannot do this — a parse error and a missing variable
+      // carry none (measured against a live instance, 2026-09-23).
+      if (!Object.hasOwn(resp, 'data')) throw ToolError.input('GRAPHQL_DOCUMENT_ERROR', message, { errors });
+
+      throw ToolError.instance('GRAPHQL_EXEC_ERROR', message, { errors, data: resp.data });
     }
 
     return resp;

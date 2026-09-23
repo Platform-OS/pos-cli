@@ -100,6 +100,30 @@ describe('an empty archive', () => {
   });
 });
 
+/**
+ * A deploy that is not partial deletes every file missing from the build, and `partial` defaults
+ * to false — so the destructive mode is reached by omitting an argument. The default matches
+ * `pos-cli deploy` and stays; what was missing is any way to tell which project was sent, since
+ * the directories come from the server's working directory and no argument can name them.
+ */
+describe('the project a deploy came from', () => {
+  test('the answer names it', async () => {
+    const { Gateway } = gatewayWith(['ready_for_import']);
+
+    const result = await runTool(deployStart, AUTH, { Gateway });
+
+    expect(result.data.appPath).toBe(fs.realpathSync(workDir));
+  });
+
+  test('omitting partial still deploys the mode that deletes, and says so', async () => {
+    const { Gateway } = gatewayWith(['ready_for_import']);
+
+    const result = await runTool(deployStart, AUTH, { Gateway });
+
+    expect(result.data.params).toEqual({ partial: false });
+  });
+});
+
 describe('the job_id deploy-start returns', () => {
   test('names the release on the instance it deployed to', async () => {
     const { Gateway } = gatewayWith(['ready_for_import']);
