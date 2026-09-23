@@ -19,9 +19,29 @@ import { authProperties } from '../schemas/auth.js';
 import { ToolError, kindForStatus } from '../tool-error.js';
 import makeRequest, { testAuthHeaders, testsUrl } from './request.js';
 import { missingTestsModule } from './module-check.js';
+import { crashedTestRun } from './crash-check.js';
 
-/** How to find out what tests exist, for the errors that need to say so. No tool lists them. */
-const LIST_TESTS = 'graphql-exec: { admin_liquid_partials(filter: { path: { ends_with: "_test" } }) { results { path } } }';
+/**
+ * How to find out what tests exist, for the errors that need to say so. No tool lists them.
+ *
+ * `per_page` and `total_entries` are not decoration: the default page is 20, and an evaluation
+ * followed this query on an instance holding 38 tests, got 20 back with nothing saying so, and
+ * concluded its test was missing. A remedy that misleads is worse than no remedy.
+ */
+const LIST_TESTS = 'graphql-exec: { admin_liquid_partials(per_page: 100, filter: { path: { ends_with: "_test" } }) { total_entries results { path } } }';
+
+/**
+ * What goes *inside* a test file, without this repository saying what.
+ *
+ * Two evaluations could not write a test from anything the server told them, and both recovered
+ * the same way: by reading the tests module's own assertions back off the instance. Those are
+ * partials carrying a `{% doc %}` block that names every parameter they take, so pointing at them
+ * answers the question and cannot go stale — the contract belongs to the tests module, and a copy
+ * of it here would be wrong the first time that module changed.
+ *
+ * Only on `NO_TESTS`. Where tests already exist, `LIST_TESTS` names real ones to read instead.
+ */
+const SHOW_ASSERTIONS = 'graphql-exec: { admin_liquid_partials(per_page: 20, filter: { path: { starts_with: "modules/tests/assertions/" } }) { results { path body } } }';
 
 const asObject = (body) => {
   try {
@@ -80,7 +100,8 @@ const nothingMatched = (filter) => (filter
     `No test path contains '${filter}', so nothing ran. Names are matched as substrings, and a test file's path must end with _test. List them with ${LIST_TESTS}`,
     { filter, matched: 0 })
   : ToolError.project('NO_TESTS',
-    `This instance has no test files, so nothing ran. A test is a partial whose path ends with _test. List them with ${LIST_TESTS}`,
+    `This instance has no test files, so nothing ran. A test is a partial whose path ends with _test, and it takes and returns a contract. `
+      + `The assertions it calls document their own parameters: read them with ${SHOW_ASSERTIONS}`,
     { matched: 0 }));
 
 const testsRunTool = {
@@ -145,7 +166,9 @@ const testsRunTool = {
     }
 
     if (statusCode >= 400) {
-      throw new ToolError(kindForStatus(statusCode), 'HTTP_ERROR', `Request failed with status ${statusCode}`, { statusCode, body });
+      // A 5xx the instance is well enough to deny: a test raised and took the run down with it.
+      throw (await crashedTestRun(statusCode, auth, ctx, params?.name))
+        ?? new ToolError(kindForStatus(statusCode), 'HTTP_ERROR', `Request failed with status ${statusCode}`, { statusCode, body });
     }
 
     // 200, and not a run. The runner refuses outside staging and development, and says so in JSON.

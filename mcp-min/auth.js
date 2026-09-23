@@ -58,7 +58,12 @@ export async function resolveAuth(params, ctx = {}, options = {}) {
   const auth = await resolve(params, ctx, options);
   // `runTool` builds meta.auth from this. Recording it here is what lets a tool stop assembling
   // the same masked block itself, and keeps it out of the thirteen that used to.
-  ctx.resolvedAuth = auth;
+  //
+  // An anonymous tool reports only the host. Resolution still reads a named environment, so the
+  // credential is in hand — but it is never sent, and publishing it said the opposite of the
+  // tool's own description. Stripped here rather than at the call site, so a second anonymous
+  // tool cannot forget to.
+  ctx.resolvedAuth = options.anonymous ? { url: auth.url, source: auth.source } : auth;
   return auth;
 }
 

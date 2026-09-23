@@ -192,7 +192,6 @@ describe('what the result says about failure', () => {
 
     const res = await call({ template: 'T' }, recording(answer).Gateway);
 
-    expect(res.error).toMatchObject({ kind: 'instance', code: 'LIQUID_EXEC_ERROR' });
     expect(res.error.message).toMatch(/line 3/);
     expect(res.error.details.diagnostic.stack[0].line).toBe(3);
   });
@@ -255,6 +254,49 @@ describe('what the result says about failure', () => {
       const res = await call({ template: 'T' }, recording(answer).Gateway);
 
       expect(res.error.message).toMatch(/from error field/);
+    });
+  });
+
+  /**
+   * Whose mistake it was. Every failure used to be `instance` — "the instance ran it and refused,
+   * read the message rather than retrying unchanged" — including a template that never parsed,
+   * which is the one failure a caller can always fix and resend.
+   *
+   * `diagnostic.type` is the only structural signal and it settles two cases, measured against a
+   * live instance on 2026-09-23. It settles no more than that: the payloads below are the real
+   * ones, and `GraphqlTagError` appears for a missing `.graphql` file *and* for a query the
+   * instance refused on its data rules, so it cannot be read as either.
+   */
+  describe('a template the caller can fix', () => {
+    const failing = (diagnostic, error) => recording({ result: 'Liquid error', error, diagnostic }).Gateway;
+
+    test.each([
+      ['a template that never parsed', 'Liquid::SyntaxError', "Liquid syntax error: 'if' tag was never closed"],
+      ['an unknown tag, which is also a parse failure', 'Liquid::SyntaxError', "Liquid syntax error: Unknown tag 'nosuchtag'"],
+      ['a filter that does not exist', 'Liquid::UndefinedFilter', 'Liquid error (line 1): undefined filter nosuchfilter']
+    ])('%s is input', async (_label, type, error) => {
+      const res = await call({ template: 'T' }, failing({ type, stack: [] }, error));
+
+      expect(res.error.kind).toBe('input');
+      expect(res.error.code).toBe('LIQUID_TEMPLATE_ERROR');
+      expect(res.error.message).toContain(error);
+    });
+
+    test.each([
+      ['a missing .graphql file and a refused query share this type', 'GraphqlTagError', 'Liquid error (line 1): Couldn\'t find "no_such.graphql". '],
+      ['the base class says nothing about whose fault it is', 'Liquid::Error', 'Liquid error (line 1): can\'t find partial "no_such_p".']
+    ])('%s stays instance', async (_label, type, error) => {
+      const res = await call({ template: 'T' }, failing({ type, stack: [{ path: null, line: 1 }] }, error));
+
+      expect(res.error.kind).toBe('instance');
+      expect(res.error.code).toBe('LIQUID_EXEC_ERROR');
+    });
+
+    // A failure with no diagnostic at all must not be guessed at either.
+    test('a failure carrying no diagnostic stays instance', async () => {
+      const res = await call({ template: 'T' }, recording({ result: 'Liquid error: something' }).Gateway);
+
+      expect(res.error.kind).toBe('instance');
     });
   });
 

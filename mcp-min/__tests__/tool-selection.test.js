@@ -259,6 +259,34 @@ describe('descriptions only name tools exposed alongside them', () => {
       expect(dangling).toEqual([]);
     }
   );
+
+  /**
+   * The same rule for a capability named in prose rather than by its tool name. `job-status`
+   * described "a deploy, a data import, export or clean, or an async test run" — three of those
+   * are not in `dev`, and the async test run had been removed from the registry altogether. A
+   * hyphenated name is what the check above looks for, so none of it matched.
+   *
+   * Only the spaced form of a real tool name, which is as far as a regex can honestly reach: no
+   * pattern turns "an async test run" into `tests-run-async`. What stops that one recurring is
+   * not restating in prose a list the code owns — `job-status` now names no kinds at all, and
+   * `JOB_KINDS` is the only place they are written down.
+   */
+  test.each(PROFILE_NAMES.filter(profile => profileTools(profile, registry.keys()).length > 0))(
+    'in the %s profile, not even spelled as prose',
+    (profile) => {
+      const { tools } = selectTools({ profile, env: {} });
+      const hidden = [...registry.keys()].filter(name => !tools.has(name));
+
+      const dangling = [...tools].flatMap(([name, tool]) => {
+        const text = JSON.stringify({ description: tool.description, inputSchema: tool.inputSchema });
+        return hidden
+          .filter(h => new RegExp(`(?<![\\w-])${h.replace(/-/g, ' ')}(?![\\w-])`, 'i').test(text))
+          .map(h => `${name} → ${h} (as "${h.replace(/-/g, ' ')}")`);
+      });
+
+      expect(dangling).toEqual([]);
+    }
+  );
 });
 
 describe('findTool', () => {

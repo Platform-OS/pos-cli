@@ -1166,6 +1166,29 @@ expect(stderr).toMatch(/Could not connect|Request to( the)? server failed/);
 
 **Key file**: `lib/ServerError.js` — `getNetworkErrorCode` helper + `requestHandler`
 
+### Every request is bounded, and the bound is on the answer, not the transfer
+
+`apiRequest` gives each request a deadline (`RESPONSE_TIMEOUT_MS`, 5 min) that ends the call if the
+host accepts the connection and then says nothing. It is **time to first byte**: the timer is
+cleared the moment response headers arrive, so reading a slow body is never cut off.
+`AbortSignal.timeout` would have been a whole-response deadline, which aborts precisely the
+transfers that are working.
+
+A request whose body is a file gets `UPLOAD_TIMEOUT_MS` (15 min) instead, because its headers
+cannot arrive until the upload has gone up; `carriesAFile` must keep matching what `buildFormData`
+turns into a file part. A caller that knows better passes `timeoutMs`.
+
+This is a backstop, not a latency target — a full 39-test suite answers in 2.4s. It exists because
+the MCP server is long-lived and answers concurrently, and its `ctx.signal` fires only when the
+*client* gives up, which an agent waiting on a result does not do. A timed-out request is thrown
+as `RequestError` with `code: 'ETIMEDOUT'`, which is already in `classify`'s unreachable set, so it
+reaches a tool as `kind: unavailable` with the host named — the same as a refused connection, and
+distinguishable from the caller cancelling, which is reported as itself.
+
+`page-fetch` shares the helper rather than carrying its own: it runs a page's Liquid, so it is the
+likeliest request in the system to hang. `waitForUnpack` and the S3 upload use `fetch` directly and
+are bounded by their own loops.
+
 ## Node.js Version
 
 - **Minimum**: Node.js 22.13.0 — set by the dependencies, not by our own code: `commander` 15 needs

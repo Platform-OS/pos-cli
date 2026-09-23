@@ -21,6 +21,20 @@ const MAX_REPORTED_ERRORS = 10;
 const LIQUID_ERRORS = /Liquid error[^\n<]{0,200}/gi;
 
 /**
+ * Failures the template is provably to blame for, by `diagnostic.type` (measured 2026-09-23).
+ *
+ * `Liquid::SyntaxError` never parsed, so nothing ran; `Liquid::UndefinedFilter` names a filter
+ * that does not exist. Both are faults in the one thing the caller supplied, so `input` — "change
+ * the arguments and call again" — is what to do about them.
+ *
+ * The rest keep `instance` because the type does not separate them: `GraphqlTagError` is returned
+ * both for a `.graphql` file that is not there, which is the caller's, and for a query the
+ * instance refused on its own data rules, which is not. `Liquid::Error` is the base class. Reading
+ * either as the caller's would tell an agent to rewrite a template that is already right.
+ */
+const CALLER_FAULT = new Set(['Liquid::SyntaxError', 'Liquid::UndefinedFilter']);
+
+/**
  * The error lines a render left in its own output, which is the only statement of what went wrong
  * when the endpoint's own `error` is null — so they are lifted out rather than the page they are
  * buried in becoming the message. Distinct: one failing partial in a loop repeats its line.
@@ -88,6 +102,8 @@ const execLiquidTool = {
 
     if (respError || inOutput.length > 0) {
       const message = String(resp?.error || resp?.errors || inOutput.join('\n') || 'Liquid execution failed');
+
+      if (CALLER_FAULT.has(resp?.diagnostic?.type)) throw ToolError.input('LIQUID_TEMPLATE_ERROR', message, resp);
       throw ToolError.instance('LIQUID_EXEC_ERROR', message, resp);
     }
 

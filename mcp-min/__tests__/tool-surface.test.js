@@ -151,7 +151,11 @@ const BARE_TOOLS = [
 //         away from the place its answer is costs more than the 21 bytes.
 // 22,598  graphql-exec calls a bad document an input failure rather than an instance one (TASK-54),
 //         which is what it now answers: 3 B back, and the sentence stops contradicting the `kind`.
-const BARE_TOOLS_LIST_BYTES = 22598;
+// 22,529  job-status stopped listing the kinds of job it reads (round 3, F10). It named a data
+//         import, export and clean, which `--profile dev` hides, and an async test run, which no
+//         longer exists in any profile — `tests-run-async` was removed in this release and the
+//         description outlived it. A caller has the job_id; the kinds were never its to know.
+const BARE_TOOLS_LIST_BYTES = 22529;
 
 const HANG_MS = 15000;
 

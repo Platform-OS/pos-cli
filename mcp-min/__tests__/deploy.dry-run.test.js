@@ -156,6 +156,59 @@ describe('what it reports', () => {
     expect(data.deleted.files).toEqual(['pages/someone-elses.liquid']);
   });
 
+  /**
+   * A deletion that costs records, told apart from one that costs code. Measured 2026-09-23: the
+   * converter files `app/schema/*.yml` under `Tables`, and dropping a table drops the rows in it —
+   * which are not in the archive, so no second deploy puts them back. In the flat list it reads
+   * exactly like a partial going, and an evaluation treated the two the same.
+   */
+  describe('deletions that destroy data', () => {
+    const reportWith = (report) => gatewayFake({ report }).Fake;
+
+    test('a table going is named on its own', async () => {
+      const { data } = await runTool(dryRunTool, { ...AUTH }, {
+        Gateway: reportWith({
+          Tables: { upserted: [], deleted: ['schema/items.yml'], skipped: [] },
+          Pages: { upserted: [], deleted: ['views/pages/x.liquid'], skipped: [] }
+        }),
+        ...FAST
+      });
+
+      expect(data.dataLoss).toEqual({ count: 1, files: ['schema/items.yml'] });
+      // Still in the full list: this names a subset, it does not remove anything from it.
+      expect(data.deleted.files).toEqual(['schema/items.yml', 'views/pages/x.liquid']);
+    });
+
+    test('code going is not data going', async () => {
+      const { data } = await runTool(dryRunTool, { ...AUTH }, {
+        Gateway: reportWith({ Pages: { upserted: [], deleted: ['views/pages/x.liquid'], skipped: [] } }),
+        ...FAST
+      });
+
+      expect(Object.hasOwn(data, 'dataLoss')).toBe(false);
+    });
+
+    // The key is the converter's. An unrecognised one stays silent rather than guessing at data.
+    test('a category this does not know is not flagged', async () => {
+      const { data } = await runTool(dryRunTool, { ...AUTH }, {
+        Gateway: reportWith({ SomethingNew: { upserted: [], deleted: ['whatever/x.yml'], skipped: [] } }),
+        ...FAST
+      });
+
+      expect(Object.hasOwn(data, 'dataLoss')).toBe(false);
+      expect(data.deleted.files).toEqual(['whatever/x.yml']);
+    });
+
+    test('a table that is only upserted is not a loss', async () => {
+      const { data } = await runTool(dryRunTool, { ...AUTH }, {
+        Gateway: reportWith({ Tables: { upserted: ['schema/items.yml'], deleted: [], skipped: [] } }),
+        ...FAST
+      });
+
+      expect(Object.hasOwn(data, 'dataLoss')).toBe(false);
+    });
+  });
+
   test('separates what would be deleted from what would be added', async () => {
     const { Fake } = gatewayFake({
       report: {

@@ -3,6 +3,7 @@ import { resolveAuth } from '../auth.js';
 import Gateway from '../../lib/proxy.js';
 import { authProperties } from '../schemas/auth.js';
 import { cancelled } from '../cancellation.js';
+import log from '../log.js';
 import { ToolError } from '../tool-error.js';
 // One pattern and one ordering for one identifier, shared with the GUI's logs schema.
 import { ROW_ID, newerOf } from '../../lib/logRowId.js';
@@ -46,6 +47,28 @@ const asText = (value) => (typeof value === 'string' ? value : (value === undefi
 
 // Substring, not the exact `error_type` equality `pos-cli logs --filter` makes: there
 // `--filter error` misses a row typed `Liquid error`. `null` when nothing was asked for.
+/**
+ * The newest row the instance holds, whatever was asked for.
+ *
+ * Asked only when a `since` read came back with nothing, which is the one answer a caller cannot
+ * read: an empty result looks the same whether nothing happened in that window or the instance
+ * stopped writing to the log days ago. One extra read of the newest page settles it.
+ *
+ * Not on an empty `lastId` read: that is a tail at the tip of the stream and is empty most times
+ * it is called, so the cost would land on the common case and answer a question nobody asked.
+ *
+ * @returns {Promise<{id: string, created_at?: string}|null>} null when the log holds nothing at all
+ */
+const newestRowOn = async (gateway) => {
+  const response = await gateway.logs({ lastId: '0' });
+  const rows = response?.logs;
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+
+  // Oldest first, so the newest is last (measured 2026-09-23).
+  const newest = rows[rows.length - 1];
+  return { id: String(newest?.id), ...(newest?.created_at && { created_at: newest.created_at }) };
+};
+
 const matcherFor = ({ errorType, contains } = {}) => {
   const type = errorType?.toLowerCase();
   const text = contains?.toLowerCase();
@@ -136,8 +159,20 @@ const fetchLogsTool = {
       latestId = maxId;
     }
 
+    // Only a `since` read that found nothing: see `newestRowOn`.
+    const newestRow = (out.length === 0 && params?.since !== undefined && !ctx.signal?.aborted)
+      ? await newestRowOn(gateway).catch((err) => {
+        // A diagnostic must not turn an empty answer into a failed call.
+        log.debug('could not read the newest log row', { error: String(err) });
+        return undefined;
+      })
+      : undefined;
+
     return {
       logs: out.map(lean),
+      // What the instance actually holds, when the answer was otherwise just "nothing". `null`
+      // means the log is empty; a timestamp far in the past means it stopped being written to.
+      ...(newestRow !== undefined && { newestRow }),
       // The string the instance gave us, unchanged: `last_id` is a strict greater-than, so a
       // cursor that lost its fraction re-delivers every row from the same second.
       lastId: latestId,

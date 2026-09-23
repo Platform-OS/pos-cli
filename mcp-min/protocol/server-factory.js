@@ -29,7 +29,10 @@ const PUBLISH_ONLY = Object.freeze({
   getValidator: () => input => ({ valid: true, data: input, errorMessage: undefined })
 });
 
-const text = value => JSON.stringify(value, null, 2);
+// Compact. Nothing but a model reads a tool result, JSON does not need indenting to parse, and
+// the indentation was 27% of a logs-fetch of twenty rows — paid on every result of every call,
+// by a server that counts its tool descriptions to the byte.
+const text = value => JSON.stringify(value);
 
 /**
  * A failure decided before the handler ran. Built through `ToolError` so that it carries a `kind`

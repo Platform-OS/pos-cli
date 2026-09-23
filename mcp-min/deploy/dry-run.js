@@ -62,6 +62,24 @@ const category = (data) => ({
   skipped: { count: toCount(data?.skipped), files: toList(data?.skipped) }
 });
 
+/**
+ * Categories whose deletion takes data with it rather than code.
+ *
+ * Measured 2026-09-23: the converter files `app/schema/*.yml` under `Tables`, and dropping a table
+ * drops the records in it — which are not in the archive and no second deploy puts back. In the
+ * flat `deleted` list a schema looks exactly like a partial, so an evaluation read a table going
+ * and a page going as the same kind of line.
+ *
+ * A category this does not name is not flagged: the key is the converter's, so an unrecognised one
+ * stays silent rather than guessing about data.
+ */
+const DESTROYS_DATA = new Set(['Tables']);
+
+/** The deletions that cost records, by category, when there are any. */
+const dataLossIn = (categories) => Object.entries(categories)
+  .filter(([name]) => DESTROYS_DATA.has(name))
+  .flatMap(([, c]) => c.deleted.files);
+
 const sumOver = (categories, key) => Object.values(categories).reduce((n, c) => n + c[key].count, 0);
 
 const flat = (categories, key) => ({
@@ -240,6 +258,8 @@ const dryRunDeployTool = {
       }
     }
 
+    const dataLoss = dataLossIn(categories);
+
     return {
       applied: false,
       releaseId,
@@ -255,6 +275,9 @@ const dryRunDeployTool = {
       // dropped" from "this tool does not say".
       discarded: { count: discarded.length, files: discarded },
       deleted: flat(categories, 'deleted'),
+      // Only when there are any: a field that is usually empty is one a reader learns to skip,
+      // and this is the one line in a delete list that cannot be undone by deploying again.
+      ...(dataLoss.length > 0 && { dataLoss: { count: dataLoss.length, files: dataLoss } }),
       upserted: flat(categories, 'upserted'),
       // Counted, not named. On a dry run where nothing changes these were 88% of the whole answer,
       // listed twice — and a path that is not changing is the one thing nobody asked about. What

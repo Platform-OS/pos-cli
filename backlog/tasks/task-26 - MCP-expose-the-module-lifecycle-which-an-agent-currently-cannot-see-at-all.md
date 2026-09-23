@@ -4,6 +4,7 @@ title: 'MCP: expose the module lifecycle, which an agent currently cannot see at
 status: To Do
 assignee: []
 created_date: '2026-09-18 17:32'
+updated_date: '2026-09-23 20:28'
 labels:
   - mcp
   - agent-facing
@@ -47,3 +48,13 @@ Depends on nothing, but shares the description standard and the placement rule f
 - [ ] #7 The tools added are measured against the tools/list byte budget, and their effect on the dev profile is stated
 - [ ] #8 Module tools follow the description standard from TASK-23.2, including saying when to prefer a neighbouring tool
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+**Round 3 evaluation (2026-09-23) hit this from the other side.** `check-run` reported `MissingPartial` errors for `modules/tests/assertions/equal` — a partial that exists on the instance and that the tests using it run against fine. platformos-check lints the local tree and knows nothing about instance-installed modules, so every test file an agent writes carries false errors and real ones get buried.
+
+That is not a `check-run` defect. It is this task: **the `dev` profile exposes no way to get modules onto disk.** An agent told to write a test in a directory without `modules/` cannot make the linter correct by any route the profile offers, and the evaluator learned the assertion signature only by reading the partial back off the instance through `graphql-exec`.
+
+Worth weighing when this task chooses which of the 13 subcommands to expose: `modules install` (or a frozen-only variant) is what closes it, and a read-only `modules list` does not.
+<!-- SECTION:NOTES:END -->

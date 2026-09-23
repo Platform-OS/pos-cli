@@ -72,9 +72,11 @@ describe('a failing assertion is a run that happened', () => {
   });
 
   // A 500 with no run in it is still a failure of the call — the status is not ignored, it is
-  // judged second.
+  // judged second. The Gateway is supplied so the health probe that now separates a crashed test
+  // from an unwell instance answers here rather than reaching for the network.
   test('a 500 that is not a run is still an error', async () => {
-    const result = await call({ name: 'a' }, { request: answering('<html><title>Aw, Snap!</title></html>', 500) });
+    class Unreachable { async getInstance() { throw Object.assign(new Error('down'), { statusCode: 503 }); } }
+    const result = await call({ name: 'a' }, { request: answering('<html><title>Aw, Snap!</title></html>', 500), Gateway: Unreachable });
 
     expect(result.ok).toBe(false);
     expect(result.error.code).toBe('HTTP_ERROR');
@@ -175,6 +177,30 @@ describe('a selection that matched nothing is not a pass', () => {
 
     expect(result.error).toMatchObject({ kind: 'project', code: 'NO_TESTS' });
     expect(result.error.details).not.toHaveProperty('filter');
+  });
+
+  /**
+   * With no tests on the instance there is no example to copy, and two evaluations could not write
+   * one from anything the server said — both recovered by reading the tests module's assertions
+   * off the instance. The error points there rather than restating the contract, which belongs to
+   * that module and would be wrong here the first time it changed.
+   */
+  test('with nothing to copy, it says how to find out what goes in a test', async () => {
+    const result = await call({}, { request: answering(empty()) });
+
+    expect(result.error.message).toContain('takes and returns a contract');
+    expect(result.error.message).toContain('modules/tests/assertions/');
+    // Pointed at, not copied: no assertion's own parameters are named here.
+    expect(result.error.message).not.toContain('field_name');
+  });
+
+  // Where tests exist, real ones are the better example, so this stays about finding them.
+  test('a filter that matched nothing points at the tests that do exist', async () => {
+    const result = await call({ name: 'nope' }, { request: answering(empty()) });
+
+    expect(result.error.code).toBe('NO_TESTS_MATCHED');
+    expect(result.error.message).toContain('ends_with: "_test"');
+    expect(result.error.message).not.toContain('modules/tests/assertions/');
   });
 });
 
@@ -290,6 +316,56 @@ describe('a 404 from an instance with no test runner', () => {
  * instance, and nothing said so. Measured on 2026-09-22: anything under `app/tests` lands in
  * `files_not_matched`, while `app/lib/**` deploys as Partials.
  */
+/**
+ * A test is a Liquid partial, so one that raises takes the page rendering it down: the runner
+ * answers 500 with an error page and no detail. Read from the status alone that is `unavailable`
+ * — "the same call may work later" — so an evaluation retried a test that could never pass and
+ * had no route to the reason. The instance is asked whether it is well, exactly as a 5xx on a job
+ * is settled, and one that answers for itself is not the thing that failed.
+ */
+describe('a 5xx from an instance that is otherwise well', () => {
+  const crashed = () => vi.fn().mockResolvedValue({
+    statusCode: 500,
+    body: '<!DOCTYPE html><html><head><title>Aw, Snap!</title></head><body>error</body></html>'
+  });
+
+  const instanceThat = (answers, onProbe = () => {}) => class {
+    async getInstance() { onProbe(); if (!answers) throw Object.assign(new Error('down'), { statusCode: 503 }); return { id: 1 }; }
+  };
+
+  test('is the test that raised, not something to retry', async () => {
+    const result = await call({ name: 'crash_test' }, { request: crashed(), Gateway: instanceThat(true) });
+
+    expect(result.error).toMatchObject({ kind: 'project', code: 'TEST_RUN_CRASHED' });
+    expect(result.error.message).toContain("matching 'crash_test'");
+    // The HTML page was the whole of the old answer, and none of its signal.
+    expect(JSON.stringify(result.error)).not.toContain('DOCTYPE');
+  });
+
+  // The probe is what separates the two; without it the instance gets blamed for the test, or the
+  // test for the instance, and only one of those can be acted on.
+  test('an instance that cannot answer for itself keeps the retryable classification', async () => {
+    const result = await call({ name: 'crash_test' }, { request: crashed(), Gateway: instanceThat(false) });
+
+    expect(result.error).toMatchObject({ kind: 'unavailable', code: 'HTTP_ERROR' });
+  });
+
+  test('a run with no name says so without inventing one', async () => {
+    const result = await call({}, { request: crashed(), Gateway: instanceThat(true) });
+
+    expect(result.error.message).toMatch(/^A test raised/);
+  });
+
+  // It costs a request, so it must only be paid when the run has already failed.
+  test('a run that works never probes', async () => {
+    const probes = vi.fn();
+    const result = await call({}, { request: answering(runBody()), Gateway: instanceThat(true, probes) });
+
+    expect(result.ok).toBe(true);
+    expect(probes).not.toHaveBeenCalled();
+  });
+});
+
 describe('the parameters say where a test file can actually live', () => {
   const properties = () => registry.get('unit-tests-run').inputSchema.properties;
 

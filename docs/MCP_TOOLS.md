@@ -358,7 +358,8 @@ is the only place that failure exists, whether the job was queued by a deployed 
     lastId: "1790008926.7639065",
     count: 2,
     scanned: 2,            // only when a filter was used: how many rows were read to find those
-    scanLimitReached: true // only when the scan bound, not the filter or the limit, ended the read
+    scanLimitReached: true, // only when the scan bound, not the filter or the limit, ended the read
+    newestRow: null        // only when a `since` read found nothing: see below
   },
   meta: {
     startedAt: "2025-01-23T10:30:00Z",
@@ -367,6 +368,16 @@ is the only place that failure exists, whether the job was queued by a deployed 
   }
 }
 ```
+
+**`newestRow` tells you which kind of empty a `since` read was.** `count: 0` reads the same
+whether nothing happened in the window asked about or the instance stopped writing to its log
+altogether — an evaluation hit the second and could not tell. When a `since` read comes back with
+nothing, one extra read reports the newest row the instance holds: a timestamp far in the past
+means the log is stale rather than quiet, and `null` means it holds no rows at all. The field is
+absent when rows were found, and absent for a `lastId` read — a tail sits at the tip of the stream
+and is empty most times it is called, so the extra request would land on the common case to answer
+a question it did not ask. An instance that will not answer it leaves the field off rather than
+failing the call.
 
 **Rows carry what the instance said and no more.** `data` is omitted when it is null, and
 `updated_at` when it repeats `created_at` — 52 bytes of a measured 322-byte row, which `limit:
@@ -1022,6 +1033,18 @@ the archive is written under `tmp/` (in a directory of its own per call, describ
   meta: { ... }
 }
 ```
+
+**`dataLoss` names the deletions that cost records.** A deploy that is not partial deletes every
+file missing from the build, and in the flat `deleted` list a table schema reads exactly like a
+partial — but dropping `app/schema/*.yml` drops the rows in that table, which are not in the
+archive and which no second deploy puts back. The field appears only when such a deletion is in
+the list, and names a subset of `deleted` rather than removing anything from it. It is keyed on the
+converter's own category (`Tables`, measured 2026-09-23); a category pos-cli does not recognise is
+never flagged, so silence here means "not known to destroy data", not "safe".
+
+**Assets are not deleted by a non-partial deploy.** Measured 2026-09-23: an asset on the instance
+and absent from the project does not appear in `deleted` at all, and no `Asset` category appears in
+`byCategory` for deletions. Installed modules are likewise outside what the release replaces.
 
 **A preview leaves a release behind.** `dry_run=true` is not a request the API answers without
 recording: it allocates a release id, validates the archive against it, and keeps the record —

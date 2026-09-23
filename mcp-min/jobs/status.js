@@ -33,7 +33,7 @@ const isTransient = err => err?.name === 'RequestError' || isServerError(err);
 const jobNotFound = err => ToolError.not_found('JOB_NOT_FOUND', `${err.message}.`, err.details);
 
 const jobStatusTool = {
-  description: 'Status of an operation started earlier: a deploy, a data import, export or clean, or an async test run. state is running, completed (it finished; a test run whose assertions failed still counts) or failed (the operation itself failed). Read warnings even on completed: a deploy names files it discarded there.',
+  description: 'Status of an operation started earlier, read from the job_id that started it. state is running, completed (the work finished) or failed (the operation itself failed). Read warnings even on completed: a deploy names files it discarded there.',
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',

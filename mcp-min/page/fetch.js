@@ -19,6 +19,8 @@
 import log from '../log.js';
 import { resolveAuth } from '../auth.js';
 import { ToolError } from '../tool-error.js';
+// The same bound every other request gets: a page runs Liquid, so it is the likeliest to hang.
+import { responseDeadline, timedOut, RESPONSE_TIMEOUT_MS } from '../../lib/apiRequest.js';
 import { authProperties } from '../schemas/auth.js';
 import { cancelled } from '../cancellation.js';
 
@@ -85,13 +87,17 @@ const pageFetchTool = {
     if (ctx.signal?.aborted) throw cancelled();
 
     const fetcher = ctx.fetch ?? fetch;
+    const deadline = responseDeadline({ signal: ctx.signal });
     let response;
     try {
-      response = await fetcher(target.href, { redirect: 'manual', signal: ctx.signal });
+      response = await fetcher(target.href, { redirect: 'manual', signal: deadline.signal });
     } catch (err) {
       if (ctx.signal?.aborted) throw cancelled();
-      // Reaches `classify`, which names the host and tells a DNS failure from a refused connection.
+      // Both reach `classify`, which names the host and tells a timeout from a refused connection.
+      if (deadline.reached()) throw timedOut(target.href, RESPONSE_TIMEOUT_MS, err);
       throw Object.assign(new Error(err?.message ?? String(err)), { name: 'RequestError', cause: err, options: { uri: target.href } });
+    } finally {
+      deadline.clear();
     }
 
     const contentType = response.headers.get('content-type');

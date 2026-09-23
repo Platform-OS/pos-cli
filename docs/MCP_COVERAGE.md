@@ -177,6 +177,30 @@ worth writing down.
   currently always false; `pull` is the capability that would use it, and it is `later` above for
   its own reasons. If `downloadable` ever comes back true, that row is where the decision changes.
 
+- **Authoring guidance — taught at the point of failure, not carried as resources (TASK-55).** Two
+  evaluations could not write a test file from anything the server said, which raised the question
+  of whether this server should register MCP **resources** holding authoring knowledge. Measured
+  2026-09-23, the gap is one item rather than a corpus, and two of the three it was thought to be
+  are not gaps at all:
+
+  | Claimed gap | Measured |
+  | --- | --- |
+  | A page needs front matter with `slug` | **No.** A page with no front matter at all deploys and serves, at a slug taken from its filename. |
+  | A table schema's YAML shape | **Mostly no.** The converter refuses a wrong one by name: *"Unknown properties: fields. Available properties are: metadata, name, properties."* |
+  | What goes in a test file | **Yes.** `deploy-dry-run` refuses `assert_equal` as an unknown tag, and nothing says what the right form is. |
+
+  For the one that is real, the content belongs to the `tests` module, whose assertions are
+  partials carrying a `{% doc %}` block that names every parameter they take. So `NO_TESTS` points
+  at them — `admin_liquid_partials` filtered on `modules/tests/assertions/` — rather than restating
+  a contract that would be wrong here the first time that module changed. It is the route both
+  evaluations found for themselves, and it costs nothing until an agent has no tests to copy.
+  `NO_TESTS_MATCHED` deliberately does not carry it: where tests already exist, real ones are the
+  better example and `LIST_TESTS` names them.
+
+  **No resources capability is registered**, and none should be added for this: `resources/list` is
+  served every session whether or not anything is read, the material is another repository's, and
+  neither evaluation was blocked — both reached the answer through a tool they already had.
+
 ## What this audit changed
 
 - **`pos-cli logsv2 search` did not work at all.** `lib/swagger-client.js` assigned to an undeclared

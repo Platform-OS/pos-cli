@@ -640,3 +640,71 @@ test('a since of exactly the epoch reads from the oldest row kept', async () => 
 test('the description says the matching happens here rather than on the instance', () => {
   expect(tool.description).toMatch(/matched here, not by the instance/);
 });
+
+/**
+ * An empty answer, and which empty it is.
+ *
+ * `{logs: [], count: 0}` reads the same whether nothing happened in the window asked about or the
+ * instance stopped writing to its log days ago. An evaluation hit the second — verified from
+ * outside this tool: writes were being discarded while reads still answered, so the newest row was
+ * a day older than the session — and could not tell, because the result says nothing about what
+ * the instance holds.
+ */
+describe('an empty read says what the instance actually holds', () => {
+  const ROWS = [
+    { id: '1790008519.397928', message: 'old', created_at: '2026-09-22T19:15:19.397Z' },
+    { id: '1790008926.7639065', message: 'newest', created_at: '2026-09-22T19:22:06.763Z' }
+  ];
+
+  test('a since read that found nothing reports the newest row there is', async () => {
+    const res = await callAsClient({ since: '2026-09-23T12:00:00Z' }, instanceWith(ROWS).Gateway);
+
+    expect(res.data.count).toBe(0);
+    expect(res.data.newestRow).toEqual({ id: '1790008926.7639065', created_at: '2026-09-22T19:22:06.763Z' });
+  });
+
+  test('a log holding nothing at all answers null, which is a different thing', async () => {
+    const res = await callAsClient({ since: '2026-09-23T12:00:00Z' }, instanceWith([]).Gateway);
+
+    expect(res.data.newestRow).toBeNull();
+  });
+
+  test('a read that found rows does not ask, and does not say', async () => {
+    const { Gateway, asked } = instanceWith(ROWS);
+
+    const res = await callAsClient({ since: '2026-01-01T00:00:00Z' }, Gateway);
+
+    expect(res.data.count).toBe(2);
+    expect(Object.hasOwn(res.data, 'newestRow')).toBe(false);
+    expect(asked).not.toContain('0');
+  });
+
+  /**
+   * The cost gate. A tail polls with `lastId` at the tip of the stream and comes back empty most
+   * times it is called; charging that an extra request would put the cost on the common path to
+   * answer a question it did not ask.
+   */
+  test('an empty lastId poll asks nothing extra', async () => {
+    const { Gateway, asked } = instanceWith(ROWS);
+
+    const res = await callAsClient({ lastId: '9999999999.9' }, Gateway);
+
+    expect(res.data.count).toBe(0);
+    expect(Object.hasOwn(res.data, 'newestRow')).toBe(false);
+    expect(asked).toEqual(['9999999999.9']);
+  });
+
+  test('an instance that will not answer the extra question still returns the rows it did', async () => {
+    class HalfBroken {
+      async logs({ lastId }) {
+        if (lastId === '0') throw Object.assign(new Error('nope'), { statusCode: 503 });
+        return { logs: [] };
+      }
+    }
+
+    const res = await callAsClient({ since: '2026-09-23T12:00:00Z' }, HalfBroken);
+
+    expect(res.ok).toBe(true);
+    expect(Object.hasOwn(res.data, 'newestRow')).toBe(false);
+  });
+});
