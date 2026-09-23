@@ -834,4 +834,89 @@ describe('apiRequest', () => {
       );
     });
   });
+
+  // Without a deadline these inherit undici's five-minute defaults, which reach an operator
+  // as a command that stopped rather than a request that failed.
+  describe('request deadline', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    // A fetch that answers only when its signal is aborted: the stalled connection the
+    // deadline exists for.
+    const stalledFetch = () =>
+      global.fetch.mockImplementation((_uri, options) => new Promise((_resolve, reject) => {
+        options.signal.addEventListener('abort', () => {
+          reject(Object.assign(new Error('This operation was aborted'), { name: 'AbortError' }));
+        });
+      }));
+
+    test('rejects a request that runs out of time as a network failure', async () => {
+      stalledFetch();
+
+      const promise = apiRequest({ uri: 'https://partners.platformos.com/api/pos_modules', timeout: 3000 });
+      // ServerError reads .name to pick a handler and walks to .code for the message, so a
+      // deadline has to arrive shaped like every other network failure, not as an AbortError.
+      const rejection = expect(promise).rejects.toMatchObject({
+        name: 'RequestError',
+        code: 'ETIMEDOUT',
+        options: { uri: 'https://partners.platformos.com/api/pos_modules' }
+      });
+
+      await vi.advanceTimersByTimeAsync(3000);
+      await rejection;
+    });
+
+    test('leaves a request that answers in time alone', async () => {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('{"id":1540}')
+      });
+
+      await expect(apiRequest({ uri: 'https://partners.platformos.com/api/x', timeout: 3000 }))
+        .resolves.toEqual({ id: 1540 });
+
+      // The deadline is cleared on the way out; an armed timer would outlive the command.
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    test('arms nothing when no timeout is asked for', async () => {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('{}')
+      });
+
+      await apiRequest({ uri: 'https://partners.platformos.com/api/x' });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://partners.platformos.com/api/x',
+        expect.not.objectContaining({ signal: expect.anything() })
+      );
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    test("does not mistake the caller's own abort for a deadline", async () => {
+      stalledFetch();
+      const caller = new AbortController();
+
+      const failure = apiRequest({ uri: 'https://partners.platformos.com/api/x', timeout: 60000, signal: caller.signal })
+        .catch((e) => e);
+
+      caller.abort();
+      await vi.advanceTimersByTimeAsync(0);
+
+      const error = await failure;
+      expect(error.name).toBe('RequestError');
+      expect(error.message).toMatch(/aborted/);
+      // Not ETIMEDOUT: the deadline had not passed, and saying it had would send an
+      // operator looking for a slow server instead of the code that cancelled the call.
+      expect(error.code).toBeUndefined();
+    });
+  });
 });
