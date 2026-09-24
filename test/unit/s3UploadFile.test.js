@@ -294,7 +294,7 @@ describe('s3UploadFile', () => {
       expect(error.statusCode).toBeUndefined();
     });
 
-    test('sets no deadline of its own, and takes the long one apiRequest gives an upload', async () => {
+    test('sets no deadline of its own, and takes the one apiRequest gives every request', async () => {
       fs.statSync.mockReturnValue({ size: 10 });
       fs.readFileSync.mockReturnValue(Buffer.from('content'));
       mime.getType.mockReturnValue('application/zip');
@@ -302,10 +302,10 @@ describe('s3UploadFile', () => {
 
       await uploadFile('/tmp/release.zip', 'https://s3.example.com/bucket/release.zip');
 
-      // A transfer takes as long as the operator's uplink takes, so nothing here picks a ceiling:
-      // a body of bytes is recognised as an upload in apiRequest and gets UPLOAD_TIMEOUT_MS, which
-      // is a backstop against a dead socket rather than a limit on a slow upload that is working.
-      // Callers who know their payload is small still pass their own.
+      // Nothing here picks a bound: apiRequest gives every request the same one, chosen to sit
+      // under the 300s cap `fetch` applies whatever pos-cli asks for, so a stalled upload is
+      // reported as a timeout naming the host rather than as "Request to the server failed."
+      // Callers who know their payload is small still pass a shorter one.
       expect(global.fetch.mock.calls[0][1].timeout).toBeUndefined();
       expect(global.fetch.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
     });

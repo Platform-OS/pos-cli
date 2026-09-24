@@ -1166,45 +1166,36 @@ expect(stderr).toMatch(/Could not connect|Request to( the)? server failed/);
 
 **Key file**: `lib/ServerError.js` — `getNetworkErrorCode` helper + `requestHandler`
 
-### Every request is bounded, and the bound is on the answer, not the transfer
+### Every request is bounded, and the bound is under the client's own cap
 
-`apiRequest` gives each request a deadline (`RESPONSE_TIMEOUT_MS`, 5 min) that ends the call if the
-host accepts the connection and then says nothing. It is **time to first byte**: the timer is
+`apiRequest` gives each request a deadline (`RESPONSE_TIMEOUT_MS`, 4.5 min) that ends the call if
+the host accepts the connection and then says nothing. It is **time to first byte**: the timer is
 cleared the moment response headers arrive, so reading a slow body is never cut off.
 `AbortSignal.timeout` would have been a whole-response deadline, which aborts precisely the
-transfers that are working.
+transfers that are working. A caller that knows its endpoint passes a shorter `timeout` —
+`lib/portal.js` and `lib/presignUrl.js` set 30s, because the Portal answers JSON in milliseconds.
 
-A request that sends a file asks for `UPLOAD_TIMEOUT_MS` (15 min) instead, because its headers
-cannot arrive until the upload has gone up. `carriesAFile` must keep matching the body-building
-beside it: a file part, a `FormData` the caller built (a presigned S3 POST) and raw bytes (a
-presigned PUT) are all uploads, and the last two have no `path` to recognise them by. A caller that
-knows its endpoint passes `timeout` — the Partner Portal and the presign service answer JSON in
-milliseconds, so `lib/portal.js` and `lib/presignUrl.js` set 30s rather than wait five minutes on a
-stalled one.
+**The number sits under `fetch`'s own 300s cap, and that is the whole point of choosing it.**
+Measured 2026-09-24 (Node 25.6.0): undici applies `headersTimeout` to the entire *send* and never
+resets it as bytes move, so a 96MB upload at a steady 256KB/s — nothing wrong at either end — was
+killed at 300.9s with 64MB delivered. Nothing a request carries can raise that: the timing options
+in `RequestInit` are ignored, and a signal only ever ends a request *earlier*. So a bound above
+300s can never fire, and what the operator gets instead is the client's own failure, `fetch
+failed`, which `getNetworkErrorCode` cannot place — `ServerError` falls through to **"Request to
+the server failed."**, naming no host, no duration and nothing about it being a timeout. Keeping
+our bound below the cap is what makes the failure ours to report: `RequestError` with
+`code: 'ETIMEDOUT'` and the uri. `apiRequest.test.js` asserts the relation, because raising the
+constant past 300s would silently hand the message back.
 
-**That 15 minutes is asked for and not granted, and an upload is capped at five.** Node's global
-fetch applies undici's `headersTimeout` (300s) to the whole send, and it does not reset as bytes
-move — measured 2026-09-24 on Node 25.6: a healthy 96MB upload into a peer reading a steady 256KB/s
-was killed at 300.9s with `UND_ERR_HEADERS_TIMEOUT`, after 64MB had arrived, and a send into a peer
-that read nothing failed at 301.4s with the same error. So any upload needing more than five minutes
-fails today whatever bound this file names: 50MB needs 1.4 Mbit/s sustained, 500MB needs 13. The
-ceiling is movable, and moving it is the whole fix: the same 96MB upload at the same rate was
-killed at 300.9s under the default and answered **200 at 384.8s** with `headersTimeout` raised to
-15 min through a per-request `dispatcher`. That means taking `undici` on as a direct dependency,
-which it is not today (`node:https`, which has no default timeout, is the alternative). Until one
-of those lands, `UPLOAD_TIMEOUT_MS` is what pos-cli asks for and not what applies (TASK to raise
-it), and an upload needing over five minutes cannot succeed.
-
-`RESPONSE_TIMEOUT_MS` is the same 300s as undici's default, so for an ordinary call the two bounds
-race; ours wins only because its timer starts a few milliseconds earlier, before the connect. That
-is what makes the failure the classified `ETIMEDOUT` rather than a bare `fetch failed`, so the
-margin is worth widening rather than relying on.
+One bound, not two. An upload used to get a longer one on the reasoning that headers cannot arrive
+until the body has gone up, which is true and still unreachable — the cap applies to the send. The
+cost of the single bound is that an upload needing over 4.5 minutes fails where it previously had
+5; lifting that needs a different HTTP client for uploads, not a bigger number here.
 
 This is a backstop, not a latency target — a full 39-test suite answers in 2.4s. It exists because
 the MCP server is long-lived and answers concurrently, and its `ctx.signal` fires only when the
-*client* gives up, which an agent waiting on a result does not do. A timed-out request is thrown
-as `RequestError` with `code: 'ETIMEDOUT'`, which is already in `classify`'s unreachable set, so it
-reaches a tool as `kind: unavailable` with the host named — the same as a refused connection, and
+*client* gives up, which an agent waiting on a result does not do. A timed-out request reaches a
+tool as `kind: unavailable` with the host named — the same as a refused connection, and
 distinguishable from the caller cancelling, which is reported as itself.
 
 `page-fetch` shares the helper rather than carrying its own: it runs a page's Liquid, so it is the

@@ -937,7 +937,7 @@ describe('apiRequest', () => {
  * Driven on fake timers: a test that really waited five minutes is one nobody runs.
  */
 describe('a request that gets no response', () => {
-  let apiRequest, RESPONSE_TIMEOUT_MS, UPLOAD_TIMEOUT_MS;
+  let apiRequest, RESPONSE_TIMEOUT_MS;
 
   /** Never resolves, and rejects the way `fetch` does when its signal aborts. */
   const silent = () => {
@@ -954,7 +954,7 @@ describe('a request that gets no response', () => {
   beforeEach(async () => {
     vi.useFakeTimers();
     const module = await import('#lib/apiRequest.js');
-    ({ apiRequest, RESPONSE_TIMEOUT_MS, UPLOAD_TIMEOUT_MS } = module);
+    ({ apiRequest, RESPONSE_TIMEOUT_MS } = module);
   });
 
   afterEach(() => {
@@ -998,67 +998,33 @@ describe('a request that gets no response', () => {
   });
 
   /**
-   * A request whose body is a file cannot be answered until the upload finishes, so the ordinary
-   * bound would cut off a release archive on a slow link — the one thing this must not do.
+   * Including a request that sends a file. It used to be given a longer bound of its own, on the
+   * reasoning that headers cannot arrive until the upload has gone up — but `fetch` caps every
+   * request at 300s however patient the caller is, so that bound could never be reached and only
+   * made the failure the client's to report rather than ours.
    */
-  test('a request carrying a file waits far longer', async () => {
+  test('a request carrying a file takes the same bound', async () => {
     fs.readFileSync.mockReturnValue(Buffer.from('zip'));
     silent();
-    let done = false;
-    apiRequest({ method: 'POST', uri: 'https://x.example.com/releases', formData: { file: { path: '/tmp/release.zip' } } })
-      .catch(() => { done = true; });
-
-    await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS + 1000);
-    expect(done, 'an upload must not be cut off at the ordinary bound').toBe(false);
-
-    await vi.advanceTimersByTimeAsync(UPLOAD_TIMEOUT_MS);
-    expect(done).toBe(true);
-  });
-
-  /**
-   * The two shapes an upload to object storage takes: a presigned PUT, whose body is the file's
-   * bytes, and a presigned POST, whose body is a FormData the caller built around them. Neither
-   * has a `path` to recognise, so both read as an ordinary JSON call and were cut off at five
-   * minutes — on precisely the uploads the longer bound exists for.
-   */
-  test('a raw body of bytes is an upload, not an ordinary call', async () => {
-    silent();
-    let done = false;
-    apiRequest({ method: 'PUT', uri: 'https://s3.example.com/assets.zip', body: Buffer.from('zip'), json: false })
-      .catch(() => { done = true; });
-
-    await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS + 1000);
-    expect(done, 'an upload must not be cut off at the ordinary bound').toBe(false);
-
-    await vi.advanceTimersByTimeAsync(UPLOAD_TIMEOUT_MS);
-    expect(done).toBe(true);
-  });
-
-  test("a FormData the caller built is an upload too", async () => {
-    silent();
-    const formData = new FormData();
-    formData.append('key', 'assets/${filename}');
-    formData.append('file', new Blob(['zip']), 'assets.zip');
-
-    let done = false;
-    apiRequest({ method: 'POST', uri: 'https://s3.example.com/bucket', formData, json: false })
-      .catch(() => { done = true; });
-
-    await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS + 1000);
-    expect(done, 'an upload must not be cut off at the ordinary bound').toBe(false);
-
-    await vi.advanceTimersByTimeAsync(UPLOAD_TIMEOUT_MS);
-    expect(done).toBe(true);
-  });
-
-  test('a body that is not a file keeps the ordinary bound', async () => {
-    silent();
-    let done = false;
-    apiRequest({ method: 'POST', uri: 'https://x.example.com/graph', body: { query: '{ x }' } }).catch(() => { done = true; });
+    const settled = apiRequest({
+      method: 'POST',
+      uri: 'https://x.example.com/releases',
+      formData: { file: { path: '/tmp/release.zip' } }
+    }).catch(e => e);
 
     await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS);
 
-    expect(done).toBe(true);
+    expect((await settled).code).toBe('ETIMEDOUT');
+  });
+
+  /**
+   * The point of the number, and the thing that would silently undo this: a bound above the HTTP
+   * client's own 300s cap can never fire, and the client's failure is `fetch failed` — which
+   * `ServerError` cannot place, so it prints "Request to the server failed." with no host, no
+   * duration and no sign that it timed out.
+   */
+  test('stays under the cap the HTTP client applies to every request', () => {
+    expect(RESPONSE_TIMEOUT_MS).toBeLessThan(300000);
   });
 
   // The caller's own signal still works, and cancelling is not a timeout.

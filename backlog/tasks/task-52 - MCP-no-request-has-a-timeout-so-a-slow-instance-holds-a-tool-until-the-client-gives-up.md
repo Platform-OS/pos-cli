@@ -6,7 +6,7 @@ title: >-
 status: Done
 assignee: []
 created_date: '2026-09-22 12:55'
-updated_date: '2026-09-23 21:17'
+updated_date: '2026-09-24 08:23'
 labels:
   - mcp
   - robustness
@@ -46,6 +46,16 @@ Open questions for whoever takes this:
 - [x] #4 `page-fetch` inherits it rather than carrying its own
 - [x] #5 A test drives a fetch that never resolves and asserts the call comes back, with fake timers rather than a real wait
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+**Superseded in part, 2026-09-24.** The two-tier bound described above is gone: `UPLOAD_TIMEOUT_MS` (15 min) and the `carriesAFile` predicate that chose it have been removed, and every request now takes one bound, `RESPONSE_TIMEOUT_MS`, lowered from 5 min to 4.5.
+
+The reason is a measurement this task did not have. `fetch` applies undici's `headersTimeout` — 300s — to the whole request *send*, and never resets it as bytes move: a 96MB upload at a steady 256KB/s, healthy at both ends, was killed at 300.9s with 64MB delivered. Nothing a request carries can raise that; the timing fields in `RequestInit` are ignored and a signal only ever ends a request earlier. So the 15-minute upload bound could never be reached, and what the operator actually got was the client's own `fetch failed`, which `getNetworkErrorCode` cannot place — `ServerError` fell through to "Request to the server failed.", naming no host, no duration and nothing about a timeout.
+
+Keeping our bound *under* the client's cap is what makes the failure ours to report, which was AC #4's intent all along. Raising the cap instead is possible — a per-request `undici` dispatcher was built and measured working (the same upload finished in 384.8s) — but it costs a direct `undici` dependency, an undocumented `RequestInit` extension, proxy-agent handling, and makes a dead socket take 20 minutes to fail instead of 5, to serve uploads over ~50MB on links under 1.4 Mbit/s. Judged not worth it and discarded. If a real user ever hits the cap it will now say so plainly, which is the evidence that would reopen the question.
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 

@@ -10,6 +10,11 @@ import { authProperties } from '../schemas/auth.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
+// As the repository writes them. `path.relative` answers in the platform's own separator, so on
+// Windows this read `mcp-min\page\fetch.js` and matched no path written in the test, while the
+// same assertion passed on Linux -- a failure only CI could find.
+const repoPath = (file) => path.relative(repoRoot, file).split(path.sep).join('/');
+
 const authFileList = fg
   .sync('mcp-min/**/*.js', { cwd: repoRoot, absolute: true, ignore: ['**/__tests__/**', '**/node_modules/**'] })
   .filter(file => !file.endsWith(`${path.sep}auth.js`))
@@ -118,7 +123,7 @@ describe('authentication params stay accepted', () => {
   const ANONYMOUS_AUTH = /\bresolveAuth\([^;]*anonymous:\s*true/;
   const sendsCredentials = (file) => !ANONYMOUS_AUTH.test(fs.readFileSync(file, 'utf8'));
 
-  test.each(authenticatingFiles.map((file, i) => [path.relative(repoRoot, file), i, file]))(
+  test.each(authenticatingFiles.map((file, i) => [repoPath(file), i, file]))(
     '%s declares the credentials it resolves, on a closed schema',
     (_label, index, file) => {
       const schema = authTools[index]?.inputSchema;
@@ -143,7 +148,7 @@ describe('authentication params stay accepted', () => {
     const credentialed = authenticatingFiles.filter(sendsCredentials);
 
     expect(credentialed.length, 'tools that resolve full credentials').toBeGreaterThan(15);
-    expect(anonymous.map(file => path.relative(repoRoot, file))).toEqual(['mcp-min/page/fetch.js']);
+    expect(anonymous.map(repoPath)).toEqual(['mcp-min/page/fetch.js']);
 
     const schema = authTools[authenticatingFiles.indexOf(anonymous[0])].inputSchema;
     // The point of the relaxation: a tool that sends nothing must not ask for a token either.
