@@ -794,60 +794,14 @@ expect(stderr).toMatch(/Could not connect|Request to( the)? server failed/);
 
 **Key file**: `lib/ServerError.js` — `getNetworkErrorCode` helper + `requestHandler`
 
-### The request ceiling, and why an upload gets its own
+### Uploads are streamed, never read into a Buffer
 
-`fetch` applies undici's `headersTimeout` — 300s — to the whole request **send**, and it does not
-reset as bytes move. Measured 2026-09-24 (Node 25.6.0, built-in undici 7.19.2): a 96MB body going
-out at a steady 256KB/s, never stalling, was killed at 300.9s with 64MB delivered; the same upload
-answered 200 at 384.8s with the ceiling raised. So an upload needing more than five minutes could
-not succeed — a 50MB archive needs 1.4 Mbit/s sustained to fit inside 300s — and it failed as
-`fetch failed`, naming neither the host nor the cause.
-
-An `AbortSignal` cannot fix that: a signal only ever ends a request **earlier** than the ceiling.
-Raising it needs a `dispatcher`, which is why `undici` is a direct dependency (`^6`, which
-deduplicates onto the copy `node-gyp` already installs, so nothing extra is downloaded).
-
-`lib/requestCeiling.js` owns all of it and `apiRequest` spends four lines on it:
-
-- **`carriesAFile` must keep matching `apiRequest`'s body-building.** A `FormData` the caller built
-  (a presigned S3 POST), raw bytes (a presigned PUT) and the two values `buildFormData` turns into
-  a file part are uploads; the first two have no `path` to recognise them by, which is how they
-  came to be treated as ordinary calls. Wrong in either direction and a request gets the ceiling
-  meant for the other kind.
-- **`UPLOAD_HEADERS_TIMEOUT_MS` is finite, and above every deadline pos-cli sets itself.** `0`
-  disables the timeout, and nothing else bounds a transfer, so a socket that died mid-upload would
-  hold a deploy — and, in the MCP server, a background asset upload nobody awaits — for ever. Being
-  above the caller deadlines (the longest is `lib/portal.js`, 30s) is what keeps a bound pos-cli
-  chose the one that reports the failure.
-- **One `Agent` per process, loaded on first use.** It owns a connection pool, so one per request
-  leaves a pool behind per upload; the memoised value is the *promise*, so two uploads starting
-  together share one Agent rather than racing to build two. `undici` is imported inside
-  `uploadDispatcher` rather than at the top of the file because `apiRequest` is on the path of
-  every command and loading it costs ~125ms measured — `pos-cli env list` must not pay that for a
-  library only an upload uses. Measured: a shared Agent pools per origin and does not hold the
-  event loop open, so a CLI command still exits immediately.
-- **A dispatcher must not change where the bytes go.** It replaces the one the process would
-  otherwise use, routing included: Node 24 installs an `EnvHttpProxyAgent` globally when
-  `NODE_USE_ENV_PROXY` is set (measured: `Agent` without it, `EnvHttpProxyAgent` with it), and a
-  plain Agent of ours would ignore it — so on a corporate network every request would be proxied
-  except an upload, which would try to connect directly and be refused. When the global dispatcher
-  is anything but a stock `Agent`, `uploadDispatcher` supplies nothing and the upload runs like
-  every other request, at the default ceiling. Checked by constructor name rather than
-  `instanceof`, because the global one is built by Node's own copy of undici and is a different
-  class object. Giving those uploads the longer ceiling too means building an `EnvHttpProxyAgent`,
-  which undici marks experimental and warns about on every construction; that is a follow-up for
-  somebody who needs it, not a guess to ship.
-- **A ceiling reached inside the client is reported as `ETIMEDOUT` with the host.** That is what
-  `ServerError` explains and what `classify` (`mcp-min/tool-error.js`) reads as a host that did not
-  answer. The message names a duration only when pos-cli chose it.
-
-**`dispatcher` on `RequestInit` is an undici extension, not a documented Node API**, and the
-`Agent` comes from the userland copy while `fetch` uses Node's built-in one (6.28.1 into 7.19.2 in
-the measurement above — it tolerates a major-version gap, but neither project promises that). If a
-Node release stops honouring it, uploads silently return to a five-minute cap, so
-`test/unit/uploadCeiling.test.js` drives a real socket and fails when a raised ceiling is ignored.
-It runs on every Node version in CI for that reason; its ceilings are whole seconds because
-undici's timeout wheel is coarse — a 300ms ceiling was measured firing at ~800ms.
+Node's `fetch` sends a Buffer as a single chunk, and undici refreshes its 300s `headersTimeout`
+only when the socket accepts a chunk, so a buffered upload slower than 300s is cut off mid-send.
+A file opened with `fs.openAsBlob` streams in pieces and the timeout ends only a stalled transfer.
+`buildFormData` (`lib/apiRequest.js`) and `lib/s3UploadFile.js` open files this way; nothing on an
+upload path may `readFileSync` a file into the body. `test/unit/uploadStreaming.test.js` guards it
+with a real socket, and `lib/ServerError.js` reports `UND_ERR_*_TIMEOUT` as a timeout.
 
 ## Node.js Version
 
