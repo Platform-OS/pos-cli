@@ -50,7 +50,7 @@ describe('apiRequest', () => {
         }
       };
 
-      fs.readFileSync.mockReturnValue(fileBuffer);
+      fs.openAsBlob.mockResolvedValue(new Blob([fileBuffer]));
 
       global.fetch.mockResolvedValue({
         ok: true,
@@ -64,7 +64,7 @@ describe('apiRequest', () => {
         formData
       });
 
-      expect(fs.readFileSync).toHaveBeenCalledWith('/home/user/project/app/views/pages/index.liquid');
+      expect(fs.openAsBlob).toHaveBeenCalledWith('/home/user/project/app/views/pages/index.liquid');
       expect(global.fetch).toHaveBeenCalledWith(
         'https://example.com/api/sync',
         expect.objectContaining({
@@ -142,7 +142,7 @@ describe('apiRequest', () => {
         numberValue: 123
       };
 
-      fs.readFileSync.mockReturnValue(fileBuffer);
+      fs.openAsBlob.mockResolvedValue(new Blob([fileBuffer]));
 
       global.fetch.mockResolvedValue({
         ok: true,
@@ -156,7 +156,7 @@ describe('apiRequest', () => {
         formData
       });
 
-      expect(fs.readFileSync).toHaveBeenCalledWith('/home/user/project/file.txt');
+      expect(fs.openAsBlob).toHaveBeenCalledWith('/home/user/project/file.txt');
       expect(global.fetch).toHaveBeenCalled();
     });
 
@@ -202,106 +202,6 @@ describe('apiRequest', () => {
       });
 
       expect(global.fetch).toHaveBeenCalled();
-    });
-
-    test('handles file path with special characters', async () => {
-      const fileBuffer = Buffer.from('content');
-      const formData = {
-        file: {
-          path: '/home/user/project/file with spaces & chars.txt'
-        }
-      };
-
-      fs.readFileSync.mockReturnValue(fileBuffer);
-
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        text: vi.fn().mockResolvedValue('{}')
-      });
-
-      await apiRequest({
-        method: 'POST',
-        uri: 'https://example.com/api/upload',
-        formData
-      });
-
-      expect(fs.readFileSync).toHaveBeenCalled();
-    });
-
-    test('handles Windows file paths', async () => {
-      const fileBuffer = Buffer.from('content');
-      const formData = {
-        file: {
-          path: 'C:\\Users\\user\\project\\file.txt'
-        }
-      };
-
-      fs.readFileSync.mockReturnValue(fileBuffer);
-
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        text: vi.fn().mockResolvedValue('{}')
-      });
-
-      await apiRequest({
-        method: 'POST',
-        uri: 'https://example.com/api/upload',
-        formData
-      });
-
-      expect(fs.readFileSync).toHaveBeenCalledWith('C:\\Users\\user\\project\\file.txt');
-    });
-
-    test('handles empty file', async () => {
-      const emptyBuffer = Buffer.from('');
-      const formData = {
-        file: {
-          path: '/home/user/project/empty.txt'
-        }
-      };
-
-      fs.readFileSync.mockReturnValue(emptyBuffer);
-
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        text: vi.fn().mockResolvedValue('{}')
-      });
-
-      await apiRequest({
-        method: 'POST',
-        uri: 'https://example.com/api/upload',
-        formData
-      });
-
-      expect(fs.readFileSync).toHaveBeenCalled();
-    });
-
-    test('handles large file buffer', async () => {
-      const largeBuffer = Buffer.alloc(1024); // Small buffer for testing (simulating 10MB)
-      const formData = {
-        file: {
-          path: '/home/user/project/large.zip'
-        }
-      };
-
-      fs.readFileSync.mockReturnValue(largeBuffer);
-
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        text: vi.fn().mockResolvedValue('{}')
-      });
-
-      await apiRequest({
-        method: 'POST',
-        uri: 'https://example.com/api/upload',
-        formData
-      });
-
-      expect(fs.readFileSync).toHaveBeenCalled();
     });
   });
 

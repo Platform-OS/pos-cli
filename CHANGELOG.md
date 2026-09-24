@@ -4,6 +4,8 @@
 
 ### Fixes
 
+* **An upload that needs more than five minutes no longer fails.** Every file pos-cli sends (release and asset archives, module archives, data-import and `uploads push` ZIPs) was read into memory and sent as a single chunk, so Node's 300-second request timeout cut off any upload slower than that with `fetch failed`. Files are now streamed from disk: the timeout only ends a transfer that has stopped moving, memory no longer grows with the archive, and a timeout is reported as one, naming the host.
+
 * One dropped connection to the CDN no longer ends `pos-cli deploy` with nothing but `"fetch failed"`. After uploading the asset archive, deploy checks the CDN once a second until the platform has unpacked it, and only then sends the asset manifest; a check that got no answer was reported as a fatal error, so a network blip at that moment exited with status 1 after the release had already been applied, without the manifest being sent, and without saying what failed or where. A check that gets no answer — a connection error, a 5xx, or a `408`, `425` or `429` — is now retried at the same pace and still counts toward the existing limit of 90 checks. Three in a row stop the deploy with the CDN's address, the underlying error (for example `other side closed (UND_ERR_SOCKET)` or `getaddrinfo ENOTFOUND …`) and what to do: the manifest was not sent, so run the deploy again. A 5xx used to be taken to mean the archive was already gone, which sent the manifest without waiting. The same applies to the MCP `deploy-start` tool's background asset upload.
 
 ## 6.5.1 (2026-09-17)

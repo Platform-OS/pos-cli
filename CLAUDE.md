@@ -794,6 +794,15 @@ expect(stderr).toMatch(/Could not connect|Request to( the)? server failed/);
 
 **Key file**: `lib/ServerError.js` — `getNetworkErrorCode` helper + `requestHandler`
 
+### Uploads are streamed, never read into a Buffer
+
+Node's `fetch` sends a Buffer as a single chunk, and undici refreshes its 300s `headersTimeout`
+only when the socket accepts a chunk, so a buffered upload slower than 300s is cut off mid-send.
+A file opened with `fs.openAsBlob` streams in pieces and the timeout ends only a stalled transfer.
+`buildFormData` (`lib/apiRequest.js`) and `lib/s3UploadFile.js` open files this way; nothing on an
+upload path may `readFileSync` a file into the body. `test/unit/uploadStreaming.test.js` guards it
+with a real socket, and `lib/ServerError.js` reports `UND_ERR_*_TIMEOUT` as a timeout.
+
 ## Node.js Version
 
 - **Minimum**: Node.js 22.13.0 — set by the dependencies, not by our own code: `commander` 15 needs
