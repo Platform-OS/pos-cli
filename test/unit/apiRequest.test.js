@@ -901,6 +901,28 @@ describe('apiRequest', () => {
       expect(vi.getTimerCount()).toBe(0);
     });
 
+    /**
+     * The HTTP client has a ceiling of its own — undici's 300s headersTimeout — and reaching it
+     * arrives as `fetch failed`, three words naming neither the host nor what happened. ServerError
+     * picks its handler from `name` and walks the cause chain to `code`, so a timeout has to say
+     * that it was one.
+     */
+    test('a ceiling reached inside the HTTP client is reported as a timeout', async () => {
+      global.fetch.mockRejectedValue(Object.assign(new TypeError('fetch failed'), {
+        cause: Object.assign(new Error('Headers Timeout Error'), { code: 'UND_ERR_HEADERS_TIMEOUT' })
+      }));
+
+      const error = await apiRequest({ uri: 'https://partners.platformos.com/api/x' }).catch((e) => e);
+
+      expect(error.name).toBe('RequestError');
+      expect(error.code).toBe('ETIMEDOUT');
+      expect(error.options.uri).toBe('https://partners.platformos.com/api/x');
+      expect(error.message).toContain('timed out waiting for a response');
+      // No duration: pos-cli did not choose this bound, and quoting a number it does not set would
+      // be wrong the day Node changes it. An upload, whose ceiling pos-cli does set, names it.
+      expect(error.message).not.toMatch(/\d+ms/);
+    });
+
     test("does not mistake the caller's own abort for a deadline", async () => {
       stalledFetch();
       const caller = new AbortController();

@@ -19,6 +19,9 @@ vi.mock('../../lib/logger.js');
 // Mock global fetch
 global.fetch = vi.fn();
 
+// The options are matched by the parts these tests are about. An upload also carries the
+// dispatcher that raises its request ceiling (lib/requestCeiling.js), which is not this file's
+// subject and would otherwise have to be repeated in every assertion here.
 describe('s3UploadFile', () => {
   let uploadFile, uploadFileFormData;
 
@@ -63,14 +66,14 @@ describe('s3UploadFile', () => {
       expect(fs.statSync).toHaveBeenCalledWith(fileName);
       expect(fs.readFileSync).toHaveBeenCalledWith(fileName);
       expect(mime.getType).toHaveBeenCalledWith(fileName);
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, {
+      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
         method: 'PUT',
         headers: {
           'Content-Length': fileSize.toString(),
           'Content-Type': 'image/jpeg'
         },
         body: fileBuffer
-      });
+      }));
       expect(result).toBe(s3Url);
     });
 
@@ -171,14 +174,14 @@ describe('s3UploadFile', () => {
 
       const result = await uploadFile(fileName, s3Url);
 
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, {
+      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
         method: 'PUT',
         headers: {
           'Content-Length': '0',
           'Content-Type': 'text/plain'
         },
         body: emptyBuffer
-      });
+      }));
       expect(result).toBe(s3Url);
     });
 
@@ -229,14 +232,14 @@ describe('s3UploadFile', () => {
       const result = await uploadFile(fileName, s3Url);
 
       expect(mime.getType).toHaveBeenCalledWith(fileName);
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, {
+      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
         method: 'PUT',
         headers: {
           'Content-Length': fileSize.toString(),
           'Content-Type': 'application/javascript'
         },
         body: fileBuffer
-      });
+      }));
       expect(result).toBe(s3Url);
     });
   });
@@ -294,6 +297,23 @@ describe('s3UploadFile', () => {
       expect(error.statusCode).toBeUndefined();
     });
 
+    /**
+     * The bytes of a file are what makes this an upload, and what gets it the raised request
+     * ceiling (lib/requestCeiling.js). Asserted here rather than only on the predicate, because
+     * it is this call site that decides the body shape: send the file as anything else and the
+     * upload silently goes back to the five-minute cap.
+     */
+    test('is dispatched under the raised request ceiling', async () => {
+      fs.statSync.mockReturnValue({ size: 10 });
+      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      mime.getType.mockReturnValue('application/zip');
+      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
+
+      await uploadFile('/tmp/release.zip', 'https://s3.example.com/bucket/release.zip');
+
+      expect(global.fetch.mock.calls[0][1].dispatcher).toBeDefined();
+    });
+
     test('arms no deadline of its own unless the caller asks for one', async () => {
       fs.statSync.mockReturnValue({ size: 10 });
       fs.readFileSync.mockReturnValue(Buffer.from('content'));
@@ -334,11 +354,11 @@ describe('s3UploadFile', () => {
 
       expect(fs.readFileSync).toHaveBeenCalledWith(filePath);
       expect(mime.getType).toHaveBeenCalledWith(filePath);
-      expect(global.fetch).toHaveBeenCalledWith(data.url, {
+      expect(global.fetch).toHaveBeenCalledWith(data.url, expect.objectContaining({
         method: 'POST',
         headers: {},
         body: expect.any(FormData)
-      });
+      }));
       expect(result).toBe(true);
     });
 
@@ -450,11 +470,11 @@ describe('s3UploadFile', () => {
       await uploadFileFormData(filePath, data);
 
       // Verify fetch was called with FormData
-      expect(global.fetch).toHaveBeenCalledWith(data.url, {
+      expect(global.fetch).toHaveBeenCalledWith(data.url, expect.objectContaining({
         method: 'POST',
         headers: {},
         body: expect.any(FormData)
-      });
+      }));
     });
 
     test('handles various MIME types correctly', async () => {
