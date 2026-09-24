@@ -826,6 +826,17 @@ deduplicates onto the copy `node-gyp` already installs, so nothing extra is down
   every command and loading it costs ~125ms measured — `pos-cli env list` must not pay that for a
   library only an upload uses. Measured: a shared Agent pools per origin and does not hold the
   event loop open, so a CLI command still exits immediately.
+- **A dispatcher must not change where the bytes go.** It replaces the one the process would
+  otherwise use, routing included: Node 24 installs an `EnvHttpProxyAgent` globally when
+  `NODE_USE_ENV_PROXY` is set (measured: `Agent` without it, `EnvHttpProxyAgent` with it), and a
+  plain Agent of ours would ignore it — so on a corporate network every request would be proxied
+  except an upload, which would try to connect directly and be refused. When the global dispatcher
+  is anything but a stock `Agent`, `uploadDispatcher` supplies nothing and the upload runs like
+  every other request, at the default ceiling. Checked by constructor name rather than
+  `instanceof`, because the global one is built by Node's own copy of undici and is a different
+  class object. Giving those uploads the longer ceiling too means building an `EnvHttpProxyAgent`,
+  which undici marks experimental and warns about on every construction; that is a follow-up for
+  somebody who needs it, not a guess to ship.
 - **A ceiling reached inside the client is reported as `ETIMEDOUT` with the host.** That is what
   `ServerError` explains and what `classify` (`mcp-min/tool-error.js`) reads as a host that did not
   answer. The message names a duration only when pos-cli chose it.

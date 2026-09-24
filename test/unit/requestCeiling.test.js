@@ -126,6 +126,43 @@ describe('the upload dispatcher', () => {
     expect(JSON.parse(stdout)).toEqual({ afterImport: false, afterUse: true });
   }, 30000);
 
+  /**
+   * A dispatcher replaces the one the process would otherwise use, routing included: Node 24
+   * installs an `EnvHttpProxyAgent` globally when `NODE_USE_ENV_PROXY` is set, and a plain Agent of
+   * ours would ignore it — so on a corporate network every request would go through the proxy
+   * except an upload, which would try to connect directly and be refused. Raising a ceiling must
+   * not move the bytes, so nothing is supplied when the global dispatcher is not a stock Agent.
+   *
+   * Spawned, because it turns on the process's global dispatcher, and run both ways so that the
+   * "stands aside" answer is evidence rather than a probe that never supplied anything.
+   */
+  test('stands aside when something else is steering the network', () => {
+    const ask = (setUp) => {
+      const probe = `
+        ${setUp}
+        let sent;
+        globalThis.fetch = async (_uri, options) => { sent = options; return { ok: true, status: 200, text: async () => '{}' }; };
+        import(${JSON.stringify(urlOf('lib', 'apiRequest.js'))}).then(async ({ apiRequest }) => {
+          await apiRequest({ method: 'PUT', uri: 'http://x.example.com/u', body: Buffer.from('zip'), json: false });
+          const { uploadDispatcher } = await import(${JSON.stringify(urlOf('lib', 'requestCeiling.js'))});
+          process.stdout.write(JSON.stringify({
+            supplied: (await uploadDispatcher()) !== undefined,
+            attached: sent.dispatcher !== undefined
+          }));
+        });
+      `;
+      const { stdout, status, stderr } = spawnSync(process.execPath, ['-e', probe], { encoding: 'utf8' });
+      expect(status, stderr).toBe(0);
+      return JSON.parse(stdout);
+    };
+
+    expect(ask('')).toEqual({ supplied: true, attached: true });
+    expect(ask(`
+      const { setGlobalDispatcher, EnvHttpProxyAgent } = require('undici');
+      setGlobalDispatcher(new EnvHttpProxyAgent());
+    `)).toEqual({ supplied: false, attached: false });
+  }, 30000);
+
   test('is built with the ceiling this module names', () => {
     expect(UPLOAD_HEADERS_TIMEOUT_MS).toBe(20 * 60 * 1000);
   });

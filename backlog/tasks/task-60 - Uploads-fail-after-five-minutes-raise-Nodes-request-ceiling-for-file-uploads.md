@@ -4,7 +4,7 @@ title: 'Uploads fail after five minutes: raise Node''s request ceiling for file 
 status: In Progress
 assignee: []
 created_date: '2026-09-23 23:00'
-updated_date: '2026-09-24 05:40'
+updated_date: '2026-09-24 06:15'
 labels:
   - bug
   - network
@@ -66,6 +66,7 @@ Thresholds: a 50MB archive needs more than **1.4 Mbit/s** sustained to finish in
 - [x] #10 undici is declared in package.json dependencies with an explicit version, and the version users actually install is recorded
 - [x] #11 The comment in lib/s3UploadFile.js claiming transfers are deliberately unbounded is corrected, and the CHANGELOG records the user-visible change: an upload needing more than five minutes used to fail with 'fetch failed'
 - [x] #12 The declared undici version range is chosen deliberately and the reason recorded: ^6 deduplicates onto the copy node-gyp already installs, ^7 matches what recent Node bundles internally but adds a second copy of about 1.7MB to every install
+- [x] #13 Raising the ceiling never changes where the bytes go: when the process's global dispatcher is not a stock Agent (a proxy agent, for example), no dispatcher is supplied and the upload routes exactly as every other request does, asserted both ways so the stand-aside answer cannot pass vacuously
 <!-- AC:END -->
 
 ## Implementation Notes
@@ -90,4 +91,14 @@ Implemented on branch `fix-uploads-capped-at-five-minutes` (from master 2867d47)
 **Verification.** `test/unit` 1379 passed, `mcp-min/__tests__` 439 passed. Five deliberate reverts were each confirmed to break the test that covers them, with sha256-verified restores: the dispatcher wiring, the `FormData` branch of the predicate, the `ETIMEDOUT` mapping, the upload/non-upload message branch, and the lazy import. One unrelated failure remains, `test/unit/modules.test.js`, which fails identically on pristine master (TASK-9).
 
 **CI needs no change**: `.github/workflows/tests.yaml` already runs the unit suite on Node 22 and 24, on Ubuntu and Windows, which is where the version guard lives.
+
+**Review pass found one real defect in the first implementation, now fixed.**
+
+A dispatcher replaces the one the process would otherwise use, *routing included*. Node 24 installs an `EnvHttpProxyAgent` as the global dispatcher when `NODE_USE_ENV_PROXY` is set — measured here: the global dispatcher is `Agent` without the variable and `EnvHttpProxyAgent` with it. The first implementation always supplied a plain `Agent`, so on a corporate network every pos-cli request would have gone through the proxy *except an upload*, which would have tried to connect directly and been refused. That would have turned a five-minute cap into a total failure for exactly the users most likely to have one.
+
+`uploadDispatcher` now supplies nothing when the global dispatcher is not a stock `Agent`, so those uploads run like every other request at the default ceiling. Compared by constructor name rather than `instanceof`, because the global one is built by Node's own copy of undici and is a different class object (7.19.2 against 6.28.1). Covered by a spawned test that runs both ways — with and without a proxy-aware global — so the stand-aside answer is evidence rather than a probe that never supplied anything, and bite-checked by forcing the override back on.
+
+Giving proxied uploads the longer ceiling as well means constructing an `EnvHttpProxyAgent`, which does honour `headersTimeout` (measured) but which undici marks experimental and warns about on every construction. Recorded as a follow-up for somebody who needs it rather than shipped on a guess.
+
+Also checked and found sound, so no change: no caller sends a file through the `json` parameter (`lib/proxy.js`'s `json: formData` payloads are metadata, the file having already gone to S3); a response-body timeout surfaces through the same mapping; the memoised promise resolving to `undefined` caches correctly; and the predicate matches `apiRequest`'s body-building in both directions.
 <!-- SECTION:NOTES:END -->
