@@ -13,7 +13,7 @@ import { parse } from './handle.js';
 import { authForJob } from './auth-for-job.js';
 import { JobNotFoundError, absentOrUnwell, isServerError } from './errors.js';
 
-export const MAX_WAIT_MS = 120000;
+const MAX_WAIT_MS = 120000;
 
 // 1 s between polls at first, easing off to 5 s, as lib/deploy/waitForAssetReport.js does:
 // getStatus returns the whole release record, and a flat 1 s refetches it 120 times per wait.

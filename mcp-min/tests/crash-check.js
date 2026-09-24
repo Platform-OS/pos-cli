@@ -1,26 +1,15 @@
 /**
- * Why a `/_tests/*` endpoint answered 5xx.
- *
- * A test is a Liquid partial, and one that raises takes the page rendering it down with it: the
- * runner answers **500 with an HTML error page** carrying no detail, which is the same shape an
- * unwell instance gives. Read from the status alone that is `unavailable` — "the same call may
- * work later" — so an agent is told to retry a test that can never pass, which is what an
- * evaluation did before giving up on it.
- *
- * The instance is asked a second question instead, as `jobs/errors.js` does for a 5xx on a job:
- * one answering `getInstance` while failing to run a test is not unwell, and the fault is in the
- * test. Asked only after a 5xx, so a run that works pays nothing.
+ * Why a `/_tests/*` endpoint answered 5xx: a test that raised looks exactly like an unwell
+ * instance, and read from the status alone it becomes `unavailable` — "retry later" — for a run
+ * that can never pass. The instance is asked a second question instead, as `jobs/errors.js` does
+ * for a job. Only after a 5xx, so a run that works pays nothing.
  */
 import Gateway from '../../lib/proxy.js';
 import { ToolError } from '../tool-error.js';
 import log from '../log.js';
 
-/**
- * The probe is bounded here, not by the request: `getInstance` takes no signal, and nothing in
- * this repository gives a request a deadline yet (TASK-52). A diagnostic on a path that has
- * already failed must not be what makes the failure slow, so an instance that does not answer
- * quickly is simply one this cannot tell about.
- */
+// Much shorter than the deadline `apiRequest` gives an ordinary request: a diagnostic on a path
+// that has already failed must not be what makes the failure slow.
 const PROBE_MS = 5000;
 
 async function instanceAnswersForItself(gateway) {
@@ -55,8 +44,8 @@ export async function crashedTestRun(status, auth, ctx = {}, filter) {
   const which = filter ? `A test matching '${filter}' raised` : 'A test raised';
   return ToolError.project(
     'TEST_RUN_CRASHED',
-    `${which} while it was running, so the whole run stopped and the runner answered ${status} with an error page. `
-      + 'The instance is answering for itself, so this is the test code, not the instance — calling again will do the same thing. '
+    `${which} while it was running, so the run stopped and the runner answered ${status} with an error page. `
+      + 'The instance is answering other requests, so the fault is in what ran rather than in the instance being down. '
       + 'The runner reports nothing about a run that did not finish: narrow with name to find which test it is.',
     { statusCode: status }
   );

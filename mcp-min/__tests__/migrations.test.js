@@ -64,7 +64,7 @@ describe('the migrations tools answer the way every other tool does', () => {
 
     expect(result.ok).toBe(true);
     expect(result.data.migrations).toEqual([{ id: 1, name: '20260101_add_index', state: 'executed', error_messages: null }]);
-    expect(result.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result.meta.durationMs).toBeGreaterThanOrEqual(0);
     // The masked credential comes from resolveAuth recording what it resolved, not from the tool.
     expect(result.meta.auth).toMatchObject({ url: AUTH.url, email: AUTH.email, source: 'params' });
     expect(result.meta.auth.token).not.toBe(AUTH.token);

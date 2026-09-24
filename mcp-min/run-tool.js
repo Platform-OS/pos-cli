@@ -47,7 +47,9 @@ const errorBody = (error, auth) => {
  * @returns {Promise<{ok: true, data: unknown, meta: object} | {ok: false, error: object, meta: object}>}
  */
 export async function runTool(tool, params, { toolName, ...ctx } = {}) {
-  const startedAt = new Date().toISOString();
+  // Monotonic: a duration measured with the wall clock can come out negative when the clock is
+  // adjusted mid-call, and these calls run for minutes.
+  const startedAt = performance.now();
   // `ctx` is already a copy, built by the rest above: `resolveAuth` records on it, and a caller
   // that reuses one context object across calls — every test does — must not carry one call's
   // credentials into the next.
@@ -59,11 +61,12 @@ export async function runTool(tool, params, { toolName, ...ctx } = {}) {
   // Absent annotations mean "may change things", which is the safe reading and MCP's own default.
   const call = { ...ctx, mayChangeInstance: tool?.annotations?.readOnlyHint !== true };
 
+  // How long, not when: two ISO timestamps were 80 bytes of every result against 19 for this, paid
+  // by the model on every call, and the wall-clock instants answered a question nobody asked.
   const meta = () => {
     const auth = call.resolvedAuth;
     return {
-      startedAt,
-      finishedAt: new Date().toISOString(),
+      durationMs: Math.round(performance.now() - startedAt),
       ...(auth && { auth: { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source } })
     };
   };

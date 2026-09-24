@@ -58,8 +58,7 @@ describe('uploads-push', () => {
     expect(res.data.instanceId).toBe('test-instance-123');
     expect(res.data.filePath).toBe(tempFile);
     expect(res.data.accessUrl).toBe('https://cdn.example.com/uploads.zip');
-    expect(res.meta.startedAt).toBeDefined();
-    expect(res.meta.finishedAt).toBeDefined();
+    expect(res.meta.durationMs).toBeGreaterThanOrEqual(0);
 
     // Verify mocks were called with correct arguments
     expect(mockPresignUrl).toHaveBeenCalledWith(

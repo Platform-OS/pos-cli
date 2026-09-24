@@ -15,7 +15,7 @@ import { ToolError } from '../tool-error.js';
 import { buildInstructions } from '../instructions.js';
 import log from '../log.js';
 
-export const SERVER_INFO = Object.freeze({ name: 'pos-cli-mcp', version: pkg.version });
+const SERVER_INFO = Object.freeze({ name: 'pos-cli-mcp', version: pkg.version });
 
 // While a call with a progress token runs, a progress notification goes out this often, so a
 // client that times out idle calls does not give up on a deploy or a test run.

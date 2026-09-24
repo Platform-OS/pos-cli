@@ -159,29 +159,12 @@ function envNotFound(name, filesModule) {
 }
 
 /**
- * The one resolution step that is a guess, refused for a tool that is not `readOnlyHint`.
+ * Step 4 is the only one that names no instance — it takes whichever `.pos` entry is first — so a
+ * tool that is not `readOnlyHint` is refused there rather than writing to a guess. One environment
+ * is not a guess and is allowed.
  *
- * Steps 1 to 3 all name an instance — in the arguments, in `.pos` by name, or in the environment
- * a CI job exported — and are untouched. Step 4 names nothing: it takes whichever entry happens to
- * be first in a file the model has never seen. For a tool that only reads, that is an
- * inconvenience; for one that writes it is the wrong instance changed, silently.
- *
- * `readOnlyHint` is a wider net than "changes an instance": it promises a tool changes nothing
- * locally either (`tools.js`), so a tool that only writes a local file while reading an instance is
- * refused too. That is the safe direction and costs nothing today — every tool that calls
- * `resolveAuth` does reach an instance — and it is what `runTool` can decide from the registry
- * without a second annotation to keep in step.
- *
- * Why not `required: env` in the schemas, which would be simpler: `resolveAuth` has four supported
- * call styles and only one of them passes `env`, so requiring it would reject explicit credentials,
- * `MPKIT_*` and the single-environment default alike. The ambiguity is not "no env was passed", it
- * is "nothing at all said which instance", and only this function can tell the two apart.
- *
- * One environment is not a guess, so it is allowed: a project with a single `.pos` entry has
- * nothing to choose between, and demanding a name there would be ceremony.
- *
- * `input`, because the caller fixes it by adding an argument — and the message says which, since a
- * model cannot read `.pos`.
+ * `required: env` in the schemas would be simpler and wrong: three of the four supported call
+ * styles pass no `env`. See CLAUDE.md for why the rule is stated as `readOnlyHint`.
  */
 function requireNamedInstance(ctx, names, firstEnv) {
   if (!ctx?.mayChangeInstance || names.length < 2) return;

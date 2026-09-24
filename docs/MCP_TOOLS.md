@@ -222,7 +222,7 @@ The only way to read back anything a starter began. It replaced six per-operatio
     warnings: ["…"],           // only when there are any — read these on `completed` too
     result: { … }              // kind-specific: the release and asset phase, the export, the test run
   },
-  meta: { startedAt, finishedAt, auth: { url, email, token, source } }
+  meta: { durationMs, auth: { url, email, token, source } }
 }
 ```
 
@@ -362,8 +362,7 @@ is the only place that failure exists, whether the job was queued by a deployed 
     newestRow: null        // only when a `since` read found nothing: see below
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:31:30Z",
+    durationMs: 90000,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
   }
 }
@@ -487,8 +486,7 @@ Execute GraphQL queries and mutations on a platformOS instance.
     }
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:02Z",
+    durationMs: 2000,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
   }
 }
@@ -657,8 +655,7 @@ Render Liquid templates on a platformOS instance.
     result: "Hello Alice! Your score is 42."
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:01Z",
+    durationMs: 1000,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
   }
 }
@@ -1131,8 +1128,7 @@ no second phase to wait for, and `job-status` reports the deploy finished when t
     params: { partial: false }
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:05Z",
+    durationMs: 5000,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" },
     params: { partial: false }
   }
@@ -1193,8 +1189,7 @@ Start a data import from JSON file, JSON object, or ZIP archive.
     isZip: false
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:02Z",
+    durationMs: 2000,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
   }
 }
@@ -1270,8 +1265,7 @@ Start a data export from a platformOS instance.
     isZip: false
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:02Z",
+    durationMs: 2000,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
   }
 }
@@ -1334,8 +1328,7 @@ Start a destructive data clean operation. Requires confirmation string.
   },
   warning: "This operation is irreversible. All data has been removed from the instance.",
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:02Z",
+    durationMs: 2000,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
   }
 }
@@ -1523,7 +1516,7 @@ Run the platformos-check linter over an app directory and report offences groupe
       }
     ]
   },
-  "meta": { "startedAt": "...", "finishedAt": "...", "appPath": "/abs/path" }
+  "meta": { "durationMs": 1843, "appPath": "/abs/path" }
 }
 ```
 
@@ -1607,8 +1600,7 @@ Sync a single file to a platformOS instance (upload or delete).
   },
   meta: {
     dryRun: false,
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:00Z",
+    durationMs: 0,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" }
   }
 }
@@ -1695,8 +1687,7 @@ Upload a ZIP file containing property uploads (files referenced by upload-type p
     accessUrl: "https://cdn.platformos.com/instances/abc123/property_uploads/data.public_property_upload_import.zip"
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:05Z"
+    durationMs: 5000
   }
 }
 ```
@@ -2006,8 +1997,7 @@ List all constants configured on a platformOS instance.
     count: 2
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:01Z"
+    durationMs: 1000
   }
 }
 ```
@@ -2042,8 +2032,7 @@ Set a constant on a platformOS instance. Creates or updates the constant.
     value: "new-value-here"
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:01Z"
+    durationMs: 1000
   }
 }
 ```
@@ -2096,8 +2085,7 @@ Delete a constant from a platformOS instance.
     deleted: true
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:01Z"
+    durationMs: 1000
   }
 }
 ```
@@ -2132,8 +2120,7 @@ protocol's `isError` is derived from `ok === false`. A tool cannot report a fail
     // Tool-specific data
   },
   meta: {
-    startedAt: "2025-01-23T10:30:00Z",
-    finishedAt: "2025-01-23T10:30:02Z",
+    durationMs: 2000,
     auth: {
       url: "https://instance.platformos.net",
       email: "user@example.com",
@@ -2155,7 +2142,7 @@ protocol's `isError` is derived from `ok === false`. A tool cannot report a fail
     message: "Human-readable message",
     details: {...}                // Optional: status code, response body, path
   },
-  meta: { startedAt: "...", finishedAt: "..." }
+  meta: { durationMs: 1843 }
 }
 ```
 

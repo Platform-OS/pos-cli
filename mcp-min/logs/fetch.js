@@ -45,8 +45,6 @@ const cursorForTime = (since) => {
 /** A row's `message` is sometimes an object, which `pos-cli logs` also renders. */
 const asText = (value) => (typeof value === 'string' ? value : (value === undefined || value === null ? '' : JSON.stringify(value)));
 
-// Substring, not the exact `error_type` equality `pos-cli logs --filter` makes: there
-// `--filter error` misses a row typed `Liquid error`. `null` when nothing was asked for.
 /**
  * The newest row the instance holds, whatever was asked for.
  *
@@ -70,6 +68,8 @@ const newestRowOn = async (gateway) => {
 };
 
 const matcherFor = ({ errorType, contains } = {}) => {
+  // Substring, not the exact `error_type` equality `pos-cli logs --filter` makes: there
+  // `--filter error` misses a row typed `Liquid error`.
   const type = errorType?.toLowerCase();
   const text = contains?.toLowerCase();
   if (!type && !text) return null;

@@ -184,8 +184,7 @@ describe('instance-create', () => {
     );
 
     expect(res.meta).toBeDefined();
-    expect(res.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(res.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(res.meta.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   test('has correct schema', () => {

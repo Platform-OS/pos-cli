@@ -65,7 +65,7 @@ describe('no tool builds a result itself', () => {
   // success/timeout/error), so the check cost more in false alarms than it bought.
   test.each([
     ['an ok envelope', /\{\s*ok:\s*(true|false)\b/],
-    ['its own timing meta', /\bstartedAt:\s*new Date\(\)/]
+    ['its own timing meta', /\b(startedAt|durationMs):\s*(new Date\(\)|performance\.now\(\))/]
   ])('no module constructs %s', (_label, pattern) => {
     const offenders = toolModules().filter(([, text]) => pattern.test(text)).map(([file]) => file);
 
@@ -176,7 +176,7 @@ describe('runTool is the only thing that shapes a result', () => {
 
     expect(result.ok).toBe(true);
     expect(result.data).toBeNull();
-    expect(result.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result.meta.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   test('one call cannot carry its credentials into the next through a shared context', async () => {
@@ -192,7 +192,7 @@ describe('runTool is the only thing that shapes a result', () => {
     const result = await runTool({ handler: async () => { throw new ToolError(kind, 'A_CODE', 'what went wrong'); } }, {});
 
     expect(result).toMatchObject({ ok: false, error: { kind, code: 'A_CODE', message: 'what went wrong' } });
-    expect(result.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result.meta.durationMs).toBeGreaterThanOrEqual(0);
   });
 });
 

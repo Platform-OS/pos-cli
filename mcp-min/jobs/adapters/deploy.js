@@ -67,7 +67,7 @@ export const toCount = (value) =>
  * did not change, after the deploy, when nothing can be done about them — `deploy-dry-run` reports
  * the same paths *before* the deploy, which is when they are worth reading.
  */
-export const reportCounts = (report) => {
+const reportCounts = (report) => {
   if (report === null || typeof report !== 'object' || Array.isArray(report)) return report;
 
   return Object.fromEntries(Object.entries(report).map(([category, data]) => [

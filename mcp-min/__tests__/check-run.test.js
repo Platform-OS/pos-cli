@@ -66,8 +66,7 @@ describe('platformos.check-run', () => {
 
     if (result.ok) {
       // theme-check-node is installed
-      expect(result.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-      expect(result.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result.meta.durationMs).toBeGreaterThanOrEqual(0);
       expect(result.data.appPath).toBeDefined();
       expect(result.data).toBeDefined();
       expect(typeof result.data.offenseCount).toBe('number');

@@ -654,8 +654,7 @@ describe('data-validate tool', () => {
       jsonData: { records: [] }
     });
     expect(result.meta).toBeDefined();
-    expect(result.meta.startedAt).toBeDefined();
-    expect(result.meta.finishedAt).toBeDefined();
+    expect(result.meta.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   test('respects strictProperties option', async () => {

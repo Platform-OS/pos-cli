@@ -1,26 +1,18 @@
 /**
  * deploy-dry-run — what a deploy would change, without changing it.
  *
- * A SEPARATE TOOL rather than a `dryRun` flag on `deploy-start`, decided deliberately (TASK-25 #4):
+ * A separate tool, not a `dryRun` flag on `deploy-start`: a flag leaves the destructive path one
+ * boolean away from the safe one, for a call whose whole purpose is to be reached by an agent that
+ * does not yet know what a deploy would do. Here no argument applies anything. The two also differ
+ * in lifecycle — `deploy-start` mints a `job_id` and starts a background upload that outlives the
+ * call — and in annotations, which are per tool.
  *
- *  - A flag puts the destructive path one boolean away from the safe one. The whole point of this
- *    call is to be reached by an agent that does not yet know what a deploy would do, and
- *    `dryRun: false` — or omitting it — is then a full deploy. Here no argument applies anything:
- *    the request always carries `dry_run`, and there is no branch that does not.
- *  - The two have different lifecycles. `deploy-start` mints a `job_id` and starts a background S3
- *    upload that outlives the call; a dry run must do neither. One handler carrying both is the
- *    shape that hid the failed-migration bug — a single path whose meaning depended on a flag.
- *  - Annotations are per tool. `deploy-start` is `destructiveHint: true` and a client may gate it
- *    behind a prompt; gating the dry run the same way would defeat it.
+ * `destructiveHint: false` and deliberately NOT `readOnlyHint`: nothing on the instance is created,
+ * updated or deleted, but a release record is written, one id per preview, and an archive lands
+ * under tmp/.
  *
- * `destructiveHint: false` and NOT `readOnlyHint`: nothing on the instance is created, updated or
- * deleted, but the call is not free of effects — the API records a release, one id per preview,
- * and the archive is written under tmp/. Claiming read-only would overstate it, and MCP reads a
- * missing `readOnlyHint` as "may change things", which is the honest default.
- *
- * The release is kept, `status: success` like any other, and stamped `options.dry_run: "true"` —
- * measured 2026-09-23 against a real deploy, whose `options.dry_run` is null. That marker is the
- * platform keeping the record on purpose, so nothing here tries to clean one up (TASK-49).
+ * That record is kept on purpose and stamped `options.dry_run: "true"` (a real deploy's is null,
+ * measured 2026-09-23), so nothing here tries to clean one up.
  */
 import fs from 'fs';
 import path from 'path';
