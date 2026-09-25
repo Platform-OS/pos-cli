@@ -1,6 +1,7 @@
 import { vi, describe, test, expect } from 'vitest';
 
 import partnerGetTool from '../portal/partner-get.js';
+import { runTool } from '../run-tool.js';
 
 const mockConfig = {
   master_token: 'test-token-123',
@@ -21,7 +22,7 @@ describe('partner-get', () => {
       ]
     });
 
-    const res = await partnerGetTool.handler(
+    const res = await runTool(partnerGetTool, 
       { partner_id: 42 },
       { portalRequest, portalConfig: mockConfig }
     );
@@ -57,7 +58,7 @@ describe('partner-get', () => {
       email: 'new@partner.com'
     });
 
-    const res = await partnerGetTool.handler(
+    const res = await runTool(partnerGetTool, 
       { partner_id: 1 },
       { portalRequest, portalConfig: mockConfig }
     );
@@ -77,7 +78,7 @@ describe('partner-get', () => {
       ]
     });
 
-    const res = await partnerGetTool.handler(
+    const res = await runTool(partnerGetTool, 
       { partner_id: 1 },
       { portalRequest, portalConfig: mockConfig }
     );
@@ -98,7 +99,7 @@ describe('partner-get', () => {
       Object.assign(new Error('Partner not found'), { status: 404 })
     );
 
-    const res = await partnerGetTool.handler(
+    const res = await runTool(partnerGetTool, 
       { partner_id: 999 },
       { portalRequest, portalConfig: mockConfig }
     );
@@ -113,13 +114,13 @@ describe('partner-get', () => {
       Object.assign(new Error('Invalid token'), { status: 401 })
     );
 
-    const res = await partnerGetTool.handler(
+    const res = await runTool(partnerGetTool, 
       { partner_id: 1 },
       { portalRequest, portalConfig: mockConfig }
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('PARTNER_GET_ERROR');
+    expect(res.error.code).toBe('UNAUTHORIZED');
     expect(res.error.message).toContain('Invalid token');
   });
 
@@ -128,13 +129,13 @@ describe('partner-get', () => {
       new Error('Connection refused')
     );
 
-    const res = await partnerGetTool.handler(
+    const res = await runTool(partnerGetTool, 
       { partner_id: 1 },
       { portalRequest, portalConfig: mockConfig }
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('PARTNER_GET_ERROR');
+    expect(res.error.code).toBe('INTERNAL_ERROR');
     expect(res.error.message).toContain('Connection refused');
   });
 
@@ -144,13 +145,12 @@ describe('partner-get', () => {
       name: 'Test'
     });
 
-    const res = await partnerGetTool.handler(
+    const res = await runTool(partnerGetTool, 
       { partner_id: 1 },
       { portalRequest, portalConfig: mockConfig }
     );
 
-    expect(res.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(res.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(res.meta.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   test('has correct schema with required partner_id', () => {

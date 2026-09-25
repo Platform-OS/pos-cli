@@ -383,4 +383,4 @@ function validateJsonStructure(data) {
 }
 
 // Export helper functions for testing
-export { isValidUUID, isValidDatetime, matchesSchemaType, validateRecord, validateJsonStructure };
+export { isValidDatetime, matchesSchemaType, validateRecord, validateJsonStructure };

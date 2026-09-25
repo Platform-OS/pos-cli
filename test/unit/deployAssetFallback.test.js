@@ -68,7 +68,10 @@ describe('deploying to an instance that cannot presign an asset upload', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    gateway = { getInstance: vi.fn().mockResolvedValue({ id: 1 }) };
+    // url and token as the real Gateway carries them: `canPresignAssetUpload` hands those to the
+    // presign service rather than reading MARKETPLACE_* off the process, so that two uploads
+    // running at once cannot read each other's credentials.
+    gateway = { url: authData.url, token: authData.token, getInstance: vi.fn().mockResolvedValue({ id: 1 }) };
     vi.mocked(Gateway).mockImplementation(function() { return gateway; });
     files.getAssets.mockResolvedValue(['app/assets/style/main.css']);
     makeArchive.mockResolvedValue(3);
@@ -94,7 +97,7 @@ describe('deploying to an instance that cannot presign an asset upload', () => {
 
     await directAssetsUploadStrategy({ env, authData, params });
 
-    expect(presignDirectory).toHaveBeenCalledWith('instances/1/assets');
+    expect(presignDirectory).toHaveBeenCalledWith('instances/1/assets', { url: authData.url, token: authData.token });
   });
 
   test('uploads directly, as before, when the instance can presign', async () => {

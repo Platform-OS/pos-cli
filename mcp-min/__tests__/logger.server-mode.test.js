@@ -14,11 +14,9 @@ beforeAll(async () => {
   isServerMode = actual.isServerMode;
 });
 
-// Regression guard for the MCP-server crash: logger.Error is the single
-// process-exit choke point in the CLI. Loaded in-process by the long-lived
-// MCP server, a process.exit(1) there tears down the whole server and every
-// tool it serves. In server mode Error must THROW (catchable per-request)
-// instead; standalone CLI must keep the process.exit(1) contract.
+// logger.Error is the CLI's single process-exit choke point, and the MCP server loads it
+// in-process: a process.exit(1) there tears down every tool the server serves. In server mode it
+// must throw instead, while the standalone CLI keeps the exit contract.
 describe('logger server-mode hardening', () => {
   afterEach(() => {
     setServerMode(false);
@@ -76,4 +74,73 @@ describe('logger server-mode hardening', () => {
 
     expect(exitSpy).not.toHaveBeenCalled();
   });
+});
+
+// stdout is the MCP JSON-RPC channel. `logger.Info`, `Success`, `Log`, `News` and `Print` all
+// write there by default — a Partner Portal retry notice (lib/proxy.js) or a two-factor session
+// message (lib/twoFactorSession.js) arrives mid-response and the client sees malformed JSON.
+describe('server mode keeps stdout for the protocol', () => {
+  const write = (stream) => vi.spyOn(process[stream], 'write').mockReturnValue(true);
+
+  test.each(['Info', 'Success', 'Log', 'News'])('%s writes to stderr, not stdout', async (method) => {
+    const stdout = write('stdout');
+    const stderr = write('stderr');
+    setServerMode(true);
+
+    await logger[method]('a message');
+
+    expect(stdout).not.toHaveBeenCalled();
+    expect(stderr.mock.calls.map(([line]) => line).join('')).toContain('a message');
+  });
+
+  test('Print keeps its contract of writing raw text, on stderr', async () => {
+    const stdout = write('stdout');
+    const stderr = write('stderr');
+    setServerMode(true);
+
+    await logger.Print('raw');
+
+    expect(stdout).not.toHaveBeenCalled();
+    expect(stderr).toHaveBeenCalledWith('raw');
+  });
+
+  // Outside the server this is a command-line tool: its output belongs on stdout, which the
+  // backends reach through console.log (vitest intercepts that, so it is what to watch).
+  test('the CLI still writes to stdout', async () => {
+    const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+    setServerMode(false);
+
+    await logger.Info('a message');
+
+    expect(consoleLog.mock.calls.flat().join('')).toContain('a message');
+  });
+});
+
+/**
+ * Which backend `lib/logger.js` loads depends on NO_COLOR and CI, read once at import. The two
+ * have to be indistinguishable from outside, or a suite passes on a laptop and fails in CI for a
+ * reason that has nothing to do with what it was testing — which is exactly what happened: the
+ * test above spies on `console.log`, and `simple.js` used to bind `console.log` at import time, so
+ * under CI the spy saw nothing while the output still went to stdout.
+ */
+describe('both logger backends are observable the same way', () => {
+  test.each(['../../lib/logger/simple.js', '../../lib/logger/rainbow.js'])(
+    '%s calls through to console when it runs, not at import',
+    async (module) => {
+      const backend = await import(module);
+      const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      try {
+        backend.Info('to stdout');
+        backend.Warn('to stderr');
+
+        expect(consoleLog.mock.calls.flat().join('')).toContain('to stdout');
+        expect(consoleError.mock.calls.flat().join('')).toContain('to stderr');
+      } finally {
+        consoleLog.mockRestore();
+        consoleError.mockRestore();
+      }
+    }
+  );
 });

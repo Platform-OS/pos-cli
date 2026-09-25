@@ -1,4 +1,5 @@
 import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { runTool } from '../run-tool.js';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -540,8 +541,11 @@ describe('validateRecords', () => {
 
 describe('data-validate tool', () => {
   test('has correct description and inputSchema', () => {
-    expect(dataValidateTool.description).toContain('Validate');
-    expect(dataValidateTool.inputSchema.properties).toHaveProperty('env');
+    expect(dataValidateTool.description).toContain('schema');
+    // No `env`, and nothing else that authenticates: the check reads the project's schema files
+    // and sends nothing, so a parameter naming an instance could only mislead a caller into
+    // thinking it validated against that instance.
+    expect(Object.keys(dataValidateTool.inputSchema.properties)).not.toContain('env');
     expect(dataValidateTool.inputSchema.properties).toHaveProperty('filePath');
     expect(dataValidateTool.inputSchema.properties).toHaveProperty('jsonData');
     expect(dataValidateTool.inputSchema.properties).toHaveProperty('appPath');
@@ -551,15 +555,14 @@ describe('data-validate tool', () => {
   });
 
   test('returns error when no data source provided', async () => {
-    const result = await dataValidateTool.handler({ env: 'staging' });
+    const result = await runTool(dataValidateTool, {});
     expect(result.ok).toBe(false);
     expect(result.error.code).toBe('VALIDATION_ERROR');
     expect(result.error.message).toContain('Provide one of');
   });
 
   test('returns error when multiple data sources provided', async () => {
-    const result = await dataValidateTool.handler({
-      env: 'staging',
+    const result = await runTool(dataValidateTool, {
       filePath: '/path/to/file.json',
       jsonData: { records: [] }
     });
@@ -569,8 +572,7 @@ describe('data-validate tool', () => {
   });
 
   test('returns error when file not found', async () => {
-    const result = await dataValidateTool.handler({
-      env: 'staging',
+    const result = await runTool(dataValidateTool, {
       filePath: '/nonexistent/file.json'
     });
     expect(result.ok).toBe(false);
@@ -578,8 +580,7 @@ describe('data-validate tool', () => {
   });
 
   test('validates jsonData with valid records', async () => {
-    const result = await dataValidateTool.handler({
-      env: 'staging',
+    const result = await runTool(dataValidateTool, {
       jsonData: { records: [validRecord] },
       appPath: path.join(process.cwd(), 'examples')
     });
@@ -588,13 +589,26 @@ describe('data-validate tool', () => {
     expect(result.data.recordsValidated).toBe(1);
   });
 
-  test('validates jsonData with invalid records', async () => {
-    const result = await dataValidateTool.handler({
-      env: 'staging',
+  // Records that fail the check are this tool's answer, not a failure to answer: the call did
+  // what was asked. Reporting them as ok:false made a finding indistinguishable from the checker
+  // breaking, and disagreed with check-run, which reports violations from a run that worked.
+  test('records that fail the check are a successful call reporting valid: false', async () => {
+    const result = await runTool(dataValidateTool, {
       jsonData: { records: [{ id: 'invalid' }] }
     });
+
+    expect(result.ok).toBe(true);
+    expect(result.data.valid).toBe(false);
+    expect(result.data.code).toBe('VALIDATION_FAILED');
+    expect(result.data.errors.length).toBeGreaterThan(0);
+  });
+
+  test('a checker that cannot run at all still fails the call', async () => {
+    const result = await runTool(dataValidateTool, { jsonData: { records: 'not-an-array' } });
+
     expect(result.ok).toBe(false);
-    expect(result.error.code).toBe('VALIDATION_FAILED');
+    expect(result.error.kind).toBe('input');
+    expect(result.error.code).toBe('INVALID_FORMAT');
   });
 
   test('validates file with valid JSON', async () => {
@@ -602,8 +616,7 @@ describe('data-validate tool', () => {
     fs.writeFileSync(tmpFile, JSON.stringify({ records: [validRecord] }));
 
     try {
-      const result = await dataValidateTool.handler({
-        env: 'staging',
+      const result = await runTool(dataValidateTool, {
         filePath: tmpFile,
         appPath: path.join(process.cwd(), 'examples')
       });
@@ -618,8 +631,7 @@ describe('data-validate tool', () => {
     fs.writeFileSync(tmpFile, 'not json');
 
     try {
-      const result = await dataValidateTool.handler({
-        env: 'staging',
+      const result = await runTool(dataValidateTool, {
         filePath: tmpFile
       });
       expect(result.ok).toBe(false);
@@ -630,8 +642,7 @@ describe('data-validate tool', () => {
   });
 
   test('returns error when records is not an array', async () => {
-    const result = await dataValidateTool.handler({
-      env: 'staging',
+    const result = await runTool(dataValidateTool, {
       jsonData: { records: 'not an array' }
     });
     expect(result.ok).toBe(false);
@@ -639,13 +650,11 @@ describe('data-validate tool', () => {
   });
 
   test('includes meta timestamps', async () => {
-    const result = await dataValidateTool.handler({
-      env: 'staging',
+    const result = await runTool(dataValidateTool, {
       jsonData: { records: [] }
     });
     expect(result.meta).toBeDefined();
-    expect(result.meta.startedAt).toBeDefined();
-    expect(result.meta.finishedAt).toBeDefined();
+    expect(result.meta.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   test('respects strictProperties option', async () => {
@@ -658,27 +667,26 @@ describe('data-validate tool', () => {
     };
 
     // Should pass without strictProperties
-    const resultLax = await dataValidateTool.handler({
-      env: 'staging',
+    const resultLax = await runTool(dataValidateTool, {
       jsonData: { records: [recordWithUnknown] },
       appPath: path.join(process.cwd(), 'examples'),
       strictProperties: false
     });
     expect(resultLax.ok).toBe(true);
+    expect(resultLax.data.valid).toBe(true);
 
     // Should fail with strictProperties
-    const resultStrict = await dataValidateTool.handler({
-      env: 'staging',
+    const resultStrict = await runTool(dataValidateTool, {
       jsonData: { records: [recordWithUnknown] },
       appPath: path.join(process.cwd(), 'examples'),
       strictProperties: true
     });
-    expect(resultStrict.ok).toBe(false);
+    expect(resultStrict.ok).toBe(true);
+    expect(resultStrict.data.valid).toBe(false);
   });
 
   test('rejects jsonData with invalid top-level structure', async () => {
-    const result = await dataValidateTool.handler({
-      env: 'staging',
+    const result = await runTool(dataValidateTool, {
       jsonData: { items: [] }
     });
     expect(result.ok).toBe(false);
@@ -687,8 +695,7 @@ describe('data-validate tool', () => {
   });
 
   test('rejects jsonData with mix of valid and unknown keys', async () => {
-    const result = await dataValidateTool.handler({
-      env: 'staging',
+    const result = await runTool(dataValidateTool, {
       jsonData: { records: [], extra: 'data' }
     });
     expect(result.ok).toBe(false);
@@ -697,8 +704,7 @@ describe('data-validate tool', () => {
   });
 
   test('accepts jsonData with only users key', async () => {
-    const result = await dataValidateTool.handler({
-      env: 'staging',
+    const result = await runTool(dataValidateTool, {
       jsonData: { users: [] }
     });
     expect(result.ok).toBe(true);

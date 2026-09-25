@@ -1,59 +1,70 @@
 #!/usr/bin/env node
 
 import { program } from '../lib/program.js';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import logger from '../lib/logger.js';
+import { addToolSelectionOptions, selectionFrom } from '../mcp-min/cli-args.js';
+import { selectTools } from '../mcp-min/tool-selection.js';
+import { buildInstructions } from '../mcp-min/instructions.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const defaultConfigPath = join(__dirname, '..', 'mcp-min', 'tools.config.json');
-const configPath = process.env.MCP_TOOLS_CONFIG || defaultConfigPath;
+const SOURCE_LABELS = { bundled: 'default (bundled)', MCP_TOOLS_CONFIG: 'MCP_TOOLS_CONFIG' };
+const STATE_NOTES = {
+  loaded: '',
+  missing: ' — not found, so no tool is disabled or redescribed',
+  unreadable: ' — could not be read, so no tool is disabled or redescribed',
+  unparseable: ' — not valid JSON, so no tool is disabled or redescribed'
+};
 
-program
+const reasonText = (reason, profile) => ({
+  profile: `not in profile ${profile}`,
+  excluded: 'excluded with --exclude-tools',
+  disabled: 'disabled in the tools config'
+}[reason]);
+
+const listOrNone = names => (names.length ? names.join(', ') : '(none)');
+
+addToolSelectionOptions(program
   .name('pos-cli-mcp-config')
-  .description('Display MCP server tool configuration')
-  .option('--json', 'Output raw JSON')
-  .action((opts) => {
-    let config;
+  .description('Display which tools the MCP server exposes, and why the others are not exposed')
+  .option('--json', 'Output raw JSON'))
+  .action(async (opts) => {
+    // The same resolution the server runs at startup, so this prints — and refuses — exactly what
+    // `pos-cli-mcp` with these options would.
+    let selection;
     try {
-      config = JSON.parse(readFileSync(configPath, 'utf-8'));
-    } catch (err) {
-      console.error(`Error reading config: ${configPath}\n${err.message}`);
+      selection = selectTools(selectionFrom(opts));
+    } catch (error) {
+      if (error?.name !== 'ToolsConfigError') throw error;
+      await logger.Error(error.message, { exit: false, notify: false, hideTimestamp: true });
       process.exit(1);
     }
 
-    const source = process.env.MCP_TOOLS_CONFIG ? 'MCP_TOOLS_CONFIG' : 'default (bundled)';
+    const { configFile, profile, include, exclude, tools, hidden } = selection;
+    const exposed = [...tools].map(([name, tool]) => ({ name, description: tool.description || '' }));
+    // The same string the server would send this selection, so it can be read without starting one.
+    const instructions = buildInstructions(tools);
 
     if (opts.json) {
-      console.log(JSON.stringify(config, null, 2));
+      console.log(JSON.stringify({ config: configFile, profile, include, exclude, exposed, hidden, instructions }, null, 2));
       return;
     }
 
-    console.log(`Config: ${configPath} (${source})\n`);
+    console.log(`Config: ${configFile.path} (${SOURCE_LABELS[configFile.source]})${STATE_NOTES[configFile.state]}`);
+    console.log(`Profile: ${profile}   --include-tools: ${listOrNone(include)}   --exclude-tools: ${listOrNone(exclude)}\n`);
 
-    const tools = config.tools || {};
-    const enabled = [];
-    const disabled = [];
-
-    for (const [name, cfg] of Object.entries(tools)) {
-      if (cfg.enabled === false) {
-        disabled.push({ name, description: cfg.description || '' });
-      } else {
-        enabled.push({ name, description: cfg.description || '' });
-      }
-    }
-
-    console.log(`Enabled (${enabled.length}):`);
-    for (const t of enabled) {
+    console.log(`Exposed (${exposed.length}):`);
+    for (const t of exposed) {
       console.log(`  ${t.name.padEnd(26)} ${t.description}`);
     }
 
-    if (disabled.length) {
-      console.log(`\nDisabled (${disabled.length}):`);
-      for (const t of disabled) {
-        console.log(`  ${t.name.padEnd(26)} ${t.description}`);
+    if (hidden.length) {
+      console.log(`\nNot exposed (${hidden.length}):`);
+      for (const t of hidden) {
+        console.log(`  ${t.name.padEnd(26)} ${reasonText(t.reason, profile)}`);
       }
     }
+
+    console.log(`\nInstructions sent to the client (${Buffer.byteLength(instructions)} bytes):`);
+    console.log(instructions ? instructions.split('\n').map(line => (line ? `  ${line}` : '')).join('\n') : '  (none)');
   });
 
-program.parse();
+await program.parseAsync();

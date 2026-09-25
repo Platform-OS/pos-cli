@@ -1,6 +1,7 @@
 import { vi, describe, test, expect } from 'vitest';
 
 import endpointsListTool from '../portal/endpoints-list.js';
+import { runTool } from '../run-tool.js';
 
 const mockConfig = {
   master_token: 'test-token-123',
@@ -15,7 +16,7 @@ describe('endpoints-list', () => {
       { id: 3, name: 'Asia Pacific', url: 'https://ap.platformos.com', region: 'ap-southeast-1' }
     ]);
 
-    const res = await endpointsListTool.handler(
+    const res = await runTool(endpointsListTool, 
       {},
       { portalRequest, portalConfig: mockConfig }
     );
@@ -45,7 +46,7 @@ describe('endpoints-list', () => {
       ]
     });
 
-    const res = await endpointsListTool.handler(
+    const res = await runTool(endpointsListTool, 
       {},
       { portalRequest, portalConfig: mockConfig }
     );
@@ -58,7 +59,7 @@ describe('endpoints-list', () => {
   test('returns empty list when no endpoints', async () => {
     const portalRequest = vi.fn().mockResolvedValueOnce([]);
 
-    const res = await endpointsListTool.handler(
+    const res = await runTool(endpointsListTool, 
       {},
       { portalRequest, portalConfig: mockConfig }
     );
@@ -73,7 +74,7 @@ describe('endpoints-list', () => {
       { id: 1, name: 'Minimal Endpoint' }
     ]);
 
-    const res = await endpointsListTool.handler(
+    const res = await runTool(endpointsListTool, 
       {},
       { portalRequest, portalConfig: mockConfig }
     );
@@ -92,13 +93,13 @@ describe('endpoints-list', () => {
       new Error('Connection timeout')
     );
 
-    const res = await endpointsListTool.handler(
+    const res = await runTool(endpointsListTool, 
       {},
       { portalRequest, portalConfig: mockConfig }
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('ENDPOINTS_LIST_ERROR');
+    expect(res.error.code).toBe('INTERNAL_ERROR');
     expect(res.error.message).toContain('Connection timeout');
   });
 
@@ -107,26 +108,25 @@ describe('endpoints-list', () => {
       Object.assign(new Error('Unauthorized'), { status: 401 })
     );
 
-    const res = await endpointsListTool.handler(
+    const res = await runTool(endpointsListTool, 
       {},
       { portalRequest, portalConfig: mockConfig }
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('ENDPOINTS_LIST_ERROR');
+    expect(res.error.code).toBe('UNAUTHORIZED');
     expect(res.error.message).toContain('Unauthorized');
   });
 
   test('includes meta timestamps', async () => {
     const portalRequest = vi.fn().mockResolvedValueOnce([]);
 
-    const res = await endpointsListTool.handler(
+    const res = await runTool(endpointsListTool, 
       {},
       { portalRequest, portalConfig: mockConfig }
     );
 
-    expect(res.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(res.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(res.meta.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   test('has correct schema with no required fields', () => {

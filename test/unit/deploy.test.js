@@ -331,7 +331,13 @@ describe('Deploy - Unit Tests', () => {
   });
 });
 
-describe.skip('Dry Run', () => {
+/**
+ * Enabled in 6.6.0. These shipped as `describe.skip` with the dry run itself (#693) and never ran,
+ * so nothing checked that `push` sends `marketplace_builder[dry_run]` or that the strategy keeps
+ * assets out of S3 — on the one deploy path whose whole purpose is to change nothing. They pass as
+ * written; the skip was not hiding a failure, which is what made it easy to leave.
+ */
+describe('Dry Run', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     nock.cleanAll();

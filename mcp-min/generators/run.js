@@ -1,16 +1,18 @@
 import path from 'path';
 import { runGenerator } from './utils.js';
+import { ToolError } from '../tool-error.js';
+import { generatorPathProperty } from '../schemas/generators.js';
 
 const runTool = {
-  description: 'Run a yeoman generator by path with arguments and options',
+  description: 'Run a generator, writing the files it produces into the project.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      generatorPath: { type: 'string' },
-      args: { type: 'array', items: { type: 'string' }, description: 'Positional arguments passed to generator (order matters)' },
-      options: { type: 'object', additionalProperties: true, description: 'Options passed to generator (like --name=value)' },
-      requireArgs: { type: 'boolean', description: 'If true, validate that required generator args are provided', default: true }
+      generatorPath: generatorPathProperty,
+      args: { type: 'array', items: { type: 'string' }, description: 'Positional arguments, in the order the generator expects.' },
+      options: { type: 'object', additionalProperties: true, description: 'Named options, as key and value.' },
+      requireArgs: { type: 'boolean', description: 'Refuse to run when a required argument is missing.', default: true }
     },
     required: ['generatorPath', 'args']
   },
@@ -26,16 +28,23 @@ const runTool = {
         if (helpInfo && helpInfo.args && Array.isArray(helpInfo.args)) {
           const requiredNames = helpInfo.args.filter(a => a.required).map(a => a.name);
           if (requiredNames.length > 0 && (!Array.isArray(args) || args.length < requiredNames.length)) {
-            return { ok: false, error: { code: 'MISSING_REQUIRED_ARGUMENTS', message: `Missing required args: ${requiredNames.join(', ')}` }, required: requiredNames };
+            throw ToolError.input(
+              'MISSING_REQUIRED_ARGUMENTS',
+              `Missing required args: ${requiredNames.join(', ')}`,
+              { required: requiredNames }
+            );
           }
         }
       } catch (e) {
-        // Ignore help errors; fallback to running
+        // A generator that is not there, or arguments that are missing, is the answer — not
+        // something to run past. Anything else help raises is introspection trouble, and running
+        // the generator anyway is the older, more useful behaviour.
+        if (e instanceof ToolError) throw e;
       }
     }
 
     const result = await runGenerator(resolvedPath, args, options, ctx.yeomanEnv);
-    return { ok: true, result };
+    return { result };
   }
 };
 

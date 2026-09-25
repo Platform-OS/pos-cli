@@ -6,6 +6,7 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-07-24 14:35'
+updated_date: '2026-09-17 08:37'
 labels:
   - dns
   - refactoring
@@ -18,6 +19,7 @@ references:
   - lib/dns/mapping.js
 parent_task_id: TASK-1
 priority: medium
+ordinal: 33000
 ---
 
 ## Description
