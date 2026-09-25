@@ -43,7 +43,7 @@ The Instance details page in the Partner Portal shows the `env add` command pre-
 
 #### Two-Factor Authentication
 
-If your Partner Portal account has two-factor authentication enabled, the token `env add` mints is good for a year against every Instance you can deploy to, so the portal asks for a second factor before issuing one.
+If your Partner Portal account has two-factor authentication enabled, the portal asks for a second factor before issuing a token: the token `env add` mints is bound to the one Instance you named and stays valid for a year unless revoked in the portal.
 
 Nothing extra is needed for the default flow: `pos-cli env add [environment] --url [url]` (no `--email`) authorizes in the browser, where you answer the 2FA challenge like any other portal login.
 
