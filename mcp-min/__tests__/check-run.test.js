@@ -156,6 +156,9 @@ describe('platformos.check-run', () => {
 
     afterAll(() => dirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
 
+    /** Whether `haystack` names `needle`, ignoring case — see the drive-letter note below. */
+    const names = (haystack, needle) => String(haystack).toLowerCase().includes(String(needle).toLowerCase());
+
     /**
      * Both refusals the linter can reach from inside a project: a root it can assert because
      * somebody declared it, and one it only inferred from a directory name. The message differs
@@ -179,7 +182,15 @@ describe('platformos.check-run', () => {
       expect(result.error.kind, `kind was ${result.error.kind}`).toBe('input');
       expect(result.error.code).toBe('NOT_A_PROJECT_ROOT');
       // The linter's own message, forwarded whole: it names the path it was given.
-      expect(result.error.message).toContain(given);
+      //
+      // Compared without case, and only here. The message is the linter's, and it round-trips the
+      // path through a file URL, which lower-cases a Windows drive letter — it reported
+      // `c:\Users\...\app` for the `C:\Users\...\app` Node had just handed it, and CI failed on
+      // the one character. Windows paths are case-insensitive, so this is the comparison that
+      // matches what the message means rather than how the linter spelled it.
+      expect(names(result.error.message, given), result.error.message).toBe(true);
+      // Exact, because this one is ours: `details.appPath` is the argument passed straight back,
+      // untouched by anything that might normalise it.
       expect(result.error.details.appPath).toBe(given);
     });
 

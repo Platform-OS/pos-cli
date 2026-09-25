@@ -1136,6 +1136,15 @@ When adding or modifying path-handling code:
    - Deeply nested paths
    - Paths at root level
    - Module paths vs app paths
+5. **A path that has made a round trip is not byte-comparable with one Node produced.** Going
+   through a `file://` URL **lower-cases the Windows drive letter**:
+   `@platformos/platformos-check-node` reported `c:\Users\…\app` for the `C:\Users\…\app`
+   `fs.mkdtempSync` had just returned, and a `toContain` assertion failed on that one character in
+   CI while passing on Linux. Windows paths are case-insensitive, so compare case-insensitively
+   whenever the other side of the comparison is a string this repository did not produce — a
+   linter's message, an LSP position, anything that has been a URI. A value passed straight back
+   out, like `check-run`'s `details.appPath`, is still compared exactly, and should be: that is
+   what keeps the loosened comparison narrow.
 
 ### Common Mistakes to Avoid
 
