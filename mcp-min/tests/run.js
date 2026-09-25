@@ -111,7 +111,7 @@ const testsRunTool = {
     additionalProperties: false,
     properties: {
       ...authProperties,
-      name: { type: 'string', description: 'Any part of a test path, matched as a substring, e.g. create_user_test or users/. Test files live under app/lib and their path must end with _test; a deploy silently discards app/tests.' }
+      name: { type: 'string', description: 'Any part of a test path, matched as a substring, e.g. create_user_test or users/. Test files live under app/lib and their path must end with _test; a deploy silently discards app/tests. A test takes and returns a contract, calling assertions under modules/tests/assertions/ whose {% doc %} names each parameter.' }
     }
     // `name` is not required: the runner takes no filter as "every test". `env` is not required
     // either — resolveAuth also accepts url+email+token, MPKIT_*, or the single .pos entry.
@@ -121,12 +121,22 @@ const testsRunTool = {
 
     const auth = await resolveAuth(params, ctx);
 
+    // One value, three readers. The URL sends `?name=` only when there is a filter, the crash
+    // lookup matches log rows on that same parameter, and `nothingMatched` picks its error from it
+    // — so an empty `name`, which the schema accepts, has to mean the same thing to all three. It
+    // did not: the URL treated `''` as no filter while the lookup compared it as one, and matched
+    // no row for a run that had crashed.
+    const filter = params?.name || undefined;
+
     // `.js` explicitly. `/_tests/run` happens to serve the same page today, but that is platformOS
     // choosing a format for us; the parser here only reads one, so it asks for the one it reads.
     const testUrl = testsUrl(auth.url, '/_tests/run.js')
-      + (params?.name ? `?name=${encodeURIComponent(params.name)}` : '');
+      + (filter ? `?name=${encodeURIComponent(filter)}` : '');
 
     const requestFn = ctx.request || makeRequest;
+    // Noted before the request, not after: it is where a crash lookup starts reading the log, and
+    // the rows it wants were written while this was in flight.
+    const startedAtMs = Date.now();
     const response = await requestFn({ method: 'GET', uri: testUrl, headers: testAuthHeaders(auth.token) });
 
     const { statusCode, body } = response;
@@ -136,7 +146,7 @@ const testsRunTool = {
     // Before the status, deliberately: see the module note above.
     if (run) {
       const matched = count(run.total_tests);
-      if (matched === 0) throw nothingMatched(params?.name);
+      if (matched === 0) throw nothingMatched(filter);
 
       return {
         passed: count(run.total_errors) === 0,
@@ -167,7 +177,7 @@ const testsRunTool = {
 
     if (statusCode >= 400) {
       // A 5xx the instance is well enough to deny: a test raised and took the run down with it.
-      throw (await crashedTestRun(statusCode, auth, ctx, params?.name))
+      throw (await crashedTestRun(statusCode, auth, ctx, { filter, startedAtMs }))
         ?? new ToolError(kindForStatus(statusCode), 'HTTP_ERROR', `Request failed with status ${statusCode}`, { statusCode, body });
     }
 

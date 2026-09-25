@@ -6,7 +6,7 @@ import { authProperties } from '../schemas/auth.js';
 import { ToolError } from '../tool-error.js';
 
 const execGraphqlTool = {
-  description: 'Run a GraphQL query or mutation against a live instance. A mutation run to test a document has already written its data. Errors in the document come back as an input failure carrying them in details. admin_* queries read the instance itself back, source and all: admin_pages, admin_liquid_partials, admin_assets. The schema is introspectable, so __type gives a type\'s fields rather than guessing them.',
+  description: 'Run a GraphQL query or mutation against a live instance. A mutation run to test a document has already written its data. Errors in the document come back as an input failure carrying them in details. admin_* queries read the instance itself back, source and all: admin_pages (slug), admin_liquid_partials (path), admin_assets (name). The schema is introspectable, so __type gives a type\'s fields rather than guessing them.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,

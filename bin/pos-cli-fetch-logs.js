@@ -3,12 +3,12 @@
 import { program } from 'commander';
 import Gateway from '../lib/proxy.js';
 import { fetchSettings } from '../lib/settings.js';
-import { newerOf } from '../lib/logRowId.js';
+import { newerOf, OLDEST_RETAINED, NEWEST_PAGE } from '../lib/logRowId.js';
 
 program
   .name('pos-cli fetch-logs')
   .argument('[environment]', 'name of environment. Example: staging')
-  .option('--last-log-id <id>', 'return logs after provided id')
+  .option('--last-log-id <id>', `return logs after provided id; omit to read from the oldest row kept, or pass ${NEWEST_PAGE} for the newest page only`)
   .option('--endpoint <url>', 'send the request to this API base url instead of the environment\'s; your stored instance token is sent to it')
   .option('-q, --quiet', 'suppress non-log output')
   .action(async (environment, options) => {
@@ -34,7 +34,10 @@ program
 
       // fetch loop - call gateway.logs until no new logs are returned
       let seen = new Set();
-      let latestId = lastId || '0';
+      // Not `0`: the platform reads that as *no cursor* and answers with the newest page alone
+      // (measured 2026-09-25 — 20 rows of an instance holding 35), so a dump with no cursor
+      // returned the tail and stopped. `pos-cli logs` starts there on purpose; this does not.
+      let latestId = lastId || OLDEST_RETAINED;
       while (true) {
         const params = { lastId: latestId };
         const response = await gateway.logs(params).catch(err => { throw err; });

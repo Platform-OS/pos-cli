@@ -144,7 +144,7 @@ const dataImportTool = {
     return {
       id: importTask.id,
       job_id: mintFor({ kind: 'data-import', id: importTask.id, origin: auth.url }),
-      status: importTask.status
+      instanceStatus: importTask.status
     };
   }
 };

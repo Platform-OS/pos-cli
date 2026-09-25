@@ -89,24 +89,38 @@ const forwarded = (response) => {
   };
 };
 
+const errorWarnings = (response) => (Array.isArray(response?.error?.warnings) ? response.error.warnings : []);
+
+// An unrecognised key is passed through, so the next one the platform adds is not invisible.
+const otherWarnings = (response) => warningEntries(response?.warning)
+  .filter(([key]) => key !== 'files_not_matched')
+  .map(([key, value]) => `${key}: ${Array.isArray(value) ? listOf(value) : JSON.stringify(value)}`);
+
+/**
+ * Everything the instance warned about except the discarded files. Exported for `deploy-dry-run`,
+ * which names those paths in `discarded` — printing them again as prose would be the same list
+ * twice. Same reason `filesNotMatched` is exported: one reader of the platform's shape.
+ */
+export const warningsExceptDiscarded = (response) => {
+  const warnings = [...errorWarnings(response), ...otherWarnings(response)];
+  return warnings.length > 0 ? warnings : undefined;
+};
+
 /**
  * Everything the instance warned about, as sentences beside `state` rather than four levels inside
  * the release record — a discarded file used to read as an unqualified success on every field an
- * agent would check. An unrecognised key is passed through, so the next one is not invisible.
+ * agent would check.
  */
 const releaseWarnings = (response) => {
   const discarded = filesNotMatched(response);
-  const other = warningEntries(response?.warning)
-    .filter(([key]) => key !== 'files_not_matched')
-    .map(([key, value]) => `${key}: ${Array.isArray(value) ? listOf(value) : JSON.stringify(value)}`);
 
   const warnings = [
-    ...(Array.isArray(response?.error?.warnings) ? response.error.warnings : []),
+    ...errorWarnings(response),
     ...(discarded.length > 0
       ? [`${discarded.length} file${discarded.length === 1 ? '' : 's'} matched no part of the platformOS layout, `
         + `so the deploy did not put ${discarded.length === 1 ? 'it' : 'them'} on the instance: ${listOf(discarded)}`]
       : []),
-    ...other
+    ...otherWarnings(response)
   ];
 
   return warnings.length > 0 ? warnings : undefined;

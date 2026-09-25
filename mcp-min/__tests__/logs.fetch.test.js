@@ -190,7 +190,9 @@ describe('the ends of the stream', () => {
     expect(res.data).toMatchObject({ logs: [], count: 0, lastId: '1790008926.9111111' });
   });
 
-  test('omitting lastId starts at the oldest row kept', async () => {
+  // Named for what it does. It used to say "starts at the oldest row kept", which is what the
+  // schema claimed and what `0` has never meant to this API.
+  test('omitting lastId with no filter starts at the newest rows', async () => {
     const { Gateway, asked } = instanceWith(SAME_SECOND);
 
     await callAsClient({}, Gateway);
@@ -430,12 +432,13 @@ describe('since starts the read without fetching what it skips', () => {
   });
 
   // Before the epoch there is no id to convert to, and the pattern this tool publishes has no sign.
+  // `0` is not the answer here: the platform reads it as no cursor and returns the tail.
   test('a time before the epoch reads from the oldest row kept', async () => {
     const { Gateway, asked } = instanceWith(TYPED);
 
     await callAsClient({ since: '1969-07-20T20:17:00Z' }, Gateway);
 
-    expect(asked[0]).toBe('0');
+    expect(asked[0]).toBe('1');
   });
 
   test('the cursor it returns is a row id, not the time it was given', async () => {
@@ -608,7 +611,13 @@ describe('a filter survives a row that is missing what it filters on', () => {
   // `lean` already treats a null row as possible, so the matcher has to as well.
   test('a null row does not match, and does not throw', async () => {
     class WithNull {
-      async logs({ lastId }) { return { logs: lastId === '0' ? [null, RIGHT] : [] }; }
+      // One page then nothing, whatever cursor the read starts from: this is about the null row.
+      #answered = false;
+      async logs() {
+        if (this.#answered) return { logs: [] };
+        this.#answered = true;
+        return { logs: [null, RIGHT] };
+      }
     }
 
     const res = await callAsClient({ errorType: 'wanted' }, WithNull);
@@ -627,13 +636,123 @@ describe('a filter survives a row that is missing what it filters on', () => {
   });
 });
 
+/**
+ * Where a read starts when the caller names no cursor.
+ *
+ * `last_id=0` is not "from the beginning": the platform reads it as *no cursor* and answers with
+ * the newest page. Measured 2026-09-25 against an instance holding 35 rows over three days, `0`
+ * returned the newest 20 while `1`, `0.001` and `0.000001` each returned all 35 — so only the
+ * exact value `0` is special, and nothing in a response says which of the two you got.
+ *
+ * `logs-fetch` started every uncursored read at `0` while its schema said "omit for the oldest
+ * kept". An evaluation searched for an error it had seen two days earlier, got `count: 0` from a
+ * read that had looked at twenty rows, and believed it. The tool has two jobs and the filter is
+ * what tells them apart: searching has to reach the oldest row, and looking wants the newest.
+ */
+describe('where a read starts when the caller names no cursor', () => {
+  const PLATFORM_PAGE = 20;
+
+  /** An instance answering `last_id` the way the measured one does. */
+  const platformWith = (rows) => {
+    const asked = [];
+    class Platform {
+      async logs({ lastId }) {
+        asked.push(lastId);
+        if (lastId === '0') return { logs: rows.slice(-PLATFORM_PAGE) };
+        return { logs: rows.filter(row => after(row.id, lastId)) };
+      }
+    }
+    return { Gateway: Platform, asked };
+  };
+
+  // Thirty rows, oldest first, so the one that matters sits outside the newest page.
+  const MANY = Array.from({ length: 30 }, (_, i) => ({
+    id: `17900000${String(i).padStart(2, '0')}.000001`,
+    message: i === 0 ? 'the oldest row' : `row ${i}`,
+    error_type: i === 0 ? 'wanted' : 'other'
+  }));
+
+  test('a search reaches a row older than the newest page', async () => {
+    const { Gateway, asked } = platformWith(MANY);
+
+    const res = await callAsClient({ errorType: 'wanted' }, Gateway);
+
+    expect(asked[0]).toBe('1');
+    expect(res.data.logs.map(row => row.message)).toEqual(['the oldest row']);
+    expect(res.data.count).toBe(1);
+  });
+
+  // The same search from the tail, which is what the default used to be: the row is there, the
+  // read never looks at it, and `count: 0` is indistinguishable from "it never happened".
+  test('the same search from the tail reports the row as absent', async () => {
+    const { Gateway } = platformWith(MANY);
+
+    const res = await callAsClient({ errorType: 'wanted', lastId: '0' }, Gateway);
+
+    expect(res.data.count).toBe(0);
+    expect(res.data.scanned).toBe(PLATFORM_PAGE);
+  });
+
+  test.each([
+    ['errorType', { errorType: 'wanted' }],
+    ['contains', { contains: 'oldest' }],
+    ['both together', { errorType: 'wanted', contains: 'oldest' }]
+  ])('a %s filter starts at the oldest retained row', async (_label, params) => {
+    const { Gateway, asked } = platformWith(MANY);
+
+    await callAsClient(params, Gateway);
+
+    expect(asked[0]).toBe('1');
+  });
+
+  // Looking at the log, not searching it: the newest rows are the answer, and reading the whole
+  // retained log would spend an agent's context on the oldest rows it holds.
+  test('a read with no filter still returns the newest rows', async () => {
+    const { Gateway, asked } = platformWith(MANY);
+
+    const res = await callAsClient({}, Gateway);
+
+    expect(asked[0]).toBe('0');
+    expect(res.data.logs).toHaveLength(PLATFORM_PAGE);
+    expect(res.data.logs.at(-1).id).toBe(MANY.at(-1).id);
+    // No filter means every row read was returned, so there is nothing for `scanned` to add.
+    expect(Object.hasOwn(res.data, 'scanned')).toBe(false);
+  });
+
+  // A cursor the caller named is the caller's, whichever of the two jobs this call is.
+  test.each([
+    ['lastId beats the filtered default', { lastId: '1790000005.000001', errorType: 'wanted' }, '1790000005.000001'],
+    ['lastId beats the unfiltered default', { lastId: '1790000005.000001' }, '1790000005.000001'],
+    ['since beats the filtered default', { since: '2026-09-22T17:16:51Z', contains: 'row' }, '1790097411.000'],
+    ['since beats the unfiltered default', { since: '2026-09-22T17:16:51Z' }, '1790097411.000']
+  ])('%s', async (_label, params, expected) => {
+    const { Gateway, asked } = platformWith(MANY);
+
+    await callAsClient(params, Gateway);
+
+    expect(asked[0]).toBe(expected);
+  });
+
+  // The one read that genuinely wants the tail. `newestRowOn` asks "what is the newest row you
+  // hold", which is the question `0` answers, so it must not be moved with the default.
+  test('the newest-row probe still asks for the tail', async () => {
+    const { Gateway, asked } = platformWith(MANY);
+
+    const res = await callAsClient({ since: '2030-01-01T00:00:00Z' }, Gateway);
+
+    expect(res.data.count).toBe(0);
+    expect(res.data.newestRow.id).toBe(MANY.at(-1).id);
+    expect(asked.at(-1)).toBe('0');
+  });
+});
+
 // The epoch itself: `ms <= 0` and `ms < 0` differ only here.
 test('a since of exactly the epoch reads from the oldest row kept', async () => {
   const { Gateway, asked } = instanceWith(TYPED);
 
   await callAsClient({ since: '1970-01-01T00:00:00.000Z' }, Gateway);
 
-  expect(asked[0]).toBe('0');
+  expect(asked[0]).toBe('1');
 });
 
 // An agent that does not know the cost reads a slow call as a hung one.

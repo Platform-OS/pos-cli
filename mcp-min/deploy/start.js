@@ -148,7 +148,9 @@ const startDeployTool = {
       // `assets` is whether there is a separate phase to wait for, which a server that did not
       // start this deploy cannot know. Assets inside the release are not one.
       job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: { assets: plan.mode === 'direct' } }),
-      status: pushResponse.status,
+      // The instance's word for the release it just accepted, not a verdict on the deploy, which
+      // is still running. `job-status` publishes the same value under the same name.
+      instanceStatus: pushResponse.status,
       // No path: the archive is removed when the deploy is done, so naming it invites a caller
       // to depend on a file that will not be there.
       archive: { fileCount: numberOfFiles, assetsIncluded: plan.mode === 'in-archive' },

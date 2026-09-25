@@ -52,7 +52,7 @@ const dataExportTool = {
       // The zip flag travels in the handle: reading an export's status needs it, and the
       // agent polling is not the one that chose it.
       job_id: mintFor({ kind: 'data-export', id: exportTask.id, origin: auth.url, flags: { zip: isZip } }),
-      status: exportTask.status || 'pending',
+      instanceStatus: exportTask.status || 'pending',
       isZip
     };
   }

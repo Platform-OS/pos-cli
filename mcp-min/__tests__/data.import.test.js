@@ -85,7 +85,7 @@ describe('data-import tool', () => {
 
       expect(result.ok).toBe(true);
       expect(result.data.id).toBe('import-job-789');
-      expect(result.data.status).toBe('pending');
+      expect(result.data.instanceStatus).toBe('pending');
       expect(mockPresignUrl).toHaveBeenCalled();
       expect(mockUploadFile).toHaveBeenCalled();
     });

@@ -310,7 +310,14 @@ Four tools start work that outlives the call (`deploy-start`, `data-import`, `da
   two later. `deploy-dry-run` read the push response, so it reported `deleted: 0` for deploys that
   delete and never surfaced a deploy the instance had already refused. It polls the release to
   settlement and reports `verdict` — `would_succeed` / `would_fail` / `not_known` — beside the
-  per-category paths.
+  per-category paths. **A release the instance refuses carries `report: null` too** (measured
+  2026-09-25), and the counts were invented from it a second time: `planComputed` says whether a
+  plan was worked out at all, and `deleted`, `upserted`, `skipped` and `byCategory` are absent
+  rather than empty when it was not. Keyed on the report and never on `verdict`, so a refusal that
+  does say what it would have changed still publishes those lists. `assets` answers the project's
+  own count on that path as well — `state: 'none'` is a claim about the project, not one a check
+  that never ran may make — and `warnings` carries what else the release said, which `job-status`
+  reported only once the deploy had run.
 - **An upstream body is bounded once, in `toResult`.** `classify` is not the only thing that puts
   an upstream `body` in `details`: the `/_tests/*` tools build their own errors, because those
   endpoints answer with a status rather than throwing. Bounding at each thrower is a rule the next
@@ -372,6 +379,20 @@ Four tools start work that outlives the call (`deploy-start`, `data-import`, `da
   understands one. The `?formatter=text` it used to send was never honoured at all, so ~180 lines
   of text parser ran against JSON and made a test out of every non-indented line.
 
+- **A test that raises is diagnosed, not just classified.** The runner answers 500 with an HTML
+  page naming nothing, so `crash-check.js` asks the instance two further questions: whether it is
+  well (which separates "a test raised" from "the instance is down"), and then what it logged.
+  The failure row carries the file, the line, the exception class and its message — an evaluation
+  found them by hand, one `logs-fetch` after being told to "narrow with name" for a run whose name
+  already matched one test. Correlation is on the platform's own fields, never the tests module's:
+  `data.type` marks a row the instance's error handler wrote (a `{% log %}` row has no `type` or
+  `message` inside `data`, measured 2026-09-25), and `data.context.url` ties the row to this run
+  rather than another in flight. Rows are not readable at once — 1.4 s, 2.3 s and 2.7 s over three
+  measured runs — so the read retries for five seconds, and every part of it is best effort: a
+  refused log, a row that never comes or a cancelled client leaves the error as it was. The cost
+  is paid only by a run that has already failed. `cursorForMs` is shared from `lib/logRowId.js`
+  with `logs-fetch`, so the two cannot encode an instant differently.
+
 - **No tests ran is not a pass.** Zero tests means zero failures, which answered `passed: true` for
   a mistyped name or a suite that was never deployed — the same class of silent success as a
   discarded deploy file. A filter that matches nothing is `NO_TESTS_MATCHED` (`not_found`), an
@@ -383,8 +404,30 @@ Four tools start work that outlives the call (`deploy-start`, `data-import`, `da
 - **A field an agent branches on is named for what it holds.** `check-run` answered `fileCount`
   beside `filesChecked`, so a clean run read as "nothing was checked"; it is `filesWithOffenses`.
   `job-status` answers with two vocabularies on purpose — `state` is ours (`running` | `completed` |
-  `failed`, the same three for every kind) and `status` is the instance's own word, which
-  `deploy-start` also returns — and `docs/MCP_TOOLS.md` says so where both appear.
+  `failed`, the same three for every kind) and `instanceStatus` is the instance's own word — and
+  `docs/MCP_TOOLS.md` says so where both appear. The second was published as `status`, which reads
+  as a second spelling of the first, and the two disagree exactly when it matters: a deploy whose
+  release is in while its assets are still uploading is `state: running` with the release at
+  `success`, and an evaluation branched on the instance's word and called the deploy finished. It
+  is renamed rather than removed because it is not a duplicate of anything in `result` —
+  `data-export` does not put the raw response there, and for the data jobs it is `status.name`
+  flattened. Every tool that publishes that value uses the one name: `job-status`, `deploy-start`
+  and the three data starters, so an agent never watches the field rename itself mid-workflow.
+  `assets.status` on `deploy-start` is untouched and is ours, not the instance's: it says which
+  route the assets took, not how a job is going. Inside `jobs/adapters/` the field stays `status`,
+  which is what the platform calls it on the wire; the translation belongs at the boundary.
+
+- **A library's refusal to the caller is not a pos-cli defect.** `classify` reads an unrecognised
+  `Error` as `kind: internal`, "a defect in pos-cli" — right for a thrown `TypeError`, wrong for a
+  dependency politely declining an argument. `check-run` passed
+  `@platformos/platformos-check-node`'s project-root refusal straight through, so an evaluation
+  that linted `app` rather than the project root was told to report a bug about its own argument.
+  It is `input` (`NOT_A_PROJECT_ROOT`), carrying the library's message unchanged, because that
+  message is already written for whoever typed the path. The match is on the `code` the package
+  exports for the purpose, written out rather than imported: `instanceof` throws against a copy
+  that does not export the class, and an imported constant that is absent leaves the comparison
+  against `undefined`, which catches every error carrying no code at all. `check-run.test.js` pins
+  the literal against the installed package.
 
 - **An upstream record is forwarded whole; a row is trimmed only where it is provably empty.** The
   two look alike and are not. `job-status` passes the release record verbatim — all sixteen fields,
@@ -463,6 +506,18 @@ Four tools start work that outlives the call (`deploy-start`, `data-import`, `da
   (`lib/validation/schemas/gui.js`), one exported pattern, so the two cannot drift again. The
   pattern is what refuses a cursor smuggling its own query parameters; `Gateway.logs` encodes it as
   well, so neither guard stands alone. Nothing between the instance and the caller may parse the id.
+
+  **`last_id=0` is not a cursor.** Measured 2026-09-25: the platform reads exactly `0` as *no
+  cursor given* and answers with the newest page, while `1`, `0.001` and `0.000001` are each the
+  strict greater-than above — on an instance holding 35 rows, `0` returned the newest 20 and every
+  other value returned all 35. `logs-fetch` defaulted to `0` while publishing "omit for the oldest
+  kept", so a search that passed no `since` read twenty rows and answered `count: 0`, which reads
+  exactly like "that never happened". Its default now depends on the call: a filter starts at
+  `OLDEST_RETAINED` (`'1'`), because the instance cannot narrow anything and the scan happens
+  regardless, and an unfiltered read still starts at `NEWEST_PAGE` (`'0'`), which is what "show me
+  the log" means. Both are named constants in `logs/fetch.js` for one reason — `newestRowOn` and
+  `bin/pos-cli-logs.js` want the tail and are right to pass `0`, so the value alone cannot say
+  which is meant.
 
   **What reaches that log.** Deployed code writes there, `{% log %}` included; a `liquid-exec`
   render's **Liquid errors** are written too, and only its `{% log %}` is not — so a template

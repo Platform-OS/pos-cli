@@ -55,6 +55,9 @@ describe('platformos.check-run', () => {
 
       expect(result.ok).toBe(false);
       expect(result.error.code).toBe('NOT_A_DIRECTORY');
+      // The same reading as NOT_A_PROJECT_ROOT below: the fix is to name a different directory,
+      // which is an argument. `project` would send the agent to look at the machine instead.
+      expect(result.error.kind).toBe('input');
       expect(result.error.message).toContain(tmpFile);
     } finally {
       fs.unlinkSync(tmpFile);
@@ -129,6 +132,76 @@ describe('platformos.check-run', () => {
       const correcting = allChecks.filter(check => /addFix/.test(String(check.run)));
 
       expect(correcting.map(check => check.meta?.code)).toEqual([]);
+    });
+  });
+
+  /**
+   * A directory that is not a project root is the caller's mistake, and the linter says so in a
+   * message written for whoever typed the path. It reached `classify` as an ordinary Error and
+   * came back as `kind: internal` — "a defect in pos-cli" — so an evaluation that passed
+   * `appPath: "app"` was told to report a bug about its own argument.
+   */
+  describe('a directory that is not a project root', () => {
+    const dirs = [];
+
+    /** A project whose root is marked the way `markers` says, with one page under app/. */
+    const projectWith = (markers) => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-root-'));
+      dirs.push(dir);
+      fs.mkdirSync(path.join(dir, 'app', 'views', 'pages'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'app', 'views', 'pages', 'index.liquid'), 'hello\n', 'utf8');
+      for (const marker of markers) fs.writeFileSync(path.join(dir, marker), '{}', 'utf8');
+      return dir;
+    };
+
+    afterAll(() => dirs.forEach(dir => fs.rmSync(dir, { recursive: true, force: true })));
+
+    /**
+     * Both refusals the linter can reach from inside a project: a root it can assert because
+     * somebody declared it, and one it only inferred from a directory name. The message differs
+     * and the classification must not — in each the fix is to name a different directory, which
+     * is an argument.
+     *
+     * The variant for a path inside no project at all is deliberately not tested: whether an OS
+     * temp directory sits under a marker is a fact about the machine, and upstream already had
+     * that test fail on Windows CI.
+     */
+    test.each([
+      ['a root declared by .pos', ['.pos']],
+      ['a root inferred from app/', []]
+    ])('%s refuses a subdirectory as an input error', async (_label, markers) => {
+      const root = projectWith(markers);
+      const given = path.join(root, 'app');
+
+      const result = await runTool(checkRunTool, { appPath: given });
+
+      expect(result.ok).toBe(false);
+      expect(result.error.kind, `kind was ${result.error.kind}`).toBe('input');
+      expect(result.error.code).toBe('NOT_A_PROJECT_ROOT');
+      // The linter's own message, forwarded whole: it names the path it was given.
+      expect(result.error.message).toContain(given);
+      expect(result.error.details.appPath).toBe(given);
+    });
+
+    /**
+     * The literal in `check/run.js` is what does the matching, and it is written out rather than
+     * imported — an older copy exporting no constant would leave the comparison against
+     * `undefined` and catch every error carrying no code. This is the other half of that: a rename
+     * upstream fails here instead of quietly going back to blaming pos-cli.
+     */
+    test('the code it matches on is the one the linter exports', async () => {
+      const { PROJECT_ROOT_ERROR_CODE } = await import('@platformos/platformos-check-node');
+
+      expect(PROJECT_ROOT_ERROR_CODE).toBe('PLATFORMOS_PROJECT_ROOT');
+    });
+
+    test('the root itself still lints', async () => {
+      const root = projectWith(['.pos']);
+
+      const result = await runTool(checkRunTool, { appPath: root });
+
+      expect(result.ok, JSON.stringify(result.error)).toBe(true);
+      expect(result.data.appPath).toBe(root);
     });
   });
 

@@ -26,7 +26,7 @@ import { makeArchive } from '../../lib/archive.js';
 import { manifestGenerate } from '../../lib/assets/manifest.js';
 import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
-import { releaseState, filesNotMatched, toCount } from '../jobs/adapters/deploy.js';
+import { releaseState, filesNotMatched, warningsExceptDiscarded, toCount } from '../jobs/adapters/deploy.js';
 import { makeWorkDir, removeWorkDir } from './work-dir.js';
 
 const POLL_MS = 1000;
@@ -131,6 +131,16 @@ const waitForRelease = async (gateway, releaseId, signal, { pollMs, timeoutMs })
   }
 };
 
+/**
+ * Whether the instance worked out what the deploy would change. Measured 2026-09-25: a release it
+ * rejects answers `status: "error"` with `report: null`, and a release that has not settled has
+ * none yet either — so an absent report is "not computed", never "nothing would change".
+ */
+const hasReport = (release) => {
+  const report = release?.report;
+  return report !== null && typeof report === 'object' && !Array.isArray(report);
+};
+
 /** What the instance refused, per file where it said. */
 const validationError = (release) => {
   const body = release?.error ?? {};
@@ -141,7 +151,7 @@ const validationError = (release) => {
 };
 
 const dryRunDeployTool = {
-  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start would be refused too, and error names the files. discarded names files a deploy would drop while still reporting success. Some categories report a count with no paths, so count can exceed files.',
+  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start would be refused too, and error names the files. planComputed is false when the instance refused before working out the changes; the lists are then absent, not empty. discarded names files a deploy would drop while still reporting success. Some categories report a count with no paths, so count can exceed files.',
   annotations: { destructiveHint: false },
   inputSchema: {
     type: 'object',
@@ -204,21 +214,30 @@ const dryRunDeployTool = {
 
     const releaseId = pushResponse?.id ?? null;
     let categories = {};
+    // Whether the lists below are the instance's answer at all. Without a release there was never
+    // anything to ask.
+    let planComputed = false;
     // `would_fail` is the answer to the question this tool is asked, not a failure of the call, so
     // it travels in the result — where the description tells the agent to read it.
     let verdict = 'not_known';
     let error;
     // Files the converter matched no rule for: a deploy drops them and still reports success.
     let discarded = [];
+    let warnings;
 
     const clock = timing(ctx);
 
     if (releaseId) {
       const { state, release } = await waitForRelease(gateway, releaseId, ctx.signal, clock);
-      categories = Object.fromEntries(
-        Object.entries(release.report ?? {}).map(([name, data]) => [name, category(data)])
-      );
+      planComputed = hasReport(release);
+      categories = planComputed
+        ? Object.fromEntries(Object.entries(release.report).map(([name, data]) => [name, category(data)]))
+        : {};
       discarded = filesNotMatched(release);
+      // The instance's own caveats, which `job-status` reports after a deploy. A dry run is when
+      // they can still be acted on — 'module X is not configured for file deletion' says a delete
+      // list is shorter than it looks.
+      warnings = warningsExceptDiscarded(release);
       if (state === 'done') verdict = 'would_succeed';
       if (state === 'failed') {
         verdict = 'would_fail';
@@ -229,25 +248,24 @@ const dryRunDeployTool = {
     // The manifest is sent, never the files: the release is a dry run, so the API validates the
     // manifest against it instead of applying it, and nothing reaches S3.
     const assetFiles = await files.getAssets();
-    let assets = { state: 'none', count: 0 };
+    // `none` is a claim about the project, so it is read off the project. A check that did not run
+    // answers `not_reported`, whether the release had no id or the instance refused it.
+    let assets = assetFiles.length > 0
+      ? { state: 'not_reported', count: assetFiles.length }
+      : { state: 'none', count: 0 };
+
     // A release the instance has already rejected has nothing for a manifest to be validated
     // against, and waiting on one would spend a minute to learn that.
-    if (assetFiles.length > 0 && verdict !== 'would_fail') {
-      // `none` means the project has none. Without a release id there is nothing to validate a
-      // manifest against, which is a different answer and has to read as one.
-      assets = { state: 'not_reported', count: assetFiles.length };
+    if (assetFiles.length > 0 && verdict !== 'would_fail' && releaseId) {
+      ctx.sendProgress?.({ progress: 1, total: 2, message: 'Validating assets' });
+      const manifest = await manifestGenerate();
+      await gateway.sendManifest(manifest, releaseId);
 
-      if (releaseId) {
-        ctx.sendProgress?.({ progress: 1, total: 2, message: 'Validating assets' });
-        const manifest = await manifestGenerate();
-        await gateway.sendManifest(manifest, releaseId);
-
-        // The report goes to `byCategory` with the rest of the file report, so it is read the same
-        // way; what stays here is the verdict on the asset phase itself.
-        const { report, ...outcome } = await waitForAssets(gateway, releaseId, ctx.signal, clock);
-        assets = { ...outcome, count: assetFiles.length };
-        if (report) categories.Asset = category(report);
-      }
+      // The report goes to `byCategory` with the rest of the file report, so it is read the same
+      // way; what stays here is the verdict on the asset phase itself.
+      const { report, ...outcome } = await waitForAssets(gateway, releaseId, ctx.signal, clock);
+      assets = { ...outcome, count: assetFiles.length };
+      if (report) categories.Asset = category(report);
     }
 
     const dataLoss = dataLossIn(categories);
@@ -266,17 +284,25 @@ const dryRunDeployTool = {
       // Always present, so an agent branches on the count without having to tell "nothing was
       // dropped" from "this tool does not say".
       discarded: { count: discarded.length, files: discarded },
-      deleted: flat(categories, 'deleted'),
-      // Only when there are any: a field that is usually empty is one a reader learns to skip,
-      // and this is the one line in a delete list that cannot be undone by deploying again.
-      ...(dataLoss.length > 0 && { dataLoss: { count: dataLoss.length, files: dataLoss } }),
-      upserted: flat(categories, 'upserted'),
-      // Counted, not named. On a dry run where nothing changes these were 88% of the whole answer,
-      // listed twice — and a path that is not changing is the one thing nobody asked about. What
-      // *is* changing is named above; `archive.fileCount` says how many went in altogether.
-      skipped: { count: sumOver(categories, 'skipped') },
-      // Counts only: every name here was already in the three lists above, byte for byte.
-      byCategory: countsByCategory(categories),
+      ...(warnings && { warnings }),
+      // Always present, and what the four fields below depend on. An instance that refused the
+      // release never worked out what would change, and `deleted: {count: 0}` for a deploy that
+      // would delete forty files is the most dangerous answer this tool can give — so the lists
+      // are absent rather than empty, and this says which of the two it is.
+      planComputed,
+      ...(planComputed && {
+        deleted: flat(categories, 'deleted'),
+        // Only when there are any: a field that is usually empty is one a reader learns to skip,
+        // and this is the one line in a delete list that cannot be undone by deploying again.
+        ...(dataLoss.length > 0 && { dataLoss: { count: dataLoss.length, files: dataLoss } }),
+        upserted: flat(categories, 'upserted'),
+        // Counted, not named. On a dry run where nothing changes these were 88% of the whole
+        // answer, listed twice — and a path that is not changing is the one thing nobody asked
+        // about. What *is* changing is named above; `archive.fileCount` says how many went in.
+        skipped: { count: sumOver(categories, 'skipped') },
+        // Counts only: every name here was already in the three lists above, byte for byte.
+        byCategory: countsByCategory(categories)
+      }),
       assets,
       // No path: the archive is already removed by here.
       archive: { fileCount: numberOfFiles }

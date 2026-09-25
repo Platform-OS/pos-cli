@@ -76,7 +76,7 @@ describe('the handle a starter mints is the one job-status reads', () => {
     const started = await runTool(dataExport, { ...AUTH, zip: true }, { Gateway });
     const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
 
-    expect(status.data).toMatchObject({ kind: 'data-export', state: 'completed', done: true, status: 'done' });
+    expect(status.data).toMatchObject({ kind: 'data-export', state: 'completed', done: true, instanceStatus: 'done' });
     expect(status.data.result).toEqual({ zip: true, zipFileUrl: 'https://cdn.example.com/e.zip' });
   });
 });

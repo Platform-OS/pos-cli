@@ -179,8 +179,25 @@ describe('the background asset upload', () => {
     const started = await runTool(deployStart, AUTH, { Gateway });
     const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
 
-    expect(status.data).toMatchObject({ state: 'running', done: false, status: 'success' });
+    expect(status.data).toMatchObject({ state: 'running', done: false, instanceStatus: 'success' });
     expect(status.data.result.assets).toEqual({ phase: 'uploading' });
+    // The exact pair an evaluation misread. Published as `status` beside `state` the two look like
+    // one answer spelled twice, and it took the release's `success` for the deploy's, calling a
+    // deploy finished while its assets were still going up. The old name is gone rather than kept
+    // alongside: two names for one value is the confusion, not the cure.
+    expect(status.data, 'the instance word must not be published as `status`').not.toHaveProperty('status');
+  });
+
+  // `deploy-start` answers the same value at the moment it hands back a job_id, so it has to use
+  // the same name: a caller that learned one field from the starter reads the other from the poll.
+  test('the starter names the release status the same way job-status does', async () => {
+    getAssets.mockResolvedValue([]);
+    const { Gateway } = gatewayWith(['success']);
+
+    const result = await runTool(deployStart, AUTH, { Gateway });
+
+    expect(result.data.instanceStatus).toBe('ready_for_import');
+    expect(result.data).not.toHaveProperty('status');
   });
 
   // The manifest is sent for a release id, and the CLI only ever sends one after the import has
@@ -215,7 +232,7 @@ describe('the background asset upload', () => {
     const status = await runTool(jobStatus, { job_id: started.data.job_id, ...AUTH }, { Gateway });
 
     expect(deployAssets).not.toHaveBeenCalled();
-    expect(status.data).toMatchObject({ state: 'failed', status: 'error' });
+    expect(status.data).toMatchObject({ state: 'failed', instanceStatus: 'error' });
   }, 30000);
 
   test('a deploy with no assets is finished as soon as its release is in', async () => {

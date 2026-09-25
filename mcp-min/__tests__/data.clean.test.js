@@ -59,7 +59,7 @@ describe('data-clean tools', () => {
 
       expect(result.ok).toBe(true);
       expect(result.data.id).toBe('clean-job-123');
-      expect(result.data.status).toBe('pending');
+      expect(result.data.instanceStatus).toBe('pending');
       expect(result.data.includeSchema).toBe(false);
       expect(result.data.warning).toContain('remove ALL data');
     });

@@ -190,10 +190,20 @@ worth writing down.
   | What goes in a test file | **Yes.** `deploy-dry-run` refuses `assert_equal` as an unknown tag, and nothing says what the right form is. |
 
   For the one that is real, the content belongs to the `tests` module, whose assertions are
-  partials carrying a `{% doc %}` block that names every parameter they take. So `NO_TESTS` points
-  at them — `admin_liquid_partials` filtered on `modules/tests/assertions/` — rather than restating
-  a contract that would be wrong here the first time that module changed. It is the route both
-  evaluations found for themselves, and it costs nothing until an agent has no tests to copy.
+  partials carrying a `{% doc %}` block that names every parameter they take — measured 2026-09-25,
+  all ten of them, and the block survives the deploy, so `admin_liquid_partials` filtered on
+  `modules/tests/assertions/` reads it back intact. Pointing at them beats restating a contract
+  that would be wrong here the first time that module changed.
+
+  **Where the pointer sits was wrong until round 4.** It rode on `NO_TESTS`, which fires only on an
+  instance with **no test files at all** — so an agent writing a new test where tests already exist
+  could never reach it, which is exactly what happened: round 4 read three files of the module to
+  recover the same contract, the one moment in that run it needed source no tool would give it. The
+  fact now sits on `unit-tests-run`'s `name` parameter, where it is read while the call is being
+  written: a test takes and returns a `contract` and calls assertions under
+  `modules/tests/assertions/`. That is 123 bytes of `tools/list` once a session, argued in the dev
+  byte ledger. `NO_TESTS` keeps its query, which is still the right answer for an instance with
+  nothing to copy.
   `NO_TESTS_MATCHED` deliberately does not carry it: where tests already exist, real ones are the
   better example and `LIST_TESTS` names them.
 

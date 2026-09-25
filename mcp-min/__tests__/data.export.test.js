@@ -40,7 +40,7 @@ describe('data-export tools', () => {
 
       expect(result.ok).toBe(true);
       expect(result.data.id).toBe('export-job-123');
-      expect(result.data.status).toBe('pending');
+      expect(result.data.instanceStatus).toBe('pending');
       expect(result.data.isZip).toBe(false);
     });
 

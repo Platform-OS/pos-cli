@@ -217,7 +217,7 @@ The only way to read back anything a starter began. It replaced six per-operatio
     kind: "deploy",            // deploy | data-import | data-export | data-clean | test-run
     state: "running",          // running | completed | failed
     done: false,               // state != running
-    status: "in_progress",     // the instance's own word for it
+    instanceStatus: "in_progress", // the instance's own word, which is not `state`
     error: "…",                // only when state is failed
     warnings: ["…"],           // only when there are any — read these on `completed` too
     result: { … }              // kind-specific: the release and asset phase, the export, the test run
@@ -228,11 +228,20 @@ The only way to read back anything a starter began. It replaced six per-operatio
 
 `completed` means the operation finished, even if what it produced reports failures: a test run with failing assertions is `completed`, because the run did its work. `failed` means the operation itself failed.
 
-**Two words, on purpose.** `state` is this server's — `running`, `completed`, `failed`, the same three
-whatever was started. `status` is the instance's own word for the same moment (`ready_for_import`,
-`in_progress`, `success`, `error`), passed through unchanged, and `deploy-start` returns that same
-`status` when it answers. Branch on `state`; read `status` when you want to know what the instance
-called it.
+**Two words, on purpose, and named so they cannot be confused.** `state` is this server's —
+`running`, `completed`, `failed`, the same three whatever was started. `instanceStatus` is the
+instance's own word for the same moment (`ready_for_import`, `in_progress`, `success`, `error`),
+passed through unchanged, and `deploy-start` returns it under the same name when it answers. Branch
+on `state`; read `instanceStatus` when you want to know what the instance called it.
+
+**The two disagree, and that is the point.** A deploy whose release has imported while its assets
+are still going up is `state: "running"` with `instanceStatus: "success"` — the release succeeded,
+the deploy has not finished. Published as `status`, next to `state`, the pair read as one answer
+spelled twice: an evaluation branched on the instance's word and reported a deploy as finished
+while `result.assets.phase` still said `uploading`. The field was renamed rather than removed,
+because it is not a duplicate of anything in `result` — `data-export` does not carry the raw
+response there at all, and for the data jobs this is the instance's `status.name` flattened to a
+string.
 
 **`result.release` is the release record verbatim**, 815 bytes of it on a measured deploy against
 566 for the fields anything here reads. The 249 is a deliberate cost: an allowlist would have to be
@@ -250,7 +259,7 @@ record:
 
 ```javascript
 {
-  state: "completed", done: true, status: "success",
+  state: "completed", done: true, instanceStatus: "success",
   warnings: ["2 files matched no part of the platformOS layout, so the deploy did not put them on the instance: tests/eval/simple_test.liquid, tests/probe/c_test.liquid"]
 }
 ```
@@ -340,7 +349,7 @@ is the only place that failure exists, whether the job was queued by a deployed 
 - `url` *(string, optional)*: Instance URL (alternative to `env`)
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `lastId` *(string, optional)*: a `lastId` this tool returned, passed back unchanged. Omit to start at the oldest row kept (default: `'0'`)
+- `lastId` *(string, optional)*: a `lastId` this tool returned, passed back unchanged. Omit and the start depends on whether you filtered — see **Where a read starts** below
 - `since` *(string, optional)*: an ISO-8601 timestamp to read from, instead of `lastId`. Passing both is refused (`SINCE_AND_LAST_ID`)
 - `errorType` *(string, optional)*: keep only rows whose `error_type` contains this, ignoring case
 - `contains` *(string, optional)*: keep only rows whose `message` contains this, ignoring case
@@ -407,20 +416,59 @@ looking"; pass the returned `lastId` back to carry on. The cursor advances over 
 read, not only the ones returned, so a filtered read resumes after the rows it rejected rather than
 in front of them.
 
-Reading forward from the oldest end is all the API offers, so there is no "most recent N" here: to
-tail, call once to get a `lastId`, then keep passing it back. To pick up recent rows without paging
-from the beginning, start with `since`.
+**Where a read starts** when you pass neither `lastId` nor `since`:
+
+| call | starts at |
+|---|---|
+| no `errorType` and no `contains` | the newest rows — you are looking at the log |
+| either filter given | the oldest row the instance still keeps — you are searching it |
+
+This is one value to the API and two jobs for the tool, and the difference is the platform's.
+Measured 2026-09-25 against an instance holding 35 rows over three days: `last_id=0` is read as
+**no cursor at all** and answers with the newest page — 20 rows — while `1`, `0.001` and
+`0.000001` are each the strict greater-than documented above and returned all 35. Only the exact
+value `0` is special, and **nothing in a response says which of the two you got**.
+
+`logs-fetch` started every uncursored read at `0` while this document and its schema both said it
+began at the oldest row kept. A search that did not pass `since` therefore looked at twenty rows
+and answered `count: 0`, which is indistinguishable from "that never happened" — an evaluation
+searched for an error it had seen two days earlier and believed the empty answer. A filter now
+starts at the oldest retained row, because the instance cannot narrow anything and the scan happens
+either way; without one the newest rows are what was asked for, and reading the whole retained log
+would spend the caller's context on its oldest.
+
+**A row is readable a few seconds after it is written.** Measured 2026-09-25: a crashed test run's
+error row appeared 1.4 s, 2.3 s and 2.7 s after the request over three runs, and an evaluation saw
+about eight seconds for a page's `{% log %}`. So "did my code log?" asked immediately after
+triggering it answers `no` when the answer is `not yet` — read again rather than concluding the
+line was never written. `tests/crash-check.js` is the worked example: it retries for five seconds.
+
+An explicit `lastId` or `since` always wins, whichever kind of call it is. To tail, call once and
+keep passing the returned `lastId` back. To search from a known time rather than from the oldest
+row, pass `since`.
 
 **Example Usage**:
-Fetch first 100 logs:
+Search the whole retained log for one error — a filter, so it starts at the oldest row kept:
 
 ```json
 {
   "name": "logs-fetch",
   "arguments": {
     "env": "staging",
-    "limit": 100,
-    "lastId": "0"
+    "contains": "divided by 0",
+    "limit": 100
+  }
+}
+```
+
+Look at the newest rows — no filter, so it starts at the tail:
+
+```json
+{
+  "name": "logs-fetch",
+  "arguments": {
+    "env": "staging",
+    "limit": 100
   }
 }
 ```
@@ -544,8 +592,14 @@ that only exists on the instance:
 | `admin_graphql`, `admin_model_schemas`, `admin_forms`, `admin_authorization_policies`, `admin_liquid_layouts`, `admin_tables` | the rest of the deployed surface |
 | `admin_current_instance`, `admin_versions` | what the instance is |
 
-**The field names are not guessable, and they do not have to be.** The instance answers GraphQL
-introspection, so `{ __type(name: "LiquidPartial") { fields { name } } }` lists a type's fields.
+**The identifying field of each of the three is in the tool description** — `admin_pages (slug)`,
+`admin_liquid_partials (path)`, `admin_assets (name)` — because that is the guess an evaluation got
+wrong, and 21 bytes once a session is cheaper than the failed call plus the introspection call it
+cost. Everything else stays out of the description: the schema below is the platform's and changes
+without this repository.
+
+**The rest of the field names are not guessable, and they do not have to be.** The instance answers
+GraphQL introspection, so `{ __type(name: "LiquidPartial") { fields { name } } }` lists a type's fields.
 An agent evaluation lost its first call to `Field 'name' doesn't exist on type 'LiquidPartial'`
 (the field is `path`) and recovered only because it thought to try `__type` unprompted — so the
 tool description now says so, in 90 bytes, rather than naming more families that were already
@@ -580,9 +634,16 @@ the authorization policies and every partial the page renders all sit between th
 
 **Input Parameters**:
 - `env` *(string, optional)*: Environment name
-- `url` *(string, optional)*: Instance URL, used instead of `env`. **No `email` or `token`** — this
-  is the one tool whose schema does not take them, because it sends none. A closed schema means
-  passing either is refused, so an instance you have a URL for and no account on is reachable.
+- `url` *(string, optional)*: base URL to fetch from, used instead of `env`. **No `email` or
+  `token`** — this is the one tool whose schema does not take them, because it sends none. A closed
+  schema means passing either is refused, so an instance you have a URL for and no account on is
+  reachable. **Any host, not only the instance's.** `path` is then held to *that* host, which is
+  what the origin check enforces; the host itself is the caller's to name, exactly as it is on the
+  explicit-credentials path of every other tool. An evaluation used this to fetch a deployed asset
+  from the instance's separate asset host and recorded it as undocumented luck, so the description
+  says it now. Nothing is sent with the request, so the exposure is the request and not a
+  credential — a decision taken on the record 2026-09-25, and one to revisit if the HTTP transport
+  ever binds beyond loopback.
 - `path` *(string, required)*: path on the instance, starting with `/`
 
 **Response Format**:
@@ -1016,6 +1077,8 @@ the archive is written under `tmp/` (in a directory of its own per call, describ
     partial: false,
     appPath: "/home/you/projects/my-app",
     discarded: { count: 1, files: ["tests/eval/simple_test.liquid"] },
+    warnings: ["Module(s) 'tests' are not configured for automatic file deletion during deploy."],
+    planComputed: true,
     deleted:  { count: 2, files: ["views/pages/old.liquid", "graphql/gone.graphql"] },
     upserted: { count: 12, files: ["views/pages/index.liquid", "..."] },
     skipped:  { count: 1, files: ["graphql/unchanged.graphql"] },
@@ -1063,9 +1126,29 @@ report the directory they archived, the same way `check-run` reports the one it 
 not the project you meant, the fix is to start the server there; nothing in the call can move it.
 
 `deleted`, `upserted` and `skipped` are totals across every category, so an agent can branch on
-`data.deleted.count` without walking the report. Each carries `count` and `files` separately
-because the API answers some categories with a count rather than the paths; `count` is right either
-way, and `files` is empty when it was not given them.
+`data.deleted.count` without walking the report — **once `planComputed` is true**. Each carries
+`count` and `files` separately because the API answers some categories with a count rather than the
+paths; `count` is right either way, and `files` is empty when it was not given them.
+
+**`planComputed` says whether those lists are an answer at all.** The instance works out what a
+deploy would change only if it accepts the release; one it refuses carries `report: null`, measured
+2026-09-25 — and every total was then computed from that nothing. A full deploy that would have
+removed four pages, some forty partials and a table holding a record was reported as
+`deleted: {count: 0, files: []}`, which is the opposite of the truth on the one field read before a
+destructive deploy. When `planComputed` is false, `deleted`, `upserted`, `skipped` and `byCategory`
+are **absent rather than empty**, so nothing can be mistaken for a computed zero; `planComputed`
+itself is always present. It is keyed on the report rather than on `verdict`, so a refusal that does
+report what it would have changed still publishes those lists.
+
+Nothing here can compute a plan the instance declined to make. Where the refusal is a table that
+still holds records, seeing the rest of the plan means deleting those records first — which a
+preview must not do, and which `error.message` describes in the instance's own words.
+
+`warnings` is what the instance said about the deploy besides refusing or allowing it, taken from
+the release record — a module not configured for automatic file deletion, for one, which means a
+delete list is shorter than it looks. `job-status` reports the same warnings after a deploy; here
+they arrive while they can still be acted on. The discarded files are not repeated in it, because
+`discarded` already names them. The field is absent when the release carried none.
 
 `discarded` is the files the deploy would drop: paths matching no part of the platformOS layout,
 which the converter throws away while the release still reports success. It is always present, so
@@ -1076,9 +1159,9 @@ reports the same list in `warnings` once the deploy has run.
 `verdict` is `would_succeed`, `would_fail` or `not_known`. The instance evaluates the dry run and
 can refuse the deploy outright — a table that still holds records cannot be dropped, for one — and
 `would_fail` means `deploy-start` would be refused in the same way; `error.files` names what it
-objected to. `not_known` means the release had not settled within the timeout, so the counts below
-are incomplete rather than zero. The file report is read from the release once it settles, not from
-the upload response, which carries none.
+objected to. `not_known` means the release had not settled within the timeout. In both cases there
+is no file report yet, so `planComputed` is false and the change lists are absent. The file report
+is read from the release once it settles, not from the upload response, which carries none.
 
 Each call writes its archive into a directory of its own under `tmp/pos-cli-mcp-deploy/` and
 removes it when the call is done, so two deploys started close together cannot pack over each
@@ -1086,10 +1169,12 @@ other. `archive` therefore reports the file count and not a path: there is nothi
 
 `assets.state` is one of `none` (the project has no assets), `validated` (the manifest was checked,
 and its verdict is the `Asset` category), `failed` (the asset phase rejected it, with `error`),
-`not_reported` (nothing was checked — an API that does not report on assets, or a release the
-instance gave no id for) or `still_validating` (the 60-second wait ended first — the file report
-above it is complete regardless). `count` is the number of asset files found locally, so `none`
-and `not_reported` are never confused: `none` always carries `count: 0`. The manifest is sent so the API can
+`not_reported` (nothing was checked — an API that does not report on assets, a release the instance
+gave no id for, or one it refused, which leaves nothing for a manifest to be validated against) or
+`still_validating` (the 60-second wait ended first — the file report above it is complete
+regardless). `count` is the number of asset files found locally, so `none` and `not_reported` are
+never confused: `none` is a claim about the project and always carries `count: 0`, while
+`not_reported` carries the project's own count whether or not anything validated it. The manifest is sent so the API can
 validate it against the dry-run release; **nothing is uploaded to S3**.
 
 ### deploy-start
@@ -1122,7 +1207,7 @@ no second phase to wait for, and `job-status` reports the deploy finished when t
     id: "abc123def456",
     appPath: "/home/you/projects/my-app",
     job_id: "...",
-    status: "processing",
+    instanceStatus: "processing",
     archive: { fileCount: 156, assetsIncluded: false },
     assets: { count: 42, status: "deploying_in_background" },
     params: { partial: false }
@@ -1185,7 +1270,7 @@ Start a data import from JSON file, JSON object, or ZIP archive.
   ok: true,
   data: {
     id: "import-123",
-    status: "processing",
+    instanceStatus: "processing",
     isZip: false
   },
   meta: {
@@ -1261,7 +1346,7 @@ Start a data export from a platformOS instance.
   ok: true,
   data: {
     id: "export-456",
-    status: "processing",
+    instanceStatus: "processing",
     isZip: false
   },
   meta: {
@@ -1323,7 +1408,7 @@ Start a destructive data clean operation. Requires confirmation string.
   ok: true,
   data: {
     id: "clean-789",
-    status: "processing",
+    instanceStatus: "processing",
     includeSchema: false
   },
   warning: "This operation is irreversible. All data has been removed from the instance.",
@@ -1391,7 +1476,18 @@ Run platformOS tests on an instance and wait for the verdict.
 - `url` / `email` / `token` *(string, optional)*: Explicit credentials
 - `name` *(string, optional)*: Any part of a test path, matched as a substring. **Omit it to run
   every test.** Test files live under `app/lib` and their path must end with `_test`; a deploy
-  silently discards anything under `app/tests`.
+  silently discards anything under `app/tests`. A test takes and returns a `contract` and calls
+  assertions under `modules/tests/assertions/`, each of which documents its own parameters in a
+  `{% doc %}` block.
+
+**How a test is written is on `name`, and it is the one thing this server used to leave to source.**
+An evaluation read three files of the tests module — `assertions/equal.liquid`,
+`helpers/register_error.liquid` and `commands/run.liquid` — to learn the `contract` convention,
+which was the only moment in the run it needed source it could not get from a tool. The pointer
+existed on the `NO_TESTS` error, but that fires only on an instance with **no test files at all**,
+so an agent writing a new test where tests already exist could never reach it. The assertions are
+named rather than their signatures copied here: the contract belongs to the tests module, and a
+copy of it in this repository would be wrong the first time that module changed.
 
 `path` was removed in 6.6.0. The tests module filters on `name` alone and never read it, so a run
 narrowed with `path` quietly ran the whole suite — measured against tests@1.3.5.
@@ -1432,6 +1528,41 @@ forever. `ok: false` is reserved for a call that could not be made.
 to answer `passed: true` for a mistyped name or a suite that was never deployed. A `name` that
 matches nothing is now `NO_TESTS_MATCHED` (`not_found`); no `name` and no tests at all is `NO_TESTS`
 (`project`). Both name the GraphQL query that lists the test files, since no tool does.
+
+**A test that raises takes the run down, and the reason is in the instance's log.** The runner
+answers 500 with an HTML error page naming nothing — not the test, not the file, not the cause —
+so `TEST_RUN_CRASHED` used to say only that something had raised and suggest narrowing with `name`,
+which cannot help when `name` already matched one test. It is `kind: project`: the next step is to
+fix code in the project.
+
+The instance does record it. After the health probe that separates "a test raised" from "the
+instance is down", `unit-tests-run` reads the error log for the failure this run produced and
+reports it:
+
+```javascript
+{
+  kind: "project", code: "TEST_RUN_CRASHED",
+  message: "A test matching 'eval4_error' raised while it was running, so the run stopped and the
+            runner answered 500 with an error page. … The instance logged it at
+            lib/test/eval4_error_test.liquid:3: Liquid::ZeroDivisionError — 10 divided by 0",
+  details: {
+    statusCode: 500,
+    error: { type: "Liquid::ZeroDivisionError", message: "10 divided by 0" },
+    stack: [ { path: "lib/test/eval4_error_test.liquid", line: 3 }, … ]   // innermost first, capped at 5
+  }
+}
+```
+
+Two fields find that row and both are the platform's, not the tests module's: `data.type` is the
+exception class, written only by the instance's own error handler — measured 2026-09-25, an error
+row carries `type` and `message` inside `data` while a `{% log %}` row carries neither — and
+`data.context.url` is the request that produced the row, which ties it to this run rather than to
+another in flight. A row is not readable the instant it is written: measured over three crashed runs
+it appeared 1.4 s, 2.3 s and 2.7 s after the request, so the read is retried for up to five seconds.
+
+All of it is best effort. A log the instance will not serve, a row that never arrives, or a client
+that cancels leaves the classification exactly as it was, with the message pointing at `logs-fetch`
+and `since` instead. The whole cost lands on a run that has already failed.
 
 **Older tests modules**: the per-test `tests` array is empty on a module whose JSON report had not
 yet been fixed, while `matched`, `assertions` and `failures` are still correct — so the counts and
@@ -1480,7 +1611,7 @@ Run the platformos-check linter over an app directory and report offences groupe
 **Tool Name**: `check-run`
 
 **Input Parameters**:
-- `appPath` *(string, optional)*: Path to the platformOS app directory to check (default: current directory)
+- `appPath` *(string, optional)*: the **project root** to lint — the directory holding `.pos`, `.platformos-check.yml`, `app/` or `modules/`, not a subdirectory of it (default: current directory)
 - `autoFix` *(boolean, optional, default: false)*: Fix what can be fixed, then re-check and return what remains. See the note below: no check currently ships a correction, so this writes nothing today.
 
 **Response**:
@@ -1520,7 +1651,17 @@ Run the platformos-check linter over an app directory and report offences groupe
 }
 ```
 
-**Errors**: `PATH_NOT_FOUND` and `NOT_A_DIRECTORY` for an `appPath` that is not a directory on this machine; `MISSING_DEPENDENCY` if the linter cannot be loaded from the installation.
+**Errors**: `PATH_NOT_FOUND` and `NOT_A_DIRECTORY` for an `appPath` that is not a directory on this
+machine; `NOT_A_PROJECT_ROOT` (`kind: input`) for one that is a directory but not the root of a
+platformOS project; `MISSING_DEPENDENCY` if the linter cannot be loaded from the installation.
+
+**`appPath` is a project root, and `app/` is not one.** The linter resolves the root by looking for
+`.pos`, `.platformos-check.yml`, `app/`, `marketplace_builder/` or `modules/` at or above the path
+it is given, and refuses anything that is not that root — its message names the path you passed
+and, where it can say so, the root to use instead. That refusal is forwarded whole as
+`NOT_A_PROJECT_ROOT`. It used to arrive as `kind: internal`, which the server instructions define
+as "a defect in pos-cli", so an evaluation that passed `appPath: "app"` was told to report a bug
+about its own argument. It is `input`: the fix is to name a different directory.
 
 **Example Usage**:
 Lint the current directory:
@@ -1532,13 +1673,13 @@ Lint the current directory:
 }
 ```
 
-Lint a specific app directory and fix what can be fixed:
+Lint another project and fix what can be fixed — note the path is the project root, not its `app/`:
 
 ```json
 {
   "name": "check-run",
   "arguments": {
-    "appPath": ".",
+    "appPath": "../other-project",
     "autoFix": true
   }
 }
@@ -2201,7 +2342,7 @@ Every long-running operation follows the same pattern, whatever it started.
 ```javascript
 {
   "ok": true,
-  "data": {"id": "abc123def456", "job_id": "pjob1_…", "status": "ready_for_import"}
+  "data": {"id": "abc123def456", "job_id": "pjob1_…", "instanceStatus": "ready_for_import"}
 }
 ```
 

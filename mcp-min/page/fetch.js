@@ -67,7 +67,7 @@ const pageFetchTool = {
     additionalProperties: false,
     properties: {
       env: authProperties.env,
-      url: { type: 'string', format: 'uri', description: 'Instance URL, used instead of env. Needs no email or token: this tool sends none.' },
+      url: { type: 'string', format: 'uri', description: 'Base URL to fetch from, used instead of env. Any host — commonly the instance asset host. Needs no email or token: this tool sends none.' },
       path: { type: 'string', pattern: PATH, description: 'Path on the instance, starting with /, e.g. /eval-page.' }
     },
     required: ['path']

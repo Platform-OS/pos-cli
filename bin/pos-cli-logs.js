@@ -9,7 +9,7 @@ import logger from '../lib/logger.js';
 import Gateway from '../lib/proxy.js';
 import ServerError from '../lib/ServerError.js';
 import { formatDiagnostic } from '../lib/diagnostics.js';
-import { newerOf } from '../lib/logRowId.js';
+import { newerOf, NEWEST_PAGE } from '../lib/logRowId.js';
 
 class LogStream extends EventEmitter {
   constructor(authData, interval, filter) {
@@ -71,7 +71,9 @@ class LogStream extends EventEmitter {
 // on a tail left running all day is unbounded. A row id is a microsecond epoch and is never parsed.
 const storage = {
   seen: new Set(),
-  lastId: '0',
+  // A tail begins at the tip, which is the one thing `0` means to this API — not "from the
+  // beginning". Named so it is not read as the same default `fetch-logs` had to stop using.
+  lastId: NEWEST_PAGE,
   record: (row) => {
     storage.seen.add(row.id);
     storage.lastId = newerOf(storage.lastId, row.id);

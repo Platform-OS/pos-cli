@@ -137,7 +137,12 @@ const jobStatusTool = {
           kind: job.kind,
           state: polled.state,
           done,
-          status: polled.status,
+          // The instance's own word for the job, under a name that cannot be read as a synonym for
+          // `state`. The two disagree on purpose — a deploy whose release is in while its assets
+          // are still uploading is `state: running` with the release at `success` — and published
+          // side by side as `state` and `status`, an evaluation took the second for the job's
+          // outcome and read the deploy as finished.
+          instanceStatus: polled.status,
           ...(polled.error && { error: polled.error }),
           ...(polled.warnings && { warnings: polled.warnings }),
           result: polled.result

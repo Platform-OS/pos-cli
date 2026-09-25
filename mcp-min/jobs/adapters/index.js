@@ -2,6 +2,10 @@
  * One adapter per job kind: `poll(deps, id, flags)` → `{ state, status, result, error? }`, where
  * `state` is 'running' | 'completed' | 'failed'. Everything kind-specific about reading a status
  * lives behind this — `job-status` itself only resolves credentials and formats.
+ *
+ * `status` is the instance's own word, kept under the platform's name here because that is what an
+ * adapter reads off the wire; `job-status` publishes it as `instanceStatus`, so that a caller
+ * cannot read it as a second spelling of `state`.
  */
 import deploy from './deploy.js';
 import dataImport from './data-import.js';

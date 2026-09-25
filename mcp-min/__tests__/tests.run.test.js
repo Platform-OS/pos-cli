@@ -350,10 +350,212 @@ describe('a 5xx from an instance that is otherwise well', () => {
     expect(result.error).toMatchObject({ kind: 'unavailable', code: 'HTTP_ERROR' });
   });
 
+  // The other half of the same agreement, on the path that succeeds: an empty name is not a filter,
+  // so the request carries none and the whole suite runs.
+  test('an empty name sends no filter to the runner', async () => {
+    const request = answering(runBody());
+
+    const result = await call({ name: '' }, { request });
+
+    expect(request.mock.calls[0][0].uri).not.toContain('name=');
+    expect(result.data.url).not.toContain('name=');
+  });
+
   test('a run with no name says so without inventing one', async () => {
     const result = await call({}, { request: crashed(), Gateway: instanceThat(true) });
 
     expect(result.error.message).toMatch(/^A test raised/);
+  });
+
+  /**
+   * What the runner will not say, the instance already wrote down.
+   *
+   * An evaluation was told "a test raised, narrow with name to find which it is" for a run whose
+   * `name` already matched exactly one test — advice that cannot help — and found the cause one
+   * `logs-fetch` later: `Liquid error (lib/test/eval4_error_test.liquid:3): 10 divided by 0`, with
+   * a full stack. Reading it here costs one request on a path that has already failed.
+   *
+   * The rows below are the shape measured on a live instance 2026-09-25. Two fields do the work
+   * and both are the platform's: `data.type` marks a row the instance's own error handler wrote
+   * (a `{% log %}` row has no `type` and no `message` inside `data`), and `data.context.url` is
+   * the request that produced it, which is what ties a row to this run rather than another.
+   */
+  describe('the crash the instance logged', () => {
+    const CRASH = {
+      id: '1790330679.3190001',
+      message: '"Liquid error (lib/test/eval4_error_test.liquid:3): 10 divided by 0"',
+      error_type: 'Liquid error',
+      data: {
+        schema_version: 1,
+        type: 'Liquid::ZeroDivisionError',
+        message: '10 divided by 0',
+        stack: [
+          { path: 'lib/test/eval4_error_test.liquid', line: 3 },
+          { path: 'modules/tests/public/lib/commands/run.liquid', line: 33 },
+          { path: 'modules/tests/public/views/pages/_tests/run.js.liquid', line: 5 }
+        ],
+        context: { url: 'inst.example.com/_tests/run.js?name=crash_test' }
+      }
+    };
+
+    /** The tests module's own row for the same run: a stack, a context, and no `type`. */
+    const STARTING = {
+      id: '1790330679.3000001',
+      message: 'Starting unit tests',
+      error_type: 'liquid_test_743ee',
+      data: {
+        schema_version: 1,
+        stack: [{ path: 'modules/tests/public/lib/commands/run.liquid', line: 8 }],
+        context: { url: 'inst.example.com/_tests/run.js?name=crash_test' }
+      }
+    };
+
+    /** A well instance whose log answers with `pages` in turn, the last repeating. */
+    const wellWithLog = (pages) => {
+      let read = 0;
+      return class {
+        async getInstance() { return { id: 1 }; }
+        async logs() { return { logs: pages[Math.min(read++, pages.length - 1)] }; }
+      };
+    };
+
+    // Milliseconds, so the lag loop is decided rather than slept.
+    const FAST = { pollIntervalMs: 1, crashLookupMs: 50 };
+
+    const crashed500 = () => vi.fn().mockResolvedValue({
+      statusCode: 500,
+      body: '<!DOCTYPE html><html><head><title>Aw, Snap!</title></head><body>error</body></html>'
+    });
+
+    test('names the file, the line and the exception instead of asking for a narrower name', async () => {
+      const result = await call({ name: 'crash_test' },
+        { request: crashed500(), Gateway: wellWithLog([[STARTING, CRASH]]), ...FAST });
+
+      expect(result.error.code).toBe('TEST_RUN_CRASHED');
+      expect(result.error.message).toContain('lib/test/eval4_error_test.liquid:3');
+      expect(result.error.message).toContain('Liquid::ZeroDivisionError');
+      expect(result.error.message).toContain('10 divided by 0');
+      // The advice that could not help is gone once the answer is in hand.
+      expect(result.error.message).not.toMatch(/narrow/i);
+    });
+
+    test('carries the stack structurally, innermost frame first', async () => {
+      const result = await call({ name: 'crash_test' },
+        { request: crashed500(), Gateway: wellWithLog([[CRASH]]), ...FAST });
+
+      expect(result.error.details.error).toEqual({ type: 'Liquid::ZeroDivisionError', message: '10 divided by 0' });
+      expect(result.error.details.stack[0]).toEqual({ path: 'lib/test/eval4_error_test.liquid', line: 3 });
+      expect(result.error.details.stack).toHaveLength(3);
+    });
+
+    /**
+     * The row the tests module writes for its own progress has a stack and a context too, and
+     * points at the module rather than at the test. Taking it would name the wrong file with the
+     * same confidence — the failure this whole class of fix is about.
+     */
+    test('does not mistake the run\'s own logging for the fault that stopped it', async () => {
+      const result = await call({ name: 'crash_test' },
+        { request: crashed500(), Gateway: wellWithLog([[STARTING]]), ...FAST });
+
+      expect(result.error.details).not.toHaveProperty('stack');
+      expect(result.error.message).not.toContain('commands/run.liquid');
+    });
+
+    // Another run's crash, in flight at the same time, is in the same log.
+    test('ignores a failure logged by a different run', async () => {
+      const other = { ...CRASH, data: { ...CRASH.data, context: { url: 'inst.example.com/_tests/run.js?name=something_else' } } };
+
+      const result = await call({ name: 'crash_test' },
+        { request: crashed500(), Gateway: wellWithLog([[other]]), ...FAST });
+
+      expect(result.error.details).not.toHaveProperty('stack');
+    });
+
+    // A whole-suite run has no `name`, and must not match a filtered run's rows.
+    test('a run with no name matches the row that had none either', async () => {
+      const wholeSuite = { ...CRASH, data: { ...CRASH.data, context: { url: 'inst.example.com/_tests/run.js' } } };
+
+      const matched = await call({}, { request: crashed500(), Gateway: wellWithLog([[wholeSuite]]), ...FAST });
+      const notMatched = await call({}, { request: crashed500(), Gateway: wellWithLog([[CRASH]]), ...FAST });
+
+      expect(matched.error.details.stack[0].path).toBe('lib/test/eval4_error_test.liquid');
+      expect(notMatched.error.details).not.toHaveProperty('stack');
+    });
+
+    /**
+     * `name: ''` passes the schema, and three readers have to agree about what it means. The URL
+     * sends `?name=` only when there is a filter, so an empty one produces a run — and a log row —
+     * with no `name` at all, while the lookup was comparing `'' === undefined` and matching
+     * nothing. A crashed run would have reported no file and no line, for no reason a caller could
+     * see. Derived once now, so the URL and the lookup cannot disagree.
+     */
+    test('an empty name is no filter to the lookup, exactly as it is to the URL', async () => {
+      const wholeSuite = { ...CRASH, data: { ...CRASH.data, context: { url: 'inst.example.com/_tests/run.js' } } };
+
+      const result = await call({ name: '' },
+        { request: crashed500(), Gateway: wellWithLog([[wholeSuite]]), ...FAST });
+
+      expect(result.error.details.stack[0].path).toBe('lib/test/eval4_error_test.liquid');
+      expect(result.error.message).toMatch(/^A test raised/);
+    });
+
+    /**
+     * A row is not readable the instant it is written — measured 1.4 s, 2.3 s and 2.7 s after the
+     * request over three crashed runs. One read straight after the 500 finds nothing.
+     */
+    test('waits for the row to reach the log rather than reading once', async () => {
+      const result = await call({ name: 'crash_test' },
+        { request: crashed500(), Gateway: wellWithLog([[], [], [CRASH]]), ...FAST });
+
+      expect(result.error.message).toContain('lib/test/eval4_error_test.liquid:3');
+    });
+
+    test('gives up on the lookup rather than the answer, and says where to look', async () => {
+      const result = await call({ name: 'crash_test' },
+        { request: crashed500(), Gateway: wellWithLog([[]]), ...FAST });
+
+      expect(result.error.code).toBe('TEST_RUN_CRASHED');
+      expect(result.error.message).toContain('logs-fetch');
+      expect(result.error.details).toEqual({ statusCode: 500 });
+    });
+
+    // A diagnostic that throws would replace a bad answer with no answer.
+    test('a log the instance will not serve leaves the rest of the error intact', async () => {
+      const brokenLog = class {
+        async getInstance() { return { id: 1 }; }
+        async logs() { throw Object.assign(new Error('nope'), { statusCode: 503 }); }
+      };
+
+      const result = await call({ name: 'crash_test' }, { request: crashed500(), Gateway: brokenLog, ...FAST });
+
+      expect(result.error.code).toBe('TEST_RUN_CRASHED');
+      expect(result.error.message).toContain("matching 'crash_test'");
+    });
+
+    /**
+     * The lookup waits, so it is the kind of work `cancellation.js` exists for: a client that has
+     * stopped listening must not have this instance polled on its behalf for five seconds.
+     */
+    test('a client that has gone away stops the lookup', async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      const result = await call({ name: 'crash_test' },
+        { request: crashed500(), Gateway: wellWithLog([[CRASH]]), signal: controller.signal, ...FAST });
+
+      // The crash classification still stands — it was decided before the wait.
+      expect(result.error.code).toBe('TEST_RUN_CRASHED');
+      expect(result.error.details).toEqual({ statusCode: 500 });
+    });
+
+    // Only a run given no name can act on it, which is the run that used to be told to.
+    test('suggests narrowing by name only when the run was given none', async () => {
+      const withName = await call({ name: 'crash_test' }, { request: crashed500(), Gateway: wellWithLog([[]]), ...FAST });
+      const without = await call({}, { request: crashed500(), Gateway: wellWithLog([[]]), ...FAST });
+
+      expect(withName.error.message).not.toMatch(/narrow/i);
+      expect(without.error.message).toMatch(/Narrowing with name/);
+    });
   });
 
   // It costs a request, so it must only be paid when the run has already failed.

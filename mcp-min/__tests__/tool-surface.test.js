@@ -68,7 +68,32 @@ const DEV_TOOLS = [
 //                a nonsense parameter — so the choice was these three parameters or a second log
 //                tool, and the one TASK-28 planned needs logsv2, which is unreachable (TASK-56).
 //                A tool would have been 450–900 B and a second log tool to pick wrongly between.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 9400;
+//
+// 9,400 → 9,750  round 4 (291 B), four clauses answering four things the evaluation had to work
+//                out for itself. Argued individually, because a budget raised for a bundle is a
+//                budget nobody argued:
+//                • unit-tests-run.name gains the test contract (~123 B). The one moment in the
+//                  run where the agent needed source it could not get from this server: it read
+//                  three files of the tests module to learn that a test takes and returns a
+//                  `contract` and calls assertions under modules/tests/assertions/. The pointer
+//                  existed, on the NO_TESTS error — which only fires on an instance with no tests
+//                  at all, so an agent writing a test where tests already exist can never reach
+//                  it. Naming the assertions rather than copying their signature keeps the
+//                  contract owned by the module, where it cannot go stale here.
+//                • logs-fetch says a row is not readable at once (~84 B). Measured 1.4–2.7 s for
+//                  a test run and ~8 s in the evaluation for a page's {% log %}. "Did my code
+//                  log?" answered `no` when the answer was `not yet` — a silent wrong answer.
+//                • graphql-exec names the identifying field of each admin_* type (~21 B), inline
+//                  as `admin_pages (slug)`. The agent guessed `path` on all three because
+//                  admin_liquid_partials has it, and spent a failed call plus an introspection
+//                  call — about 600 tokens once per session against 21 bytes once per session.
+//                • page-fetch.url stops saying "Instance URL" (~55 B). It has always accepted any
+//                  host; the agent used it against the instance's asset host and recorded that as
+//                  undocumented luck. Documenting it was a decision taken on the record, not a
+//                  discovery.
+//                dev lands at 9,674, keeping the ~75 bytes of headroom that make this fail on
+//                growth rather than on a rewording.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 9750;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -155,7 +180,32 @@ const BARE_TOOLS = [
 //         import, export and clean, which `--profile dev` hides, and an async test run, which no
 //         longer exists in any profile — `tests-run-async` was removed in this release and the
 //         description outlived it. A caller has the job_id; the kinds were never its to know.
-const BARE_TOOLS_LIST_BYTES = 22529;
+// 22,647  deploy-dry-run says what `planComputed` is for (round 4, F2 — 118 B). It answered
+//         `deleted: {count: 0, files: []}` for a release the instance had already refused:
+//         measured 2026-09-25, a rejected release carries `report: null`, so every count came out
+//         of nothing. On the evaluation's instance that was a full deploy which would have removed
+//         four pages, some forty partials and a table with a record in it, reported as deleting
+//         nothing — on the one field an agent checks before a destructive deploy. The lists are
+//         now absent rather than empty, and an unexplained absence is the next bug report.
+// 22,718  logs-fetch says where an uncursored read starts (round 4, F1 — 71 B net). It defaulted to
+//         `last_id=0` while its schema said "omit for the oldest kept". Measured 2026-09-25: the
+//         platform reads 0 as *no cursor* and answers the newest page — 20 of the 35 rows that
+//         instance held — while 1, 0.001 and 0.000001 each returned all 35. So every search that
+//         did not pass `since` read twenty rows and answered `count: 0`, and an evaluation
+//         believed one. A filter now starts at the oldest retained row and an unfiltered read
+//         still returns the newest; that is two jobs, and one sentence has to tell them apart.
+//         The false "omit for the oldest kept" and a `default: "0"` that Ajv never applied came
+//         off `lastId` and paid for most of it.
+// 22,741  check-run's appPath names the directory it wants (round 4, F5 — 23 B). "Directory to
+//         lint." reads as "any directory", so an evaluation passed `app` and was answered
+//         `kind: internal`, "a defect in pos-cli", for its own argument — a bug report that was
+//         never ours, and a wasted call. The linter's refusal is classified `input` now, and the
+//         parameter says the one thing that was ambiguous about it.
+// 23,032  four clauses for four things round 4 had to work out for itself (291 B): the test
+//         contract on unit-tests-run.name, the log's write-to-readable delay on logs-fetch, the
+//         identifying field of each admin_* type on graphql-exec, and page-fetch.url saying that
+//         it takes any host. The same 291 B the dev profile pays, where each one is argued.
+const BARE_TOOLS_LIST_BYTES = 23032;
 
 const HANG_MS = 15000;
 

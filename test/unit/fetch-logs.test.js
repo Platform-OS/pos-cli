@@ -80,13 +80,27 @@ describe('pos-cli fetch-logs', () => {
     expect(asked.some(u => u.includes('last_id=1790097411.216'))).toBe(true);
   });
 
-  test('without it the read starts at 0', async () => {
+  // It used to start at `0`, which this API reads as *no cursor* and answers with the newest page
+  // — measured 2026-09-25, 20 rows of an instance holding 35. A dump that stops after the tail is
+  // not a dump. `1` is 1970-01-01T00:00:01Z, older than any row that can exist.
+  test('without it the read starts at the oldest row kept, not the tail', async () => {
     asked = [];
     pages = [[]];
 
     await run([]);
 
-    expect(asked.some(u => u.includes('last_id=0'))).toBe(true);
+    expect(asked.some(u => u.includes('last_id=1'))).toBe(true);
+    expect(asked.some(u => /last_id=0(&|$)/.test(u))).toBe(false);
+  });
+
+  // The tail is still reachable, by asking for it.
+  test('--last-log-id 0 still asks for the newest page', async () => {
+    asked = [];
+    pages = [[]];
+
+    await run(['--last-log-id', '0']);
+
+    expect(asked.some(u => /last_id=0(&|$)/.test(u))).toBe(true);
   });
 
   // The other defect: the catch read `program.quiet` off the imported commander program rather
@@ -169,7 +183,8 @@ describe('pos-cli fetch-logs', () => {
   test('an inclusive last_id reaching the end is not reported as stopping early', async () => {
     const rows = [{ id: '1790097411.216', message: 'a' }, { id: '1790097411.999', message: 'b' }];
     serve = (cursor) => {
-      const from = cursor === '0' ? 0 : rows.findIndex(r => r.id === cursor);
+      // The default cursor is now `1`, which is older than every row: the whole list.
+      const from = cursor === '1' ? 0 : rows.findIndex(r => r.id === cursor);
       return rows.slice(from === -1 ? rows.length : from);
     };
 

@@ -192,7 +192,7 @@ describe('deploy', () => {
   ])('a release reading %s is %s', async (status, state, done) => {
     const result = await deploy(async () => ({ status, ...(status === 'error' && { error: { error: 'bad liquid' } }) }));
 
-    expect(result.data).toMatchObject({ kind: 'deploy', state, done, status });
+    expect(result.data).toMatchObject({ kind: 'deploy', state, done, instanceStatus: status });
   });
 
   test('a failed release reports the file the instance blamed, and its warnings', async () => {
@@ -230,7 +230,7 @@ describe('deploy', () => {
     test('does not make the job read as an unqualified success', async () => {
       const result = await discarding(['tests/eval/simple_test.liquid']);
 
-      expect(result.data).toMatchObject({ state: 'completed', done: true, status: 'success' });
+      expect(result.data).toMatchObject({ state: 'completed', done: true, instanceStatus: 'success' });
       expect(result.data.warnings[0]).toMatch(/did not put it on the instance/);
     });
 
@@ -361,8 +361,11 @@ describe('a deploy is not done while its assets are still going up', () => {
 
     const result = await poll(async () => ({ status: 'success' }));
 
-    expect(result.data).toMatchObject({ state: 'running', done: false, status: 'success' });
+    expect(result.data).toMatchObject({ state: 'running', done: false, instanceStatus: 'success' });
     expect(result.data.result.assets).toEqual({ phase: 'uploading' });
+    // `state` and the instance's word disagree here on purpose, which is exactly why the second
+    // cannot be called `status`: side by side they read as one answer spelled twice.
+    expect(result.data).not.toHaveProperty('status');
   });
 
   test('the manifest is in and the instance is unpacking', async () => {
@@ -430,7 +433,7 @@ describe('data jobs', () => {
 
     const result = await runTool(jobStatus, { job_id: handle(kind), env: 'staging' }, ctx);
 
-    expect(result.data).toMatchObject({ kind, state, done: state !== 'running', status });
+    expect(result.data).toMatchObject({ kind, state, done: state !== 'running', instanceStatus: status });
   });
 
   test.each(KINDS)('%s reads a status given as an object', async (kind, method) => {
@@ -438,7 +441,7 @@ describe('data jobs', () => {
 
     const result = await runTool(jobStatus, { job_id: handle(kind), env: 'staging' }, ctx);
 
-    expect(result.data).toMatchObject({ state: 'completed', status: 'done' });
+    expect(result.data).toMatchObject({ state: 'completed', instanceStatus: 'done' });
   });
 
   // A status we do not know is not a finished job: the only safe reading is "not done yet".
@@ -447,7 +450,7 @@ describe('data jobs', () => {
 
     const result = await runTool(jobStatus, { job_id: handle(kind), env: 'staging' }, ctx);
 
-    expect(result.data).toMatchObject({ state: 'running', done: false, status: 'quarantined' });
+    expect(result.data).toMatchObject({ state: 'running', done: false, instanceStatus: 'quarantined' });
   });
 
   test.each(KINDS)('%s: a 404 is JOB_NOT_FOUND', async (kind, method) => {
@@ -494,7 +497,7 @@ describe('wait_ms', () => {
 
     const result = await runTool(jobStatus, { job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 }, ctx);
 
-    expect(result.data).toMatchObject({ state: 'completed', done: true, status: 'success' });
+    expect(result.data).toMatchObject({ state: 'completed', done: true, instanceStatus: 'success' });
     expect(calls.gateway.filter(c => c.name === 'getStatus')).toHaveLength(4);
   }, 20000);
 
@@ -504,7 +507,7 @@ describe('wait_ms', () => {
     const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'staging', wait_ms: 100 }, ctx);
 
     expect(result.ok).toBe(true);
-    expect(result.data).toMatchObject({ state: 'running', done: false, status: 'in_progress' });
+    expect(result.data).toMatchObject({ state: 'running', done: false, instanceStatus: 'in_progress' });
     expect(calls.gateway.filter(c => c.name === 'getStatus').length).toBeGreaterThan(1);
   }, 20000);
 
@@ -559,7 +562,7 @@ describe('wait_ms', () => {
     const result = await runTool(jobStatus, { job_id: handle('deploy', '41', { assets: false }), env: 'staging', wait_ms: 5000 }, ctx);
 
     expect(result.ok).toBe(true);
-    expect(result.data).toMatchObject({ state: 'completed', status: 'success' });
+    expect(result.data).toMatchObject({ state: 'completed', instanceStatus: 'success' });
     expect(poll).toBe(3);
   }, 20000);
 
@@ -686,7 +689,7 @@ describe('a 5xx: the job is not there, or the instance is unwell', () => {
     const result = await runTool(jobStatus, { job_id: handle('deploy', '41', { assets: false }), env: 'staging' }, ctx);
 
     expect(result.ok).toBe(true);
-    expect(result.data).toMatchObject({ state: 'completed', status: 'success' });
+    expect(result.data).toMatchObject({ state: 'completed', instanceStatus: 'success' });
     expect(probes(calls)).toBe(0);
   });
 

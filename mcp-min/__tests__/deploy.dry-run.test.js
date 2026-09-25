@@ -302,6 +302,25 @@ describe('what it reports', () => {
     expect(data.assets).toEqual({ state: 'not_reported', count: 1 });
   });
 
+  /**
+   * The same claim, for the other reason the check does not run. A refused release has nothing for
+   * a manifest to be validated against, and the asset block was skipped without the initialiser
+   * being corrected — so a project holding two assets answered `{state: 'none', count: 0}`,
+   * measured on a live instance 2026-09-25. The count is the project's and is known either way.
+   */
+  test('assets are not reported as absent when the instance refused the release', async () => {
+    fs.mkdirSync(path.join(workDir, 'app', 'assets'), { recursive: true });
+    fs.writeFileSync(path.join(workDir, 'app', 'assets', 'app.css'), 'body{}');
+    const { Fake, calls } = gatewayFake({ releaseStatus: 'error', error: { error: 'nope' } });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('would_fail');
+    expect(data.assets).toEqual({ state: 'not_reported', count: 1 });
+    // Still not checked, which is the behaviour that was right all along.
+    expect(calls.sendManifest).toEqual([]);
+  });
+
   test('a project with no assets says so rather than omitting them', async () => {
     const { Fake, calls } = gatewayFake({ report: {} });
 
@@ -361,6 +380,141 @@ describe('files the deploy would discard', () => {
 
     expect(data.verdict).toBe('would_fail');
     expect(data.discarded.files).toEqual(['tests/a_test.liquid']);
+  });
+});
+
+/**
+ * A plan the instance refused to make is not a plan of no changes.
+ *
+ * Measured against a live instance 2026-09-25: a release it rejects answers `status: "error"` with
+ * `report: null`, and every count below was computed from that nothing. `deleted: {count: 0}` went
+ * out for a full deploy that would have removed four pages, some forty partials, two assets and a
+ * table with a record in it — the one field an agent checks before a destructive deploy, reading
+ * as safe. Zero is an answer; the absence of an answer is not zero.
+ */
+describe('a plan the instance did not work out', () => {
+  test('is absent rather than empty when the release is refused', async () => {
+    const { Fake } = gatewayFake({
+      releaseStatus: 'error',
+      error: { error: 'Validation failed:\nschema/items.yml: cannot be deleted — 1 record(s) still exist.' }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('would_fail');
+    expect(data.planComputed).toBe(false);
+    expect(data.deleted).toBeUndefined();
+    expect(data.upserted).toBeUndefined();
+    expect(data.skipped).toBeUndefined();
+    expect(data.byCategory).toBeUndefined();
+  });
+
+  // Keyed on the report itself, not on the verdict: a refusal that still says what it would have
+  // changed is worth reporting, and tying the two together would be a second guess to maintain.
+  test('is reported when a refused release carries one anyway', async () => {
+    const { Fake } = gatewayFake({
+      releaseStatus: 'error',
+      error: { error: 'nope' },
+      report: { Pages: { upserted: [], deleted: ['views/pages/x.liquid'], skipped: [] } }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('would_fail');
+    expect(data.planComputed).toBe(true);
+    expect(data.deleted).toEqual({ count: 1, files: ['views/pages/x.liquid'] });
+  });
+
+  // The other half of the distinction, and the one that must not be lost: an instance that looked
+  // and found nothing to change is a real answer, and still answers zero.
+  test('a computed plan of no changes still reports zero', async () => {
+    const { Fake } = gatewayFake({ report: {} });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('would_succeed');
+    expect(data.planComputed).toBe(true);
+    expect(data.deleted).toEqual({ count: 0, files: [] });
+    expect(data.upserted).toEqual({ count: 0, files: [] });
+    expect(data.byCategory).toEqual({});
+  });
+
+  // Nothing was ever asked, so nothing is known — the same answer by a different route.
+  test('is absent when the push returned no release to read', async () => {
+    class NoReleaseId {
+      async push() { return { status: 'dry_run' }; }
+      async getStatus() { throw new Error('must not be called without a release'); }
+    }
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: NoReleaseId, ...FAST });
+
+    expect(data.planComputed).toBe(false);
+    expect(data.deleted).toBeUndefined();
+  });
+
+  // `discarded` is read off `warning.files_not_matched`, which a refused release still carries. It
+  // is not part of the report, so it does not go missing with it.
+  test('still names the files the deploy would discard', async () => {
+    const { Fake } = gatewayFake({
+      releaseStatus: 'error',
+      error: { error: 'nope' },
+      warning: { files_not_matched: ['tests/a_test.liquid'] }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.planComputed).toBe(false);
+    expect(data.discarded).toEqual({ count: 1, files: ['tests/a_test.liquid'] });
+  });
+});
+
+/**
+ * The instance's own caveats about the deploy. `job-status` lifts them out of the release record
+ * after one has run; a dry run is when they can still be acted on — "module X is not configured
+ * for automatic file deletion" says a delete list is shorter than it looks, which is exactly the
+ * question this tool is asked. They were read only after the deploy and not before it.
+ */
+describe('warnings the release carries', () => {
+  // The measured shape: a refused release carried `error.warnings` beside `error.error`.
+  test('a refused release reports the caveats it came with', async () => {
+    const caveat = "Module(s) 'tests' are not configured for automatic file deletion during deploy.";
+    const { Fake } = gatewayFake({
+      releaseStatus: 'error',
+      error: { error: 'Validation failed:\nschema/items.yml: cannot be deleted', warnings: [caveat] }
+    });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.warnings).toEqual([caveat]);
+    expect(data.planComputed).toBe(false);
+  });
+
+  // job-status renders the discarded files as a sentence because it has nowhere else to put them.
+  // Here they are a list of their own, so printing them again would be the same paths twice.
+  test('do not repeat the files already named in discarded', async () => {
+    const { Fake } = gatewayFake({ report: {}, warning: { files_not_matched: ['tests/a_test.liquid'] } });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.discarded.files).toEqual(['tests/a_test.liquid']);
+    expect(data.warnings).toBeUndefined();
+  });
+
+  // An unrecognised key is passed through, so the next warning the platform adds is not invisible.
+  test('include a warning key this repository does not know', async () => {
+    const { Fake } = gatewayFake({ report: {}, warning: { quota_nearly_spent: 'nearly' } });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.warnings).toEqual(['quota_nearly_spent: "nearly"']);
+  });
+
+  test('are absent when the release carried none', async () => {
+    const { Fake } = gatewayFake({ report: {} });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.warnings).toBeUndefined();
   });
 });
 
@@ -522,14 +676,17 @@ describe('what the dry run reports', () => {
     expect(calls.sendManifest).toEqual([]);
   });
 
-  // An unfinished answer, not an error: the archive was built and the push accepted.
+  // An unfinished answer, not an error: the archive was built and the push accepted. It used to
+  // answer `deleted: {count: 0}` here, which is the guess the name rejects — a release that never
+  // settled has no report, so nothing is known about what it would delete.
   test('a release that never settles is not_known rather than a guess', async () => {
     const { Fake } = gatewayFake({ releaseStatus: 'in_progress' });
 
     const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
 
     expect(data.verdict).toBe('not_known');
-    expect(data.deleted).toEqual({ count: 0, files: [] });
+    expect(data.planComputed).toBe(false);
+    expect(data.deleted).toBeUndefined();
   });
 
   test('a cancelled call stops polling the release', async () => {

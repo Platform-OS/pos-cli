@@ -6,7 +6,7 @@ import { cancelled } from '../cancellation.js';
 import log from '../log.js';
 import { ToolError } from '../tool-error.js';
 // One pattern and one ordering for one identifier, shared with the GUI's logs schema.
-import { ROW_ID, newerOf } from '../../lib/logRowId.js';
+import { ROW_ID, newerOf, cursorForMs, NEWEST_PAGE, OLDEST_RETAINED } from '../../lib/logRowId.js';
 
 /**
  * A row with the two fields that carry nothing taken off it: 16% of a 322-byte row, on a tool whose
@@ -29,17 +29,22 @@ const lean = (row) => {
 // enough. The most rows one call reads; the same ceiling as `limit`'s maximum.
 export const MAX_SCAN = 10000;
 
-// A row id is a microsecond epoch of the instant `created_at` names, so a time is a cursor the
-// instance itself skips by. Built from integer milliseconds: dividing would round.
+/**
+ * The caller's `since`, as a cursor. The encoding is `lib/logRowId.js`'s, shared with the crash
+ * lookup in `tests/crash-check.js`; what stays here is the parse and the refusal, which are this
+ * tool's to make.
+ *
+ * `NEWEST_PAGE` and `OLDEST_RETAINED` come from there too. The difference between them cost an
+ * evaluation a search: this tool defaulted to `0` while its schema said "omit for the oldest
+ * kept", so a search that passed no `since` looked at twenty rows, answered `count: 0`, and was
+ * believed.
+ */
 const cursorForTime = (since) => {
   const ms = Date.parse(since);
   if (Number.isNaN(ms)) {
     throw ToolError.input('INVALID_SINCE', `since is not a time that can be read: ${since}. Pass an ISO-8601 timestamp, e.g. 2026-09-22T17:16:51Z.`);
   }
-  if (ms <= 0) return '0';
-
-  const seconds = Math.floor(ms / 1000);
-  return `${seconds}.${String(ms - seconds * 1000).padStart(3, '0')}`;
+  return cursorForMs(ms);
 };
 
 /** A row's `message` is sometimes an object, which `pos-cli logs` also renders. */
@@ -58,7 +63,7 @@ const asText = (value) => (typeof value === 'string' ? value : (value === undefi
  * @returns {Promise<{id: string, created_at?: string}|null>} null when the log holds nothing at all
  */
 const newestRowOn = async (gateway) => {
-  const response = await gateway.logs({ lastId: '0' });
+  const response = await gateway.logs({ lastId: NEWEST_PAGE });
   const rows = response?.logs;
   if (!Array.isArray(rows) || rows.length === 0) return null;
 
@@ -82,20 +87,30 @@ const matcherFor = ({ errorType, contains } = {}) => {
   };
 };
 
-// Refused together rather than resolved by precedence: a caller that passed both meant one of
-// them, and choosing silently starts the read somewhere they did not ask for.
-const startingCursor = (params) => {
+/**
+ * Where to start reading. `since` and `lastId` are refused together rather than resolved by
+ * precedence: a caller that passed both meant one of them, and choosing silently starts the read
+ * somewhere they did not ask for.
+ *
+ * With neither, the default is the one thing this tool cannot get from the caller — which of its
+ * two jobs this call is. A filter means searching, and a search that does not reach the oldest row
+ * reports "no such error" for one that is there; the instance cannot filter, so the scan happens
+ * either way and starting at the beginning is what makes its answer true. No filter means looking
+ * at the log, where the newest rows are the answer and the whole retained log is not.
+ */
+const startingCursor = (params, searching) => {
   const since = params?.since;
   const lastId = params?.lastId;
   if (since !== undefined && since !== null && lastId !== undefined && lastId !== null) {
     throw ToolError.input('SINCE_AND_LAST_ID', 'Pass since or lastId, not both: they name different places to start. since is a time; lastId resumes an earlier call.');
   }
   if (since !== undefined && since !== null) return cursorForTime(since);
-  return lastId !== undefined && lastId !== null ? String(lastId) : '0';
+  if (lastId !== undefined && lastId !== null) return String(lastId);
+  return searching ? OLDEST_RETAINED : NEWEST_PAGE;
 };
 
 const fetchLogsTool = {
-  description: 'Fetch rows from the instance error log, the stream pos-cli logs tails. Deployed code writes here, {% log %} included; a liquid-exec render adds only its Liquid errors, not its {% log %}. Reads forward from lastId or since, oldest first, and returns the next lastId. errorType and contains are matched here, not by the instance, so a narrow search still reads every row.',
+  description: 'Fetch rows from the instance error log, the stream pos-cli logs tails. Deployed code writes here, {% log %} included; a liquid-exec render adds only its Liquid errors, not its {% log %}. Reads forward from lastId or since, oldest first, and returns the next lastId. errorType and contains are matched here, not by the instance, so a narrow search still reads every row. With no lastId or since it starts at the oldest retained row when filtering, and at the newest rows otherwise. A row is readable a few seconds after it is written, so an immediate read can miss it.',
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',
@@ -105,7 +120,7 @@ const fetchLogsTool = {
       // A row id as the instance writes it: a microsecond epoch, `"1790008926.7639065"`. `integer`
       // rejected that outright and `number` would round it, so the resume this tool documents had
       // no value that worked at all.
-      lastId: { type: 'string', pattern: ROW_ID, description: 'A lastId this tool returned, passed back unchanged; only newer rows come back. Omit for the oldest kept.', default: '0' },
+      lastId: { type: 'string', pattern: ROW_ID, description: 'A lastId this tool returned, passed back unchanged; only newer rows come back.' },
       since: { type: 'string', format: 'date-time', description: 'ISO-8601 time to read from; use instead of lastId, never with it.' },
       errorType: { type: 'string', minLength: 1, description: 'Keep rows whose error_type contains this, ignoring case.' },
       contains: { type: 'string', minLength: 1, description: 'Keep rows whose message contains this, ignoring case.' },
@@ -124,7 +139,7 @@ const fetchLogsTool = {
     const matches = matcherFor(params);
     // A string from here on, never a number: the ids are microsecond epochs at the edge of what a
     // double holds.
-    let latestId = startingCursor(params);
+    let latestId = startingCursor(params, matches !== null);
     const seen = new Set();
     const out = [];
     const maxCount = Number.isFinite(params?.limit) ? params.limit : Infinity;

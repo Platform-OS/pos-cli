@@ -76,7 +76,8 @@ const SECTIONS = [
   // knowledge and used deploy-dry-run as an oracle, a round trip to the instance per guess.
   // Categories observed on a live deploy: Pages, Partials, Asset, Tables, GraphQL, Translations.
   () => 'Layout: deployable source lives under app/ — views/pages, views/partials, views/layouts, '
-    + 'assets, schema, graphql, lib — and a path matching none of it is not deployed.',
+    + 'assets, schema, graphql, lib — and a path matching none of it is not deployed. A module mirrors that '
+    + 'layout under modules/<name>/public and /private.',
 
   // Each starter's description already says it returns a job_id. What no single one of them can
   // say is which calls share the pattern, or that waiting is done with wait_ms rather than a loop.

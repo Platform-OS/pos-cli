@@ -192,7 +192,14 @@ describe('instructions are paid for on every session', () => {
   // rather than of any one tool, so putting it there means repeating it across tools and paying on
   // every request instead of once a session. 156 bytes, and full lands at 1502 — the same ~50 of
   // headroom this ceiling has always kept, so it still fails on growth rather than on a rewording.
-  const BUDGET = 1550;
+  // 1550 → 1625 in 6.6.0 for modules in the layout line (round 4, F4 — 71 bytes). It named only
+  // `app/`, while `dir.ALLOWED` is `app`, `marketplace_builder` and `modules`: an agent that reads
+  // this and then a dry run's file list, which on the evaluation instance was full of
+  // `modules/tests/public/...`, is holding a rule and a contradiction of it. Same argument as the
+  // line itself — true of the project rather than of any one tool, so no tool description can own
+  // it. full lands at 1573 and dev at 1533, keeping the ~50 of headroom this ceiling has always
+  // had, so it still fails on growth rather than on a rewording.
+  const BUDGET = 1625;
 
   test.each([['full', {}], ['dev', { profile: 'dev' }]])('%s fits the budget', (_label, options) => {
     const size = Buffer.byteLength(buildInstructions(resolve(options)));

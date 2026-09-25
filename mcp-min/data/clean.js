@@ -64,7 +64,7 @@ const dataCleanTool = {
     return {
       id: response.id,
       job_id: mintFor({ kind: 'data-clean', id: response.id, origin: auth.url }),
-      status: response.status || 'pending',
+      instanceStatus: response.status || 'pending',
       includeSchema,
       warning: includeSchema
         ? 'This will remove ALL data AND schema files (pages, schemas, etc.) from the instance!'

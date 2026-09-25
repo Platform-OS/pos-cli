@@ -20,6 +20,22 @@ const severityToLabel = (severity) => {
   }
 };
 
+/**
+ * The linter's refusal to check a directory that is not a project root — addressed to whoever
+ * typed the path, not a crash. It reaches `classify` as an ordinary `Error`, which reads it as
+ * `internal`, "a defect in pos-cli": an evaluation passed `appPath: "app"`, was told to report a
+ * bug, and the argument was simply wrong.
+ *
+ * Matched on the `code` the package exports for the purpose rather than with `instanceof`: pos-cli
+ * resolves `@platformos/platformos-check-node` independently, and `instanceof` against a copy that
+ * does not export the class throws in place of the error being tested. Written out rather than
+ * imported, because an older copy exporting no constant would leave the comparison
+ * `err.code === undefined` and catch every error that carries no code at all. `check-run.test.js`
+ * pins the literal against the installed package, so a rename upstream fails there instead of
+ * quietly going back to blaming pos-cli.
+ */
+const PROJECT_ROOT_REFUSAL = 'PLATFORMOS_PROJECT_ROOT';
+
 const uriToPath = (uri) => {
   try {
     return fileURLToPath(uri);
@@ -47,7 +63,7 @@ const checkRunTool = {
     properties: {
       appPath: {
         type: 'string',
-        description: 'Directory to lint.',
+        description: 'Project root to lint, not a subdirectory.',
         default: '.'
       },
       autoFix: {
@@ -66,7 +82,7 @@ const checkRunTool = {
     }
 
     if (!fs.statSync(appPath).isDirectory()) {
-      throw ToolError.project('NOT_A_DIRECTORY', `Path is not a directory: ${appPath}`, { appPath });
+      throw ToolError.input('NOT_A_DIRECTORY', `Path is not a directory: ${appPath}`, { appPath });
     }
 
     let platformosCheck;
@@ -86,7 +102,15 @@ const checkRunTool = {
     const configPath = fs.existsSync(configFile) ? configFile : undefined;
 
     // Run checks
-    const result = await platformosCheck.appCheckRun(checkPath, configPath);
+    let result;
+    try {
+      result = await platformosCheck.appCheckRun(checkPath, configPath);
+    } catch (e) {
+      if (e?.code !== PROJECT_ROOT_REFUSAL) throw e;
+      // The linter's own message names the path it was given and the root it found, and is written
+      // for whoever typed one — so it is forwarded whole rather than replaced.
+      throw ToolError.input('NOT_A_PROJECT_ROOT', e.message, { appPath });
+    }
     let offenses = result.offenses;
     // `app` is an App model, whose file count is its `size` getter. It was an array of source
     // files before platformos-check-node 1.0.0, so `.length` here silently became undefined.
