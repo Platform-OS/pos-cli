@@ -152,15 +152,20 @@ export async function crashedTestRun(status, auth, ctx = {}, { filter, startedAt
   // report the user's test as a pos-cli defect. `ERROR_KINDS` is a closed set of eight shared
   // across the whole surface, so a ninth member for one code is not on the table.
 
-  // What the crash costs, which is everything else in the run.
+  // What the crash costs, which is everything else in the run — and which tests module this is.
   //
-  // The runner accumulates each test's contract in a Liquid variable and renders the report from
-  // it *after* the loop, in the same render (`modules/tests/commands/run`). A raise aborts that
-  // render, so the results it had already collected are discarded with it — measured against a
-  // live instance on 2026-09-29: a test that passes on its own reported nothing when it ran in the
-  // same call as a test that raised after it. Nothing here can recover them; narrowing `name` to
-  // exclude the one that raised re-runs the rest, and that is the caller's choice to make, since
-  // running every test separately would pay for a rare crash on every green suite.
+  // The runner accumulated each test's contract in a Liquid variable and rendered the report from
+  // it *after* the loop, in the same render (`modules/tests/commands/run`), so a raise aborted the
+  // render and discarded the results already collected. Measured against a live instance on
+  // 2026-09-29: a test that passes on its own reported nothing when it ran in the same call as a
+  // test that raised after it.
+  //
+  // That is fixed upstream — the runner wraps each test in `try`/`catch` and records a raise as
+  // that test failing, under the error key `(raised)` — so an instance that still answers this way
+  // is running a tests module from before the fix, and the upgrade is worth naming. Reaching this
+  // code at all is the version check: nothing here can recover the lost results, and re-running a
+  // narrower `name` is the caller's choice, since running every test separately would pay for a
+  // rare crash on every green suite.
   const which = filter ? `A test matching '${filter}' raised` : 'A test raised';
   const where = crash && at(crash.stack);
 
@@ -171,9 +176,16 @@ export async function crashedTestRun(status, auth, ctx = {}, { filter, startedAt
       + (where
         ? `The instance logged it at ${where}: ${crash.type}${crash.message ? ` — ${crash.message}` : ''}`
         : 'The runner reports nothing about a run that did not finish; the instance records Liquid failures in its error log, '
-          + `so logs-fetch with since set to just before this call is where the file and line are.${filter ? '' : ' Narrowing with name says which test it is.'}`),
+          + `so logs-fetch with since set to just before this call is where the file and line are.${filter ? '' : ' Narrowing with name says which test it is.'}`)
+      + ' A newer tests module records a raise as a failing test and still reports every other test in the run.',
     {
       statusCode: status,
+      // Reaching here means this instance predates the upstream fix, so the upgrade is the thing
+      // that stops the rest of the run being lost next time.
+      remedy: {
+        command: 'pos-cli modules update tests && pos-cli deploy <env>',
+        runBy: 'a person, or an agent with a shell: it changes the project and needs a deploy'
+      },
       ...(crash && {
         error: { type: crash.type, ...(crash.message !== undefined && { message: crash.message }) },
         // Innermost first: the first frame is where it raised, the rest are how the test got there.

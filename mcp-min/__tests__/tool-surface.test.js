@@ -123,15 +123,17 @@ const DEV_TOOLS = [
 //                  modules/tests/assertions/", which is the reference a test writes, not a
 //                  directory: the files are at modules/tests/public/lib/assertions/, as this
 //                  repository's own fixtures show, and the evaluation went looking for them.
-//                • unit-tests-run says what a raise costs (108 B). A test that raises ends the
-//                  whole run and no other result survives it — measured 2026-09-29 against a live
-//                  instance, a test that passes on its own reported nothing when it ran in the
-//                  same call as one that raised after it. An evaluation lost a 38-test run to
-//                  this and recovered only by guessing at a narrower name. The runner belongs to
-//                  the tests module, so nothing here can fix it; the clause is read before the
-//                  call, which is the only point at which the caller can still choose otherwise.
-//                dev lands at 10,180, keeping ~70 bytes of headroom.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 10250;
+//                • unit-tests-run says what a raise costs (108 B), and then gives it back (-67 B
+//                  net). The clause warned that a raise ends the whole run and no other result
+//                  survives it. It was true, and it stopped being true in the same release: the
+//                  tests module now wraps each test in try/catch and records a raise as that test
+//                  failing, under the error key (raised). A warning about a module version is not
+//                  worth a byte on every request by every agent, so it came out; what stays is
+//                  the error key an agent branches on, and TEST_RUN_CRASHED — which only an
+//                  instance running the older module can reach — names the upgrade at the moment
+//                  it is needed.
+//                dev lands at 10,113, keeping ~67 bytes of headroom.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 10180;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -280,7 +282,16 @@ const BARE_TOOLS = [
 //         as one that raised after it. An evaluation lost a 38-test run to this. The runner is the
 //         tests module's, so nothing here can recover them; the clause is read before the call,
 //         which is the last moment the caller can choose to run a narrower set instead.
-const BARE_TOOLS_LIST_BYTES = 23538;
+// 23,471  and gives 67 of those 108 back, in the same release. The tests module was fixed: each
+//         test runs inside try/catch and a raise is recorded as that test failing, under the error
+//         key `(raised)`, so the rest of the suite reports. Measured on a live instance after the
+//         fix — a 17-test suite that had answered nothing reported 12 passing, 4 raised and 1
+//         assertion failure. The warning would now be a sentence about an old module version, paid
+//         on every request; `(raised)` replaces it, because that is the key an agent branches on
+//         and the one thing about a raise a result does not explain by itself. The older module is
+//         still out there: `TEST_RUN_CRASHED` is unchanged and now carries `details.remedy` with
+//         the module upgrade, which costs nothing until a run actually crashes.
+const BARE_TOOLS_LIST_BYTES = 23471;
 
 const HANG_MS = 15000;
 

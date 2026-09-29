@@ -1639,20 +1639,27 @@ so `TEST_RUN_CRASHED` used to say only that something had raised and suggest nar
 which cannot help when `name` already matched one test. It is `kind: project`: the next step is to
 change code in the project and deploy it again, which is what that kind means (see the kind table).
 
-**It takes every other result with it, and nothing here can get them back.** The runner collects
-each test's contract in a Liquid variable and renders the report from it *after* the loop, in the
-same render (`modules/tests/commands/run`) — so a raise aborts the render and the results already
-collected are discarded with it. Measured against a live instance on 2026-09-29: a test that
-reports a pass on its own reported nothing at all when it ran in the same call as a test that
-raised *after* it. An evaluation lost a 38-test run to one bad test and recovered only by guessing
-at a narrower `name`, which then reported 36 tests and 6 failures normally — so the results exist,
-and one raise is enough to withhold all of them.
+**It used to take every other result with it, and that is fixed in the tests module.** The runner
+collected each test's contract in a Liquid variable and rendered the report from it *after* the
+loop, in the same render (`modules/tests/commands/run`), so a raise aborted the render and the
+results already collected were discarded. Measured against a live instance on 2026-09-29: a test
+that reports a pass on its own reported nothing at all when it ran in the same call as a test that
+raised *after* it, and an evaluation lost a 38-test run to one bad test.
 
-The runner belongs to the `tests` platformOS module rather than to pos-cli, so this is not
-pos-cli's to fix; what is owed to the caller is saying so before the call, which the tool
-description now does. Running each test in its own request would recover the rest, and is not done:
-it would pay for a rare crash on every green suite, and an agent that knows which test raised — the
-message above says which — can narrow `name` to exclude it and decide that for itself.
+The module now wraps each test in `try`/`catch` and records a raise on that test's own contract,
+under the error key **`(raised)`**, carrying the exception class, file, line and message. The run
+completes, every other test reports, and the run is still red and still answers 500. Measured after
+the fix on the same instance: a 17-test suite that had answered nothing reported 12 passing, 4
+raised and 1 assertion failure — and the four raises turned out to be one real bug that had been
+invisible. Nothing in `unit-tests-run` had to change for it: the body is parsed before the status,
+so a raised test is a failing test.
+
+**`TEST_RUN_CRASHED` therefore means the instance is running a tests module from before that fix**,
+and it stays for exactly that reason. It carries `details.remedy` with the module upgrade, which
+costs nothing until a run actually crashes. On such an instance the results really are unreachable:
+narrowing `name` to exclude the test that raised re-runs the rest, and that is the caller's choice
+to make, since running every test in its own request would pay for a rare crash on every green
+suite.
 
 The instance does record it. After the health probe that separates "a test raised" from "the
 instance is down", `unit-tests-run` reads the error log for the failure this run produced and

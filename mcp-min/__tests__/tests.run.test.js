@@ -61,6 +61,37 @@ describe('a failing assertion is a run that happened', () => {
     expect(result.error).toBeUndefined();
   });
 
+  /**
+   * What the fixed tests module sends, and the reason this needs its own test: it is a 500 whose
+   * body *is* a run, and the raise arrives as one more error key rather than as an error page.
+   *
+   * The module used to let a raise end the whole render, so the runner answered with the
+   * platform's error page and every other result was lost — `TEST_RUN_CRASHED` exists for that and
+   * stays, because instances run older modules. The fix wraps each test in `try`/`catch` and
+   * records the raise on that test's own contract under `(raised)`. Nothing in this tool had to
+   * change for it, and that is exactly the claim worth pinning: the body is parsed first, so a
+   * raised test is a failing test and the run reports every other one.
+   */
+  test('a run where a test raised is a completed run, with the raise on that test', async () => {
+    const body = runBody({
+      total_tests: 3, total_assertions: 2, total_errors: 2,
+      tests: [
+        { name: 'a_test', success: true, assertions: 1, errors: {} },
+        { name: 'b_test', success: false, assertions: 0, errors: { '(raised)': ['GraphqlTagError: Liquid error (lib/test/b_test.liquid:3): Couldn\'t find "no/such/query.graphql".'] } },
+        { name: 'c_test', success: false, assertions: 1, errors: { value: ['expected 1 to equal 2'] } }
+      ]
+    });
+
+    const result = await call({}, { request: answering(body, 500) });
+
+    expect(result.ok).toBe(true);
+    expect(result.data).toMatchObject({ passed: false, matched: 3, failures: 2 });
+    // The test that raised names itself, and the ones around it still report.
+    expect(result.data.tests[1].errors['(raised)'][0]).toContain('lib/test/b_test.liquid:3');
+    expect(result.data.tests[0].success).toBe(true);
+    expect(result.data.tests[2].errors.value).toEqual(['expected 1 to equal 2']);
+  });
+
   // The other half: the body is read before the status, so a green run under 200 is unaffected.
   test('a green run is passed:true', async () => {
     const body = runBody({ total_errors: 0, tests: [{ name: 'a_test', success: true, assertions: 1, errors: {} }] });
@@ -373,11 +404,27 @@ describe('a 5xx from an instance that is otherwise well', () => {
     expect(result.data).toBeUndefined();
   });
 
-  // Read before the call, where it can still change what the caller runs. The error says it too,
-  // but by then the run has been spent.
-  test('the description says a raise ends the whole run', () => {
-    expect(tool.description).toMatch(/raises ends the whole run/);
-    expect(tool.description).toMatch(/narrow with name/);
+  /**
+   * The description used to warn that a raise ends the whole run. That is fixed in the tests
+   * module — each test is wrapped in `try`/`catch` and a raise is recorded as that test failing,
+   * under the error key `(raised)` — so the warning would now be a sentence about an old module
+   * version, paid on every request by every agent. It came out; what stays is the key an agent
+   * branches on, and the crash error names the module upgrade at the moment it is needed.
+   */
+  test('the description names the error key a raise produces, not the old whole-run warning', () => {
+    expect(tool.description).toMatch(/\(raised\)/);
+    expect(tool.description).not.toMatch(/ends the whole run/);
+  });
+
+  // A crash means this instance predates the upstream fix, and that is actionable.
+  test('a crashed run names the module upgrade that prevents it', async () => {
+    const result = await call({}, { request: crashed(), Gateway: instanceThat(true) });
+
+    expect(result.error.details.remedy).toMatchObject({
+      command: expect.stringContaining('modules update tests'),
+      runBy: expect.stringContaining('deploy')
+    });
+    expect(result.error.message).toMatch(/newer tests module/);
   });
 
   // The probe is what separates the two; without it the instance gets blamed for the test, or the
@@ -554,7 +601,10 @@ describe('a 5xx from an instance that is otherwise well', () => {
 
       expect(result.error.code).toBe('TEST_RUN_CRASHED');
       expect(result.error.message).toContain('logs-fetch');
-      expect(result.error.details).toEqual({ statusCode: 500 });
+      // The lookup added nothing; the remedy is not the lookup's and stays.
+      expect(result.error.details.error).toBeUndefined();
+      expect(result.error.details.stack).toBeUndefined();
+      expect(result.error.details.statusCode).toBe(500);
     });
 
     // A diagnostic that throws would replace a bad answer with no answer.
@@ -583,7 +633,9 @@ describe('a 5xx from an instance that is otherwise well', () => {
 
       // The crash classification still stands — it was decided before the wait.
       expect(result.error.code).toBe('TEST_RUN_CRASHED');
-      expect(result.error.details).toEqual({ statusCode: 500 });
+      expect(result.error.details.error).toBeUndefined();
+      expect(result.error.details.stack).toBeUndefined();
+      expect(result.error.details.statusCode).toBe(500);
     });
 
     // Only a run given no name can act on it, which is the run that used to be told to.
