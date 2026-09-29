@@ -667,6 +667,18 @@ describe('what the dry run reports', () => {
     expect(data.error.files).toEqual([{ file: 'schema/note.yml', errors: ['cannot be deleted — 1 record(s) still exist.'] }]);
   });
 
+  /**
+   * It is not refused. The push is accepted, `deploy-start` answers `ok: true` with a `job_id`,
+   * and the failure arrives through `job-status` as `state: failed` — measured 2026-09-29, a full
+   * deploy the instance would refuse came back as a started job and failed on the first poll. An
+   * evaluation read "refused" as a synchronous rejection and was left unsure whether its assets
+   * had gone up, because the same result said `assets.status: deploying_in_background`.
+   */
+  test('the description says what would_fail means for deploy-start', () => {
+    expect(dryRunTool.description).not.toMatch(/deploy-start would be refused/);
+    expect(dryRunTool.description).toMatch(/job-status/);
+  });
+
   // Nothing to validate a manifest against, and waiting on one would spend the timeout to find out.
   test('a refused release does not then wait on the asset phase', async () => {
     const { Fake, calls } = gatewayFake({ releaseStatus: 'error', error: { error: 'nope' } });
@@ -698,5 +710,160 @@ describe('what the dry run reports', () => {
     controller.abort();
 
     expect(await running).toMatchObject({ ok: false, error: { kind: 'cancelled' } });
+  });
+});
+
+/**
+ * What a refusal costs, told apart from what it is.
+ *
+ * A full deploy blocked by a table that still holds records is answered with the instance's own
+ * message, and that message ends with the `records_delete_all` mutation that would clear the
+ * blocker. Nothing in the result marked it as destroying data, nothing said a person should
+ * decide, and `graphql-exec` is on the same surface and will run it — on the one tool whose whole
+ * purpose is to be the safe step before a deploy.
+ *
+ * Two structural facts decide it, and neither is a word in that message: the converter files
+ * `schema/*.yml` under `Tables`, and a non-partial deploy deletes what the project no longer has.
+ * Measured against a live instance on 2026-09-29: a full run of a two-file project was refused
+ * over `modules/community/public/schema/tag.yml` (12 records) and
+ * `modules/user/public/schema/profile.yml` (1), while a malformed `schema/t62_broken.yml` that the
+ * project *did* have was refused in the same shape and cost nothing.
+ */
+describe('a refusal that can only be cleared by deleting records', () => {
+  const refusing = (details) => gatewayFake({
+    releaseStatus: 'error',
+    error: {
+      error: `Validation failed:\n${details.map(d => `${d.file}: ${d.errors[0]}`).join('\n')}`,
+      details
+    }
+  });
+
+  const cannotDelete = (file, records = 1) => ({
+    file,
+    errors: [`cannot be deleted — ${records} record(s) still exist. Delete all records of this type first.\npos-cli exec graphql <env> 'mutation { records_delete_all(table: "${file}") { count } }'`]
+  });
+
+  test('is named as a field, not only inside the forwarded message', async () => {
+    const { Fake } = refusing([cannotDelete('schema/eval_items.yml')]);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.blockers.dataLoss.count).toBe(1);
+    expect(data.blockers.dataLoss.files).toEqual(['schema/eval_items.yml']);
+  });
+
+  test('says who decides it', async () => {
+    const { Fake } = refusing([cannotDelete('schema/eval_items.yml')]);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.blockers.dataLoss.decidedBy).toMatch(/person/);
+  });
+
+  // The module spelling keeps its directory; the app one has it stripped. Both arrive here.
+  test('reads a module table path the same way', async () => {
+    const { Fake } = refusing([cannotDelete('modules/community/public/schema/tag.yml', 12)]);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.blockers.dataLoss.files).toEqual(['modules/community/public/schema/tag.yml']);
+  });
+
+  /**
+   * The half that stops the flag crying wolf. This file is in the project, so the deploy is not
+   * deleting it — the instance refused its contents, and fixing the file costs no records.
+   */
+  test('a refused table the project still has is not a data loss', async () => {
+    fs.mkdirSync(path.join(workDir, 'app', 'schema'), { recursive: true });
+    fs.writeFileSync(path.join(workDir, 'app', 'schema', 'broken.yml'), 'name: broken\nproperties:\n -bad\n');
+    const { Fake } = refusing([{ file: 'schema/broken.yml', errors: ["Body contains invalid YAML: did not find expected '-' indicator at line 3"] }]);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.blockers.dataLoss).toBeUndefined();
+    expect(data.blockers.other).toEqual({ count: 1 });
+  });
+
+  // The category half. A page the deploy would delete costs no records, so it is not flagged.
+  test('a deleted file that is not a table is not a data loss', async () => {
+    const { Fake } = refusing([{ file: 'views/pages/gone.liquid', errors: ['cannot be deleted'] }]);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.blockers.dataLoss).toBeUndefined();
+    expect(data.blockers.other).toEqual({ count: 1 });
+  });
+
+  test('both kinds in one refusal are counted apart', async () => {
+    fs.mkdirSync(path.join(workDir, 'app', 'schema'), { recursive: true });
+    fs.writeFileSync(path.join(workDir, 'app', 'schema', 'broken.yml'), 'name: broken\n');
+    const { Fake } = refusing([
+      { file: 'schema/broken.yml', errors: ['Body contains invalid YAML'] },
+      cannotDelete('modules/user/public/schema/profile.yml'),
+      cannotDelete('modules/community/public/schema/tag.yml', 12)
+    ]);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.blockers.dataLoss.count).toBe(2);
+    expect(data.blockers.other).toEqual({ count: 1 });
+  });
+
+  // Nothing the instance said may be lost to the field that summarises it.
+  test('the instance message and per-file details are still forwarded unchanged', async () => {
+    const details = [cannotDelete('schema/eval_items.yml')];
+    const { Fake } = refusing(details);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.error.files).toEqual(details);
+    expect(data.error.message).toContain('records_delete_all');
+  });
+
+  // A blocked full deploy computes no plan, so the partial run is the only way to see the rest of
+  // it. Two evaluations worked that out for themselves.
+  test('a blocked full deploy points at the partial dry run', async () => {
+    const { Fake } = refusing([cannotDelete('schema/eval_items.yml')]);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.planComputed).toBe(false);
+    expect(data.blockers.restOfPlan).toMatch(/partial/);
+  });
+
+  // It is already partial; there is nothing narrower to suggest.
+  test('a blocked partial deploy does not point at itself', async () => {
+    const { Fake } = refusing([{ file: 'views/pages/x.liquid', errors: ['Liquid syntax error'] }]);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH, partial: true }, { Gateway: Fake, ...FAST });
+
+    expect(data.blockers.restOfPlan).toBeUndefined();
+  });
+
+  test('a deploy that is not blocked reports no blockers at all', async () => {
+    const { Fake } = gatewayFake({ report: { Liquid: { upserted: ['a.liquid'] } } });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('would_succeed');
+    expect(data.blockers).toBeUndefined();
+  });
+
+  // A field an agent has to know is there. The result only carries it on a run that is blocked,
+  // so the description is where a caller finds out it exists at all.
+  test('the description names the field', () => {
+    expect(dryRunTool.description).toMatch(/blockers\.dataLoss/);
+  });
+
+  // The absence rule this sits beside: a refused release still computes nothing, and the lists
+  // stay absent rather than becoming empty.
+  test('it does not turn an uncomputed plan into an empty one', async () => {
+    const { Fake } = refusing([cannotDelete('schema/eval_items.yml')]);
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.planComputed).toBe(false);
+    expect(data.deleted).toBeUndefined();
+    expect(data.dataLoss).toBeUndefined();
   });
 });

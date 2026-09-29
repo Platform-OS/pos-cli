@@ -36,17 +36,19 @@ describe('abortableDelay', () => {
 });
 
 describe('logs-fetch', () => {
+  // From the oldest retained row, because that is the read that pages: one with no cursor asks for
+  // the newest page, which is a single request and has nothing after it to page to.
   test('stops paging when the call is cancelled', async () => {
     const controller = new AbortController();
     let page = 0;
     const logs = vi.fn(async () => {
       page += 1;
       if (page === 3) controller.abort();
-      return { logs: [{ id: page, message: `row ${page}` }] };
+      return { logs: [{ id: `179000851${page}.000001`, message: `row ${page}` }] };
     });
     const Gateway = class { logs = logs; };
 
-    expect(await runTool(logsFetch, { ...auth }, { Gateway, signal: controller.signal })).toMatchObject({ ok: false, error: { kind: 'cancelled', code: 'CANCELLED' } });
+    expect(await runTool(logsFetch, { ...auth, lastId: '1' }, { Gateway, signal: controller.signal })).toMatchObject({ ok: false, error: { kind: 'cancelled', code: 'CANCELLED' } });
     expect(logs).toHaveBeenCalledTimes(3);
   });
 });

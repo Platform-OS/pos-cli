@@ -49,16 +49,27 @@ const declaredBytes = (response) => {
   return header && Number.isInteger(value) && value >= 0 ? value : null;
 };
 
-const bodyOf = (text) => {
-  const bytes = Buffer.byteLength(text);
-  if (bytes <= MAX_BODY_BYTES) return { body: text, bytes, truncated: false };
+const cutTo = (text, maxBytes) => {
+  if (Buffer.byteLength(text) <= maxBytes) return { body: text, truncated: false };
 
   // Cut by bytes, and decoded with `stream: true` so an incomplete sequence at the cut is held back
   // rather than replaced: `toString('utf8')` emits U+FFFD there, three bytes where one was dropped,
   // which left the bounded body both corrupt and over the ceiling it was enforcing.
   const decoder = new TextDecoder('utf-8');
-  return { body: decoder.decode(Buffer.from(text).subarray(0, MAX_BODY_BYTES), { stream: true }), bytes, truncated: true };
+  return { body: decoder.decode(Buffer.from(text).subarray(0, maxBytes), { stream: true }), truncated: true };
 };
+
+/**
+ * How much body the caller wants. The default is the ceiling, so a call that passes nothing is the
+ * call this tool has always made.
+ *
+ * It exists because there was no way to ask for less. An evaluation confirmed a 10.8 MB text asset
+ * had deployed and paid ~10k tokens — 13% of the whole run — for `status: 200` and a byte count,
+ * because 16 KB of it came back too. Round 4 declined to suppress a body by a rule of our own, and
+ * that reasoning still holds: which bodies matter is the caller's to know, and a custom 404 page is
+ * exactly what an agent wants to see. This does not decide for anyone; it lets the caller say.
+ */
+const requestedBytes = (params) => (Number.isInteger(params?.maxBodyBytes) ? params.maxBodyBytes : MAX_BODY_BYTES);
 
 const pageFetchTool = {
   description: 'Fetch a path on an instance over HTTP: status, headers and body, as a visitor gets it. This is how to confirm a deploy is live — reading the source back does not prove the URL works. No credentials are sent; a redirect is reported, not followed.',
@@ -68,7 +79,8 @@ const pageFetchTool = {
     properties: {
       env: authProperties.env,
       url: { type: 'string', format: 'uri', description: 'Base URL to fetch from, used instead of env. Any host — commonly the instance asset host. Needs no email or token: this tool sends none.' },
-      path: { type: 'string', pattern: PATH, description: 'Path on the instance, starting with /, e.g. /eval-page.' }
+      path: { type: 'string', pattern: PATH, description: 'Path on the instance, starting with /, e.g. /eval-page.' },
+      maxBodyBytes: { type: 'integer', minimum: 0, maximum: MAX_BODY_BYTES, description: 'Most body bytes to return; 0 for status and headers only. Default 16384.' }
     },
     required: ['path']
   },
@@ -102,6 +114,10 @@ const pageFetchTool = {
 
     const contentType = response.headers.get('content-type');
     const textual = isTextual(contentType);
+    const maxBytes = requestedBytes(params);
+    // Two ways to end up handing back no body, handled as one: the response is not text, or the
+    // caller asked for none.
+    const returnsBody = textual && maxBytes > 0;
     // `redirect: 'manual'` means a 3xx arrives here instead of being chased off the instance;
     // `headers.location` says where it points. Named `isRedirect` because `redirected` on a
     // Response means the opposite — that one *was* followed.
@@ -111,21 +127,23 @@ const pageFetchTool = {
       isRedirect: response.status >= 300 && response.status < 400,
       headers: headersOf(response)
     };
-    // An image, a zip or a font is described rather than returned.
-    const omitted = { bodyOmitted: `not text (${contentType ?? 'no content-type'})` };
+    // An image, a zip or a font is described rather than returned; so is a body the caller did not
+    // ask for. Either way the reason is said, so an absent body is never an unexplained one.
+    const omitted = { bodyOmitted: textual ? 'maxBodyBytes: 0' : `not text (${contentType ?? 'no content-type'})` };
 
-    // Its size is then the whole answer, so a declared length means those bytes need never be
-    // pulled into this process at all.
-    const declared = textual ? null : declaredBytes(response);
+    // With no body to hand back, its size is the whole answer — so a declared length means the
+    // body is released unread rather than pulled into this process to be counted and thrown away.
+    const declared = returnsBody ? null : declaredBytes(response);
     if (declared !== null) {
       await response.body?.cancel().catch(() => {});
       return { ...common, contentBytes: declared, ...omitted };
     }
 
-    // Read either way: an unread body leaves the socket open, and the length is worth reporting.
-    const { body, bytes, truncated } = bodyOf(await response.text());
+    // Read either way: an unread body leaves the socket open, and the real size is worth reporting
+    // however little of it was asked for — a bounded read must not disguise a large resource.
+    const text = await response.text();
 
-    return { ...common, contentBytes: bytes, ...(textual ? { body, truncated } : omitted) };
+    return { ...common, contentBytes: Buffer.byteLength(text), ...(returnsBody ? cutTo(text, maxBytes) : omitted) };
   }
 };
 

@@ -353,7 +353,7 @@ is the only place that failure exists, whether the job was queued by a deployed 
 - `since` *(string, optional)*: an ISO-8601 timestamp to read from, instead of `lastId`. Passing both is refused (`SINCE_AND_LAST_ID`)
 - `errorType` *(string, optional)*: keep only rows whose `error_type` contains this, ignoring case
 - `contains` *(string, optional)*: keep only rows whose `message` contains this, ignoring case
-- `limit` *(integer, optional)*: stop after this many **matching** rows, counting from the **oldest** one after the starting cursor (1–10000)
+- `limit` *(integer, optional)*: most **matching** rows to return (1–10000). Which end of the read they come from depends on where it starts — see **Where a read starts** below
 
 **Response Format**:
 ```javascript
@@ -368,7 +368,8 @@ is the only place that failure exists, whether the job was queued by a deployed 
     count: 2,
     scanned: 2,            // only when a filter was used: how many rows were read to find those
     scanLimitReached: true, // only when the scan bound, not the filter or the limit, ended the read
-    newestRow: null        // only when a `since` read found nothing: see below
+    newestRow: null,       // only when a `since` read found nothing: see below
+    noRowsSince: { at: "2026-09-25T23:46:49.000Z", seconds: 304997 } // only when a lastId resume read nothing
   },
   meta: {
     durationMs: 90000,
@@ -380,12 +381,31 @@ is the only place that failure exists, whether the job was queued by a deployed 
 **`newestRow` tells you which kind of empty a `since` read was.** `count: 0` reads the same
 whether nothing happened in the window asked about or the instance stopped writing to its log
 altogether — an evaluation hit the second and could not tell. When a `since` read comes back with
-nothing, one extra read reports the newest row the instance holds: a timestamp far in the past
-means the log is stale rather than quiet, and `null` means it holds no rows at all. The field is
-absent when rows were found, and absent for a `lastId` read — a tail sits at the tip of the stream
-and is empty most times it is called, so the extra request would land on the common case to answer
-a question it did not ask. An instance that will not answer it leaves the field off rather than
-failing the call.
+nothing, one extra read reports the newest row the instance holds: `null` means it holds no rows at
+all, and `ageSeconds` says how long ago the newest one was written, so telling a quiet window from
+a dead log is not a timestamp subtraction you have to do yourself. The field is absent when rows
+were found. An instance that will not answer it leaves the field off rather than failing the call.
+
+**`noRowsSince` answers the same question on a `lastId` resume, and costs nothing.** No probe is
+made there — a tail sits at the tip of the stream and is empty most times it is called, so an extra
+request would land on the common case. It does not need one: a resume that read **no rows at all**
+has already established what the probe would ask, which is that nothing has been written since that
+cursor, and a row id is a microsecond epoch, so how long that is comes out of the cursor itself.
+
+```javascript
+{ logs: [], count: 0, lastId: "1790380009.486324",
+  noRowsSince: { at: "2026-09-25T23:46:49.000Z", seconds: 304997 } }
+```
+
+Measured against a live instance on 2026-09-29, whose log had been frozen since 25 September: the
+resume above cost **one request, the same as before**, and took `data` from 50 bytes to 115. Round
+5 sat on that instance and could not tell "nothing matched" from "this log stopped being written
+to", which is what those 65 bytes now say.
+
+It is reported only when the read came back having scanned nothing — rows that were read and then
+rejected by a filter mean the log is alive — and only for a cursor naming an instant somebody
+chose, so `lastId: "0"` and `lastId: "1"` do not produce one. A `since` read is answered by
+`newestRow` instead, since "nothing since the time you asked about" only restates the question.
 
 **Rows carry what the instance said and no more.** `data` is omitted when it is null, and
 `updated_at` when it repeats `created_at` — 52 bytes of a measured 322-byte row, which `limit:
@@ -442,6 +462,21 @@ error row appeared 1.4 s, 2.3 s and 2.7 s after the request over three runs, and
 about eight seconds for a page's `{% log %}`. So "did my code log?" asked immediately after
 triggering it answers `no` when the answer is `not yet` — read again rather than concluding the
 line was never written. `tests/crash-check.js` is the worked example: it retries for five seconds.
+
+**Which end `limit` takes from** follows from the same split. A read of the newest rows is a
+single page — nothing is newer than the page the instance has just sent — so the whole page is read
+and `limit` keeps the **newest** of it, in one request. A read going forward stops the moment it
+has `limit` rows, so those are the **oldest** after the cursor.
+
+`{limit: 5}` used to mean the five *oldest* rows of the newest page. Measured 2026-09-29 against a
+live instance: `{limit: 2}` answered the rows written at 23:46:48.743 and 23:46:48.811, while
+`{}` answered that same page ending at 23:46:49.486. "Show me the last five log rows" is the most
+ordinary call this tool has, and it answered with the wrong five while nothing in the result said
+which end they came from.
+
+Either way the returned `lastId` is the newest row that was **read**, so a limited read of the
+newest rows resumes at the tip of the stream rather than in the middle of the page it just looked
+at; a limited read going forward resumes on the last row it handed over.
 
 An explicit `lastId` or `since` always wins, whichever kind of call it is. To tail, call once and
 keep passing the returned `lastId` back. To search from a known time rather than from the oldest
@@ -645,6 +680,9 @@ the authorization policies and every partial the page renders all sit between th
   credential — a decision taken on the record 2026-09-25, and one to revisit if the HTTP transport
   ever binds beyond loopback.
 - `path` *(string, required)*: path on the instance, starting with `/`
+- `maxBodyBytes` *(integer, optional, 0–16384)*: most body bytes to return. `0` asks for the status
+  and headers only. Omitted, it is 16384 — the ceiling this tool has always applied, so a call that
+  does not pass it is unchanged
 
 **Response Format**:
 ```javascript
@@ -680,11 +718,25 @@ A `404` is `ok: true` with `status: 404`: the agent asked whether the page is li
 is that it is not. `ok: false` is reserved for a call that could not be made — an unreachable
 instance, a path off the instance.
 
-The body is capped at 16 KB, cut on a character boundary, with `contentBytes` giving the real size
-and `truncated` saying it was cut. A response that is not text is described in `bodyOmitted` rather
-than returned: an image or an archive is megabytes of noise to a model, and says nothing its status
-and size do not. Where such a response declares a `content-length`, that is the whole answer, so the
-body is released unread rather than pulled into the server to be counted and thrown away.
+The body is capped at 16 KB by default, cut on a character boundary, with `contentBytes` giving the
+real size and `truncated` saying it was cut. A response that is not text is described in
+`bodyOmitted` rather than returned: an image or an archive is megabytes of noise to a model, and
+says nothing its status and size do not. Where such a response declares a `content-length`, that is
+the whole answer, so the body is released unread rather than pulled into the server to be counted
+and thrown away.
+
+**`maxBodyBytes` is how a caller asks for less**, including for none at all. Confirming that a
+10.8 MB text asset had deployed cost an evaluation about 10k tokens — 13% of the whole run — for
+`status: 200` and a byte count, because 16 KB of the asset came back with them. `maxBodyBytes: 0`
+answers that call with the status, the headers and `bodyOmitted: "maxBodyBytes: 0"`, and where the
+response declares a `content-length` the bytes are never read at all, exactly as for a non-textual
+one. `contentBytes` is always the response's real size, whatever was asked for, so a bounded read
+can never make a large resource look small — and a smaller cap is still cut on a character
+boundary, so what comes back is a string rather than a corrupt one.
+
+Nothing here decides which bodies are worth returning. That rule was proposed in round 4 and
+declined, because a custom 404 page is exactly what an agent wants to see and this server cannot
+know which body matters; the parameter answers the other question, which is letting the caller say.
 
 It is **not** `readOnlyHint`. A GET on a platformOS page runs that page's Liquid, and this tool
 cannot know what that does; MCP reads a missing hint as "may change things", which is the honest
@@ -1140,9 +1192,45 @@ are **absent rather than empty**, so nothing can be mistaken for a computed zero
 itself is always present. It is keyed on the report rather than on `verdict`, so a refusal that does
 report what it would have changed still publishes those lists.
 
-Nothing here can compute a plan the instance declined to make. Where the refusal is a table that
-still holds records, seeing the rest of the plan means deleting those records first — which a
-preview must not do, and which `error.message` describes in the instance's own words.
+Nothing here can compute a plan the instance declined to make. **`blockers` says what the refusal
+would cost**, beside the instance's own message rather than instead of it:
+
+```javascript
+{
+  verdict: "would_fail",
+  error: { message: "Validation failed:\nmodules/user/public/schema/profile.yml: cannot be deleted — 1 record(s) still exist. …", files: [ … ] },
+  blockers: {
+    dataLoss: {
+      count: 1,
+      files: ["modules/user/public/schema/profile.yml"],
+      decidedBy: "a person: getting past these means deleting the records in those tables, and no deploy brings them back"
+    },
+    other: { count: 0 },
+    restOfPlan: "Run this tool again with partial: true. …"
+  },
+  planComputed: false
+}
+```
+
+That message ends with the `records_delete_all` mutation that would clear the blocker, written as
+ordinary prose. Nothing in it marks the command as destroying data or as a decision for a person,
+and `graphql-exec` is on this same surface and will run it — on the tool whose whole purpose is to
+be the safe step before a deploy.
+
+`blockers.dataLoss` names the refused files that can only be cleared by deleting records;
+`blockers.other.count` is how many of the rest there are, since `error.files` already names every
+one of them. Which is which is decided structurally and never from the wording of the message: the
+converter files `schema/*.yml` under `Tables`, and a non-partial deploy deletes what the project no
+longer has — so a refused table the project *does* still hold is a file being imported, and costs
+no records. Measured 2026-09-29 against a live instance: a full run refused over
+`modules/community/public/schema/tag.yml` (12 records) and `modules/user/public/schema/profile.yml`
+(1) reports both under `dataLoss`, while a malformed `schema/t62_broken.yml` that the project does
+have is refused in exactly the same shape and reports under `other`.
+
+`blockers.restOfPlan` points a blocked full deploy at this tool with `partial: true`. A blocked full
+deploy computes no plan at all, so that is the only way to see the rest of it — a partial deploy
+deletes nothing, so none of these blockers apply to it. Two evaluations fell back to it on their
+own and nothing in the result had said it was there.
 
 `warnings` is what the instance said about the deploy besides refusing or allowing it, taken from
 the release record — a module not configured for automatic file deletion, for one, which means a
@@ -1158,10 +1246,20 @@ reports the same list in `warnings` once the deploy has run.
 
 `verdict` is `would_succeed`, `would_fail` or `not_known`. The instance evaluates the dry run and
 can refuse the deploy outright — a table that still holds records cannot be dropped, for one — and
-`would_fail` means `deploy-start` would be refused in the same way; `error.files` names what it
-objected to. `not_known` means the release had not settled within the timeout. In both cases there
-is no file report yet, so `planComputed` is false and the change lists are absent. The file report
-is read from the release once it settles, not from the upload response, which carries none.
+`error.files` names what it objected to. `not_known` means the release had not settled within the
+timeout. In both cases there is no file report yet, so `planComputed` is false and the change lists
+are absent. The file report is read from the release once it settles, not from the upload response,
+which carries none.
+
+**`would_fail` does not mean `deploy-start` will be refused.** The push is accepted: `deploy-start`
+answers `ok: true` with a `job_id`, and the failure arrives later through `job-status` as
+`state: failed`, carrying the same validation error. Measured 2026-09-29 against a live instance —
+a full deploy the instance would refuse came back as a started job and failed on the first poll.
+This document and the tool description both said "refused" until then, and an evaluation read that
+as a synchronous rejection; because `deploy-start` also reported `assets.status:
+"deploying_in_background"` on the same release, it was left unsure whether its assets had gone up.
+Nothing is applied either way — the release fails validation — but the outcome is read from
+`job-status`, not from the call that started it.
 
 Each call writes its archive into a directory of its own under `tmp/pos-cli-mcp-deploy/` and
 removes it when the call is done, so two deploys started close together cannot pack over each
@@ -1477,8 +1575,8 @@ Run platformOS tests on an instance and wait for the verdict.
 - `name` *(string, optional)*: Any part of a test path, matched as a substring. **Omit it to run
   every test.** Test files live under `app/lib` and their path must end with `_test`; a deploy
   silently discards anything under `app/tests`. A test takes and returns a `contract` and calls
-  assertions under `modules/tests/assertions/`, each of which documents its own parameters in a
-  `{% doc %}` block.
+  assertions by reference — `include 'modules/tests/assertions/equal'` — each of which documents
+  its own parameters in a `{% doc %}` block.
 
 **How a test is written is on `name`, and it is the one thing this server used to leave to source.**
 An evaluation read three files of the tests module — `assertions/equal.liquid`,
@@ -1488,6 +1586,12 @@ existed on the `NO_TESTS` error, but that fires only on an instance with **no te
 so an agent writing a new test where tests already exist could never reach it. The assertions are
 named rather than their signatures copied here: the contract belongs to the tests module, and a
 copy of it in this repository would be wrong the first time that module changed.
+
+**`modules/tests/assertions/equal` is a reference, not a directory.** It is what a test writes to
+reach an assertion, and what `admin_liquid_partials` filters on — but the file is at
+`modules/tests/public/lib/assertions/equal.liquid`, since the converter strips `public/lib/`. The
+sentence above used to say assertions live "under `modules/tests/assertions/`", and an evaluation
+read that as a location and went looking for it on disk.
 
 `path` was removed in 6.6.0. The tests module filters on `name` alone and never read it, so a run
 narrowed with `path` quietly ran the whole suite — measured against tests@1.3.5.
@@ -1533,7 +1637,22 @@ matches nothing is now `NO_TESTS_MATCHED` (`not_found`); no `name` and no tests 
 answers 500 with an HTML error page naming nothing — not the test, not the file, not the cause —
 so `TEST_RUN_CRASHED` used to say only that something had raised and suggest narrowing with `name`,
 which cannot help when `name` already matched one test. It is `kind: project`: the next step is to
-fix code in the project.
+change code in the project and deploy it again, which is what that kind means (see the kind table).
+
+**It takes every other result with it, and nothing here can get them back.** The runner collects
+each test's contract in a Liquid variable and renders the report from it *after* the loop, in the
+same render (`modules/tests/commands/run`) — so a raise aborts the render and the results already
+collected are discarded with it. Measured against a live instance on 2026-09-29: a test that
+reports a pass on its own reported nothing at all when it ran in the same call as a test that
+raised *after* it. An evaluation lost a 38-test run to one bad test and recovered only by guessing
+at a narrower `name`, which then reported 36 tests and 6 failures normally — so the results exist,
+and one raise is enough to withhold all of them.
+
+The runner belongs to the `tests` platformOS module rather than to pos-cli, so this is not
+pos-cli's to fix; what is owed to the caller is saying so before the call, which the tool
+description now does. Running each test in its own request would recover the rest, and is not done:
+it would pay for a rare crash on every green suite, and an agent that knows which test raised — the
+message above says which — can narrow `name` to exclude it and decide that for itself.
 
 The instance does record it. After the health probe that separates "a test raised" from "the
 instance is down", `unit-tests-run` reads the error log for the failure this run produced and
@@ -1542,8 +1661,9 @@ reports it:
 ```javascript
 {
   kind: "project", code: "TEST_RUN_CRASHED",
-  message: "A test matching 'eval4_error' raised while it was running, so the run stopped and the
-            runner answered 500 with an error page. … The instance logged it at
+  message: "A test matching 'eval4_error' raised while it was running, so the whole run stopped
+            and reported nothing — including any test that had already passed — and the runner
+            answered 500 with an error page. … The instance logged it at
             lib/test/eval4_error_test.liquid:3: Liquid::ZeroDivisionError — 10 divided by 0",
   details: {
     statusCode: 500,
@@ -2294,7 +2414,7 @@ protocol's `isError` is derived from `ok === false`. A tool cannot report a fail
 | `input` | the arguments were wrong; change them and call again |
 | `not_found` | what the arguments named is not there |
 | `auth` | credentials rejected or missing; re-authenticate rather than retry |
-| `project` | the project or machine is not ready for this |
+| `project` | the project or machine has to change: its files, its setup, or code it has deployed |
 | `instance` | the instance ran it and refused; the message says why |
 | `unavailable` | nothing was decided; the same call may work later |
 | `internal` | a defect in pos-cli |

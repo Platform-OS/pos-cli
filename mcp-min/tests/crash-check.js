@@ -136,12 +136,37 @@ export async function crashedTestRun(status, auth, ctx = {}, { filter, startedAt
     return null;
   });
 
+  // Settled 2026-09-29, after two evaluations in separate rounds called this the wrong kind.
+  //
+  // It stays `project`, and the gloss the instructions publish for that kind was widened to say
+  // what it always covered. The objection was to the words, not to the classification: "the
+  // project or machine is not ready" maps to installing or deploying something, and a deployed
+  // test that divides by zero is neither. But every kind is a next step, and the next step here is
+  // to change code in the project and deploy it again — which is what `project` means and no other
+  // member of the closed set does.
+  //
+  // `input` was the alternative and is worse: the arguments were fine, so an agent told to fix
+  // them would go back to `name` and find nothing wrong with it. `instance` is wrong — the
+  // instance ran what it was given and is answering other requests, which is precisely what
+  // `instanceAnswersForItself` above establishes before this error is built. `internal` would
+  // report the user's test as a pos-cli defect. `ERROR_KINDS` is a closed set of eight shared
+  // across the whole surface, so a ninth member for one code is not on the table.
+
+  // What the crash costs, which is everything else in the run.
+  //
+  // The runner accumulates each test's contract in a Liquid variable and renders the report from
+  // it *after* the loop, in the same render (`modules/tests/commands/run`). A raise aborts that
+  // render, so the results it had already collected are discarded with it — measured against a
+  // live instance on 2026-09-29: a test that passes on its own reported nothing when it ran in the
+  // same call as a test that raised after it. Nothing here can recover them; narrowing `name` to
+  // exclude the one that raised re-runs the rest, and that is the caller's choice to make, since
+  // running every test separately would pay for a rare crash on every green suite.
   const which = filter ? `A test matching '${filter}' raised` : 'A test raised';
   const where = crash && at(crash.stack);
 
   return ToolError.project(
     'TEST_RUN_CRASHED',
-    `${which} while it was running, so the run stopped and the runner answered ${status} with an error page. `
+    `${which} while it was running, so the whole run stopped and reported nothing — including any test that had already passed — and the runner answered ${status} with an error page. `
       + 'The instance is answering other requests, so the fault is in what ran rather than in the instance being down. '
       + (where
         ? `The instance logged it at ${where}: ${crash.type}${crash.message ? ` — ${crash.message}` : ''}`

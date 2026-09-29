@@ -160,6 +160,22 @@ describe('the instructions describe every kind an error can carry', () => {
     expect(Object.keys(ERROR_KINDS).filter(kind => !named(text, kind))).toEqual([]);
   });
 
+  /**
+   * The pairing two evaluations objected to, in separate rounds. `TEST_RUN_CRASHED` is a deployed
+   * test that raised, and it carries `kind: project` because the next step is to change code in
+   * the project and deploy it again. The sentence said "the project or machine is not ready",
+   * which maps to installing or deploying something — so the guidance pointed at a different fix
+   * from the one the error needed, and the kind took the blame. Settled in `tests/crash-check.js`.
+   */
+  test('what project means covers code the project has deployed, not only its setup', () => {
+    const text = buildInstructions(resolve());
+
+    const gloss = text.match(/project: ([^;]+);/)[1];
+
+    expect(gloss).toMatch(/deploy/i);
+    expect(gloss).not.toMatch(/not ready/);
+  });
+
   // Without this the check above passes for a server that authenticates nothing, which is the one
   // place the error taxonomy is least likely to come up.
   test('a server of local tools alone still describes them', () => {
@@ -199,7 +215,14 @@ describe('instructions are paid for on every session', () => {
   // line itself — true of the project rather than of any one tool, so no tool description can own
   // it. full lands at 1573 and dev at 1533, keeping the ~50 of headroom this ceiling has always
   // had, so it still fails on growth rather than on a rewording.
-  const BUDGET = 1625;
+  // 1625 → 1675 in 6.6.0 for what `project` means (round 5 — 41 bytes). It said "the project or
+  // machine is not ready", which maps to installing or deploying something; two evaluations in
+  // separate rounds read `TEST_RUN_CRASHED` against it and called the kind wrong, when what was
+  // wrong was this sentence. The kind is a next step, and for a deployed test that raises the next
+  // step is to change code in the project — which is what it always meant and what it now says.
+  // No new clause: the same one names its three cases. full lands at 1614 and dev at 1574, keeping
+  // the same ~50 of headroom.
+  const BUDGET = 1675;
 
   test.each([['full', {}], ['dev', { profile: 'dev' }]])('%s fits the budget', (_label, options) => {
     const size = Buffer.byteLength(buildInstructions(resolve(options)));

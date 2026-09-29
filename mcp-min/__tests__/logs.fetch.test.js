@@ -97,8 +97,10 @@ describe('the lastId this tool returns is one it accepts back', () => {
 describe('paging twice neither repeats a row nor skips one', () => {
   const idsOf = (res) => res.data.logs.map(row => row.id);
 
+  // Every walk here starts at the oldest retained row: a read that names no cursor is not the
+  // first page of a walk, it is the newest page, and there is nothing after it to page to.
   test('the second page carries on exactly where the first stopped', async () => {
-    const first = await callAsClient({ limit: 2 }, instanceWith(SAME_SECOND).Gateway);
+    const first = await callAsClient({ lastId: '1', limit: 2 }, instanceWith(SAME_SECOND).Gateway);
     expect(idsOf(first)).toEqual(['1790008519.397928', '1790008926.7639065']);
 
     const second = await callAsClient({ lastId: first.data.lastId }, instanceWith(SAME_SECOND).Gateway);
@@ -107,7 +109,7 @@ describe('paging twice neither repeats a row nor skips one', () => {
   });
 
   test('every row is delivered once across the two pages', async () => {
-    const first = await callAsClient({ limit: 2 }, instanceWith(SAME_SECOND).Gateway);
+    const first = await callAsClient({ lastId: '1', limit: 2 }, instanceWith(SAME_SECOND).Gateway);
     const second = await callAsClient({ lastId: first.data.lastId }, instanceWith(SAME_SECOND).Gateway);
 
     const delivered = [...idsOf(first), ...idsOf(second)];
@@ -118,7 +120,7 @@ describe('paging twice neither repeats a row nor skips one', () => {
   // What the caller used to be left with. Kept as a test so the two halves of the defect — the
   // value that was refused and the value that was accepted — are both pinned.
   test('the truncated cursor that used to be the only accepted one repeats a row', async () => {
-    const first = await callAsClient({ limit: 2 }, instanceWith(SAME_SECOND).Gateway);
+    const first = await callAsClient({ lastId: '1', limit: 2 }, instanceWith(SAME_SECOND).Gateway);
     const truncated = String(Math.trunc(Number(first.data.lastId)));
 
     const second = await callAsClient({ lastId: truncated }, instanceWith(SAME_SECOND).Gateway);
@@ -140,7 +142,7 @@ describe('paging twice neither repeats a row nor skips one', () => {
       }
     }
 
-    const res = await callAsClient({}, Inclusive);
+    const res = await callAsClient({ lastId: '1' }, Inclusive);
 
     expect(res.data.logs.map(row => row.id)).toEqual(SAME_SECOND.map(row => row.id));
     expect(res.data.count).toBe(3);
@@ -158,17 +160,22 @@ describe('paging twice neither repeats a row nor skips one', () => {
 });
 
 describe('what limit counts, and from which end', () => {
-  test('it takes the oldest rows after the cursor', async () => {
-    const res = await callAsClient({ limit: 1 }, instanceWith(SAME_SECOND).Gateway);
+  // Every read here names its cursor. A read that names none starts at the newest page, which
+  // `instanceWith` answers as an ordinary greater-than and the platform does not — those reads are
+  // covered against the faithful fake further down.
+  const FIRST = SAME_SECOND[0].id;
 
-    expect(res.data.logs.map(row => row.id)).toEqual(['1790008519.397928']);
+  test('it takes the oldest rows after the cursor', async () => {
+    const res = await callAsClient({ lastId: FIRST, limit: 1 }, instanceWith(SAME_SECOND).Gateway);
+
+    expect(res.data.logs.map(row => row.id)).toEqual(['1790008926.7639065']);
     expect(res.data.count).toBe(1);
   });
 
   // A page cut short by `limit` must leave the cursor on the last row handed over, or the rows
   // between it and the end of the page are lost.
   test('a page cut short leaves the cursor on the last row delivered', async () => {
-    const res = await callAsClient({ limit: 2 }, instanceWith(SAME_SECOND, { pageSize: 50 }).Gateway);
+    const res = await callAsClient({ lastId: FIRST, limit: 1 }, instanceWith(SAME_SECOND, { pageSize: 50 }).Gateway);
 
     expect(res.data.lastId).toBe('1790008926.7639065');
   });
@@ -176,10 +183,10 @@ describe('what limit counts, and from which end', () => {
   test('without a limit it drains the stream across pages', async () => {
     const { Gateway, asked } = instanceWith(SAME_SECOND, { pageSize: 1 });
 
-    const res = await callAsClient({}, Gateway);
+    const res = await callAsClient({ lastId: '1' }, Gateway);
 
     expect(res.data.logs).toHaveLength(3);
-    expect(asked).toEqual(['0', '1790008519.397928', '1790008926.7639065', '1790008926.9111111']);
+    expect(asked).toEqual(['1', '1790008519.397928', '1790008926.7639065', '1790008926.9111111']);
   });
 });
 
@@ -300,7 +307,8 @@ describe('the description answers what an agent cannot find out for itself', () 
   test.each([
     ['the tool names the stream it reads', () => tool.description, /error log/i],
     ['the tool says what a liquid-exec render contributes', () => tool.description, /liquid-exec/],
-    ['limit says which end it counts from', () => property('limit'), /oldest|newest/i],
+    ['limit says which end it counts from on a newest-rows read', () => property('limit'), /newest/i],
+    ['limit says which end it counts from when reading forward', () => property('limit'), /oldest/i],
     ['lastId says it goes back unchanged', () => property('lastId'), /unchanged|verbatim|as given/i]
   ])('%s', (_label, text, pattern) => {
     expect(text()).toMatch(pattern);
@@ -719,6 +727,73 @@ describe('where a read starts when the caller names no cursor', () => {
     expect(Object.hasOwn(res.data, 'scanned')).toBe(false);
   });
 
+  /**
+   * Which end `limit` takes from on the newest page.
+   *
+   * The page arrives oldest first, so a read that stopped after `limit` rows handed back the
+   * *oldest* rows of the newest page. Measured against a live instance on 2026-09-29:
+   * `{limit: 2}` answered 23:46:48.743 … 23:46:48.811 while `{}` answered the same page ending
+   * 23:46:49.486. "Show me the last 5 log rows" is the most ordinary call this tool has, and it
+   * was the one that answered wrongly — silently, since nothing in the result says which end it
+   * came from.
+   */
+  test('a limit on the newest rows returns the newest of them', async () => {
+    const { Gateway } = platformWith(MANY);
+
+    const res = await callAsClient({ limit: 3 }, Gateway);
+
+    expect(res.data.logs.map(row => row.id)).toEqual(MANY.slice(-3).map(row => row.id));
+    expect(res.data.count).toBe(3);
+  });
+
+  // The cursor is the newest row read, not the last row returned: the caller asked for the tail,
+  // so what follows this read is what is written next.
+  test('a limited read of the newest rows resumes after the whole page', async () => {
+    const { Gateway } = platformWith(MANY);
+
+    const first = await callAsClient({ limit: 3 }, Gateway);
+    expect(first.data.lastId).toBe(MANY.at(-1).id);
+
+    const second = await callAsClient({ lastId: first.data.lastId }, platformWith(MANY).Gateway);
+
+    expect(second.data.logs).toEqual([]);
+  });
+
+  // Nothing follows the newest page, so asking again is a request spent confirming it. The read
+  // that stopped at `limit` used to cost one request and must still cost one.
+  test('a read of the newest rows costs one request, with or without a limit', async () => {
+    const limited = platformWith(MANY);
+    const whole = platformWith(MANY);
+
+    await callAsClient({ limit: 3 }, limited.Gateway);
+    await callAsClient({}, whole.Gateway);
+
+    expect(limited.asked).toEqual(['0']);
+    expect(whole.asked).toEqual(['0']);
+  });
+
+  // A limit larger than the page is not a limit at all.
+  test('a limit above the page size returns the page', async () => {
+    const { Gateway } = platformWith(MANY);
+
+    const res = await callAsClient({ limit: 10000 }, Gateway);
+
+    expect(res.data.logs).toHaveLength(PLATFORM_PAGE);
+    expect(res.data.logs.at(-1).id).toBe(MANY.at(-1).id);
+  });
+
+  // The other half of the rule. A filtered read starts at the oldest retained row and walks
+  // forward, so its `limit` is the first rows that match — the newest end would mean scanning the
+  // whole log to hand back the end of it.
+  test('a filtered read still takes its limit oldest-first', async () => {
+    const { Gateway, asked } = platformWith(MANY);
+
+    const res = await callAsClient({ contains: 'row', limit: 3 }, Gateway);
+
+    expect(asked[0]).toBe('1');
+    expect(res.data.logs.map(row => row.id)).toEqual(MANY.slice(0, 3).map(row => row.id));
+  });
+
   // A cursor the caller named is the caller's, whichever of the two jobs this call is.
   test.each([
     ['lastId beats the filtered default', { lastId: '1790000005.000001', errorType: 'wanted' }, '1790000005.000001'],
@@ -770,16 +845,106 @@ test('the description says the matching happens here rather than on the instance
  * the instance holds.
  */
 describe('an empty read says what the instance actually holds', () => {
+  // A row id is a microsecond epoch of the instant `created_at` names, so these two have to agree:
+  // 1790008519 is 2026-09-21T16:35:19Z. They did not, and the mismatch is invisible until
+  // something reads the time out of the id — which is exactly what the quiet-period field does.
   const ROWS = [
-    { id: '1790008519.397928', message: 'old', created_at: '2026-09-22T19:15:19.397Z' },
-    { id: '1790008926.7639065', message: 'newest', created_at: '2026-09-22T19:22:06.763Z' }
+    { id: '1790008519.397928', message: 'old', created_at: '2026-09-21T16:35:19.397Z' },
+    { id: '1790008926.7639065', message: 'newest', created_at: '2026-09-21T16:42:06.763Z' }
   ];
 
   test('a since read that found nothing reports the newest row there is', async () => {
     const res = await callAsClient({ since: '2026-09-23T12:00:00Z' }, instanceWith(ROWS).Gateway);
 
     expect(res.data.count).toBe(0);
-    expect(res.data.newestRow).toEqual({ id: '1790008926.7639065', created_at: '2026-09-22T19:22:06.763Z' });
+    expect(res.data.newestRow).toMatchObject({ id: '1790008926.7639065', created_at: '2026-09-21T16:42:06.763Z' });
+  });
+
+  /**
+   * How old, not when. The field exists so an agent can tell a quiet window from a log that has
+   * stopped, and a timestamp days in the past answers that only after the agent has subtracted it
+   * from now — which round 5 did by hand, on an instance that had recorded nothing for four days.
+   */
+  test('and says how long ago that row was written', async () => {
+    const res = await callAsClient({ since: '2026-09-23T12:00:00Z' }, instanceWith(ROWS).Gateway);
+
+    // The row is from 2026-09-22 and this test runs after it, so any correct answer is large.
+    expect(res.data.newestRow.ageSeconds).toBeGreaterThan(86400);
+  });
+
+  /**
+   * The same question on the path that resumes, answered for nothing.
+   *
+   * `newestRow` is deliberately not asked for on a `lastId` read: a tail sits at the tip of the
+   * stream and is empty most times it is called, so the probe would land on the common case. It
+   * does not have to. A resume that read **no rows at all** has already established what the probe
+   * would ask — nothing has been written since that cursor — and the cursor is a microsecond
+   * epoch, so how long that is costs nothing to say.
+   */
+  describe('an empty resume says how long the instance has been quiet', () => {
+    // The newest row this fake holds, so a resume from it reads nothing — which is the shape round
+    // 5 sat on for four days without being able to tell it from a filter that matched nothing.
+    const NEWEST = '1790008926.7639065';
+
+    test('a resume that read nothing reports the instant it read from', async () => {
+      const res = await callAsClient({ lastId: NEWEST }, instanceWith(ROWS).Gateway);
+
+      expect(res.data.count).toBe(0);
+      expect(res.data.noRowsSince.at).toBe('2026-09-21T16:42:06.000Z');
+      expect(res.data.noRowsSince.seconds).toBeGreaterThan(86400);
+    });
+
+    test('and costs no second request to say it', async () => {
+      const { Gateway, asked } = instanceWith(ROWS);
+
+      await callAsClient({ lastId: NEWEST }, Gateway);
+
+      expect(asked).toEqual([NEWEST]);
+    });
+
+    // A live log: the resume returns rows, so there is nothing to report and nothing is reported.
+    test('a resume that found rows says nothing about quiet', async () => {
+      const res = await callAsClient({ lastId: '1790008519.397928' }, instanceWith(ROWS).Gateway);
+
+      expect(res.data.count).toBeGreaterThan(0);
+      expect(Object.hasOwn(res.data, 'noRowsSince')).toBe(false);
+    });
+
+    // Rows were read and the filter rejected them: the log is being written to, so saying it had
+    // been quiet since the cursor would be false.
+    test('a filtered resume that read rows and matched none is not quiet', async () => {
+      const res = await callAsClient({ lastId: '1790008519.397928', contains: 'no such text' }, instanceWith(ROWS).Gateway);
+
+      expect(res.data.count).toBe(0);
+      expect(res.data.scanned).toBeGreaterThan(0);
+      expect(Object.hasOwn(res.data, 'noRowsSince')).toBe(false);
+    });
+
+    // Neither is an instant a caller chose, so neither is reported as one.
+    test.each([
+      ['the newest page', '0'],
+      ['the oldest retained row', '1']
+    ])('a resume from %s reports no quiet period', async (_label, lastId) => {
+      const res = await callAsClient({ lastId }, instanceWith([]).Gateway);
+
+      expect(res.data.count).toBe(0);
+      expect(Object.hasOwn(res.data, 'noRowsSince')).toBe(false);
+    });
+
+    // The default read names no cursor, so there is no instant to measure from.
+    test('a read with no cursor at all reports no quiet period', async () => {
+      const res = await callAsClient({}, instanceWith([]).Gateway);
+
+      expect(Object.hasOwn(res.data, 'noRowsSince')).toBe(false);
+    });
+
+    // A `since` read has `newestRow`, which answers the same question about the whole log.
+    test('a since read is answered by newestRow instead', async () => {
+      const res = await callAsClient({ since: '2026-09-23T12:00:00Z' }, instanceWith(ROWS).Gateway);
+
+      expect(res.data.newestRow).toBeDefined();
+      expect(Object.hasOwn(res.data, 'noRowsSince')).toBe(false);
+    });
   });
 
   test('a log holding nothing at all answers null, which is a different thing', async () => {

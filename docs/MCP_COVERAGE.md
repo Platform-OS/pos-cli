@@ -200,9 +200,10 @@ worth writing down.
   could never reach it, which is exactly what happened: round 4 read three files of the module to
   recover the same contract, the one moment in that run it needed source no tool would give it. The
   fact now sits on `unit-tests-run`'s `name` parameter, where it is read while the call is being
-  written: a test takes and returns a `contract` and calls assertions under
-  `modules/tests/assertions/`. That is 123 bytes of `tools/list` once a session, argued in the dev
-  byte ledger. `NO_TESTS` keeps its query, which is still the right answer for an instance with
+  written: a test takes and returns a `contract` and calls assertions by reference, as
+  `modules/tests/assertions/equal` — which is how a test names one, not where the file sits. That
+  is 173 bytes of `tools/list` on every request, argued in the dev byte
+  ledger. `NO_TESTS` keeps its query, which is still the right answer for an instance with
   nothing to copy.
   `NO_TESTS_MATCHED` deliberately does not carry it: where tests already exist, real ones are the
   better example and `LIST_TESTS` names them.

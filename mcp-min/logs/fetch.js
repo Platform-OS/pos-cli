@@ -6,7 +6,7 @@ import { cancelled } from '../cancellation.js';
 import log from '../log.js';
 import { ToolError } from '../tool-error.js';
 // One pattern and one ordering for one identifier, shared with the GUI's logs schema.
-import { ROW_ID, newerOf, cursorForMs, NEWEST_PAGE, OLDEST_RETAINED } from '../../lib/logRowId.js';
+import { ROW_ID, newerOf, cursorForMs, epochSecondsOf, NEWEST_PAGE, OLDEST_RETAINED } from '../../lib/logRowId.js';
 
 /**
  * A row with the two fields that carry nothing taken off it: 16% of a 322-byte row, on a tool whose
@@ -69,7 +69,24 @@ const newestRowOn = async (gateway) => {
 
   // Oldest first, so the newest is last (measured 2026-09-23).
   const newest = rows[rows.length - 1];
-  return { id: String(newest?.id), ...(newest?.created_at && { created_at: newest.created_at }) };
+  const age = quietSince(newest?.id);
+  // How old, not when: a timestamp days in the past is the answer to "is this log still being
+  // written to", and reading it that way is an arithmetic step the caller should not have to take.
+  return {
+    id: String(newest?.id),
+    ...(newest?.created_at && { created_at: newest.created_at }),
+    ...(age && { ageSeconds: age.seconds })
+  };
+};
+
+/**
+ * How long ago the instant a row id names was, in whole seconds, and that instant as a time.
+ * `undefined` for a string that is not a row id, so a caller's nonsense cannot become a duration.
+ */
+const quietSince = (cursor) => {
+  const at = epochSecondsOf(cursor);
+  if (at === null) return undefined;
+  return { at: new Date(at * 1000).toISOString(), seconds: Math.max(0, Math.floor(Date.now() / 1000) - at) };
 };
 
 const matcherFor = ({ errorType, contains } = {}) => {
@@ -124,7 +141,7 @@ const fetchLogsTool = {
       since: { type: 'string', format: 'date-time', description: 'ISO-8601 time to read from; use instead of lastId, never with it.' },
       errorType: { type: 'string', minLength: 1, description: 'Keep rows whose error_type contains this, ignoring case.' },
       contains: { type: 'string', minLength: 1, description: 'Keep rows whose message contains this, ignoring case.' },
-      limit: { type: 'integer', minimum: 1, maximum: 10000, description: 'Stop after this many matching rows, oldest first.' }
+      limit: { type: 'integer', minimum: 1, maximum: 10000, description: 'Most matching rows to return: the newest when the read starts at the newest rows, the oldest when it reads forward.' }
     }
   },
   handler: async (params, ctx = {}) => {
@@ -140,6 +157,11 @@ const fetchLogsTool = {
     // A string from here on, never a number: the ids are microsecond epochs at the edge of what a
     // double holds.
     let latestId = startingCursor(params, matches !== null);
+    // `0` is not a place in the stream: the platform answers it with the newest page, and nothing
+    // is newer than the page it just sent. So this read is one page, and `limit` has to come off
+    // its newest end — `{limit: 5}` meant the last five rows and returned the five oldest of the
+    // newest twenty (measured 2026-09-29).
+    const newestPage = latestId === NEWEST_PAGE;
     const seen = new Set();
     const out = [];
     const maxCount = Number.isFinite(params?.limit) ? params.limit : Infinity;
@@ -167,12 +189,40 @@ const fetchLogsTool = {
         maxId = newerOf(maxId, id);
 
         if (!matches || matches(row)) out.push(row);
-        if (out.length >= maxCount || scanned >= MAX_SCAN) break;
+        if ((!newestPage && out.length >= maxCount) || scanned >= MAX_SCAN) break;
       }
 
       if (maxId === prevId) break; // no progress
       latestId = maxId;
+      // Nothing follows the newest page, so a second request could only ask the instance to
+      // confirm that. The cursor is still the newest row read, which is what resumes this read.
+      if (newestPage) break;
     }
+
+    // The newest end: a newest-page read walks the whole page, so `limit` is the last `limit`
+    // rows of it. A read going forward stops the moment it has `limit`, so this is a no-op there.
+    const returned = out.length > maxCount ? out.slice(-maxCount) : out;
+
+    /**
+     * The staleness signal on the path that resumes, which costs nothing to give.
+     *
+     * A resume that comes back with **no rows read at all** has already established the thing a
+     * second request would be asked: nothing has been written since that cursor. The cursor is a
+     * microsecond epoch, so how long that is comes free — no request, no timestamp arithmetic left
+     * to the caller. An evaluation sat on an instance that had recorded nothing for four days and
+     * could not tell that from "my filter matched nothing", because this path gives no
+     * `newestRow` — deliberately, since an empty tail poll is the common case and must not pay for
+     * a probe. It does not have to.
+     *
+     * Only on `lastId`: a `since` read that found nothing is answered by `newestRow` below, and
+     * "nothing since the time you asked about" only restates the question. Only when nothing was
+     * read, never when rows were read and filtered out — those are rows, and the log is alive.
+     * `0` and `1` are not instants anyone chose, so neither is reported as one.
+     */
+    const noRowsSince = (scanned === 0 && params?.lastId !== undefined && params?.lastId !== null
+      && latestId !== NEWEST_PAGE && latestId !== OLDEST_RETAINED)
+      ? quietSince(latestId)
+      : undefined;
 
     // Only a `since` read that found nothing: see `newestRowOn`.
     const newestRow = (out.length === 0 && params?.since !== undefined && !ctx.signal?.aborted)
@@ -184,19 +234,21 @@ const fetchLogsTool = {
       : undefined;
 
     return {
-      logs: out.map(lean),
+      logs: returned.map(lean),
       // What the instance actually holds, when the answer was otherwise just "nothing". `null`
       // means the log is empty; a timestamp far in the past means it stopped being written to.
       ...(newestRow !== undefined && { newestRow }),
+      // "Nothing new" and "this log stopped being written to" read the same without it.
+      ...(noRowsSince !== undefined && { noRowsSince }),
       // The string the instance gave us, unchanged: `last_id` is a strict greater-than, so a
       // cursor that lost its fraction re-delivers every row from the same second.
       lastId: latestId,
-      count: out.length,
+      count: returned.length,
       // Without a filter every row read is a row returned, so it would say nothing.
       ...(matches && { scanned }),
       // "Nothing matched" and "stopped looking" are different answers. Only when the bound, rather
       // than `limit`, is what ended the read.
-      ...(scanned >= MAX_SCAN && out.length < maxCount && { scanLimitReached: true })
+      ...(scanned >= MAX_SCAN && returned.length < maxCount && { scanLimitReached: true })
     };
   }
 };

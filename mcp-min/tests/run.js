@@ -105,13 +105,13 @@ const nothingMatched = (filter) => (filter
     { matched: 0 }));
 
 const testsRunTool = {
-  description: 'Run tests on an instance and wait for the result. Omit name to run every test. A failed assertion is a completed run: ok:true with passed:false, and tests[].errors names the assertion.',
+  description: 'Run tests on an instance and wait for the result. Omit name to run every test. A failed assertion is a completed run: ok:true with passed:false, and tests[].errors names the assertion. A test that raises ends the whole run and no other result survives it, so narrow with name to see the rest.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
       ...authProperties,
-      name: { type: 'string', description: 'Any part of a test path, matched as a substring, e.g. create_user_test or users/. Test files live under app/lib and their path must end with _test; a deploy silently discards app/tests. A test takes and returns a contract, calling assertions under modules/tests/assertions/ whose {% doc %} names each parameter.' }
+      name: { type: 'string', description: 'Any part of a test path, matched as a substring, e.g. create_user_test or users/. Test files live under app/lib and their path must end with _test; a deploy silently discards app/tests. A test takes and returns a contract, calling assertions by reference — include modules/tests/assertions/equal, not a path on disk — whose {% doc %} names each parameter.' }
     }
     // `name` is not required: the runner takes no filter as "every test". `env` is not required
     // either — resolveAuth also accepts url+email+token, MPKIT_*, or the single .pos entry.

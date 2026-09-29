@@ -56,7 +56,11 @@ const SECTIONS = [
   // what to do about one status is advice, and advice rides on the error that needs it.
   () => 'Results: every tool answers with ok. A failure is ok:false with an error carrying a kind and a code; '
     + 'the kind says what to do next — input: fix the arguments; not_found: what you named is not there; '
-    + 'auth: re-authenticate, do not retry; project: the project or machine is not ready; '
+    + 'auth: re-authenticate, do not retry; '
+    // "not ready" reads as install or deploy something, and left no room for the deployed code
+    // being wrong — which is what `TEST_RUN_CRASHED` is, and what two evaluations called a
+    // misclassification on the strength of this sentence rather than of the kind.
+    + 'project: fix the project or machine — its files, its setup, or code it has deployed; '
     + 'instance: the instance refused it, so read the message rather than retrying unchanged; '
     + 'unavailable: the same call may work later; internal: a pos-cli defect; cancelled: the client stopped it. '
     // Replaces the refresh-token sentence the credentials section used to carry: one remedy

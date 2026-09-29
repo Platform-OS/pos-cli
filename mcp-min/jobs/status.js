@@ -60,7 +60,10 @@ const jobStatusTool = {
       // environment to add. The resolver's own kind and code are kept — ENV_NOT_FOUND is more
       // use than a blanket AUTH_ERROR — and only the message gains the fact it was missing.
       const failure = e instanceof ToolError ? e : ToolError.auth('AUTH_ERROR', String(e.message || e));
-      throw new ToolError(failure.kind, failure.code, `${failure.message}. The job was started on ${job.origin}`, failure.details);
+      // The resolver's message already ends in a full stop — `envNotFound` writes one — so adding
+      // another gave "Configured: verification.. The job was started on …".
+      const said = String(failure.message).replace(/\.\s*$/, '');
+      throw new ToolError(failure.kind, failure.code, `${said}. The job was started on ${job.origin}`, failure.details);
     }
 
     // Before any request: a handle for another instance must not be answered with this one's

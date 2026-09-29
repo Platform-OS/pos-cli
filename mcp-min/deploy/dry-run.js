@@ -67,6 +67,45 @@ const category = (data) => ({
  */
 const DESTROYS_DATA = new Set(['Tables']);
 
+/**
+ * The same judgement `DESTROYS_DATA` makes, made from a path because a refused release has no
+ * report to read it off. The converter files `schema/*.yml` under `Tables` — measured 2026-09-29,
+ * a dry run reported `schema/t62_items.yml` there — and dropping a table drops the records in it.
+ */
+const TABLE_FILE = /(^|\/)schema\/[^/]+\.ya?ml$/;
+
+/**
+ * Whether a path the instance named is still in this project. This is the half that stops the
+ * flag crying wolf.
+ *
+ * A non-partial deploy deletes what the build does not have, so a refused table the project no
+ * longer holds is a deletion the instance blocked — while a refused table the project *does* hold
+ * is a file being imported, and costs no records. Measured 2026-09-29 against a live instance: a
+ * malformed `schema/t62_broken.yml` is refused with the same `would_fail` and the same
+ * `error.files` shape as two module tables holding thirteen records between them.
+ *
+ * A report path drops the deploy directory for app files (`schema/x.yml`) and keeps it for module
+ * ones (`modules/<name>/public/schema/x.yml`), so both spellings are tried. A path that resolves
+ * outside the project is not one of ours to go looking for.
+ */
+const inProject = (reported) => [reported, ...dir.available().map(d => path.join(d, reported))]
+  .some((candidate) => {
+    const full = path.resolve(candidate);
+    return full.startsWith(process.cwd() + path.sep) && fs.existsSync(full);
+  });
+
+/**
+ * The files a refused deploy is blocked on that can only be cleared by deleting records.
+ *
+ * Read off `error.files` — the per-file details the instance sends — and never off its message.
+ * That message ends with a `records_delete_all` mutation, and `graphql-exec` is on the same
+ * surface and will run it; pattern-matching prose to find that out would make the warning depend
+ * on wording the platform is free to change.
+ */
+const dataLossBlockers = (error) => (error?.files ?? [])
+  .map(entry => entry?.file)
+  .filter(file => typeof file === 'string' && TABLE_FILE.test(file) && !inProject(file));
+
 /** The deletions that cost records, by category, when there are any. */
 const dataLossIn = (categories) => Object.entries(categories)
   .filter(([name]) => DESTROYS_DATA.has(name))
@@ -151,7 +190,7 @@ const validationError = (release) => {
 };
 
 const dryRunDeployTool = {
-  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start would be refused too, and error names the files. planComputed is false when the instance refused before working out the changes; the lists are then absent, not empty. discarded names files a deploy would drop while still reporting success. Some categories report a count with no paths, so count can exceed files.',
+  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start is accepted and then fails, which job-status reports as state: failed; error names the files. blockers.dataLoss names the refused files that can only be cleared by deleting records. planComputed is false when the instance refused before working out the changes; the lists are then absent, not empty. discarded names files a deploy would drop while still reporting success. Some categories report a count with no paths, so count can exceed files.',
   annotations: { destructiveHint: false },
   inputSchema: {
     type: 'object',
@@ -269,6 +308,8 @@ const dryRunDeployTool = {
     }
 
     const dataLoss = dataLossIn(categories);
+    const refusedFiles = error?.files ?? [];
+    const blockedByData = dataLossBlockers(error);
 
     return {
       applied: false,
@@ -281,6 +322,28 @@ const dryRunDeployTool = {
       // and `error` says which files the instance refused.
       verdict,
       ...(error && { error }),
+      // What the refusal costs, beside the instance's own words rather than instead of them. The
+      // message it sends ends with the `records_delete_all` that would clear the blocker, as
+      // ordinary prose — nothing in it says that command destroys data or that a person should
+      // decide, and `graphql-exec` is on this same surface.
+      ...(verdict === 'would_fail' && {
+        blockers: {
+          // Named again although `error.files` holds them: this is the one line in the answer that
+          // no second deploy can undo.
+          ...(blockedByData.length > 0 && {
+            dataLoss: {
+              count: blockedByData.length,
+              files: blockedByData,
+              decidedBy: 'a person: getting past these means deleting the records in those tables, and no deploy brings them back'
+            }
+          }),
+          // The rest are in `error.files` already; what belongs here is whether there are any.
+          other: { count: refusedFiles.length - blockedByData.length },
+          // A blocked full deploy computes no plan at all, so this is the only way to see the rest
+          // of it — two evaluations found it for themselves and nothing here said it was there.
+          ...(!partial && { restOfPlan: 'Run this tool again with partial: true. A partial deploy deletes nothing, so it reports what this deploy would change apart from the deletions it is blocked on.' })
+        }
+      }),
       // Always present, so an agent branches on the count without having to tell "nothing was
       // dropped" from "this tool does not say".
       discarded: { count: discarded.length, files: discarded },

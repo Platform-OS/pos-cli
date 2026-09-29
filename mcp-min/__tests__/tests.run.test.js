@@ -194,6 +194,19 @@ describe('a selection that matched nothing is not a pass', () => {
     expect(result.error.message).not.toContain('field_name');
   });
 
+  /**
+   * `modules/tests/assertions/equal` is what a test writes to reach an assertion, and what
+   * `admin_liquid_partials` filters on. It is not where the file is: that is
+   * `modules/tests/public/lib/assertions/equal.liquid`, as this repository's own fixtures show. The
+   * sentence said "assertions under …", which an evaluation read as a directory and went looking.
+   */
+  test('the name parameter says that path is a reference rather than a directory', () => {
+    const description = tool.inputSchema.properties.name.description;
+
+    expect(description).not.toMatch(/assertions under/);
+    expect(description).toMatch(/not a path on disk/i);
+  });
+
   // Where tests exist, real ones are the better example, so this stays about finding them.
   test('a filter that matched nothing points at the tests that do exist', async () => {
     const result = await call({ name: 'nope' }, { request: answering(empty()) });
@@ -340,6 +353,31 @@ describe('a 5xx from an instance that is otherwise well', () => {
     expect(result.error.message).toContain("matching 'crash_test'");
     // The HTML page was the whole of the old answer, and none of its signal.
     expect(JSON.stringify(result.error)).not.toContain('DOCTYPE');
+  });
+
+  /**
+   * What a raise costs, which is every other result in the run.
+   *
+   * The runner collects each test's contract in a Liquid variable and renders the report from it
+   * after the loop, in the same render; a raise aborts that render and the collected results go
+   * with it. Measured against a live instance on 2026-09-29: `t67b_apass_test` reports a pass on
+   * its own, and reports nothing at all when it runs in the same call as a test that raises after
+   * it. Nothing in this repository can recover them — the runner belongs to the `tests` module —
+   * so what is owed to the caller is saying so.
+   */
+  test('a raise leaves no result for any other test in the run', async () => {
+    const result = await call({}, { request: crashed(), Gateway: instanceThat(true) });
+
+    expect(result.error.code).toBe('TEST_RUN_CRASHED');
+    expect(result.error.message).toMatch(/already passed/);
+    expect(result.data).toBeUndefined();
+  });
+
+  // Read before the call, where it can still change what the caller runs. The error says it too,
+  // but by then the run has been spent.
+  test('the description says a raise ends the whole run', () => {
+    expect(tool.description).toMatch(/raises ends the whole run/);
+    expect(tool.description).toMatch(/narrow with name/);
   });
 
   // The probe is what separates the two; without it the instance gets blamed for the test, or the

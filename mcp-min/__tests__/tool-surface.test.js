@@ -93,7 +93,45 @@ const DEV_TOOLS = [
 //                  discovery.
 //                dev lands at 9,674, keeping the ~75 bytes of headroom that make this fail on
 //                growth rather than on a rewording.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 9750;
+//
+// 9,750 → 9,900  round 5 (154 B), two clauses, argued one at a time for the same reason:
+//                • logs-fetch.limit names the end it takes rows from (66 B). "Oldest first" was
+//                  true of a read going forward and wrong about the most ordinary call this tool
+//                  has. Measured 2026-09-29 against a live instance: {limit: 2} answered the two
+//                  oldest rows of the newest page while {} answered that whole page. A silent
+//                  wrong answer on "show me the last five log rows", and the caller filling in
+//                  limit is the one who cannot tell which of the two reads it is making.
+//                • deploy-dry-run names blockers.dataLoss (88 B). A full deploy blocked by a table
+//                  that still holds records is answered with the instance's own message, and that
+//                  message ends with the records_delete_all that would clear it — as ordinary
+//                  prose, on a surface where graphql-exec will run it. The result now says which
+//                  refusals cost records; without the clause an agent only meets the field after
+//                  a deploy has already been blocked, which is the wrong moment to discover it.
+//                • page-fetch gains maxBodyBytes (151 B). The one parameter here that buys back
+//                  more than it costs: an evaluation confirmed a 10.8 MB text asset had deployed
+//                  and paid ~10k tokens — 13% of the whole run — for a status code and a byte
+//                  count, because 16 KB of the asset came with them. 151 bytes once per request
+//                  against 10k tokens on any run that checks an asset. It adds no rule about
+//                  which bodies matter, which is what round 4 declined and was right to.
+//                • two published sentences corrected (93 B). Both were wrong rather than merely
+//                  terse, and a correction that costs bytes is still worth them: deploy-dry-run
+//                  said would_fail means deploy-start "would be refused too" — it is accepted and
+//                  then fails, which job-status reports as state: failed (measured 2026-09-29,
+//                  a refused full deploy came back as a started job and failed on the first poll),
+//                  and an evaluation read "refused" as a synchronous rejection and could not tell
+//                  whether its assets had gone up. unit-tests-run.name said assertions live "under
+//                  modules/tests/assertions/", which is the reference a test writes, not a
+//                  directory: the files are at modules/tests/public/lib/assertions/, as this
+//                  repository's own fixtures show, and the evaluation went looking for them.
+//                • unit-tests-run says what a raise costs (108 B). A test that raises ends the
+//                  whole run and no other result survives it — measured 2026-09-29 against a live
+//                  instance, a test that passes on its own reported nothing when it ran in the
+//                  same call as one that raised after it. An evaluation lost a 38-test run to
+//                  this and recovered only by guessing at a narrower name. The runner belongs to
+//                  the tests module, so nothing here can fix it; the clause is read before the
+//                  call, which is the only point at which the caller can still choose otherwise.
+//                dev lands at 10,180, keeping ~70 bytes of headroom.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 10250;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -205,7 +243,44 @@ const BARE_TOOLS = [
 //         contract on unit-tests-run.name, the log's write-to-readable delay on logs-fetch, the
 //         identifying field of each admin_* type on graphql-exec, and page-fetch.url saying that
 //         it takes any host. The same 291 B the dev profile pays, where each one is argued.
-const BARE_TOOLS_LIST_BYTES = 23032;
+// 23,098  logs-fetch's limit names the end it takes rows from, for each of the two reads (round 5,
+//         F3 — 66 B). It said "oldest first", which is true of a read going forward and wrong
+//         about the most ordinary call this tool has. Measured against a live instance on
+//         2026-09-29: `{limit: 2}` answered the two oldest rows of the newest page, while `{}`
+//         answered that whole page ending three quarters of a second later. The rows come off the
+//         newest end of a newest-page read now, and the sentence has to carry both cases, because
+//         the caller filling in `limit` is the one who cannot tell which read they are making.
+// 23,186  deploy-dry-run names `blockers.dataLoss` (round 5, F2 — 88 B). A full deploy blocked by
+//         a table that still holds records is answered with the instance's message, which ends
+//         with the `records_delete_all` that would clear the blocker — undifferentiated prose on
+//         a surface where `graphql-exec` will run it. Measured 2026-09-29: a refused release
+//         names its files in `error.files`, so which of them cost records is worked out from the
+//         path and the project rather than from that text. The field only appears on a blocked
+//         run, so the description is the only place a caller learns it is there at all.
+// 23,337  page-fetch gains `maxBodyBytes` (round 5, F4 — 151 B). It always returned up to 16 KB
+//         and a caller who wanted only the status had no way to say so: an evaluation confirmed a
+//         10.8 MB text asset had deployed and spent ~10k tokens, 13% of the run, on a status code
+//         and a byte count. `0` is status and headers only, and where the response declares a
+//         length the bytes are never pulled off the network at all. The default is the old ceiling
+//         and the maximum, so every call that passes nothing is unchanged; nothing here decides
+//         which bodies are worth returning, which is the rule round 4 declined to invent.
+// 23,430  two sentences that were wrong, corrected (round 5, F5/F6 — 93 B). `deploy-dry-run` said
+//         `would_fail` means `deploy-start` "would be refused too": it is accepted and then fails,
+//         and `job-status` reports that as `state: failed` — measured 2026-09-29, a full deploy the
+//         instance would refuse came back as a started job with a `job_id` and failed on the first
+//         poll. `unit-tests-run.name` said assertions live "under modules/tests/assertions/", which
+//         is what a test writes to reach one and what `admin_liquid_partials` filters on, but not
+//         where the files are — `modules/tests/public/lib/assertions/`, as the fixtures in this
+//         repository show. Both were added in round 4 and verified in one reading only.
+// 23,538  unit-tests-run says what a raise costs (round 5, F7 — 108 B). A test that raises ends
+//         the whole run and no other result survives it: the runner collects each contract in a
+//         Liquid variable and renders the report after the loop, in the same render, so a raise
+//         aborts it and takes the collected results with it. Measured 2026-09-29 against a live
+//         instance — a test that passes on its own reported nothing when it ran in the same call
+//         as one that raised after it. An evaluation lost a 38-test run to this. The runner is the
+//         tests module's, so nothing here can recover them; the clause is read before the call,
+//         which is the last moment the caller can choose to run a narrower set instead.
+const BARE_TOOLS_LIST_BYTES = 23538;
 
 const HANG_MS = 15000;
 

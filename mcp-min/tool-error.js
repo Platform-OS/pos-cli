@@ -18,7 +18,11 @@ export const ERROR_KINDS = Object.freeze({
   input: 'the arguments were wrong; change them and call again',
   not_found: 'what the arguments named is not there',
   auth: 'the credentials were rejected or missing; re-authenticate rather than retry',
-  project: 'the project or machine is not ready for this',
+  // Three things, not one: files here, setup here, and code already deployed there. It read
+  // "not ready", which maps to installing or deploying something and not to a deployed test
+  // raising — and two evaluations in a row objected to `TEST_RUN_CRASHED` carrying this kind on
+  // exactly that ground. See `tests/crash-check.js` for why the classification stayed.
+  project: 'the project or machine has to change: its files, its setup, or code it has deployed',
   instance: 'the instance ran it and refused; the message says why',
   unavailable: 'nothing was decided; the same call may work later',
   internal: 'a defect in pos-cli',

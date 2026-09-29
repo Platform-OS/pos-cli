@@ -1,6 +1,6 @@
 // Ordering log row ids, which neither `Number` nor `<` gets right. Both mistakes have shipped.
 import { describe, test, expect } from 'vitest';
-import { isNewer, newerOf } from '#lib/logRowId.js';
+import { isNewer, newerOf, epochSecondsOf } from '#lib/logRowId.js';
 
 describe('the two comparisons that look right and are not', () => {
   // The 17th significant digit is past what a double holds, so these parse to one value.
@@ -78,5 +78,37 @@ describe('newerOf advances a cursor without parsing it', () => {
   test('the digits it returns are the ones it was given', () => {
     // Number('1790097411.2168736') would come back as 1790097411.2168736 rounded and re-printed.
     expect(newerOf('0', '1790097411.2168736')).toBe('1790097411.2168736');
+  });
+});
+
+/**
+ * Reading the instant out of a cursor, which is allowed only because nothing is done with it but
+ * report a duration. The cursor itself still travels as the string the instance sent.
+ */
+describe('epochSecondsOf', () => {
+  test('it reads the epoch second out of a row id', () => {
+    expect(epochSecondsOf('1790008926.7639065')).toBe(1790008926);
+    expect(new Date(epochSecondsOf('1790008926.7639065') * 1000).toISOString()).toBe('2026-09-21T16:42:06.000Z');
+  });
+
+  // The fraction is what makes a cursor a cursor, and none of it survives here on purpose: this
+  // answers "how long ago", where a microsecond is not a unit anyone is asking in.
+  test('it ignores the fraction rather than rounding the whole id', () => {
+    expect(epochSecondsOf('1790008926.9999999')).toBe(1790008926);
+  });
+
+  test('an id with no fraction still reads', () => {
+    expect(epochSecondsOf('1790008926')).toBe(1790008926);
+  });
+
+  // A caller's `lastId` reaches this, and a string that is not a row id must not become a duration.
+  test.each([
+    ['text', 'not-an-id'],
+    ['an id with a query string', '1790008926&limit=1'],
+    ['empty', ''],
+    ['undefined', undefined],
+    ['null', null]
+  ])('%s is not an instant', (_label, value) => {
+    expect(epochSecondsOf(value)).toBeNull();
   });
 });

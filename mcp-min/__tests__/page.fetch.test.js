@@ -361,3 +361,148 @@ describe('its annotations', () => {
     expect(tool.annotations?.readOnlyHint).toBeUndefined();
   });
 });
+
+/**
+ * Asking for less than the ceiling.
+ *
+ * There was no way to. An evaluation confirmed a 10.8 MB text asset had deployed and paid ~10k
+ * tokens — 13% of the whole run — for `status: 200` and a byte count, because 16 KB of the asset
+ * came back with them. Round 4 declined to suppress bodies by a rule of this server's own, and that
+ * still stands: a custom 404 page is exactly what an agent wants to see, and which bodies matter is
+ * the caller's to know. This decides nothing on anyone's behalf; it lets the caller say.
+ */
+describe('how much body the caller asked for', () => {
+  test('passing nothing is the call this tool has always made', async () => {
+    const { fetch } = instance({ body: 'x'.repeat(MAX_BODY_BYTES + 10) });
+
+    const { data } = await call({ path: '/big' }, { fetch });
+
+    expect(Buffer.byteLength(data.body)).toBe(MAX_BODY_BYTES);
+    expect(data.truncated).toBe(true);
+    expect(data.contentBytes).toBe(MAX_BODY_BYTES + 10);
+  });
+
+  test('a smaller cap is what is returned, and it says it was cut', async () => {
+    const { fetch } = instance({ body: 'y'.repeat(1000) });
+
+    const { data } = await call({ path: '/page', maxBodyBytes: 200 }, { fetch });
+
+    expect(Buffer.byteLength(data.body)).toBe(200);
+    expect(data.truncated).toBe(true);
+  });
+
+  test('a body already under the cap comes back whole and uncut', async () => {
+    const { fetch } = instance({ body: '<h1>ok</h1>' });
+
+    const { data } = await call({ path: '/page', maxBodyBytes: 200 }, { fetch });
+
+    expect(data.body).toBe('<h1>ok</h1>');
+    expect(data.truncated).toBe(false);
+  });
+
+  // The ceiling means bytes, and a smaller one still cuts between characters rather than through
+  // one — the same rule the 16 KB cut has, at a size a test can see the whole of.
+  test('a small cap still cuts on a character boundary', async () => {
+    const { fetch } = instance({ body: '€'.repeat(50) });
+
+    const { data } = await call({ path: '/utf8', maxBodyBytes: 10 }, { fetch });
+
+    expect(Buffer.byteLength(data.body)).toBeLessThanOrEqual(10);
+    expect(data.body).not.toContain('\uFFFD');
+    expect(data.truncated).toBe(true);
+  });
+
+  test('zero returns no body, and says that is why', async () => {
+    const { fetch } = instance({ body: 'z'.repeat(5000) });
+
+    const { data } = await call({ path: '/page', maxBodyBytes: 0 }, { fetch });
+
+    expect(data.body).toBeUndefined();
+    expect(data.bodyOmitted).toBe('maxBodyBytes: 0');
+  });
+
+  // The whole point of asking for none: the size is still the honest one, so a bounded read can
+  // never make a 10.8 MB asset look small.
+  test('zero still reports the response size', async () => {
+    const { fetch } = instance({ body: 'z'.repeat(5000) });
+
+    const { data } = await call({ path: '/page', maxBodyBytes: 0 }, { fetch });
+
+    expect(data.contentBytes).toBe(5000);
+  });
+
+  test('zero leaves the status, headers and redirect reporting alone', async () => {
+    const { fetch } = instance({
+      status: 302,
+      headers: { 'content-type': 'text/html', location: 'https://staging.example.com/elsewhere' },
+      body: 'redirecting'
+    });
+
+    const { data } = await call({ path: '/old', maxBodyBytes: 0 }, { fetch });
+
+    expect(data.status).toBe(302);
+    expect(data.isRedirect).toBe(true);
+    expect(data.headers.location).toBe('https://staging.example.com/elsewhere');
+  });
+
+  /**
+   * And the bytes never arrive. This is the call the parameter exists for: a text asset of
+   * megabytes, confirmed live by its status, with a declared length that answers the size without
+   * the transfer.
+   */
+  test('zero releases a body that declares its length rather than reading it', async () => {
+    let released = false;
+    const fetch = async () => new Response(
+      new ReadableStream({
+        pull(controller) { controller.enqueue(new Uint8Array(8)); controller.close(); },
+        cancel() { released = true; }
+      }),
+      { status: 200, headers: { 'content-type': 'text/plain', 'content-length': '10807019' } }
+    );
+
+    const { data } = await runTool(tool, { ...AUTH, path: '/big.txt', maxBodyBytes: 0 }, { fetch });
+
+    expect(data.contentBytes).toBe(10807019);
+    expect(data.bodyOmitted).toBe('maxBodyBytes: 0');
+    expect(released).toBe(true);
+  });
+
+  // Without a declared length there is nothing to report but what arrives, so it is still read.
+  test('zero with no declared length still measures what arrived', async () => {
+    const { fetch } = instance({ body: 'z'.repeat(5000) });
+
+    const { data } = await call({ path: '/page', maxBodyBytes: 0 }, { fetch });
+
+    expect(data.contentBytes).toBe(5000);
+    expect(data.body).toBeUndefined();
+  });
+
+  // Asking for a body does not make a zip into text; the reason given is still the type.
+  test('a cap does not turn a non-textual response into one', async () => {
+    const { fetch } = instance({ headers: { 'content-type': 'application/zip' }, body: 'BINARY' });
+
+    const { data } = await call({ path: '/a.zip', maxBodyBytes: MAX_BODY_BYTES }, { fetch });
+
+    expect(data.body).toBeUndefined();
+    expect(data.bodyOmitted).toContain('application/zip');
+    expect(data.contentBytes).toBe(6);
+  });
+
+  test.each([
+    ['a negative cap', -1],
+    ['more than the ceiling', MAX_BODY_BYTES + 1],
+    ['a fraction', 100.5],
+    ['a string', '100']
+  ])('the schema refuses %s', (_label, maxBodyBytes) => {
+    expect(validate({ path: '/a', maxBodyBytes })).not.toBeNull();
+  });
+
+  test('the schema accepts zero and the ceiling', () => {
+    expect(validate({ path: '/a', maxBodyBytes: 0 })).toBeNull();
+    expect(validate({ path: '/a', maxBodyBytes: MAX_BODY_BYTES })).toBeNull();
+  });
+
+  test('the parameter says what zero gets you', () => {
+    expect(tool.inputSchema.properties.maxBodyBytes.description).toMatch(/0 for/);
+  });
+});

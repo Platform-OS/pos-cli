@@ -149,6 +149,20 @@ describe('which instance is asked', () => {
     expect(calls.gateway).toEqual([]);
   });
 
+  /**
+   * The hint is worth keeping and was worth one full stop. `envNotFound` ends its own message with
+   * one, and this appended another: "Configured: staging, prod.. The job was started on …".
+   */
+  test('an env that is not in .pos names the job\'s instance without doubling the full stop', async () => {
+    const { ctx } = context();
+
+    const result = await runTool(jobStatus, { job_id: handle('deploy'), env: 'verification' }, ctx);
+
+    expect(result.error.code).toBe('ENV_NOT_FOUND');
+    expect(result.error.message).toContain(`The job was started on ${ORIGIN}`);
+    expect(result.error.message).not.toMatch(/\.\./);
+  });
+
   test('two environments pointing at the same instance are not guessed between', async () => {
     const config = { prod: CONFIG.prod, staging: CONFIG.staging, 'staging-copy': { ...CONFIG.staging } };
     const { ctx, calls } = context({ config });
