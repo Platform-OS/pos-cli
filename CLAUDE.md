@@ -318,6 +318,18 @@ Four tools start work that outlives the call (`deploy-start`, `data-import`, `da
   own count on that path as well — `state: 'none'` is a claim about the project, not one a check
   that never ran may make — and `warnings` carries what else the release said, which `job-status`
   reported only once the deploy had run.
+- **What a refusal costs is worked out from the path, never from the message.** The instance refuses
+  a deploy that would drop a table still holding records, and the message it sends ends with the
+  `records_delete_all` that would clear the blocker — ordinary prose, on a surface where
+  `graphql-exec` will run it. `blockers` (`deploy/dry-run.js`) reports that beside the message
+  rather than instead of it, and both halves of the judgement are structural: `TABLE_FILE` is the
+  converter's own rule that `schema/*.yml` is a `Tables` file, and `inProject` is what a non-partial
+  deploy deletes — what the build does not have. The second half is what stops it crying wolf:
+  measured 2026-09-29, a malformed `schema/t62_broken.yml` the project *does* have is refused with
+  the same `would_fail` and the same `error.files` shape as two module tables holding thirteen
+  records, and costs nothing. Matching the message instead would tie the warning to wording the
+  platform is free to change. `restOfPlan` names the partial dry run, because a blocked full deploy
+  computes no plan at all and two evaluations had to find that fallback for themselves.
 - **An upstream body is bounded once, in `toResult`.** `classify` is not the only thing that puts
   an upstream `body` in `details`: the `/_tests/*` tools build their own errors, because those
   endpoints answer with a status rather than throwing. Bounding at each thrower is a rule the next
@@ -470,7 +482,15 @@ Four tools start work that outlives the call (`deploy-start`, `data-import`, `da
   emits U+FFFD at the cut — three bytes where one was dropped, so the bounded body came back both
   corrupt and *over* the ceiling it was enforcing. A response that is not text is described rather
   than returned, so a declared `content-length` is the whole answer and the body is released unread
-  rather than pulled in to be counted. The 3xx field is `isRedirect`, not `redirected`: on a Fetch
+  rather than pulled in to be counted. **`maxBodyBytes` is the caller's, and only the caller's**:
+  the default is `MAX_BODY_BYTES`, so a call that passes nothing is the call this tool has always
+  made, and `0` is status and headers only — which takes the same unread path as a non-textual
+  response when a length is declared. `contentBytes` stays the response's real size whatever was
+  asked for, or a bounded read would disguise a large resource. What this must never gain is a rule
+  of its own about which bodies are worth returning: that was declined in round 4 and the reasoning
+  holds — a custom 404 page is exactly what an agent wants to see, and nothing here can know which
+  body matters. Letting the caller say is the other question, and it is what this answers.
+  The 3xx field is `isRedirect`, not `redirected`: on a Fetch
   `Response` that name means the redirect *was* followed, which is the opposite of what this says. It is not `readOnlyHint`: a GET runs the page's
   Liquid and nothing here can know what that does.
 
@@ -505,7 +525,18 @@ Four tools start work that outlives the call (`deploy-start`, `data-import`, `da
   admin Logs page 400'd on every poll after the first rows arrived. Both now take `ROW_ID`
   (`lib/validation/schemas/gui.js`), one exported pattern, so the two cannot drift again. The
   pattern is what refuses a cursor smuggling its own query parameters; `Gateway.logs` encodes it as
-  well, so neither guard stands alone. Nothing between the instance and the caller may parse the id.
+  well, so neither guard stands alone. Nothing between the instance and the caller may parse the id
+  in order to *use* it — ordering and advancing are `isNewer` and `newerOf`, which compare digits.
+  `epochSecondsOf` is the one reader, and it reads only the integer part, only to state a duration:
+  `logs-fetch` answers an empty `lastId` resume with `noRowsSince: {at, seconds}`, and what it
+  produces is a number in a result that never goes back on the wire. That is what makes the
+  staleness signal free on the path that resumes. A `since` read still pays one probe for
+  `newestRow`, because there the caller's cursor is a time they chose rather than the newest row
+  they saw; both now carry how long ago rather than only when, since "is this log still being
+  written to" was otherwise a subtraction left to the agent — and round 5 did it by hand on an
+  instance that had been frozen for four days. `noRowsSince` is reported only when the read scanned
+  nothing: rows that were read and rejected by a filter mean the log is alive, and `0` and `1` are
+  not instants anyone chose.
 
   **`last_id=0` is not a cursor.** Measured 2026-09-25: the platform reads exactly `0` as *no
   cursor given* and answers with the newest page, while `1`, `0.001` and `0.000001` are each the
