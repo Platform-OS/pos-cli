@@ -32,7 +32,7 @@
   ],
   "main": "./bin/pos-cli.js",
   "engines": {
-    "node": ">=22.13.0"
+    "node": "^22.18.0 || >=24.11.0"
   },
   "keywords": [
     "pos-cli",
@@ -40,7 +40,7 @@
     "pOS"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^8.7.0",
+    "@inquirer/prompts": "^8.7.2",
     "@platformos/platformos-check-node": "^1.1.0",
     "@platformos/platformos-common": "^0.2.0",
     "@platformos/platformos-language-server-node": "^0.1.1",
@@ -48,18 +48,18 @@
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "async": "^3.2.6",
-    "body-parser": "^2.2.2",
-    "chalk": "^6.0.0",
+    "body-parser": "^2.3.0",
+    "chalk": "^6.0.1",
     "chokidar": "^5.0.0",
     "commander": "^15.0.0",
-    "degit": "^3.8.0",
+    "degit": "^3.10.0",
     "email-validator": "^2.0.4",
     "execa": "^10.0.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "fast-glob": "^3.3.3",
-    "ignore": "^7.0.9",
-    "inquirer": "^14.2.0",
+    "ignore": "^7.0.10",
+    "inquirer": "^14.2.2",
     "is-stream": "^4.0.1",
     "livereload": "^0.10.3",
     "lodash.compact": "^3.0.1",
@@ -67,23 +67,23 @@
     "lodash.flatten": "^4.4.0",
     "lodash.reject": "^4.6.0",
     "mime": "^4.1.0",
-    "multer": "^2.3.0",
+    "multer": "^2.4.0",
     "mustache": "^4.2.0",
     "normalize-path": "^3.0.0",
-    "open": "^11.0.2",
-    "ora": "^9.3.0",
+    "open": "^11.0.4",
+    "ora": "^9.4.1",
     "prompts": "^2.4.2",
-    "semver": "^7.7.4",
+    "semver": "^7.8.5",
     "shelljs": "^0.10.0",
     "strip-ansi": "^7.2.0",
     "text-table": "^0.2.0",
     "toasted-notifier": "^10.1.0",
-    "unzipper": "^0.12.3",
+    "unzipper": "^0.12.5",
     "update-notifier": "^7.3.1",
-    "yaml": "^2.8.2",
+    "yaml": "^2.9.1",
     "yazl": "^3.3.1",
-    "yeoman-environment": "^6.2.0",
-    "yeoman-generator": "^8.3.0"
+    "yeoman-environment": "^7.2.0",
+    "yeoman-generator": "^9.2.0"
   },
   "preferGlobal": true,
   "bin": {
@@ -131,12 +131,12 @@
   },
   "homepage": "https://github.com/Platform-OS/pos-cli/issues#readme",
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.11",
-    "dotenv": "^17.3.1",
-    "globals": "^17.11.0",
+    "@vitest/coverage-v8": "^5.0.2",
+    "dotenv": "^18.0.4",
+    "globals": "^17.12.0",
     "nock": "^14.0.17",
-    "supertest": "^7.2.2",
-    "vitest": "^4.1.11"
+    "supertest": "^7.3.0",
+    "vitest": "^5.0.2"
   },
   "bundleDependencies": [
     "commander",

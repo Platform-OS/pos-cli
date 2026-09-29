@@ -796,8 +796,10 @@ expect(stderr).toMatch(/Could not connect|Request to( the)? server failed/);
 
 ## Node.js Version
 
-- **Minimum**: Node.js 22.13.0 — set by the dependencies, not by our own code: `commander` 15 needs
-  >=22.12.0 (it is ESM-only and relies on `require(esm)`) and `inquirer` 14 needs ^22.13.0.
-- **Recommended**: Node.js 22+
+- **Minimum**: `^22.18.0 || >=24.11.0` — set by the dependencies, not by our own code:
+  `yeoman-environment` 7 and `yeoman-generator` 9 declare exactly that range, which also covers
+  `commander` 15 (>=22.12.0, ESM-only, relies on `require(esm)`) and `inquirer` 14 (^22.13.0).
+  Note the gap: Node 24.0–24.10 is **not** supported, so the range cannot be written as `>=22.18.0`.
+- **Recommended**: Node.js 22.18+ or 24.11+
 - **Tested on**: 22, 24
 - Check enforced by `scripts/check-node-version.js` postinstall hook
