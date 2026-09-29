@@ -10,7 +10,7 @@
     "start:debug": "MCP_MIN_DEBUG=1 node index.js"
   },
   "dependencies": {
-    "express": "^5.2.1",
-    "body-parser": "^2.2.2"
+    "body-parser": "^2.3.0",
+    "express": "^5.2.1"
   }
 }

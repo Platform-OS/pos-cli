@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changes
+
+* The minimum supported Node.js is now **22.18.0 on the 22 line, or 24.11.0 and later** (previously 22.13.0). As before, it follows from the dependencies rather than from our own code: `yeoman-environment` 7 and `yeoman-generator` 9, which `pos-cli generate` runs on, both declare `^22.18.0 || >=24.11.0`. Node 24.0–24.10 is therefore no longer supported even though it is newer than 22.18 — upgrade within the 24 line. The `postinstall` check enforces the range, so an unsupported Node is reported at install time. Module generators that still depend on `yeoman-generator` 8 keep working; the environment runs them unchanged.
+
+* Dependencies updated to their latest releases, clearing two security advisories: `multer` 2.4.0 (a denial of service through disk writes left behind by aborted uploads; the GUI server keeps uploads in memory, so it did not write those files) and `fast-uri` 3.1.8 (host confusion through an unclosed bracket in a URI authority; pulled in by `ajv` for resolving schema URIs). The bundled web GUIs were rebuilt: the admin panel on Vite 8, and the GraphQL browser on GraphiQL 5.4 and React 19.3.
+
 ### Fixes
 
 * One dropped connection to the CDN no longer ends `pos-cli deploy` with nothing but `"fetch failed"`. After uploading the asset archive, deploy checks the CDN once a second until the platform has unpacked it, and only then sends the asset manifest; a check that got no answer was reported as a fatal error, so a network blip at that moment exited with status 1 after the release had already been applied, without the manifest being sent, and without saying what failed or where. A check that gets no answer — a connection error, a 5xx, or a `408`, `425` or `429` — is now retried at the same pace and still counts toward the existing limit of 90 checks. Three in a row stop the deploy with the CDN's address, the underlying error (for example `other side closed (UND_ERR_SOCKET)` or `getaddrinfo ENOTFOUND …`) and what to do: the manifest was not sent, so run the deploy again. A 5xx used to be taken to mean the archive was already gone, which sent the manifest without waiting. The same applies to the MCP `deploy-start` tool's background asset upload.

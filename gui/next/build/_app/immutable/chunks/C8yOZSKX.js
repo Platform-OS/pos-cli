@@ -1,0 +1,1 @@
+import{t as e}from"./x-bZnvlA.js";var t=(t,n)=>{let r={value:t,type:n};return t==null?(r.value=null,r.type=`null`,{...r}):(n===`boolean`&&(r.value=t===!0?`true`:`false`),typeof t==`object`?(r.value=t,r.type=`json`,{...r}):e(t)?(r.value=e(t),r.type=`jsonEscaped`,{...r}):{...r,original:{value:t,type:n}})};export{t};

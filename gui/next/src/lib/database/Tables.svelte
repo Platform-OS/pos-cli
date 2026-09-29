@@ -22,8 +22,6 @@ import Icon from '$lib/ui/Icon.svelte';
 // ------------------------------------------------------------------------
 // tables list (array)
 let data = $state.tables;
-// database tables filtered, as shown on the list (array)
-let tables = data;
 // container with all of the tables
 let container;
 // input used for filtering the tables (dom node)
@@ -32,7 +30,7 @@ let filterInput;
 let filterText;
 
 // get tables list
-(async () => await table.get())().then(response => { data = response; tables = response; $state.tables = response; });
+(async () => await table.get())().then(response => { data = response; $state.tables = response; });
 
 const dispatch = createEventDispatcher();
 
@@ -59,19 +57,10 @@ onMount(async () => {
 });
 
 
-// purpose:   filters the tables array by given phrase
-// argumens:  uses the filterText property as a phrase to filter items with
-// returns:   modifies the filterText property and leaves only items that matches the filter phrase
-// ------------------------------------------------------------------------
-const filter = () => {
-
-  if(filterText){
-    tables = data.filter(item => item.name.includes(filterText))
-  } else {
-    tables = data;
-  }
-
-};
+// database tables filtered, as shown on the list (array)
+// reactive rather than recomputed on input, so tables that arrive after the user
+// started typing are filtered too instead of replacing the filtered list
+$: tables = filterText ? (data ?? []).filter(item => item.name.includes(filterText)) : data;
 
 
 // purpose:   handles keyboard shortcuts for the filter input
@@ -81,7 +70,6 @@ const filterInputKeyboardShortcut = (event) => {
 
   if(event.key === 'Escape'){
     filterText = '';
-    filter();
   }
 
   if(event.key === 'Enter'){
@@ -122,7 +110,6 @@ const listKeyboardShortcut = (event) => {
     if(container.contains(document.activeElement)){
       filterInput.focus();
       filterText = '';
-      filter();
     }
   }
 
@@ -239,7 +226,7 @@ a.active {
     <div class="filter">
 
       {#if filterText}
-        <button on:click={() => { filterText = null; filter(); } }>
+        <button on:click={() => { filterText = null; } }>
           <span class="label">Reset filter</span>
           <Icon icon="x" size="18" />
         </button>
@@ -254,7 +241,6 @@ a.active {
         placeholder="Search tables"
         bind:this={filterInput}
         bind:value={filterText}
-        on:input={filter}
         on:keydown={filterInputKeyboardShortcut}
       >
 

@@ -3,6 +3,9 @@ import { posInstance } from './helpers/posInstance.js';
 
 
 const url = './logs';
+// a freshly registered log reaches the instance's log feed with a delay and the page
+// polls for new logs every 3 seconds, so the default 5s is not enough to see it arrive
+const logArrival = { timeout: 20000 };
 
 
 test('see home screen', async ({ page }) => {
@@ -22,7 +25,7 @@ test('viewing logs', async ({ page }) => {
 
   await page.goto(url);
 
-  await expect(page.getByText('This is a first test log').first()).toBeVisible();
+  await expect(page.getByText('This is a first test log').first()).toBeVisible(logArrival);
 });
 
 
@@ -66,13 +69,14 @@ test('filtering log messages', async ({ page }) => {
 
   await page.goto(url);
 
-  await expect(page.getByText('Log of info type for filtering log messages tests')).toBeAttached();
-  await expect(page.getByText('Error log for filtering log messages tests')).toBeAttached();
+  // a retry registers the same messages again, hence first() and counting only the visible matches
+  await expect(page.getByText('Log of info type for filtering log messages tests').first()).toBeAttached(logArrival);
+  await expect(page.getByText('Error log for filtering log messages tests').first()).toBeAttached(logArrival);
 
   await page.getByLabel('Filter:').fill('error');
 
-  await expect(page.getByText('Error log for filtering log messages tests')).toBeVisible();
-  await expect(page.getByText('Log of info type for filtering log messages tests')).toBeHidden();
+  await expect(page.getByText('Error log for filtering log messages tests').first()).toBeVisible();
+  await expect(page.getByText('Log of info type for filtering log messages tests').filter({ visible: true })).toHaveCount(0);
 });
 
 
@@ -82,9 +86,9 @@ test('clearing logs from the screen', async ({ page }) => {
 
   await page.goto(url);
 
-  await expect(page.getByText('Log for clearing logs from the screen tests')).toBeVisible();
+  await expect(page.getByText('Log for clearing logs from the screen tests').first()).toBeVisible(logArrival);
 
   await page.getByRole('button', { name: 'Clear screen' }).click();
 
-  await expect(page.getByText('Log for clearing logs from the screen tests')).toBeHidden();
+  await expect(page.getByText('Log for clearing logs from the screen tests').filter({ visible: true })).toHaveCount(0);
 });
