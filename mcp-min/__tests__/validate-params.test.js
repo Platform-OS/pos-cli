@@ -3,10 +3,17 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fg from 'fast-glob';
-import tools from '../tools.js';
-import { validateToolParams } from '../validate-params.js';
+import registry from '../tools.js';
+import { validateToolParams, TOOL_SCHEMA_DIALECT } from '../validate-params.js';
+import { runTool } from '../run-tool.js';
+import { authProperties } from '../schemas/auth.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+// As the repository writes them. `path.relative` answers in the platform's own separator, so on
+// Windows this read `mcp-min\page\fetch.js` and matched no path written in the test, while the
+// same assertion passed on Linux -- a failure only CI could find.
+const repoPath = (file) => path.relative(repoRoot, file).split(path.sep).join('/');
 
 const authFileList = fg
   .sync('mcp-min/**/*.js', { cwd: repoRoot, absolute: true, ignore: ['**/__tests__/**', '**/node_modules/**'] })
@@ -18,11 +25,11 @@ const authTools = await Promise.all(
   authFileList.map(file => import(pathToFileURL(file).href).then(mod => mod.default))
 );
 
-const check = (name, params) => validateToolParams(name, tools[name], params);
+const check = (name, params) => validateToolParams(name, registry.get(name), params);
 
 describe('tool input schemas', () => {
   test('every registered tool has a schema Ajv can compile', () => {
-    const uncompilable = Object.entries(tools)
+    const uncompilable = [...registry]
       .filter(([name, tool]) => validateToolParams(name, tool, {}).schemaError)
       .map(([name]) => name);
 
@@ -30,9 +37,26 @@ describe('tool input schemas', () => {
   });
 
   test('every registered tool declares an object schema', () => {
-    for (const [name, tool] of Object.entries(tools)) {
+    for (const [name, tool] of registry) {
       expect(tool.inputSchema?.type, `${name} inputSchema.type`).toBe('object');
     }
+  });
+});
+
+// MCP 2026-07-28 assigns JSON Schema 2020-12 to a schema without `$schema`, which is how tool
+// schemas are published, so that is the dialect they are enforced in. Draft-07 in strict mode
+// does not know `prefixItems` and would refuse to compile this schema.
+describe('tool schema dialect', () => {
+  const tuple = { inputSchema: { type: 'object', properties: { pair: { type: 'array', prefixItems: [{ type: 'string' }, { type: 'integer' }], items: false, minItems: 2 } } } };
+
+  test('is JSON Schema 2020-12', () => {
+    expect(TOOL_SCHEMA_DIALECT).toBe('2020-12');
+    expect(validateToolParams('tuple', tuple, { pair: ['a', 1] })).toEqual({ valid: true });
+
+    const wrong = validateToolParams('tuple', tuple, { pair: [1, 'a'] });
+    expect(wrong.valid).toBe(false);
+    expect(wrong.schemaError).toBeUndefined();
+    expect(validateToolParams('tuple', tuple, { pair: ['a', 1, 'extra'] }).valid).toBe(false);
   });
 });
 
@@ -74,68 +98,136 @@ describe('validateToolParams', () => {
   });
 });
 
-// resolveAuth (mcp-min/auth.js) resolves credentials in this order: explicit
-// url+email+token params, then the named `.pos` environment, then MPKIT_* env vars, then
-// the first `.pos` entry. A schema that made `env` mandatory would reject three of those
-// four supported call styles.
+// resolveAuth has four supported call styles and only one of them names `env`, so a schema that
+// made it mandatory would reject the other three.
 describe('authentication params stay accepted', () => {
-  // Derived from the source rather than hand-listed: a tool added later is covered the
-  // moment it calls resolveAuth. A hand-written list silently stopped guarding tools it
-  // did not happen to name.
+  // Derived from the source rather than hand-listed, so a tool added later is covered the moment
+  // it calls resolveAuth.
   const authenticatingFiles = authFileList;
 
+  // A floor, so the scan cannot pass by finding nothing. Lowered from 20 when the six deprecated
+  // status tools were removed in 6.6.0; five of them authenticated.
   test('the scan finds the authenticating tools', () => {
-    expect(authenticatingFiles.length).toBeGreaterThanOrEqual(20);
+    expect(authenticatingFiles.length).toBeGreaterThanOrEqual(18);
   });
 
-  test.each(authenticatingFiles.map((file, i) => [path.relative(repoRoot, file), i]))(
-    '%s declares url, email and token on a closed schema',
-    (_label, index) => {
+  /**
+   * A tool that sends no credentials resolves a host and nothing else, so it declares `url` alone
+   * — `page-fetch`, where the shared `url` description ("with email and token") would be false and
+   * demanding the other two blocked the anonymous GET the tool exists to make.
+   *
+   * Derived from the call the tool makes, not from a list of names. If that call is ever
+   * reformatted past this pattern the tool falls back into the stricter set and fails here, which
+   * is the safe direction for a test to be wrong in.
+   */
+  const ANONYMOUS_AUTH = /\bresolveAuth\([^;]*anonymous:\s*true/;
+  const sendsCredentials = (file) => !ANONYMOUS_AUTH.test(fs.readFileSync(file, 'utf8'));
+
+  test.each(authenticatingFiles.map((file, i) => [repoPath(file), i, file]))(
+    '%s declares the credentials it resolves, on a closed schema',
+    (_label, index, file) => {
       const schema = authTools[index]?.inputSchema;
 
       // Only closed schemas can reject unknown properties, so only they can make the
-      // explicit-credentials path unreachable by omitting these three.
+      // explicit-credentials path unreachable by omitting these.
       if (!schema || schema.additionalProperties !== false) return;
 
-      for (const property of ['url', 'email', 'token']) {
-        expect(Object.keys(schema.properties || {}), `${_label} inputSchema.properties`)
-          .toContain(property);
+      const published = Object.keys(schema.properties || {});
+      const required = sendsCredentials(file) ? ['url', 'email', 'token'] : ['url'];
+
+      for (const property of required) {
+        expect(published, `${_label} inputSchema.properties`).toContain(property);
       }
     }
   );
 
+  // Without this the split above is vacuous in both directions: every tool could be anonymous, or
+  // none could be, and the loop would pass either way.
+  test('the split is real: most tools send credentials, and the anonymous one does not publish them', () => {
+    const anonymous = authenticatingFiles.filter(file => !sendsCredentials(file));
+    const credentialed = authenticatingFiles.filter(sendsCredentials);
+
+    expect(credentialed.length, 'tools that resolve full credentials').toBeGreaterThan(15);
+    expect(anonymous.map(repoPath)).toEqual(['mcp-min/page/fetch.js']);
+
+    const schema = authTools[authenticatingFiles.indexOf(anonymous[0])].inputSchema;
+    // The point of the relaxation: a tool that sends nothing must not ask for a token either.
+    expect(Object.keys(schema.properties)).not.toContain('token');
+    expect(Object.keys(schema.properties)).not.toContain('email');
+  });
+
+  // The three credential parameters shipped undescribed on every tool that authenticates, one of
+  // which deploys. Checked on the shared object because that is the only copy: a description
+  // dropped from it goes quiet on all twenty-one at once.
+  test.each(['env', 'url', 'email', 'token'])('the shared %s property is published with a description', (name) => {
+    const property = authProperties[name];
+
+    expect(property, `authProperties.${name}`).toBeDefined();
+    expect(typeof property.description, `authProperties.${name}.description`).toBe('string');
+    expect(property.description.length).toBeGreaterThan(8);
+  });
+
+  // The rule an agent cannot infer from three separate parameters, and the reason `url` carries
+  // more words than the other two: it is the one filled in first.
+  test('the credential triple says it is a triple, and that it beats env', () => {
+    const said = ['url', 'email', 'token'].map(name => authProperties[name].description).join(' ');
+
+    expect(said).toMatch(/with email and token/);
+    expect(said).toMatch(/with url and token/);
+    expect(said).toMatch(/with url and email/);
+    expect(authProperties.url.description).toMatch(/instead of env/);
+  });
+
   const requiredExtras = {
     'constants-set': { name: 'A', value: '1' },
     'constants-unset': { name: 'A' },
-    'data-import-status': { jobId: '1' },
+
     'uploads-push': { filePath: 'uploads.zip' },
     'unit-tests-run': { name: 'example_test' },
-    'deploy-status': { id: '1' },
-    'deploy-wait': { id: '1' },
-    'data-export-status': { jobId: '1' },
-    'data-clean-status': { jobId: '1' },
+
     'data-clean': { confirmation: 'yes' },
-    'tests-run-async-result': { id: '1' },
+
     'migrations-generate': { name: 'add_thing' },
     'liquid-exec': { template: '{{ 1 }}' },
+    'page-fetch': { path: '/' },
     'graphql-exec': { query: '{ a }' },
     'sync-file': { filePath: 'app/views/a.liquid' }
   };
 
-  // Registry entries whose schema is the one exported by an authenticating file. Matched
-  // on the inputSchema object rather than the tool object, because applyConfig copies the
-  // tool when a config overrides its description but keeps the same schema reference.
-  // A name-based heuristic would wrongly sweep in portal tools like env-add, whose
-  // `token` parameter is data it sends rather than credentials it authenticates with.
+  // Matched on the inputSchema object, not the tool object: an exposed tool is a copy when the
+  // tools config overrides its description, and the copy keeps the same schema. A name-based
+  // heuristic would sweep in env-add, whose `token` is data it sends, not credentials.
   const authSchemas = new Set(authTools.map(tool => tool?.inputSchema).filter(Boolean));
-  const registeredAuthTools = Object.keys(tools).filter(name => authSchemas.has(tools[name].inputSchema));
+  const registeredAuthTools = [...registry].filter(([, tool]) => authSchemas.has(tool.inputSchema)).map(([name]) => name);
 
-  test.each(registeredAuthTools)('%s accepts explicit url/email/token without env', name => {
+  // page-fetch is the exception and has its own pair below: it publishes no `email` or `token`, so
+  // a closed schema refuses them — which is the point, not an oversight.
+  const credentialedTools = registeredAuthTools.filter(name => name !== 'page-fetch');
+
+  test.each(credentialedTools)('%s accepts explicit url/email/token without env', name => {
     const params = { url: 'https://example.com', email: 'a@b.c', token: 'tok', ...requiredExtras[name] };
     const result = check(name, params);
 
     expect(result.errors ?? []).toEqual([]);
     expect(result.valid).toBe(true);
+  });
+
+  /**
+   * The tool that sends no credentials takes a bare `url`. Round 2 of the agent evaluation stopped
+   * here: `page-fetch { url, token }` answered `INCOMPLETE_CREDENTIALS: missing email`, so pointing
+   * it at an instance you have a URL for and no account on was impossible — on a tool whose own
+   * description says no credentials are sent. The triple was never checked against anything, so it
+   * refused the honest caller and stopped nobody.
+   */
+  test('page-fetch accepts a url with no email or token', () => {
+    const result = check('page-fetch', { url: 'https://example.com', path: '/' });
+
+    expect(result.errors ?? []).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  test('page-fetch refuses a token, rather than taking one it will not send', () => {
+    expect(check('page-fetch', { url: 'https://example.com', token: 'tok', path: '/' }).valid).toBe(false);
   });
 
   test.each(registeredAuthTools)('%s accepts env alone', name => {
@@ -147,15 +239,21 @@ describe('authentication params stay accepted', () => {
   });
 });
 
-// The branch relaxed `required` on these two so the schema matches what the handler
-// actually needs; without an assertion the relaxation could be reverted unnoticed.
+// `required` on these two matches what the handler actually needs; without an assertion the
+// relaxation could be reverted unnoticed.
 describe('required relaxations', () => {
   test('data-validate requires nothing: validation runs locally and env is context only', () => {
-    expect(tools['data-validate'].inputSchema.required).toBeUndefined();
+    expect(registry.get('data-validate').inputSchema.required).toBeUndefined();
   });
 
-  test('unit-tests-run requires only name', () => {
-    expect(tools['unit-tests-run'].inputSchema.required).toEqual(['name']);
+  /**
+   * `name` was required, with the description sending a whole-suite run to `tests-run-async` — a
+   * tool that answers MISSING_ID against tests@1.3.5 while the suite runs anyway. The runner takes
+   * no filter as "every test", measured against 38 of them, so the requirement only stood between
+   * an agent and the run it wanted.
+   */
+  test('unit-tests-run requires nothing: no filter means every test', () => {
+    expect(registry.get('unit-tests-run').inputSchema.required).toBeUndefined();
   });
 
   test.each([
@@ -163,48 +261,46 @@ describe('required relaxations', () => {
     ['constants-set', ['name', 'value']],
     ['constants-unset', ['name']],
     ['data-import', undefined],
-    ['data-import-status', ['jobId']],
     ['uploads-push', ['filePath']]
   ])('%s no longer requires env', (name, expected) => {
-    expect(tools[name].inputSchema.required).toEqual(expected);
+    expect(registry.get(name).inputSchema.required).toEqual(expected);
   });
 });
 
-// logs-fetch documents `lastId` as the cursor to hand back on the next call, so what it
-// returns has to satisfy the schema it accepts. It previously returned a string while the
-// schema demanded an integer, which broke paging with -32602.
+/**
+ * `logs-fetch` documents `lastId` as the cursor to hand back, so the schema it publishes has to
+ * accept the value it returns, or paging fails with -32602.
+ *
+ * This check existed while the tool was broken and passed anyway, because its rows were
+ * `{ id: 41 }`: an integer survives `Number()` and satisfies an `integer` schema, so the fixture
+ * agreed with the bug. A real row id is a microsecond epoch the instance sends as a string.
+ */
 describe('logs-fetch cursor round-trips', () => {
-  test('the returned cursor is accepted as the next request cursor', async () => {
-    const rows = [{ id: 41, message: 'a' }, { id: 42, message: 'b' }];
+  const ROWS = [{ id: '1790008519.397928', message: 'a' }, { id: '1790008926.7639065', message: 'b' }];
+
+  const fetched = (rows) => {
     let call = 0;
     class MockGateway {
-      async logs() {
-        call += 1;
-        return { logs: call === 1 ? rows : [] };
-      }
+      async logs() { return { logs: ++call === 1 ? rows : [] }; }
     }
-
-    const result = await tools['logs-fetch'].handler(
+    return runTool(registry.get('logs-fetch'),
       { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
       { Gateway: MockGateway }
     );
+  };
+
+  test('the returned cursor is accepted as the next request cursor', async () => {
+    const result = await fetched(ROWS);
 
     expect(result.ok).toBe(true);
-    expect(result.lastId).toBe(42);
-    expect(check('logs-fetch', { lastId: result.lastId }).valid).toBe(true);
+    expect(result.data.lastId).toBe('1790008926.7639065');
+    expect(check('logs-fetch', { lastId: result.data.lastId }).valid).toBe(true);
   });
 
   test('the default cursor is also a valid next cursor', async () => {
-    class MockGateway {
-      async logs() { return { logs: [] }; }
-    }
+    const result = await fetched([]);
 
-    const result = await tools['logs-fetch'].handler(
-      { url: 'https://example.com', email: 'a@b.c', token: 'tok' },
-      { Gateway: MockGateway }
-    );
-
-    expect(result.lastId).toBe(0);
-    expect(check('logs-fetch', { lastId: result.lastId }).valid).toBe(true);
+    expect(result.data.lastId).toBe('0');
+    expect(check('logs-fetch', { lastId: result.data.lastId }).valid).toBe(true);
   });
 });

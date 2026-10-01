@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import singleFileModule, { computeRemotePath, normalizeLocalPath, toPosix } from '../sync/single-file.js';
+import { runTool } from '../run-tool.js';
 
 const singleFileTool = singleFileModule;
 
@@ -37,9 +38,9 @@ describe('sync.singleFile handler dry-run', () => {
     const cwdOrig = process.cwd();
     process.chdir(tmpDir);
     try {
-      const res = await singleFileTool.handler({ filePath: tmpPath, dryRun: true, url: 'https://example.com', email: 'a@b.c', token: 'tok' }, { transport: 'test' });
+      const res = await runTool(singleFileTool, { filePath: tmpPath, dryRun: true, url: 'https://example.com', email: 'a@b.c', token: 'tok' }, { transport: 'test' });
       expect(res.ok).toBe(true);
-      expect(res.file.normalizedPath).toMatch(/app\/assets\/dummy.txt$/);
+      expect(res.data.file.normalizedPath).toMatch(/app\/assets\/dummy.txt$/);
     } finally {
       process.chdir(cwdOrig);
       fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -76,14 +77,14 @@ describe('sync.singleFile with env parameter', () => {
     const appDir = path.join(tmpDir, 'app');
     fs.writeFileSync(path.join(appDir, 'assets', 'test.css'), 'body { color: red; }');
 
-    const res = await singleFileTool.handler({
+    const res = await runTool(singleFileTool, {
       filePath: path.join(appDir, 'assets', 'test.css'),
       env: 'staging',
       dryRun: true
     }, { transport: 'test' });
 
     expect(res.ok).toBe(true);
-    expect(res.auth.source).toBe('.pos(staging)');
-    expect(res.auth.url).toBe('https://test.staging.com');
+    expect(res.meta.auth.source).toBe('.pos(staging)');
+    expect(res.meta.auth.url).toBe('https://test.staging.com');
   });
 });

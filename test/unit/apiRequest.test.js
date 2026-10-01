@@ -885,7 +885,11 @@ describe('apiRequest', () => {
       expect(vi.getTimerCount()).toBe(0);
     });
 
-    test('arms nothing when no timeout is asked for', async () => {
+    // A deadline used to be opt-in, and a call that asked for none was handed to fetch with no
+    // signal at all. Every request is bounded now; `timeout` only shortens the default, which is
+    // what the endpoints with a known answer time do. What that default is, and that it is not
+    // reached early, is in 'a request that gets no response' below.
+    test('bounds a request that asks for no timeout of its own', async () => {
       global.fetch.mockResolvedValue({
         ok: true,
         status: 200,
@@ -896,8 +900,9 @@ describe('apiRequest', () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         'https://partners.platformos.com/api/x',
-        expect.not.objectContaining({ signal: expect.anything() })
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
       );
+      // Cleared on the way out all the same: an armed timer would outlive the command.
       expect(vi.getTimerCount()).toBe(0);
     });
 
@@ -918,5 +923,130 @@ describe('apiRequest', () => {
       // operator looking for a slow server instead of the code that cancelled the call.
       expect(error.code).toBeUndefined();
     });
+  });
+});
+
+/**
+ * A request that is never answered.
+ *
+ * Nothing here passed a timeout to `fetch`, so an instance that accepted a connection and then
+ * said nothing held the call for ever. On the CLI a person presses Ctrl-C; the MCP server is
+ * long-lived and answers concurrently, and its `ctx.signal` fires only when the *client* gives up,
+ * which an agent waiting on a result does not do.
+ *
+ * Driven on fake timers: a test that really waited five minutes is one nobody runs.
+ */
+describe('a request that gets no response', () => {
+  let apiRequest, RESPONSE_TIMEOUT_MS;
+
+  /** Never resolves, and rejects the way `fetch` does when its signal aborts. */
+  const silent = () => {
+    const seen = {};
+    global.fetch.mockImplementation((_uri, options) => new Promise((_resolve, reject) => {
+      seen.signal = options.signal;
+      options.signal.addEventListener('abort', () => {
+        reject(Object.assign(new Error('This operation was aborted'), { name: 'AbortError' }));
+      }, { once: true });
+    }));
+    return seen;
+  };
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    const module = await import('#lib/apiRequest.js');
+    ({ apiRequest, RESPONSE_TIMEOUT_MS } = module);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('comes back rather than hanging, once the bound is reached', async () => {
+    silent();
+    const call = apiRequest({ uri: 'https://x.example.com/api/app_builder/instance' });
+    const settled = call.then(() => 'resolved', (err) => err);
+
+    await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS);
+
+    const err = await settled;
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toMatch(/No response in \d+s/);
+  });
+
+  // `classify` reads `code` off the chain: ETIMEDOUT is already in its unreachable set, so this
+  // reaches a tool as `unavailable` with the host named, the same as a refused connection.
+  test('carries the code and the uri that make it an unavailable instance, not a pos-cli defect', async () => {
+    silent();
+    const settled = apiRequest({ uri: 'https://x.example.com/api/app_builder/instance' }).catch(e => e);
+
+    await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS);
+
+    const err = await settled;
+    expect(err.name).toBe('RequestError');
+    expect(err.code).toBe('ETIMEDOUT');
+    expect(err.options.uri).toContain('x.example.com');
+  });
+
+  test('is not reached one tick early', async () => {
+    silent();
+    let done = false;
+    apiRequest({ uri: 'https://x.example.com/a' }).catch(() => { done = true; });
+
+    await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS - 1);
+
+    expect(done).toBe(false);
+  });
+
+  /**
+   * Including a request that sends a file. It used to be given a longer bound of its own, on the
+   * reasoning that headers cannot arrive until the upload has gone up — but `fetch` caps every
+   * request at 300s however patient the caller is, so that bound could never be reached and only
+   * made the failure the client's to report rather than ours.
+   */
+  test('a request carrying a file takes the same bound', async () => {
+    fs.readFileSync.mockReturnValue(Buffer.from('zip'));
+    silent();
+    const settled = apiRequest({
+      method: 'POST',
+      uri: 'https://x.example.com/releases',
+      formData: { file: { path: '/tmp/release.zip' } }
+    }).catch(e => e);
+
+    await vi.advanceTimersByTimeAsync(RESPONSE_TIMEOUT_MS);
+
+    expect((await settled).code).toBe('ETIMEDOUT');
+  });
+
+  /**
+   * The point of the number, and the thing that would silently undo this: a bound above the HTTP
+   * client's own 300s cap can never fire, and the client's failure is `fetch failed` — which
+   * `ServerError` cannot place, so it prints "Request to the server failed." with no host, no
+   * duration and no sign that it timed out.
+   */
+  test('stays under the cap the HTTP client applies to every request', () => {
+    expect(RESPONSE_TIMEOUT_MS).toBeLessThan(300000);
+  });
+
+  // The caller's own signal still works, and cancelling is not a timeout.
+  test("the caller's signal still cancels, and is reported as itself", async () => {
+    silent();
+    const controller = new AbortController();
+    const settled = apiRequest({ uri: 'https://x.example.com/a', signal: controller.signal }).catch(e => e);
+
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const err = await settled;
+    expect(err.code).toBeUndefined();
+    expect(err.message).not.toMatch(/No response in/);
+  });
+
+  // The clock stops when headers arrive; reading a slow body is never what the bound is for.
+  test('a response that arrives leaves no timer behind', async () => {
+    global.fetch.mockResolvedValue({ ok: true, status: 200, text: async () => '{"ok":true}', headers: new Map() });
+
+    await apiRequest({ uri: 'https://x.example.com/a' });
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

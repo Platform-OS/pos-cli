@@ -3,13 +3,23 @@
  * Spawns the CLI in a temp directory to verify exit codes and manifest mutations.
  * All tests use --no-git to avoid requiring a git repository.
  */
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { withTmpDir } from '#test/utils/withTmpDir.js';
+
+// Every test here spawns three node processes — `pos-cli` dispatches to `pos-cli-modules`, which
+// dispatches to `pos-cli-modules-version` — and the leaf loads `lib/modules.js` through
+// `moduleConfig`, which is most of its ~0.8 s. That is comfortable on an idle machine and not on
+// a loaded Windows runner: process creation is dearer there, CI runs these files in parallel
+// (~2.5x oversubscribed in the run that failed), and the first spawn of a file pays a cold module
+// cache. 10 s was on the edge of that and the first test in the file timed out. This is latency,
+// not a hang — the fourteen tests after it, using the same helper, all passed — so the timeout is
+// raised rather than the test changed. A real hang still surfaces, just later.
+vi.setConfig({ testTimeout: 30000 });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

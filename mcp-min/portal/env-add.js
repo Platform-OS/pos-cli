@@ -1,6 +1,7 @@
 // env-add tool - Add environment using device authorization flow
 import log from '../log.js';
-import { getPortalConfig, portalRequest } from './portal-client.js';
+import { getPortalConfig } from './portal-client.js';
+import { ToolError } from '../tool-error.js';
 import fs from 'fs';
 import path from 'path';
 import { writeFileOwnerOnly } from '../../lib/filePermissions.js';
@@ -43,185 +44,168 @@ function getPortalUrl(override) {
 }
 
 const envAddTool = {
-  description: 'Add environment to .pos config. Returns verification URL immediately, spawns background waiter (60s) that saves token when user authorizes.',
+  description: 'Add an environment to .pos. Answers at once with a URL for the person to open, and saves the token in the background once they authorize.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
       environment: {
         type: 'string',
-        description: 'Environment name (e.g., staging, production)'
+        description: 'Name to store it under in .pos.'
       },
       url: {
         type: 'string',
-        description: 'Instance URL (e.g., https://my-app.staging.oregon.platform-os.com)'
+        description: 'Instance URL to add.'
       },
       token: {
         type: 'string',
-        description: 'Optional: Direct API token (skips device authorization if provided)'
+        description: 'Skip the browser step and store this token.'
       },
       email: {
         type: 'string',
-        description: 'Optional: Email associated with the account'
+        description: 'Account email to store with it.'
       },
       partner_portal_url: {
         type: 'string',
-        description: 'Optional: Partner Portal URL (reads from ~/.config/pos-cli/config.json if not provided)'
+        description: 'Portal to authorize against; the stored default otherwise.'
       },
       timeout_seconds: {
         type: 'number',
-        description: 'Optional: Max seconds to wait for authorization (default: 60, max: 120)'
+        minimum: 1,
+        maximum: 120,
+        default: 60,
+        description: 'How long to keep waiting for the person to authorize.'
       }
     },
     required: ['environment', 'url']
   },
 
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
-    log.info('handler:START', { environment: params.environment, url: params.url, params });
+    // Never the whole params object: `token` is an instance API token, and INFO is written
+    // whether or not anyone asked for debug output.
+    log.info('handler:START', {
+      environment: params.environment,
+      url: params.url,
+      tokenProvided: Boolean(params.token),
+      email: params.email
+    });
 
+    const portalUrl = ctx.portalUrl || getPortalUrl(params.partner_portal_url);
+    const timeoutSeconds = Math.min(params.timeout_seconds || 60, 120);
+    log.debug('handler:config', { portalUrl, timeoutSeconds });
+
+    // Normalize URL (ensure trailing slash)
+    let instanceUrl = params.url;
+    if (!instanceUrl.endsWith('/')) {
+      instanceUrl = instanceUrl + '/';
+    }
+
+    // Validate URL format
+    let instanceDomain;
     try {
-      const portalUrl = ctx.portalUrl || getPortalUrl(params.partner_portal_url);
-      const timeoutSeconds = Math.min(params.timeout_seconds || 60, 120);
-      log.debug('handler:config', { portalUrl, timeoutSeconds });
+      instanceDomain = new URL(instanceUrl).hostname;
+    } catch {
+      throw ToolError.input('INVALID_URL', `Invalid URL format: ${params.url}`, { url: params.url });
+    }
 
-      // Normalize URL (ensure trailing slash)
-      let instanceUrl = params.url;
-      if (!instanceUrl.endsWith('/')) {
-        instanceUrl = instanceUrl + '/';
-      }
+    const fetchFn = ctx.fetch || fetch;
 
-      // Validate URL format
-      let instanceDomain;
-      try {
-        instanceDomain = new URL(instanceUrl).hostname;
-      } catch {
-        return {
-          ok: false,
-          error: { code: 'INVALID_URL', message: `Invalid URL format: ${params.url}` },
-          meta: { startedAt, finishedAt: new Date().toISOString() }
-        };
-      }
+    // Direct token provided - skip device auth
+    if (params.token) {
+      log.info('handler:usingProvidedToken');
 
-      const fetchFn = ctx.fetch || fetch;
-
-      // Direct token provided - skip device auth
-      if (params.token) {
-        log.info('handler:usingProvidedToken');
-
-        const storeEnvFn = ctx.storeEnvironment || storeEnvironment;
-        storeEnvFn({
-          environment: params.environment,
-          url: instanceUrl,
-          token: params.token,
-          email: params.email,
-          partner_portal_url: portalUrl
-        });
-
-        return {
-          ok: true,
-          data: {
-            environment: params.environment,
-            url: instanceUrl,
-            message: `Environment "${params.environment}" added successfully.`
-          },
-          meta: { startedAt, finishedAt: new Date().toISOString() }
-        };
-      }
-
-      // Device authorization flow - get verification URL
-      log.info('handler:startingDeviceAuth', { instanceDomain, portalUrl });
-
-      let deviceAuthResponse;
-      try {
-        const authUrl = `${portalUrl}/oauth/authorize_device`;
-        log.debug('handler:requestingDeviceAuth', { authUrl });
-
-        const response = await fetchFn(authUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `domain=${encodeURIComponent(instanceDomain)}`
-        });
-
-        if (response.status === 404) {
-          return {
-            ok: false,
-            error: {
-              code: 'INSTANCE_NOT_REGISTERED',
-              message: `Instance ${instanceUrl} is not registered in the Partner Portal. Verify the URL is correct.`
-            },
-            meta: { startedAt, finishedAt: new Date().toISOString() }
-          };
-        }
-
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`Device authorization failed: ${response.status} ${text}`);
-        }
-
-        deviceAuthResponse = await response.json();
-      } catch (e) {
-        return {
-          ok: false,
-          error: { code: 'DEVICE_AUTH_FAILED', message: String(e.message || e) },
-          meta: { startedAt, finishedAt: new Date().toISOString() }
-        };
-      }
-
-      const verificationUrl = deviceAuthResponse.verification_uri_complete;
-      const deviceCode = deviceAuthResponse.device_code;
-      const pollInterval = (deviceAuthResponse.interval || 5) * 1000;
-      const waiterId = `${params.environment}-${Date.now()}`;
-
-      log.info('handler:deviceAuthSuccess', { verificationUrl, waiterId, pollInterval });
-
-      // Spawn background waiter
-      const waiterPromise = spawnBackgroundWaiter({
-        waiterId,
-        deviceCode,
-        portalUrl,
-        pollInterval,
-        timeoutSeconds,
+      const storeEnvFn = ctx.storeEnvironment || storeEnvironment;
+      storeEnvFn({
         environment: params.environment,
-        instanceUrl,
+        url: instanceUrl,
+        token: params.token,
         email: params.email,
-        fetchFn,
-        storeEnvFn: ctx.storeEnvironment || storeEnvironment
+        partner_portal_url: portalUrl
       });
 
-      // Store waiter reference
-      activeWaiters.set(waiterId, waiterPromise);
-
-      // Log waiter completion (success or failure)
-      waiterPromise.then(result => {
-        log.info('handler:waiterComplete', { waiterId, result });
-        activeWaiters.delete(waiterId);
-      }).catch(err => {
-        log.error('handler:waiterError', { waiterId, error: err.message });
-        activeWaiters.delete(waiterId);
-      });
-
-      // Return immediately with verification URL
       return {
-        ok: true,
-        data: {
-          status: 'awaiting_authorization',
-          message: `Open the URL below to authorize. Background waiter active for ${timeoutSeconds}s - will save credentials automatically when you authorize.`,
-          verification_url: verificationUrl,
-          waiter_id: waiterId,
-          timeout_seconds: timeoutSeconds
-        },
-        meta: { startedAt, finishedAt: new Date().toISOString() }
-      };
-
-    } catch (e) {
-      log.error('handler:error', { error: e.message });
-      return {
-        ok: false,
-        error: { code: 'ENV_ADD_ERROR', message: String(e.message || e) },
-        meta: { startedAt, finishedAt: new Date().toISOString() }
+        environment: params.environment,
+        url: instanceUrl,
+        message: `Environment "${params.environment}" added successfully.`
       };
     }
+
+    // Device authorization flow - get verification URL
+    log.info('handler:startingDeviceAuth', { instanceDomain, portalUrl });
+
+    let deviceAuthResponse;
+    try {
+      const authUrl = `${portalUrl}/oauth/authorize_device`;
+      log.debug('handler:requestingDeviceAuth', { authUrl });
+
+      const response = await fetchFn(authUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `domain=${encodeURIComponent(instanceDomain)}`
+      });
+
+      if (response.status === 404) {
+        throw ToolError.not_found(
+          'INSTANCE_NOT_REGISTERED',
+          `Instance ${instanceUrl} is not registered in the Partner Portal. Verify the URL is correct.`,
+          { url: instanceUrl }
+        );
+      }
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Device authorization failed: ${response.status} ${text}`);
+      }
+
+      deviceAuthResponse = await response.json();
+    } catch (e) {
+      // A typed error thrown above is the answer already; only an unrecognised failure of the
+      // authorisation request itself becomes DEVICE_AUTH_FAILED.
+      if (e instanceof ToolError) throw e;
+      throw ToolError.auth('DEVICE_AUTH_FAILED', String(e.message || e));
+    }
+
+    const verificationUrl = deviceAuthResponse.verification_uri_complete;
+    const deviceCode = deviceAuthResponse.device_code;
+    const pollInterval = (deviceAuthResponse.interval || 5) * 1000;
+    const waiterId = `${params.environment}-${Date.now()}`;
+
+    log.info('handler:deviceAuthSuccess', { verificationUrl, waiterId, pollInterval });
+
+    // Spawn background waiter
+    const waiterPromise = spawnBackgroundWaiter({
+      waiterId,
+      deviceCode,
+      portalUrl,
+      pollInterval,
+      timeoutSeconds,
+      environment: params.environment,
+      instanceUrl,
+      email: params.email,
+      fetchFn,
+      storeEnvFn: ctx.storeEnvironment || storeEnvironment
+    });
+
+    // Store waiter reference
+    activeWaiters.set(waiterId, waiterPromise);
+
+    // Log waiter completion (success or failure)
+    waiterPromise.then(result => {
+      log.info('handler:waiterComplete', { waiterId, status: result?.status, error: result?.error });
+      activeWaiters.delete(waiterId);
+    }).catch(err => {
+      log.error('handler:waiterError', { waiterId, error: err.message });
+      activeWaiters.delete(waiterId);
+    });
+
+    // Return immediately with verification URL
+    return {
+      status: 'awaiting_authorization',
+      message: `Open the URL below to authorize. Background waiter active for ${timeoutSeconds}s - will save credentials automatically when you authorize.`,
+      verification_url: verificationUrl,
+      waiter_id: waiterId,
+      timeout_seconds: timeoutSeconds
+    };
   }
 };
 
@@ -269,7 +253,12 @@ async function spawnBackgroundWaiter({
 
         log.debug('waiter:tokenResponseStatus', { status: tokenResponse.status });
         const tokenData = await tokenResponse.json();
-        log.debug('waiter:tokenData', tokenData);
+        // The body is the access token itself; whether one arrived is what a reader needs.
+        log.debug('waiter:tokenResponse', {
+          accessTokenReceived: Boolean(tokenData.access_token),
+          error: tokenData.error,
+          errorDescription: tokenData.error_description
+        });
 
         if (tokenData.access_token) {
           log.info('waiter:accessTokenReceived');

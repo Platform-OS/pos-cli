@@ -4,61 +4,35 @@ import Gateway from '../../lib/proxy.js';
 import { unsetConstant } from '../../lib/graph/queries.js';
 import { graphQLErrorMessage } from '../../lib/graph/response.js';
 import { authProperties } from '../schemas/auth.js';
+import { ToolError } from '../tool-error.js';
 
 const constantsUnsetTool = {
-  description: 'Delete a constant from a platformOS instance. Omitting env (and url/email/token) targets the first environment in .pos, so name the environment explicitly.',
+  description: 'Delete a constant from an instance.',
+  annotations: { destructiveHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     required: ['name'],
     properties: {
-      env: { type: 'string', description: 'Environment name from .pos config' },
       ...authProperties,
-      name: { type: 'string', description: 'Name of the constant to delete' }
+      name: { type: 'string', description: 'Which constant to delete.' }
     }
   },
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
+    const auth = await resolveAuth(params, ctx);
 
-    try {
-      const auth = await resolveAuth(params, ctx);
+    const GatewayCtor = ctx.Gateway || Gateway;
+    const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-      const GatewayCtor = ctx.Gateway || Gateway;
-      const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
+    const resp = await gateway.graph(unsetConstant(params.name));
 
-      const resp = await gateway.graph(unsetConstant(params.name));
+    const errorMessage = graphQLErrorMessage(resp);
+    // The instance answered and refused the mutation: its judgement, not a broken call.
+    if (errorMessage) throw ToolError.instance('GRAPHQL_ERROR', errorMessage);
 
-      const errorMessage = graphQLErrorMessage(resp);
-      if (errorMessage) {
-        return {
-          ok: false,
-          error: { code: 'GRAPHQL_ERROR', message: errorMessage }
-        };
-      }
+    const result = resp?.data?.constant_unset;
 
-      const result = resp?.data?.constant_unset;
-
-      return {
-        ok: true,
-        data: {
-          name: result?.name || params.name,
-          deleted: !!result
-        },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        error: { code: 'CONSTANTS_UNSET_FAILED', message: String(e.message || e) },
-        meta: {
-          startedAt,
-          finishedAt: new Date().toISOString()
-        }
-      };
-    }
+    return { name: result?.name || params.name, deleted: !!result };
   }
 };
 

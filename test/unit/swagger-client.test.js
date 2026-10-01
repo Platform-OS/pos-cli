@@ -43,7 +43,8 @@ vi.mock('#lib/logsv2/http.js', () => ({
 import logger from '#lib/logger.js';
 import ServerError from '#lib/ServerError.js';
 import { fetchSettings } from '#lib/settings.js';
-import { SwaggerProxy } from '#lib/swagger-client.js';
+import api from '#lib/logsv2/http.js';
+import { SwaggerProxy, search } from '#lib/swagger-client.js';
 
 describe('SwaggerProxy.client() error handling', () => {
   beforeEach(() => {
@@ -92,5 +93,58 @@ describe('SwaggerProxy.client() error handling', () => {
     await SwaggerProxy.client('staging');
 
     expect(logger.Error).toHaveBeenCalledWith('raw error string');
+  });
+});
+
+/**
+ * `buildQuery` assigned to an undeclared `query`. That is an implicit global, which works in
+ * sloppy-mode CommonJS and throws in an ES module — so every `pos-cli logsv2 search` threw
+ * `ReferenceError: query is not defined` from the ESM migration (862db40) until it was fixed,
+ * and the bin's `catch (e) { logger.Error(e) }` printed it as if the instance had refused.
+ * These drive the search path, not just the helper, because the helper alone would not have
+ * caught it either: the call site is where the throw surfaced.
+ */
+describe('logsv2 search builds its query', () => {
+  const proxyFor = async () => {
+    vi.mocked(fetchSettings).mockResolvedValue({ url: 'https://test.example.com', token: 't', email: 'e@example.com' });
+    return SwaggerProxy.client('staging');
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ServerError.isNetworkError.mockReturnValue(false);
+  });
+
+  test('a search reaches the log API with the query as its body', async () => {
+    const proxy = await proxyFor();
+    expect(proxy, 'SwaggerProxy.client returned nothing — the test would assert against undefined').toBeDefined();
+
+    await proxy.searchSQL({ from: 0, size: 10, sql: "select * from logs where str_match(message, 'boom')" });
+
+    expect(api.post).toHaveBeenCalledTimes(1);
+    const [url, options] = api.post.mock.calls[0];
+    expect(url).toBe('https://openobserve-proxy.platformos.dev/api/uuid-1/_search');
+    expect(options.body).toEqual({
+      query: { from: 0, size: 10, sql: "select * from logs where str_match(message, 'boom')" }
+    });
+  });
+
+  test('defaults to every row, and carries a time range only when one was given', () => {
+    expect(search.buildQuery({ from: 0, size: 10 })).toEqual({
+      query: { from: 0, size: 10, sql: 'select * from logs' }
+    });
+    expect(search.buildQuery({ from: 0, size: 10, start_time: 1694694303000000, end_time: 1694694403000000 }).query)
+      .toMatchObject({ start_time: 1694694303000000, end_time: 1694694403000000 });
+  });
+
+  // The undeclared binding was also module-wide state: two searches shared one object, so a
+  // second call could rewrite the first's query between building it and sending it.
+  test('two searches do not share one query object', () => {
+    const first = search.buildQuery({ from: 0, size: 1, sql: 'select a from logs' });
+    const second = search.buildQuery({ from: 9, size: 2, sql: 'select b from logs' });
+
+    expect(first).not.toBe(second);
+    expect(first.query).toMatchObject({ from: 0, size: 1, sql: 'select a from logs' });
+    expect(second.query).toMatchObject({ from: 9, size: 2, sql: 'select b from logs' });
   });
 });

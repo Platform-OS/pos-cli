@@ -79,6 +79,9 @@ describe('validate', () => {
   test('throws on an unknown mode rather than blaming the schema', () => {
     expect(() => validate(schema, { name: 'core' }, { mode: 'nope' })).toThrow(RangeError);
     expect(() => validate(schema, { name: 'core' }, { mode: 'nope' })).toThrow(/Unknown validation mode/);
+    expect(() => validate(schema, { name: 'core' }, { dialect: 'draft-04' })).toThrow(new RangeError('Unknown JSON Schema dialect: draft-04 (expected draft-07 or 2020-12)'));
+    expect(() => validate(schema, { name: 'core' }, { mode: 'toString' })).toThrow(RangeError);
+    expect(() => validate(schema, { name: 'core' }, { dialect: 'constructor' })).toThrow(RangeError);
   });
 
   test('accepts boolean schemas, which cannot key the compile cache', () => {

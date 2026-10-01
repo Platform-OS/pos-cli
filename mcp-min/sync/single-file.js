@@ -13,8 +13,9 @@ import { manifestGenerateForAssets } from '../../lib/assets/manifest.js';
 import { fillInTemplateValues } from '../../lib/templates.js';
 import dir from '../../lib/directories.js';
 import log from '../log.js';
-import { resolveAuth, maskToken, runWithAuth } from '../auth.js';
+import { resolveAuth, runWithAuth } from '../auth.js';
 import { authProperties } from '../schemas/auth.js';
+import { ToolError, kindForStatus } from '../tool-error.js';
 
 // Alias for backwards compatibility
 const templates = { fillInTemplateValues };
@@ -61,7 +62,6 @@ async function uploadAsset({ gateway, relPath, log }) {
   await uploadFileFormData(relPath, data);
   const manifest = manifestGenerateForAssets([relPath]);
   await gateway.sendManifest(manifest);
-  return { ok: true };
 }
 
 async function uploadNonAsset({ gateway, relPath, log }) {
@@ -79,38 +79,35 @@ async function uploadNonAsset({ gateway, relPath, log }) {
   }
   const formData = { path: remotePath, marketplace_builder_file_body: body };
   log?.(`[sync-file] Sync formData: path=${remotePath}, body type=${processTemplate ? 'template' : 'stream'}`);
-  const resp = await gateway.sync(formData);
-  return { ok: true, response: resp };
+  return gateway.sync(formData);
 }
 
 async function deleteRemote({ gateway, relPath }) {
   const remotePath = computeRemotePath(relPath);
   const formData = { path: remotePath, primary_key: remotePath };
-  const resp = await gateway.delete(formData);
-  return { ok: true, response: resp };
+  return gateway.delete(formData);
 }
 
 const singleFileTool = {
-  description: 'Sync a single file to a platformOS instance (upload or delete). Handles assets (direct S3 upload + manifest) and non-assets (gateway sync) automatically. Respects .posignore rules. Auth resolved from: explicit params > MPKIT_* env vars > .pos config. Use dryRun to validate without sending.',
+  description: 'Upload one file to an instance, or delete it there. Deleting needs confirmDelete. To send a whole project, use deploy-start.',
+  annotations: { destructiveHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      filePath: { type: 'string', description: 'Absolute or relative path to the file to sync. Must be inside app/, marketplace_builder/, or modules/.' },
-      env: { type: 'string', description: 'Environment name from .pos config (e.g., staging, production). Used to resolve auth when url/email/token are not provided.' },
+      filePath: { type: 'string', description: 'File to sync; must be inside app/, marketplace_builder/ or modules/.' },
       ...authProperties,
-      op: { type: 'string', enum: ['upload', 'delete'], description: 'Operation: "upload" to push file, "delete" to remove from instance. Auto-detected from file existence if omitted.' },
-      dryRun: { type: 'boolean', description: 'Validate file path, auth, and sync rules without actually uploading. Default: false.' },
-      confirmDelete: { type: 'boolean', description: 'Safety flag -- must be true to execute delete operations. Default: false.' }
+      op: { type: 'string', enum: ['upload', 'delete'], description: 'Omit it to follow whether the file exists locally.' },
+      dryRun: { type: 'boolean', description: 'Check the path, credentials and rules without sending anything.', default: false },
+      confirmDelete: { type: 'boolean', description: 'Required before a delete will run.', default: false }
     },
     required: ['filePath']
   },
-handler: async (params, ctx) => {
-    const startedAt = new Date().toISOString();
+  handler: async (params, ctx) => {
     const logFn = ctx?.log || log.info.bind(log);
     const { filePath, op: opParam, dryRun = false, confirmDelete = false } = params || {};
     if (!filePath || typeof filePath !== 'string') {
-      throw new Error('INVALID_PARAM: filePath is required');
+      throw ToolError.input('INVALID_PARAM', 'filePath is required');
     }
 
     const relPath = normalizeLocalPath(filePath);
@@ -123,24 +120,22 @@ handler: async (params, ctx) => {
     const inAllowedDir = allowedPrefixes.some((p) => toPosix(relPath).startsWith(p));
     if (!inAllowedDir) {
       logFn(`[sync-file] File outside allowed directories: ${relPath}`);
-      return {
-        ok: false,
-        operation: 'noop',
-        error: { code: 'FILE_OUTSIDE_ALLOWED_DIRECTORIES', message: `File must be inside ${allowedPrefixes.join(', ')}` },
-        file: { localPath: filePath, normalizedPath: relPath }
-      };
+      throw ToolError.input(
+        'FILE_OUTSIDE_ALLOWED_DIRECTORIES',
+        `File must be inside ${allowedPrefixes.join(', ')}`,
+        { operation: 'noop', file: { localPath: filePath, normalizedPath: relPath } }
+      );
     }
 
     const ignoreList = files.getIgnoreList();
     const should = shouldBeSynced(relPath, ignoreList);
     logFn(`[sync-file] Sync check for ${relPath}: shouldSync=${should}, ignoreList rules=${ignoreList.length}`);
     if (!should && opParam !== 'delete') {
-      return {
-        ok: false,
-        operation: 'noop',
-        error: { code: 'IGNORED_BY_RULES', message: 'File is ignored by .posignore or rules' },
-        file: { localPath: filePath, normalizedPath: relPath }
-      };
+      throw ToolError.input(
+        'IGNORED_BY_RULES',
+        'File is ignored by .posignore or rules',
+        { operation: 'noop', file: { localPath: filePath, normalizedPath: relPath } }
+      );
     }
 
     const exists = fs.existsSync(absPath);
@@ -153,7 +148,6 @@ handler: async (params, ctx) => {
 
     if (dryRun) {
       return {
-        ok: true,
         operation: op,
         file: {
           localPath: filePath,
@@ -161,9 +155,7 @@ handler: async (params, ctx) => {
           isAsset: isAssetsPath(relPath),
           size: exists ? fs.statSync(absPath).size : null
         },
-        server: { responseCode: null, method: null },
-        timings: { startedAt, finishedAt: new Date().toISOString(), durationMs: 0 },
-        auth: { url: auth.url, email: auth.email, token: maskToken(auth.token), source: auth.source }
+        server: { responseCode: null, method: null }
       };
     }
 
@@ -176,31 +168,27 @@ handler: async (params, ctx) => {
         if (op === 'delete') {
           logFn(`[sync-file] Starting delete operation for: ${relPath}`);
           if (!confirmDelete) {
-            return {
-              ok: false,
-              operation: 'delete',
-              error: { code: 'DELETE_PROTECTED', message: 'confirmDelete=true is required to delete' },
-              file: { localPath: filePath, normalizedPath: relPath }
-            };
+            throw ToolError.input(
+              'DELETE_PROTECTED',
+              'confirmDelete=true is required to delete',
+              { operation: 'delete', file: { localPath: filePath, normalizedPath: relPath } }
+            );
           }
           const result = await deleteRemote({ gateway, relPath });
           logFn(`[sync-file] Delete completed for: ${relPath}`);
           return {
-            ok: true,
             operation: 'delete',
             file: { localPath: filePath, normalizedPath: computeRemotePath(relPath) },
-            server: { responseCode: 200, method: 'gateway.delete', gatewayResponse: result.response || null },
-            timings: { startedAt, finishedAt: new Date().toISOString() }
+            server: { responseCode: 200, method: 'gateway.delete', gatewayResponse: result || null }
           };
         }
 
         if (!exists) {
-          return {
-            ok: false,
-            operation: 'upload',
-            error: { code: 'FILE_NOT_FOUND', message: `Local file not found: ${filePath}` },
-            file: { localPath: filePath, normalizedPath: relPath }
-          };
+          throw ToolError.not_found(
+            'FILE_NOT_FOUND',
+            `Local file not found: ${filePath}`,
+            { operation: 'upload', file: { localPath: filePath, normalizedPath: relPath } }
+          );
         }
 
         if (isAssetsPath(relPath)) {
@@ -208,22 +196,16 @@ handler: async (params, ctx) => {
           await uploadAsset({ gateway, relPath, log: logFn });
           logFn(`[sync-file] Asset upload completed: ${relPath}`);
           return {
-            ok: true,
             operation: 'update',
-            file: { localPath: filePath, normalizedPath: relPath, isAsset: true, size: fs.statSync(absPath).size },
-            // server: { responseCode: 200, method: 'asset.directUpload+manifest' },
-            timings: { startedAt, finishedAt: new Date().toISOString() }
+            file: { localPath: filePath, normalizedPath: relPath, isAsset: true, size: fs.statSync(absPath).size }
           };
         } else {
           logFn(`[sync-file] Uploading non-asset: ${relPath}`);
           const res = await uploadNonAsset({ gateway, relPath, log: logFn });
-          logFn(`[sync-file] Non-asset upload completed: ${relPath}, response status: ${res.response?.status || 'unknown'}`);
+          logFn(`[sync-file] Non-asset upload completed: ${relPath}, response status: ${res?.status || 'unknown'}`);
           return {
-            ok: true,
             operation: 'update',
-            file: { localPath: filePath, normalizedPath: computeRemotePath(relPath), isAsset: false, size: fs.statSync(absPath).size },
-            // server: { responseCode: 200, method: 'gateway.sync', gatewayResponse: res.response || null },
-            timings: { startedAt, finishedAt: new Date().toISOString() }
+            file: { localPath: filePath, normalizedPath: computeRemotePath(relPath), isAsset: false, size: fs.statSync(absPath).size }
           };
         }
       });
@@ -237,19 +219,15 @@ handler: async (params, ctx) => {
       const detail = serverError || String(e?.message || e);
       logFn(`[sync-file] Error during ${op} for ${relPath} (${statusCode}): ${detail}`);
 
-      const errPayload = {
-        code: 'GATEWAY_ERROR',
-        message: detail,
+      // Kept because it reads the server's own error body out of the response, which the invoker
+      // cannot see. The kind still follows the status, from the same table the invoker uses.
+      if (e instanceof ToolError) throw e;
+      throw new ToolError(kindForStatus(statusCode), 'GATEWAY_ERROR', detail, {
         statusCode,
-        details: {
-          operation: op,
-          file: { localPath: filePath, normalizedPath: relPath },
-          ...(serverDetails && { server: serverDetails })
-        }
-      };
-      const err = new Error(`${errPayload.code}: ${detail}`);
-      err._pos = errPayload;
-      throw err;
+        operation: op,
+        file: { localPath: filePath, normalizedPath: relPath },
+        ...(serverDetails && { server: serverDetails })
+      });
     }
   }
 };

@@ -1,6 +1,7 @@
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 import instanceCreateTool from '../portal/instance-create.js';
+import { runTool } from '../run-tool.js';
 
 const mockConfig = {
   master_token: 'test-token-123',
@@ -13,7 +14,7 @@ describe('instance-create', () => {
       .mockResolvedValueOnce({ available: true }) // name check
       .mockResolvedValueOnce({ acknowledged: true }); // create
 
-    const res = await instanceCreateTool.handler(
+    const res = await runTool(instanceCreateTool, 
       {
         name: 'my-new-instance',
         partner_id: 123,
@@ -59,7 +60,7 @@ describe('instance-create', () => {
       .mockResolvedValueOnce({ available: true })
       .mockResolvedValueOnce({ acknowledged: true });
 
-    await instanceCreateTool.handler(
+    await runTool(instanceCreateTool, 
       {
         name: 'tagged-instance',
         partner_id: 1,
@@ -85,7 +86,7 @@ describe('instance-create', () => {
     const portalRequest = vi.fn()
       .mockResolvedValueOnce({ available: false });
 
-    const res = await instanceCreateTool.handler(
+    const res = await runTool(instanceCreateTool, 
       {
         name: 'taken-name',
         partner_id: 1,
@@ -111,7 +112,7 @@ describe('instance-create', () => {
         { status: 422, data: { errors: ['billing_plan_id is invalid'] } }
       ));
 
-    const res = await instanceCreateTool.handler(
+    const res = await runTool(instanceCreateTool, 
       {
         name: 'valid-name',
         partner_id: 1,
@@ -130,7 +131,7 @@ describe('instance-create', () => {
     const portalRequest = vi.fn()
       .mockRejectedValueOnce(new Error('Network timeout'));
 
-    const res = await instanceCreateTool.handler(
+    const res = await runTool(instanceCreateTool, 
       {
         name: 'test-instance',
         partner_id: 1,
@@ -141,7 +142,7 @@ describe('instance-create', () => {
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('INSTANCE_CREATE_ERROR');
+    expect(res.error.code).toBe('INTERNAL_ERROR');
     expect(res.error.message).toContain('Network timeout');
   });
 
@@ -150,7 +151,7 @@ describe('instance-create', () => {
       .mockResolvedValueOnce({ available: true })
       .mockResolvedValueOnce({ acknowledged: true });
 
-    await instanceCreateTool.handler(
+    await runTool(instanceCreateTool, 
       {
         name: 'test instance',
         partner_id: 1,
@@ -172,7 +173,7 @@ describe('instance-create', () => {
       .mockResolvedValueOnce({ available: true })
       .mockResolvedValueOnce({ acknowledged: true });
 
-    const res = await instanceCreateTool.handler(
+    const res = await runTool(instanceCreateTool, 
       {
         name: 'test',
         partner_id: 1,
@@ -183,8 +184,7 @@ describe('instance-create', () => {
     );
 
     expect(res.meta).toBeDefined();
-    expect(res.meta.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(res.meta.finishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(res.meta.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   test('has correct schema', () => {

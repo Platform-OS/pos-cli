@@ -4,6 +4,7 @@ title: 'GUI server: multer failures return an HTML 500 with a full stack trace'
 status: To Do
 assignee: []
 created_date: '2026-09-02 10:22'
+updated_date: '2026-09-17 08:37'
 labels:
   - bug
   - security
@@ -13,7 +14,7 @@ references:
   - lib/server.js
   - test/unit/server.validation.test.js
 priority: high
-ordinal: 19000
+ordinal: 14000
 ---
 
 ## Description

@@ -1,105 +1,87 @@
 // instance-create tool - Create a new platformOS instance via Partner Portal API
 import log from '../log.js';
 import { getPortalConfig, portalRequest } from './portal-client.js';
+import { ToolError } from '../tool-error.js';
 
 const instanceCreateTool = {
-  description: 'Create a new platformOS instance via Partner Portal API. Returns job acknowledgment.',
+  description: 'Create a platformOS instance through the Partner Portal. Returns once creation has started; it takes a few minutes to finish.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
       name: {
         type: 'string',
-        description: 'Instance name (subdomain). Will be validated for availability.'
+        description: 'Subdomain for the instance; checked for availability first.'
       },
       partner_id: {
         type: 'number',
-        description: 'Partner ID (use partners-list tool to find)'
+        description: 'From partners-list.'
       },
       endpoint_id: {
         type: 'number',
-        description: 'Region/endpoint ID (use endpoints-list tool to find)'
+        description: 'From endpoints-list.'
       },
       billing_plan_id: {
         type: 'number',
-        description: 'Billing plan ID (use partners-list to see available plans)'
+        description: 'From partner-get.'
       },
       tags: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Optional tags for the instance'
+        description: 'Tags to attach.'
       }
     },
     required: ['name', 'partner_id', 'endpoint_id', 'billing_plan_id']
   },
 
   handler: async (params, ctx = {}) => {
-    const startedAt = new Date().toISOString();
     log.debug('tool:instance-create invoked', { name: params.name });
 
-    try {
-      // Allow injection for testing
-      const configFn = ctx.getPortalConfig || getPortalConfig;
-      const requestFn = ctx.portalRequest || portalRequest;
-      const config = ctx.portalConfig || configFn();
+    // Injectable for tests.
+    const configFn = ctx.getPortalConfig || getPortalConfig;
+    const requestFn = ctx.portalRequest || portalRequest;
+    const config = ctx.portalConfig || configFn();
 
-      // 1. Validate instance name availability
-      log.debug('instance-create: checking name availability', { name: params.name });
-      const nameCheck = await requestFn({
-        method: 'GET',
-        path: `/api/instance_name_checks/${encodeURIComponent(params.name)}`,
-        config
-      });
-
-      if (!nameCheck.available) {
-        return {
-          ok: false,
-          error: {
-            code: 'NAME_UNAVAILABLE',
-            message: `Instance name "${params.name}" is not available`
-          },
-          meta: { startedAt, finishedAt: new Date().toISOString() }
-        };
+    const withPortalErrors = (promise) => promise.catch((e) => {
+      // The Portal rejected the payload rather than failing: the caller can fix it and call again.
+      if (e?.status === 422 || e?.statusCode === 422) {
+        throw ToolError.input('VALIDATION_ERROR', String(e.message || e), e.data);
       }
+      throw e;
+    });
 
-      // 2. Create instance
-      log.debug('instance-create: creating instance', { name: params.name, partner_id: params.partner_id });
-      const response = await requestFn({
-        method: 'POST',
-        path: '/api/tasks/instance/create',
-        body: {
-          instance_billing_plan_type_id: params.billing_plan_id,
-          partner_id: params.partner_id,
-          instance_params: {
-            endpoint_id: params.endpoint_id,
-            name: params.name,
-            tag_list: params.tags || []
-          }
-        },
-        config
-      });
+    const nameCheck = await withPortalErrors(requestFn({
+      method: 'GET',
+      path: `/api/instance_name_checks/${encodeURIComponent(params.name)}`,
+      config
+    }));
 
-      return {
-        ok: true,
-        data: {
-          acknowledged: response.acknowledged,
-          name: params.name,
-          message: 'Instance creation started. It may take a few minutes to complete.'
-        },
-        meta: { startedAt, finishedAt: new Date().toISOString() }
-      };
-    } catch (e) {
-      log.error('instance-create: error', { error: e.message, status: e.status });
-      return {
-        ok: false,
-        error: {
-          code: e.status === 422 ? 'VALIDATION_ERROR' : 'INSTANCE_CREATE_ERROR',
-          message: String(e.message || e),
-          details: e.data
-        },
-        meta: { startedAt, finishedAt: new Date().toISOString() }
-      };
+    // `input`, not `instance`: the kind says what to do next, and the answer here is to call
+    // again with another name. Nothing is wrong with the Portal or with this call otherwise.
+    if (!nameCheck.available) {
+      throw ToolError.input('NAME_UNAVAILABLE', `Instance name "${params.name}" is not available`, { name: params.name });
     }
+
+    const response = await withPortalErrors(requestFn({
+      method: 'POST',
+      path: '/api/tasks/instance/create',
+      body: {
+        instance_billing_plan_type_id: params.billing_plan_id,
+        partner_id: params.partner_id,
+        instance_params: {
+          endpoint_id: params.endpoint_id,
+          name: params.name,
+          tag_list: params.tags || []
+        }
+      },
+      config
+    }));
+
+    return {
+      acknowledged: response.acknowledged,
+      name: params.name,
+      message: 'Instance creation started. It may take a few minutes to complete.'
+    };
   }
 };
 
