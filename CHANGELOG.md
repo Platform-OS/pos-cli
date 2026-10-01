@@ -30,6 +30,16 @@
 
 * `pos-cli ai init` registers the pos-cli server with `--profile dev`. Re-running it upgrades an entry that an earlier release wrote (`"command": "pos-cli-mcp"` with no arguments), and **no longer overwrites an entry you have changed**: a `platformos-cli` or `platformos-supervisor` entry that differs from what it would write — another profile, extra environment variables, a different command — is kept exactly as it is, and the command prints what it would have written so you can merge it by hand. It used to replace any entry that differed.
 
+* **`pos-cli ai init` offers the hosted platformOS documentation servers, and configures opencode.** After the tool question it asks whether to also register `platformos-liquid` and `platformos-graphql`, two servers platformOS hosts over HTTPS that answer from the published Liquid reference and from the GraphQL schema. They run nothing on your machine and take no credentials: looking something up is all they do, and they point back at `platformos-cli` (`liquid-exec`, `graphql-exec`, `check-run`) to run it. What they are for is that platformOS Liquid is **not** Shopify Liquid — an agent that guesses a tag or a field name writes code that looks right and is not.
+
+  Because their answers are the same in every project, the prompt asks where they go: this project, or every project on this machine. The second writes your user configuration — `~/.claude.json`, `~/.cursor/mcp.json`, `~/.config/opencode/opencode.json` — so they are available everywhere and stay out of a file you commit. VS Code is the exception: its user configuration lives at a path that depends on the platform and on which build is installed (Code, Insiders, VSCodium), so pos-cli prints the snippet and names VS Code's own **MCP: Open User Configuration** command rather than guessing the file.
+
+  **Behaviour change:** `pos-cli ai init --tool <tool>` registers them as well, into the project configuration — naming a tool means taking the defaults without being asked, and the default here is yes. Pass `--no-docs` for the two local servers alone, which is what that command wrote before, or `--docs project|global|none` to say exactly where. A script that wants the old output needs `--no-docs`.
+
+  **`--tool opencode` is new**, writing `opencode.json` with the servers under `mcp` and local ones as `type: "local"` with `command` as an array.
+
+  Configuration files are still merged rather than overwritten, re-running is still a no-op, and an entry you have edited by hand is still kept and reported — documentation servers included. Writes are now made beside the target and renamed onto it: `~/.claude.json` holds Claude Code's own project history, session state and account next to `mcpServers`, and a half-written file would take those with it.
+
 * `pos-cli mcp-config` takes `--profile`, `--include-tools` and `--exclude-tools` and shows exactly what the server would expose with them — the same code resolves both — together with the reason each other tool is not exposed (not in the profile, excluded, or disabled in the tools config). It refuses the same selections and configuration files the server refuses, with the same message. **Behaviour change:** `--json` prints that report (`config`, `profile`, `include`, `exclude`, `exposed`, `hidden`) instead of the raw contents of the configuration file.
 
 

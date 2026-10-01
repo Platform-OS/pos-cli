@@ -970,18 +970,49 @@ The fastest way to connect your AI tool is the one-step wizard:
 
     pos-cli ai init
 
-It asks which AI tool you use and registers both platformOS MCP servers — `platformos-cli` (the pos-cli tools listed below) and `platformos-supervisor` (Liquid/GraphQL/YAML code validation via `validate_code`) — in that tool's project-scoped configuration:
+It asks which AI tool you use and registers the two local platformOS MCP servers — `platformos-cli` (the pos-cli tools listed below) and `platformos-supervisor` (Liquid/GraphQL/YAML code validation via `validate_code`) — in that tool's project-scoped configuration:
 
-| Tool        | Configuration file  | Key          |
-| ----------- | ------------------- | ------------ |
-| Claude Code | `.mcp.json`         | `mcpServers` |
-| Cursor      | `.cursor/mcp.json`  | `mcpServers` |
-| VS Code     | `.vscode/mcp.json`  | `servers`    |
-| Other       | prints the JSON snippet for manual setup | — |
+| Tool        | Project configuration | User configuration | Key          |
+| ----------- | --------------------- | ------------------ | ------------ |
+| Claude Code | `.mcp.json`           | `~/.claude.json`   | `mcpServers` |
+| Cursor      | `.cursor/mcp.json`    | `~/.cursor/mcp.json` | `mcpServers` |
+| VS Code     | `.vscode/mcp.json`    | — (see below)      | `servers`    |
+| opencode    | `opencode.json`       | `~/.config/opencode/opencode.json` | `mcp` |
+| Other       | prints the JSON snippet for manual setup | — | — |
 
 Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. `platformos-cli` is registered with `--profile dev --no-http` (see [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed)): the tools a coding agent uses, over stdio only. An entry written by an earlier pos-cli — `"command": "pos-cli-mcp"` with no arguments, or with `--profile dev` alone — is upgraded to that; an entry you have changed in any other way is left exactly as it is, and the command tells you so. To skip the prompt (e.g. in scripts), pass the tool directly:
 
     pos-cli ai init --tool claude
+
+##### The documentation servers
+
+After the tool question, `pos-cli ai init` offers two more servers. These are **hosted by platformOS** over HTTPS, and unlike the two above they run nothing on your machine and take no credentials:
+
+| Server | What it answers |
+| ------ | --------------- |
+| `platformos-liquid` | platformOS Liquid reference — tags, filters, objects, and language rules, from the official documentation |
+| `platformos-graphql` | the platformOS GraphQL schema — 200+ operations and types, with worked examples |
+
+They are reference only: looking something up is all they do, and they point back at `platformos-cli` (`liquid-exec`, `graphql-exec`, `check-run`) to actually run it. Their value is that platformOS Liquid is **not** Shopify Liquid — an agent that guesses a tag or a field name writes code that looks right and is not, and these are what stop the guessing.
+
+Because the answers are the same for every project, the prompt asks where to register them:
+
+```
+? Also register the platformOS documentation servers (Liquid and GraphQL reference)?
+  > Yes, for this project
+    Yes, for all my projects
+    No
+```
+
+"Yes, for all my projects" writes them to your user configuration instead, so they are available everywhere and stay out of a project file you commit. VS Code is the exception: its user configuration lives at a path that depends on your platform and on which build you have installed, so pos-cli prints the snippet and asks you to run VS Code's own **MCP: Open User Configuration** command rather than guessing the file.
+
+`--tool` takes the defaults without asking, and the default here is yes, into the project configuration. Use `--docs` to say otherwise:
+
+    pos-cli ai init --tool claude                  # local servers + documentation servers, in the project
+    pos-cli ai init --tool opencode --docs global  # documentation servers in ~/.config/opencode/opencode.json
+    pos-cli ai init --tool claude --no-docs        # local servers only, as before 6.7
+
+If you script `pos-cli ai init --tool <tool>` and want it to keep writing only the two local servers, add `--no-docs`.
 
 **The server used to be called `platformos`** and is now `platformos-cli`, after the command it runs — the old name said nothing about what it was, and the supervisor is platformOS too. `pos-cli ai init` renames an entry it wrote, in place, and removes the old one so the server is not registered twice. An entry you have customised is left under the old name, with a message saying what the new one would be: rename it yourself, or keep it — nothing breaks either way, since the name is only how your AI tool refers to the server.
 
