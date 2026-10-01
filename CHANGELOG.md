@@ -122,6 +122,12 @@
 
 * **`data-validate` no longer accepts `env`.** The parameter reached one debug line and nothing else — the check reads the schema files in the project and sends nothing to an instance — so all it could do was suggest the validation was instance-aware. A call that passes it is now rejected rather than silently ignoring it.
 
+### Changes
+
+* The minimum supported Node.js is now **22.18.0 on the 22 line, or 24.11.0 and later** (previously 22.13.0). As before, it follows from the dependencies rather than from our own code: `yeoman-environment` 7 and `yeoman-generator` 9, which `pos-cli generate` runs on, both declare `^22.18.0 || >=24.11.0`. Node 24.0–24.10 is therefore no longer supported even though it is newer than 22.18 — upgrade within the 24 line. The `postinstall` check enforces the range, so an unsupported Node is reported at install time. Module generators that still depend on `yeoman-generator` 8 keep working; the environment runs them unchanged.
+
+* Dependencies updated to their latest releases, clearing two security advisories: `multer` 2.4.0 (a denial of service through disk writes left behind by aborted uploads; the GUI server keeps uploads in memory, so it did not write those files) and `fast-uri` 3.1.8 (host confusion through an unclosed bracket in a URI authority; pulled in by `ajv` for resolving schema URIs). The bundled web GUIs were rebuilt: the admin panel on Vite 8, and the GraphQL browser on GraphiQL 5.4 and React 19.3.
+
 ### Fixes
 
 * **Every tool result carries `meta.durationMs` instead of `meta.startedAt` and `meta.finishedAt`.** The two ISO instants were 80 bytes of every result where the duration they described is 19, paid by the model on every call — 3.6 KB across a sixty-call session — and a wall-clock instant answered a question nobody had asked. `meta.auth` is unchanged. A client reading the old fields sees them gone; nothing in pos-cli read them.

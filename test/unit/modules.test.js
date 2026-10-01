@@ -318,15 +318,6 @@ describe('publishVersion() — pre-flight validation', () => {
   // publishVersion catches errors and calls logger.Error + process.exit(1).
   // We verify validation by checking that logger.Error receives the right message.
   const runPublish = async () => {
-    vi.mock('#lib/logger.js', () => ({
-      default: {
-        Debug: vi.fn(),
-        Warn: vi.fn(),
-        Error: vi.fn(),
-        Info: vi.fn(),
-        Success: vi.fn()
-      }
-    }));
     vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('process.exit called'); });
     const { publishVersion } = await import('#lib/modules.js');
     const logger = (await import('#lib/logger.js')).default;

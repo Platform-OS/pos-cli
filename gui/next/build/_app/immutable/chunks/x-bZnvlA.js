@@ -1,0 +1,1 @@
+var e=e=>{if(e&&typeof e==`object`)return e;try{let t=JSON.parse(e);if(t&&typeof t==`object`)return t}catch{}return!1};export{e as t};

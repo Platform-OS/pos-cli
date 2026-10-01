@@ -1,0 +1,1 @@
+function e(e){return--e*e*e*e*e+1}export{e as t};
