@@ -284,20 +284,42 @@ describe('the request itself', () => {
     const chunk = 'x'.repeat(256 * 1024);
 
     const res = await new Promise((resolve, reject) => {
+      let answered = false;
       const req = http.request({
         host: '127.0.0.1', port, path: '/mcp', method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' }
       }, (response) => {
+        answered = true;
         let text = '';
         response.on('data', c => (text += c));
         response.on('end', () => resolve({ status: response.statusCode, text }));
       });
-      req.on('error', reject);
+      // Answering mid-stream is the whole point of this test, and a server that has answered
+      // stops reading — so the rest of the body cannot be written and the WRITE side fails with
+      // EPIPE/ECONNRESET. That is the success path. Rejecting on it made this a race between the
+      // response being parsed and the socket error arriving: run alone the error won every time,
+      // under CI load intermittently. Waiting for `answered` is not enough, because the error can
+      // beat the response callback. The side that failed is what distinguishes them — being cut
+      // off shows up as a READ error, and that is still a failure, as is anything else.
+      req.on('error', (error) => {
+        if (error.syscall === 'write' && (error.code === 'EPIPE' || error.code === 'ECONNRESET')) return;
+        reject(error);
+      });
 
       // Written slowly enough that the server answers mid-stream, which is the case that broke.
+      // Exactly one chunk past the limit, then stop and wait for the answer without ever calling
+      // end(): the body is still arriving, which is what this test is about.
+      //
+      // Not one chunk more. The server answers as soon as the limit is passed and then stops
+      // reading, so a further write fails EPIPE — and Node tears down the whole socket on a write
+      // error, discarding the response it had already received. Measured 2026-10-01: the server
+      // logged `POST /mcp 413 28.6ms`, the client wrote one chunk too many at 47ms, and the
+      // socket closed at 49ms having never surfaced the response. That is what made this test
+      // fail every time in isolation and intermittently on CI.
+      const chunksToPassTheLimit = Math.floor(MCP_BODY_LIMIT_BYTES / chunk.length) + 1;
       let written = 0;
       const writeNext = () => {
-        if (written >= 8) return req.end();
+        if (answered || req.destroyed || written >= chunksToPassTheLimit) return;
         written += 1;
         req.write(chunk, () => setTimeout(writeNext, 5));
       };
