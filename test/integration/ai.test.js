@@ -19,16 +19,44 @@ afterEach(() => {
 const run = (options = '') => cli(`ai init ${options}`, { cwd: tmpDir });
 
 describe('pos-cli ai init', () => {
-  test('--tool claude creates .mcp.json with both servers', async () => {
+  const LOCAL_SERVERS = {
+    'platformos-cli': { command: 'pos-cli-mcp', args: ['--profile', 'dev', '--no-http'] },
+    'platformos-supervisor': { command: 'pos-cli-supervisor' }
+  };
+
+  const DOCS_SERVERS = {
+    'platformos-liquid': { type: 'http', url: 'https://pos-mcp-tools.ps-01-platformos.com/liquid-mcp' },
+    'platformos-graphql': { type: 'http', url: 'https://pos-mcp-tools.ps-01-platformos.com/graphql-mcp' }
+  };
+
+  const readConfig = (...segments) => JSON.parse(fs.readFileSync(path.join(tmpDir, ...segments), 'utf8'));
+
+  // Naming a tool takes the defaults without asking, and the documentation servers default to yes.
+  test('--tool claude writes the local servers and the documentation servers', async () => {
     const { stdout, code } = await run('--tool claude');
 
     expect(code).toEqual(0);
     expect(stdout).toMatch('Registered MCP servers');
 
-    const config = JSON.parse(fs.readFileSync(path.join(tmpDir, '.mcp.json'), 'utf8'));
-    expect(config.mcpServers).toEqual({
-      'platformos-cli': { command: 'pos-cli-mcp', args: ['--profile', 'dev', '--no-http'] },
-      'platformos-supervisor': { command: 'pos-cli-supervisor' }
+    expect(readConfig('.mcp.json').mcpServers).toEqual({ ...LOCAL_SERVERS, ...DOCS_SERVERS });
+  });
+
+  test('--tool claude --no-docs writes only the local servers', async () => {
+    const { code } = await run('--tool claude --no-docs');
+
+    expect(code).toEqual(0);
+    expect(readConfig('.mcp.json').mcpServers).toEqual(LOCAL_SERVERS);
+  });
+
+  test('--tool opencode writes opencode.json with servers under the mcp key', async () => {
+    const { code } = await run('--tool opencode --no-docs');
+
+    expect(code).toEqual(0);
+    const config = readConfig('opencode.json');
+    expect(config.mcpServers).toBeUndefined();
+    expect(config.mcp).toEqual({
+      'platformos-cli': { type: 'local', command: ['pos-cli-mcp', '--profile', 'dev', '--no-http'], enabled: true },
+      'platformos-supervisor': { type: 'local', command: ['pos-cli-supervisor'], enabled: true }
     });
   });
 

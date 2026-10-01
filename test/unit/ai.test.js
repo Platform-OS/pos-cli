@@ -39,7 +39,7 @@ describe('ai init', () => {
     vi.clearAllMocks();
   });
 
-  test('claude - creates .mcp.json with both servers', async () => {
+  test('claude - creates .mcp.json with both local servers', async () => {
     await init({ tool: 'claude', docs: 'none', rootPath: getTmpDir() });
 
     const config = readJson('.mcp.json');
