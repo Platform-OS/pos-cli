@@ -1,6 +1,6 @@
 /**
  * Unit tests for S3 upload module
- * Tests file upload, FormData upload, memory handling, and error scenarios
+ * Tests file upload, FormData upload, and error scenarios
  */
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
@@ -49,8 +49,7 @@ describe('s3UploadFile', () => {
       const fileBuffer = Buffer.from('small file content');
       const fileSize = fileBuffer.length;
 
-      fs.statSync.mockReturnValue({ size: fileSize });
-      fs.readFileSync.mockReturnValue(fileBuffer);
+      fs.openAsBlob.mockResolvedValue(new Blob([fileBuffer]));
       mime.getType.mockReturnValue('image/jpeg');
       global.fetch.mockResolvedValue({
         ok: true,
@@ -60,8 +59,7 @@ describe('s3UploadFile', () => {
 
       const result = await uploadFile(fileName, s3Url);
 
-      expect(fs.statSync).toHaveBeenCalledWith(fileName);
-      expect(fs.readFileSync).toHaveBeenCalledWith(fileName);
+      expect(fs.openAsBlob).toHaveBeenCalledWith(fileName);
       expect(mime.getType).toHaveBeenCalledWith(fileName);
       expect(global.fetch).toHaveBeenCalledWith(s3Url, {
         method: 'PUT',
@@ -69,39 +67,8 @@ describe('s3UploadFile', () => {
           'Content-Length': fileSize.toString(),
           'Content-Type': 'image/jpeg'
         },
-        body: fileBuffer
+        body: expect.any(Blob)
       });
-      expect(result).toBe(s3Url);
-    });
-
-    test('handles large file near 50MB limit', async () => {
-      const fileName = '/path/to/large-video.mp4';
-      const s3Url = 'https://s3.amazonaws.com/bucket/large-video.mp4';
-      // Simulating large file size (48MB) without actually allocating memory in test
-      const fileSize = 48 * 1024 * 1024;
-      const largeBuffer = Buffer.alloc(1024); // Small buffer for testing, but reporting large size
-
-      fs.statSync.mockReturnValue({ size: fileSize });
-      fs.readFileSync.mockReturnValue(largeBuffer);
-      mime.getType.mockReturnValue('video/mp4');
-      global.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        text: vi.fn().mockResolvedValue('')
-      });
-
-      const result = await uploadFile(fileName, s3Url);
-
-      expect(fs.readFileSync).toHaveBeenCalledWith(fileName);
-      expect(mime.getType).toHaveBeenCalledWith(fileName);
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
-        method: 'PUT',
-        headers: {
-          'Content-Length': fileSize.toString(),
-          'Content-Type': 'video/mp4'
-        },
-        body: largeBuffer
-      }));
       expect(result).toBe(s3Url);
     });
 
@@ -109,8 +76,7 @@ describe('s3UploadFile', () => {
       const fileName = '/path/to/test.jpg';
       const s3Url = 'https://s3.amazonaws.com/bucket/test.jpg';
 
-      fs.statSync.mockReturnValue({ size: 1000 });
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('image/jpeg');
       global.fetch.mockResolvedValue({
         ok: false,
@@ -130,8 +96,7 @@ describe('s3UploadFile', () => {
       const fileName = '/path/to/test.jpg';
       const s3Url = 'https://s3.amazonaws.com/bucket/test.jpg';
 
-      fs.statSync.mockReturnValue({ size: 1000 });
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('image/jpeg');
       global.fetch.mockResolvedValue({
         ok: false,
@@ -147,8 +112,7 @@ describe('s3UploadFile', () => {
       const fileName = '/path/to/test.jpg';
       const s3Url = 'https://s3.amazonaws.com/bucket/test.jpg';
 
-      fs.statSync.mockReturnValue({ size: 1000 });
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('image/jpeg');
       global.fetch.mockRejectedValue(new Error('Network error'));
 
@@ -160,8 +124,7 @@ describe('s3UploadFile', () => {
       const s3Url = 'https://s3.amazonaws.com/bucket/empty.txt';
       const emptyBuffer = Buffer.from('');
 
-      fs.statSync.mockReturnValue({ size: 0 });
-      fs.readFileSync.mockReturnValue(emptyBuffer);
+      fs.openAsBlob.mockResolvedValue(new Blob([emptyBuffer]));
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockResolvedValue({
         ok: true,
@@ -177,7 +140,7 @@ describe('s3UploadFile', () => {
           'Content-Length': '0',
           'Content-Type': 'text/plain'
         },
-        body: emptyBuffer
+        body: expect.any(Blob)
       });
       expect(result).toBe(s3Url);
     });
@@ -194,14 +157,13 @@ describe('s3UploadFile', () => {
         const s3Url = `https://s3.amazonaws.com/bucket/${testCase.fileName.split('/').pop()}`;
         const buffer = Buffer.alloc(testCase.size);
 
-        fs.statSync.mockReturnValue({ size: testCase.size });
-        fs.readFileSync.mockReturnValue(buffer);
+        fs.openAsBlob.mockResolvedValue(new Blob([buffer]));
         mime.getType.mockReturnValue(testCase.mimeType);
         global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
         await uploadFile(testCase.fileName, s3Url);
 
-        expect(fs.readFileSync).toHaveBeenCalledWith(testCase.fileName);
+        expect(fs.openAsBlob).toHaveBeenCalledWith(testCase.fileName);
         expect(mime.getType).toHaveBeenCalledWith(testCase.fileName);
         expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
           headers: expect.objectContaining({
@@ -217,8 +179,7 @@ describe('s3UploadFile', () => {
       const fileBuffer = Buffer.from('console.log("test");');
       const fileSize = fileBuffer.length;
 
-      fs.statSync.mockReturnValue({ size: fileSize });
-      fs.readFileSync.mockReturnValue(fileBuffer);
+      fs.openAsBlob.mockResolvedValue(new Blob([fileBuffer]));
       mime.getType.mockReturnValue('application/javascript');
       global.fetch.mockResolvedValue({
         ok: true,
@@ -235,7 +196,7 @@ describe('s3UploadFile', () => {
           'Content-Length': fileSize.toString(),
           'Content-Type': 'application/javascript'
         },
-        body: fileBuffer
+        body: expect.any(Blob)
       });
       expect(result).toBe(s3Url);
     });
@@ -253,8 +214,7 @@ describe('s3UploadFile', () => {
     });
 
     test('puts the reason S3 gave into the error', async () => {
-      fs.statSync.mockReturnValue({ size: 10 });
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('application/zip');
       global.fetch.mockResolvedValue(s3Refusal(403,
         '<?xml version="1.0" encoding="UTF-8"?>\n<Error><Code>AccessDenied</Code>' +
@@ -268,8 +228,7 @@ describe('s3UploadFile', () => {
     });
 
     test('keeps the status when the body explains nothing', async () => {
-      fs.statSync.mockReturnValue({ size: 10 });
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('application/zip');
       global.fetch.mockResolvedValue(s3Refusal(500, '<html>500 Internal Server Error</html>'));
 
@@ -281,8 +240,7 @@ describe('s3UploadFile', () => {
     // ServerError explains those correctly -- so they must not be flattened into an
     // "upload failed" with a status that never existed.
     test('passes a transport failure through as a network error', async () => {
-      fs.statSync.mockReturnValue({ size: 10 });
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('application/zip');
       global.fetch.mockRejectedValue(Object.assign(new Error('fetch failed'), { cause: { code: 'ENOTFOUND' } }));
 
@@ -295,8 +253,7 @@ describe('s3UploadFile', () => {
     });
 
     test('arms no deadline of its own unless the caller asks for one', async () => {
-      fs.statSync.mockReturnValue({ size: 10 });
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('application/zip');
       global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
@@ -322,7 +279,7 @@ describe('s3UploadFile', () => {
       };
       const fileBuffer = Buffer.from('PDF content');
 
-      fs.readFileSync.mockReturnValue(fileBuffer);
+      fs.openAsBlob.mockResolvedValue(new Blob([fileBuffer]));
       mime.getType.mockReturnValue('application/pdf');
       global.fetch.mockResolvedValue({
         ok: true,
@@ -332,7 +289,7 @@ describe('s3UploadFile', () => {
 
       const result = await uploadFileFormData(filePath, data);
 
-      expect(fs.readFileSync).toHaveBeenCalledWith(filePath);
+      expect(fs.openAsBlob).toHaveBeenCalledWith(filePath);
       expect(mime.getType).toHaveBeenCalledWith(filePath);
       expect(global.fetch).toHaveBeenCalledWith(data.url, {
         method: 'POST',
@@ -351,7 +308,7 @@ describe('s3UploadFile', () => {
         fields: { key: 'assets/${filename}' }
       };
 
-      fs.readFileSync.mockReturnValue(Buffer.from('image'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('image')]));
       mime.getType.mockReturnValue('image/png');
       global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
@@ -374,25 +331,6 @@ describe('s3UploadFile', () => {
       expect(await uploadedFileName(filePath)).toBe('logo.png');
     });
 
-    test('handles large file near 50MB limit with FormData', async () => {
-      const filePath = '/path/to/large-asset.zip';
-      const _fileSize = 49 * 1024 * 1024; // 49MB (simulated)
-      const largeBuffer = Buffer.alloc(1024); // Small buffer for testing
-      const data = {
-        url: 'https://s3.amazonaws.com/bucket',
-        fields: { key: 'assets/${filename}' }
-      };
-
-      fs.readFileSync.mockReturnValue(largeBuffer);
-      mime.getType.mockReturnValue('application/zip');
-      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
-
-      const result = await uploadFileFormData(filePath, data);
-
-      expect(fs.readFileSync).toHaveBeenCalledWith(filePath);
-      expect(result).toBe(true);
-    });
-
     test('throws error when FormData upload fails with 403', async () => {
       const filePath = '/path/to/file.txt';
       const data = {
@@ -400,7 +338,7 @@ describe('s3UploadFile', () => {
         fields: { key: 'assets/${filename}' }
       };
 
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockResolvedValue({
         ok: false,
@@ -422,7 +360,7 @@ describe('s3UploadFile', () => {
         fields: { key: 'assets/${filename}' }
       };
 
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockRejectedValue(new Error('ECONNREFUSED'));
 
@@ -443,7 +381,7 @@ describe('s3UploadFile', () => {
         }
       };
 
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
@@ -472,7 +410,7 @@ describe('s3UploadFile', () => {
           fields: { key: 'assets/${filename}' }
         };
 
-        fs.readFileSync.mockReturnValue(Buffer.from('content'));
+        fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
         mime.getType.mockReturnValue(testCase.mimeType);
         global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
@@ -491,7 +429,7 @@ describe('s3UploadFile', () => {
         fields: { key: 'assets/${filename}' }
       };
 
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
@@ -508,7 +446,7 @@ describe('s3UploadFile', () => {
       };
       const emptyBuffer = Buffer.from('');
 
-      fs.readFileSync.mockReturnValue(emptyBuffer);
+      fs.openAsBlob.mockResolvedValue(new Blob([emptyBuffer]));
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
@@ -530,7 +468,7 @@ describe('s3UploadFile', () => {
       };
       const fileBuffer = Buffer.from('PNG image content');
 
-      fs.readFileSync.mockReturnValue(fileBuffer);
+      fs.openAsBlob.mockResolvedValue(new Blob([fileBuffer]));
       mime.getType.mockReturnValue('image/png');
       const fetchCall = {
         ok: true,
@@ -574,7 +512,7 @@ describe('s3UploadFile', () => {
       };
       const fileBuffer = Buffer.from('PNG image content');
 
-      fs.readFileSync.mockReturnValue(fileBuffer);
+      fs.openAsBlob.mockResolvedValue(new Blob([fileBuffer]));
       mime.getType.mockReturnValue('image/png');
       global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
 
@@ -593,53 +531,12 @@ describe('s3UploadFile', () => {
     });
   });
 
-  describe('Memory and Buffer handling', () => {
-    test('uploadFile creates single buffer in memory', async () => {
-      const fileName = '/path/to/test.jpg';
-      const s3Url = 'https://s3.amazonaws.com/bucket/test.jpg';
-      const fileBuffer = Buffer.alloc(1024); // Small buffer for testing (simulating 10MB)
-
-      fs.statSync.mockReturnValue({ size: fileBuffer.length });
-      fs.readFileSync.mockReturnValue(fileBuffer);
-      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
-
-      await uploadFile(fileName, s3Url);
-
-      // Verify readFileSync was called synchronously
-      expect(fs.readFileSync).toHaveBeenCalledTimes(1);
-      expect(fs.readFileSync).toHaveBeenCalledWith(fileName);
-    });
-
-    test('uploadFileFormData wraps buffer in Blob', async () => {
-      const filePath = '/path/to/file.txt';
-      const data = {
-        url: 'https://s3.amazonaws.com/bucket',
-        fields: { key: 'assets/${filename}' }
-      };
-      const fileBuffer = Buffer.from('test content');
-
-      fs.readFileSync.mockReturnValue(fileBuffer);
-      mime.getType.mockReturnValue('text/plain');
-      global.fetch.mockResolvedValue({ ok: true, status: 200, text: vi.fn().mockResolvedValue('') });
-
-      await uploadFileFormData(filePath, data);
-
-      // Verify buffer was read
-      expect(fs.readFileSync).toHaveBeenCalledWith(filePath);
-
-      // Verify fetch was called (Blob wrapping happens inside FormData)
-      expect(global.fetch).toHaveBeenCalled();
-    });
-  });
-
   describe('Error scenarios', () => {
     test('uploadFile handles file read error', async () => {
       const fileName = '/path/to/missing.jpg';
       const s3Url = 'https://s3.amazonaws.com/bucket/missing.jpg';
 
-      fs.statSync.mockImplementation(() => {
-        throw new Error('ENOENT: no such file or directory');
-      });
+      fs.openAsBlob.mockRejectedValue(new Error('ENOENT: no such file or directory'));
 
       await expect(uploadFile(fileName, s3Url)).rejects.toThrow('ENOENT');
     });
@@ -651,9 +548,7 @@ describe('s3UploadFile', () => {
         fields: { key: 'assets/${filename}' }
       };
 
-      fs.readFileSync.mockImplementation(() => {
-        throw new Error('ENOENT: no such file or directory');
-      });
+      fs.openAsBlob.mockRejectedValue(new Error('ENOENT: no such file or directory'));
 
       await expect(uploadFileFormData(filePath, data)).rejects.toThrow('ENOENT');
     });
@@ -662,8 +557,7 @@ describe('s3UploadFile', () => {
       const fileName = '/path/to/test.jpg';
       const s3Url = 'https://s3.amazonaws.com/bucket/test.jpg';
 
-      fs.statSync.mockReturnValue({ size: 1000 });
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('image/jpeg');
       global.fetch.mockResolvedValue({
         ok: false,
@@ -685,7 +579,7 @@ describe('s3UploadFile', () => {
         fields: { key: 'invalid-key' }
       };
 
-      fs.readFileSync.mockReturnValue(Buffer.from('content'));
+      fs.openAsBlob.mockResolvedValue(new Blob([Buffer.from('content')]));
       mime.getType.mockReturnValue('text/plain');
       global.fetch.mockResolvedValue({
         ok: false,

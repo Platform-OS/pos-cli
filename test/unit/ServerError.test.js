@@ -368,6 +368,21 @@ describe('ServerError', () => {
       );
     });
 
+    // undici's own request timeouts arrive under `fetch failed`, with their own codes.
+    test.each(['UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT'])('handles %s as a timeout', async (code) => {
+      const request = {
+        cause: { message: 'fetch failed', cause: { code } },
+        options: { uri: 'https://example.com/api' }
+      };
+
+      await ServerError.requestHandler(request);
+
+      expect(logger.Error).toHaveBeenCalledWith(
+        'Connection to https://example.com/api timed out. The server may be overloaded or unreachable.',
+        expect.objectContaining({ hideTimestamp: true })
+      );
+    });
+
     test('handles ECONNABORTED error', async () => {
       const request = {
         cause: {
