@@ -50,7 +50,7 @@ import envAddTool from './portal/env-add.js';
 
 const tools = {
   'envs-list': {
-    description: 'List the environments in .pos, with the instance URL of each.',
+    description: "List the environments in .pos with the instance URL of each. When: a tool reports ENV_NOT_FOUND, or before naming an env not already used in this session.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: 'object',

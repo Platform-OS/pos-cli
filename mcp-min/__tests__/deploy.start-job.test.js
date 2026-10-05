@@ -39,9 +39,11 @@ let previousCwd;
 /** A Gateway whose push succeeds and whose getStatus answers from a script. */
 function gatewayWith(statuses) {
   const seen = [];
+  const pushes = [];
   let poll = 0;
   class Gateway {
     async push(formData) {
+      pushes.push(formData);
       // The real push consumes the archive stream; nothing here does, and a stream left unread
       // opens the file later — after this test has removed its directory.
       const archive = formData['marketplace_builder[zip_file]'];
@@ -54,7 +56,7 @@ function gatewayWith(statuses) {
       return { status: statuses[Math.min(poll++, statuses.length - 1)] };
     }
   }
-  return { Gateway, seen, polls: () => poll };
+  return { Gateway, seen, polls: () => poll, lastPush: () => pushes.at(-1) };
 }
 
 beforeEach(() => {
@@ -102,9 +104,9 @@ describe('an empty archive', () => {
 
 /**
  * A deploy that is not partial deletes every file missing from the build, and `partial` defaults
- * to false — so the destructive mode is reached by omitting an argument. The default matches
- * `pos-cli deploy` and stays; what was missing is any way to tell which project was sent, since
- * the directories come from the server's working directory and no argument can name them.
+ * to **true** — deliberately unlike `pos-cli deploy`, so the mode an agent gets by not deciding
+ * cannot delete anything. Which project was sent is the other half: the directories come from the
+ * server's working directory and no argument can name them, so the answer reports `appPath`.
  */
 describe('the project a deploy came from', () => {
   test('the answer names it', async () => {
@@ -115,12 +117,26 @@ describe('the project a deploy came from', () => {
     expect(result.data.appPath).toBe(fs.realpathSync(workDir));
   });
 
-  test('omitting partial still deploys the mode that deletes, and says so', async () => {
-    const { Gateway } = gatewayWith(['ready_for_import']);
+  // The deploy an agent gets by not deciding is the one that cannot destroy anything. Measured
+  // 2026-10-01: told to keep what was live, an agent deployed by omission and deleted two pages it
+  // had never discovered, with the description warning of exactly that. `pos-cli deploy` still
+  // defaults the other way, for a person who can see the project and undo.
+  test('omitting partial leaves missing files in place, and says so', async () => {
+    const { Gateway, lastPush } = gatewayWith(['ready_for_import']);
 
     const result = await runTool(deployStart, AUTH, { Gateway });
 
+    expect(result.data.params).toEqual({ partial: true });
+    expect(lastPush()['marketplace_builder[partial_deploy]']).toBe('true');
+  });
+
+  test('partial: false is still the whole intended state, and deletes', async () => {
+    const { Gateway, lastPush } = gatewayWith(['ready_for_import']);
+
+    const result = await runTool(deployStart, { ...AUTH, partial: false }, { Gateway });
+
     expect(result.data.params).toEqual({ partial: false });
+    expect(lastPush()['marketplace_builder[partial_deploy]']).toBe('false');
   });
 });
 
@@ -397,4 +413,89 @@ describe('a background upload does not export its credentials', () => {
 
     expect(seen).toEqual({ url: undefined, token: undefined, email: undefined });
   }, 30000);
+});
+
+/**
+ * `wait_ms` moves the first status read into the call that started the deploy. What must stay
+ * true: the deploy is unchanged, the handle still comes back, and a failed status read does not
+ * fail a deploy that started.
+ */
+describe('waiting for the deploy inside deploy-start', () => {
+  test('omitting wait_ms answers exactly as before: a handle, and no job', async () => {
+    getAssets.mockResolvedValue([]);
+    const { Gateway, polls } = gatewayWith(['success']);
+
+    const result = await runTool(deployStart, AUTH, { Gateway });
+
+    expect(result.ok).toBe(true);
+    expect(result.data).not.toHaveProperty('job');
+    expect(result.data).not.toHaveProperty('jobWaitError');
+    expect(result.data.job_id).toBeTruthy();
+    // Nothing was polled: the default is still "start it and answer".
+    expect(polls()).toBe(0);
+  });
+
+  test('wait_ms carries the answer job-status would give, for the job this call started', async () => {
+    getAssets.mockResolvedValue([]);
+    const { Gateway } = gatewayWith(['success']);
+
+    const result = await runTool(deployStart, { ...AUTH, wait_ms: 5000 }, { Gateway, pollIntervalMs: 1 });
+
+    expect(result.ok).toBe(true);
+    expect(result.data.job).toMatchObject({ job_id: result.data.job_id, kind: 'deploy', state: 'completed', done: true });
+    expect(result.data).not.toHaveProperty('jobWaitError');
+  });
+
+  test('it waits rather than answering the first running poll', async () => {
+    getAssets.mockResolvedValue([]);
+    const { Gateway } = gatewayWith(['in_progress', 'in_progress', 'success']);
+
+    const result = await runTool(deployStart, { ...AUTH, wait_ms: 5000 }, { Gateway, pollIntervalMs: 1 });
+
+    expect(result.data.job).toMatchObject({ state: 'completed', done: true });
+  });
+
+  test('a wait that runs out answers done false, which is the deploy still running', async () => {
+    getAssets.mockResolvedValue([]);
+    const { Gateway } = gatewayWith(['in_progress']);
+
+    const result = await runTool(deployStart, { ...AUTH, wait_ms: 1 }, { Gateway, pollIntervalMs: 1 });
+
+    expect(result.data.job).toMatchObject({ state: 'running', done: false });
+    expect(result.data.job_id).toBeTruthy();
+  });
+
+  // The instance has accepted the deploy; losing the handle would leave nobody able to ask about it.
+  test('a status read that fails leaves the deploy started, and says so beside the handle', async () => {
+    getAssets.mockResolvedValue([]);
+    class Gateway {
+      async push(formData) {
+        const archive = formData['marketplace_builder[zip_file]'];
+        archive.on('error', () => {});
+        archive.destroy();
+        return { id: 4141, status: 'ready_for_import' };
+      }
+      async getStatus() { throw new TypeError('reading the status blew up'); }
+      async getInstance() { throw new TypeError('and so did the health probe'); }
+    }
+
+    const result = await runTool(deployStart, { ...AUTH, wait_ms: 50 }, { Gateway, pollIntervalMs: 1 });
+
+    expect(result.ok, 'a deploy that started must not be reported as a failed call').toBe(true);
+    expect(result.data.job_id).toBeTruthy();
+    expect(result.data).not.toHaveProperty('job');
+    expect(result.data.jobWaitError.message).toMatch(/blew up/);
+  });
+
+  // A cancelled call must not come back as a successful deploy with an unreadable status.
+  test('a client that cancels during the wait gets a cancellation, not a wait error', async () => {
+    getAssets.mockResolvedValue([]);
+    const { Gateway } = gatewayWith(['in_progress']);
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await runTool(deployStart, { ...AUTH, wait_ms: 5000 }, { Gateway, pollIntervalMs: 1, signal: controller.signal });
+
+    expect(result).toMatchObject({ ok: false, error: { kind: 'cancelled', code: 'CANCELLED' } });
+  });
 });

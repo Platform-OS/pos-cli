@@ -64,7 +64,7 @@ const bindLocals = (template, locals) => {
 };
 
 const execLiquidTool = {
-  description: 'Render a Liquid template on an instance and return the output. To run a query, use graphql-exec: this is for rendering. Rendering is not a deployability check either — the deploy converter rejects source that this accepts.',
+  description: "Render a Liquid template on an instance and return the output. When: to try a snippet before committing it to a file. Use graphql-exec to run a query. Caveat: rendering is not a deployability check, and the deploy converter rejects source this accepts.",
   inputSchema: {
     type: 'object',
     additionalProperties: false,

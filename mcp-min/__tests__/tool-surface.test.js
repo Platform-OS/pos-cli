@@ -133,7 +133,31 @@ const DEV_TOOLS = [
 //                  instance running the older module can reach — names the upgrade at the moment
 //                  it is needed.
 //                dev lands at 10,113, keeping ~67 bytes of headroom.
-const DEV_TOOLS_LIST_BYTE_BUDGET = 10180;
+//   2026-10-02: the ten dev descriptions were rewritten to one fixed shape — purpose, When:, Mode:,
+//               Caveat: — after an audit found 44% of their bytes were result-field semantics that
+//               only a caller needs, sent on every turn, while three of the four tools never
+//               called in 45 agent runs stated no condition for use at all. Net -106 across the
+//               dev set: deploy-dry-run -488, logs-fetch -146, and the never-called tools bought
+//               triggers (envs-list +93, job-status +114). Five facts came back after the content
+//               guards caught them, each pinned by a test that records the evaluation it came
+//               from. The rule those five settle: a fact about a field the result carries only
+//               sometimes has to stay in the description, because nothing can be learned from a
+//               result that never arrives.
+//   2026-10-02: +155 for `partial` defaulting to true on deploy-start and deploy-dry-run, so the
+//               deploy an agent gets by not deciding is the one that cannot delete anything.
+//               Measured: +63 on deploy-start's description, +94 on deploy-dry-run's, and -1 on
+//               each schema default, `"false"` being a byte longer than `"true"`. An agent
+//               evaluation measured the cost of the old default: told to keep what was live, an
+//               agent deployed by omission and destroyed two pages it had never discovered,
+//               although the description warned that a non-partial deploy deletes. The bytes buy
+//               the explanation of a default that is now deliberately unlike `pos-cli deploy`.
+//               dev lands at 10,268, keeping the same ~67 bytes of headroom.
+//   2026-10-02: +211 for `wait_ms` on deploy-start (1,008 -> 1,219 B): +83 schema, +128 for what
+//               `job` holds and when the deploy is still running — carried only when asked for,
+//               so it cannot be learned from a result that never arrives. It buys a round trip per
+//               deploy: two agent evaluations answered 34 deploy-start calls with 30 job-status
+//               calls. The bytes are paid once per request; a round trip re-sends the conversation.
+const DEV_TOOLS_LIST_BYTE_BUDGET = 10440;
 
 // Exactly what pos-cli-mcp exposed before profiles existed (captured from 6.5.1 over stdio).
 const PRE_PROFILES_TOOLS = [
@@ -291,7 +315,9 @@ const BARE_TOOLS = [
 //         and the one thing about a raise a result does not explain by itself. The older module is
 //         still out there: `TEST_RUN_CRASHED` is unchanged and now carries `details.remedy` with
 //         the module upgrade, which costs nothing until a run actually crashes.
-const BARE_TOOLS_LIST_BYTES = 23471;
+//   2026-10-02: +155 for the `partial` default change the dev budget above records, then -90 for
+//               the description rewrite it also records. Net +65 on the bare surface.
+const BARE_TOOLS_LIST_BYTES = 23747;
 
 const HANG_MS = 15000;
 

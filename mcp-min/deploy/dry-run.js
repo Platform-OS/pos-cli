@@ -190,18 +190,20 @@ const validationError = (release) => {
 };
 
 const dryRunDeployTool = {
-  description: 'Report what a deploy would add, update and delete on an instance, applying nothing. Run it before deploy-start: a deploy that is not partial deletes every file missing from the build, and this is the only way to see that list first. verdict says whether the deploy would succeed at all; would_fail means deploy-start is accepted and then fails, which job-status reports as state: failed; error names the files. blockers.dataLoss names the refused files that can only be cleared by deleting records. planComputed is false when the instance refused before working out the changes; the lists are then absent, not empty. discarded names files a deploy would drop while still reporting success. Some categories report a count with no paths, so count can exceed files.',
+  description: "Preview a deploy without applying changes. When: before deploy-start, to see what it would add, update, delete or discard. Mode: uses the same mode as deploy-start. Set partial: false to preview the full intended state, including the files it would delete. Caveat: verdict would_fail means deploy-start is accepted and the deploy then fails, which job-status reports as state: failed. blockers.dataLoss appears only on a blocked run, naming files refused because records still exist.",
   annotations: { destructiveHint: false },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
       ...authProperties,
-      partial: { type: 'boolean', description: 'Report the deploy that leaves missing files in place.', default: false }
+      // Matches deploy-start: a preview whose default differs from the deploy's would report
+      // deletions that the deploy it describes would never make.
+      partial: { type: 'boolean', description: 'Report the deploy that leaves missing files in place.', default: true }
     }
   },
   handler: async (params, ctx = {}) => {
-    const partial = !!params?.partial;
+    const partial = params?.partial === undefined ? true : !!params.partial;
     log.debug('tool:deploy-dry-run invoked', { env: params?.env, partial });
 
     const auth = await resolveAuth(params, ctx);

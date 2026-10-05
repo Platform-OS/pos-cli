@@ -149,6 +149,46 @@ describe('resolveAuth precedence', () => {
     await expect(resolveAuth({ env: 'missing' }, ctx)).rejects.toMatchObject({ code: 'ENV_NOT_FOUND' });
   });
 
+  // ...and because it does not fall back, the refusal has to say the option exists. An agent
+  // evaluation spent five calls on an invented environment name, was told a person must run
+  // `env add`, gave up on deploy-dry-run and deployed blind — with MPKIT_* set the whole time.
+  describe('an unknown environment name says what else is available', () => {
+    const empty = { ...ctx, files: { getConfig: () => ({}) } };
+
+    test('names MPKIT_* and how to use it when .pos is empty and they are set', async () => {
+      const error = await resolveAuth({ env: 'staging' }, empty).catch((e) => e);
+
+      expect(error.code).toBe('ENV_NOT_FOUND');
+      expect(error.message).toMatch(/MPKIT_URL, MPKIT_EMAIL and MPKIT_TOKEN are set/);
+      expect(error.message).toMatch(/omitting env/);
+      expect(error.details).toMatchObject({ credentialsAvailable: 'MPKIT_*' });
+      // Nothing for a person to run: a remedy here is what stopped the agent acting on its own.
+      expect(error.details.remedy).toBeUndefined();
+    });
+
+    test('still sends you to a terminal when there is genuinely nothing else', async () => {
+      withoutMpkit();
+
+      const error = await resolveAuth({ env: 'staging' }, empty).catch((e) => e);
+
+      expect(error.code).toBe('ENV_NOT_FOUND');
+      expect(error.message).not.toMatch(/MPKIT/);
+      expect(error.details.remedy).toMatchObject({ command: expect.stringContaining('pos-cli env add staging') });
+    });
+
+    // The message changes; which instance is used does not.
+    test('naming an unknown environment still refuses rather than using MPKIT_*', async () => {
+      await expect(resolveAuth({ env: 'staging' }, empty)).rejects.toMatchObject({ code: 'ENV_NOT_FOUND' });
+    });
+
+    test('an unknown name beside configured ones still lists them, unchanged', async () => {
+      const error = await resolveAuth({ env: 'nope' }, ctx).catch((e) => e);
+
+      expect(error.message).toMatch(/Configured: /);
+      expect(error.details.environments.length).toBeGreaterThan(0);
+    });
+  });
+
   // Two of the three names an instance and then resolves a different one from .pos, so the call
   // would go somewhere the caller did not ask for.
   test('explicit params need all three parts, and a partial set is refused rather than ignored', async () => {

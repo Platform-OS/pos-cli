@@ -56,7 +56,7 @@ const countBySeverity = (offenses) => {
 };
 
 const checkRunTool = {
-  description: 'Lint the Liquid and JSON files in the project. Local only: no instance is involved. Returns a check code per offence rather than a pass or fail verdict, and a clean run is not a promise that a deploy will succeed.',
+  description: "Lint the Liquid and JSON files in the project. When: before deploy-start, to find syntax errors without touching an instance. Caveat: a clean run does not promise the deploy will succeed.",
   inputSchema: {
     type: 'object',
     additionalProperties: false,

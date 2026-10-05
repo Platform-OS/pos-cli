@@ -105,7 +105,7 @@ const nothingMatched = (filter) => (filter
     { matched: 0 }));
 
 const testsRunTool = {
-  description: 'Run tests on an instance and wait for the result. Omit name to run every test. A failed assertion is a completed run: ok:true with passed:false, and tests[].errors names the assertion, or (raised) when the test itself raised.',
+  description: "Run tests on an instance and wait for the result. When: after deploying code that has tests. Mode: omit name to run every test. Caveat: a failed assertion is a completed run, reported as ok true with passed false. tests[].errors names the assertion, or (raised) when the test itself raised.",
   inputSchema: {
     type: 'object',
     additionalProperties: false,

@@ -149,6 +149,23 @@ function envNotFound(name, filesModule) {
     );
   }
 
+  // Nothing in `.pos`. Before sending anyone to a terminal, check what resolveAuth would have
+  // reached for next: `MPKIT_*` is its step 3, three lines below the throw that brings us here.
+  // An agent evaluation lost five calls and gave up on deploy-dry-run to this error, deploying
+  // blind and destroying two pages, because it was told a person had to run `env add` while
+  // working credentials sat in its own environment. An error that names a dead end is worse than
+  // no error: it is read as "you cannot proceed from here".
+  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
+  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
+    return ToolError.not_found(
+      'ENV_NOT_FOUND',
+      `Environment '${name}' is not in .pos, which has no environments configured. MPKIT_URL, MPKIT_EMAIL and MPKIT_TOKEN are set, so omitting env uses the instance they name.`,
+      // No remedy: there is no command for anyone to run, and the fix is in the message. A
+      // remedy marked for a person here is what stopped the agent.
+      { environments: [], credentialsAvailable: 'MPKIT_*' }
+    );
+  }
+
   return ToolError.not_found('ENV_NOT_FOUND', `Environment '${name}' is not in .pos, which has no environments configured.`, {
     environments: [],
     remedy: {

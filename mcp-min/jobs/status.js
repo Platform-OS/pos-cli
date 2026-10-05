@@ -13,7 +13,9 @@ import { parse } from './handle.js';
 import { authForJob } from './auth-for-job.js';
 import { JobNotFoundError, absentOrUnwell, isServerError } from './errors.js';
 
-const MAX_WAIT_MS = 120000;
+// Exported so `deploy-start`'s own wait_ms cannot drift from this one: both are bounded by what
+// the shutdown drain allows (SHUTDOWN_DEADLINE_MS, lifecycle.js).
+export const MAX_WAIT_MS = 120000;
 
 // 1 s between polls at first, easing off to 5 s, as lib/deploy/waitForAssetReport.js does:
 // getStatus returns the whole release record, and a flat 1 s refetches it 120 times per wait.
@@ -33,7 +35,7 @@ const isTransient = err => err?.name === 'RequestError' || isServerError(err);
 const jobNotFound = err => ToolError.not_found('JOB_NOT_FOUND', `${err.message}.`, err.details);
 
 const jobStatusTool = {
-  description: 'Status of an operation started earlier, read from the job_id that started it. state is running, completed (the work finished) or failed (the operation itself failed). Read warnings even on completed: a deploy names files it discarded there.',
+  description: "Report the status of an operation started earlier, from its job_id. When: after deploy-start or any tool that returns a job_id. Mode: state is running, completed (the work finished) or failed (the operation itself failed). Use wait_ms to wait instead of polling. Caveat: read warnings even when completed, because a deploy names files it discarded there.",
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',

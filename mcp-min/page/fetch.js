@@ -72,7 +72,7 @@ const cutTo = (text, maxBytes) => {
 const requestedBytes = (params) => (Number.isInteger(params?.maxBodyBytes) ? params.maxBodyBytes : MAX_BODY_BYTES);
 
 const pageFetchTool = {
-  description: 'Fetch a path on an instance over HTTP: status, headers and body, as a visitor gets it. This is how to confirm a deploy is live — reading the source back does not prove the URL works. No credentials are sent; a redirect is reported, not followed.',
+  description: "Fetch a path on an instance over HTTP and return status, headers and body. When: to confirm a deploy is live, because reading the source back does not prove the URL works. Caveat: no credentials are sent, so the page renders as it does for a visitor. A redirect is reported, not followed.",
   inputSchema: {
     type: 'object',
     additionalProperties: false,

@@ -18,6 +18,7 @@ import { mintFor, originOf } from '../jobs/handle.js';
 import { trackUpload } from '../jobs/local-phases.js';
 import { deployAssetsForRelease } from './assets-task.js';
 import { makeWorkDir, removeWorkDir } from './work-dir.js';
+import jobStatusTool, { MAX_WAIT_MS } from '../jobs/status.js';
 
 /**
  * Where this deploy's assets travel, asked before the archive is built because it decides what goes
@@ -46,18 +47,25 @@ const assetsReport = (plan) => ({
 }[plan.mode]);
 
 const startDeployTool = {
-  description: 'Deploy the project to an instance. Everything missing from the build is deleted there unless partial is set; deploy-dry-run reports that list first, changing nothing. Returns a job_id: the deploy is still running when this answers, and job-status reports when its release and its assets are both in.',
+  description: "Deploy the project to an instance. When: after check-run passes and deploy-dry-run shows the intended change. Mode: files on the instance that are missing from the build are left in place. Set partial: false to deploy the full intended state, which deletes them. Set wait_ms to wait here; job then carries what job-status would say. Caveat: without wait_ms, or when job says done false, the deploy is still running and job-status reads it back from job_id.",
   annotations: { destructiveHint: true },
   inputSchema: {
     type: 'object',
     additionalProperties: false,
     properties: {
       ...authProperties,
-      // `false` matches `pos-cli deploy`, so a deploy means the same thing on both surfaces. It is
-      // also the mode that deletes, reached by omission: what stands in for a deliberate choice is
-      // `deploy-dry-run`, which names the delete list first, and `appPath` in the answer, which
-      // names the project the files came from.
-      partial: { type: 'boolean', description: 'Leave files that are missing from the build in place.', default: false }
+      // `true`, where `pos-cli deploy` defaults to the deleting mode. The two surfaces differ on
+      // purpose: a person running the CLI has the project in front of them and a shell to put
+      // things back with, and an agent reached through this tool has neither. Measured 2026-10-01
+      // in an agent evaluation — told to keep what was live, an agent deployed by omission and
+      // destroyed two pages it had never discovered, with the description warning of exactly that.
+      //
+      // Deleting is still one argument away, and `deploy-dry-run` defaults the same way so that a
+      // preview describes the deploy that would actually happen. What changed is which of the two
+      // you get by not deciding.
+      partial: { type: 'boolean', description: 'Leave files that are missing from the build in place.', default: true },
+      // Moves the first status read into this call; the handle still comes back.
+      wait_ms: { type: 'integer', minimum: 0, maximum: MAX_WAIT_MS, description: 'Wait until the deploy is done or this long, whichever comes first.' }
     }
   },
   handler: async (params, ctx = {}) => {
@@ -67,7 +75,8 @@ const startDeployTool = {
     const GatewayCtor = ctx.Gateway || Gateway;
     const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-    const partial = !!params.partial;
+    // Absent means partial, matching the schema default: omission must not be the deleting mode.
+    const partial = params.partial === undefined ? true : !!params.partial;
 
     // Nothing here is deployable, so there is nothing to send: the project is not ready.
     const availableDirs = dir.available();
@@ -139,7 +148,7 @@ const startDeployTool = {
       removeWorkDir(workDir);
     }
 
-    return {
+    const answer = {
       id: releaseId,
       // Which project this deployed. Nothing in the call can choose it — the directories are
       // resolved against the server's own working directory — so the answer is where a caller
@@ -157,6 +166,29 @@ const startDeployTool = {
       assets: assetsReport(plan),
       params: { partial }
     };
+
+    const waitMs = Number.isInteger(params?.wait_ms) ? params.wait_ms : 0;
+    if (waitMs <= 0) return answer;
+
+    // job-status's own handler, so the polling and its error diagnosis have one implementation.
+    // A child context: `runTool` reads `resolvedAuth` back off ctx for meta.auth and job-status
+    // assigns to it, and `mayChangeInstance` must be what job-status is, not what this tool is.
+    const waitCtx = { ...ctx, mayChangeInstance: false, resolvedAuth: undefined };
+    const credentials = ['env', 'url', 'email', 'token']
+      .filter((key) => params?.[key] !== undefined)
+      .reduce((carried, key) => ({ ...carried, [key]: params[key] }), {});
+
+    try {
+      answer.job = await jobStatusTool.handler({ job_id: answer.job_id, wait_ms: waitMs, ...credentials }, waitCtx);
+    } catch (err) {
+      // A cancelled client must not be reported as a deploy whose status merely could not be read.
+      if (err?.kind === 'cancelled') throw err;
+      // The deploy started, so a failed status read cannot fail the call — nor be silent, or an
+      // absent `job` reads as a deploy that finished.
+      log.debug('tool:deploy-start wait failed', { error: String(err) });
+      answer.jobWaitError = { code: err?.code ?? 'STATUS_UNREADABLE', message: String(err?.message ?? err) };
+    }
+    return answer;
   }
 };
 

@@ -1117,7 +1117,7 @@ the archive is written under `tmp/` (in a directory of its own per call, describ
 **Input Parameters**:
 - `env` *(string, optional)*: Environment name
 - `url` / `email` / `token` *(string, optional)*: Explicit credentials
-- `partial` *(boolean, optional, default: false)*: Report the deploy that leaves missing files in place
+- `partial` *(boolean, optional, default: true)*: report the deploy that leaves missing files in place. `false` previews the full intended state, including the files it would delete
 
 **Response Format**:
 ```javascript
@@ -1286,7 +1286,8 @@ Deploy to a platformOS instance. Creates archive from `app/` and `modules/` dire
 - `url` *(string, optional)*: Instance URL
 - `email` *(string, optional)*: Account email
 - `token` *(string, optional)*: API token
-- `partial` *(boolean, optional, default: false)*: Partial deploy (doesn't remove missing files)
+- `partial` *(boolean, optional, default: true)*: leave files missing from the build in place. `false` deploys the full intended state and deletes them — deliberately unlike `pos-cli deploy`, whose default is the deleting mode.
+- `wait_ms` *(integer, optional, 0–120000)*: wait here until the deploy is done or this long has passed. The answer then carries `job`, which is what `job-status` would say; when the status could not be read it carries `jobWaitError` instead and the deploy is still running under `job_id`.
 
 `assets.status` is `deploying_in_background` (the assets are going straight to object storage, and
 `job-status` reports when they land), `in_release_archive` or `skipped`.
@@ -1308,32 +1309,34 @@ no second phase to wait for, and `job-status` reports the deploy finished when t
     instanceStatus: "processing",
     archive: { fileCount: 156, assetsIncluded: false },
     assets: { count: 42, status: "deploying_in_background" },
-    params: { partial: false }
+    params: { partial: true },
+    // only when wait_ms was passed
+    job: { job_id: "...", kind: "deploy", state: "completed", done: true, instanceStatus: "success", result: { … } }
   },
   meta: {
     durationMs: 5000,
     auth: { url: "https://...", email: "...", token: "abc...xyz", source: ".pos(staging)" },
-    params: { partial: false }
+    params: { partial: true }
   }
 }
 ```
 
 **Example Usage**:
-Full deploy:
+The default deploy, leaving files the build does not have in place, waiting for the result here:
+
+```json
+{
+  "name": "deploy-start",
+  "arguments": { "env": "staging", "wait_ms": 60000 }
+}
+```
+
+Full deploy — the whole intended state, deleting what the project does not contain:
 
 ```json
 {
   "name": "deploy-start",
   "arguments": { "env": "staging", "partial": false }
-}
-```
-
-Partial deploy (doesn't remove files):
-
-```json
-{
-  "name": "deploy-start",
-  "arguments": { "env": "staging", "partial": true }
 }
 ```
 

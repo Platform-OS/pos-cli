@@ -127,7 +127,7 @@ const startingCursor = (params, searching) => {
 };
 
 const fetchLogsTool = {
-  description: 'Fetch rows from the instance error log, the stream pos-cli logs tails. Deployed code writes here, {% log %} included; a liquid-exec render adds only its Liquid errors, not its {% log %}. Reads forward from lastId or since, oldest first, and returns the next lastId. errorType and contains are matched here, not by the instance, so a narrow search still reads every row. With no lastId or since it starts at the oldest retained row when filtering, and at the newest rows otherwise. A row is readable a few seconds after it is written, so an immediate read can miss it.',
+  description: "Fetch rows from the instance error log. When: after a deploy or a failing page, to see what the instance recorded. Mode: reads forward from lastId or since, oldest first, and returns the next lastId. Without either, reading starts at the oldest retained row when filtering, and at the newest rows otherwise. errorType and contains are matched here, not by the instance, so a narrow search still reads every row. Caveat: a liquid-exec render records only its Liquid errors, not its {% log %} output. A row becomes readable a few seconds after it is written.",
   annotations: { readOnlyHint: true },
   inputSchema: {
     type: 'object',

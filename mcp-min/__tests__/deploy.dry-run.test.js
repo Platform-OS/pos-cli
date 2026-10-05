@@ -825,10 +825,30 @@ describe('a refusal that can only be cleared by deleting records', () => {
   test('a blocked full deploy points at the partial dry run', async () => {
     const { Fake } = refusing([cannotDelete('schema/eval_items.yml')]);
 
-    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+    // Named, because omitting it is the partial run now — which is what the next test covers.
+    const { data } = await runTool(dryRunTool, { ...AUTH, partial: false }, { Gateway: Fake, ...FAST });
 
     expect(data.planComputed).toBe(false);
     expect(data.blockers.restOfPlan).toMatch(/partial/);
+  });
+
+  // The preview has to describe the deploy that would actually happen: deploy-start leaves
+  // missing files alone unless told otherwise, so omitting partial here must mean the same, or
+  // this reports deletions nobody was going to make.
+  test('omitting partial previews the deploy that leaves missing files in place', async () => {
+    const { Fake } = gatewayFake({ report: { pages: { updated: [] } } });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.partial).toBe(true);
+  });
+
+  test('partial: false previews the whole intended state', async () => {
+    const { Fake } = gatewayFake({ report: { pages: { updated: [] } } });
+
+    const { data } = await runTool(dryRunTool, { ...AUTH, partial: false }, { Gateway: Fake, ...FAST });
+
+    expect(data.partial).toBe(false);
   });
 
   // It is already partial; there is nothing narrower to suggest.
