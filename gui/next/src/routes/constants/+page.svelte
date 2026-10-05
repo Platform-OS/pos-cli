@@ -8,6 +8,7 @@ import { constant } from '#lib/api/constant.js';
 import { connectionState } from '#lib/state/connection.svelte.js';
 import { highlight, highlightState } from '#lib/state/highlight.svelte.js';
 import { notificationsState } from '#lib/state/notifications.svelte.js';
+import { can } from '#lib/scopes.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -318,6 +319,12 @@ li {
   background-color: var(--color-highlight);
 }
 
+
+.noAccess {
+  margin-block-start: 1rem;
+
+  color: var(--color-text-secondary);
+}
 </style>
 
 
@@ -342,6 +349,7 @@ li {
     </form>
   </nav>
 
+  {#if can(connectionState.online, 'constants:write')}
   <section class="create">
     <form onsubmit={create}>
       <fieldset>
@@ -358,11 +366,17 @@ li {
       </button>
     </form>
   </section>
+  {/if}
+
+  {#if !can(connectionState.online, 'constants:read')}
+  <p class="noAccess">This token does not have the constants:read scope, so the constants of this instance cannot be shown.</p>
+  {/if}
 
   <ul>
 
     {#each items as item, index (item.name)}
       <li class:hidden={filter && isFiltered(item)} class:highlighted={highlightState.constant === item.name} in:fade={{ duration: 100, delay: 10 * index }}>
+        {#if can(connectionState.online, 'constants:write')}
         <form class="delete" onsubmit={remove}>
           <input type="hidden" name="name" value={item.name}>
           <button type="submit" title="Delete constant">
@@ -370,11 +384,12 @@ li {
             <Icon icon="x" size="14" />
           </button>
         </form>
+        {/if}
         <form class="edit" onsubmit={event => update(event, index)}>
           <label for={item.name}>{item.name}</label>
           <input type="hidden" name="name" value={item.name}>
           <fieldset>
-            <input class:exposed={item.exposed} disabled={!item.exposed} name="value" value={item.value} id={item.name} oninput={() => item.changed = true}>
+            <input class:exposed={item.exposed} disabled={!item.exposed} readonly={!can(connectionState.online, 'constants:write')} name="value" value={item.value} id={item.name} oninput={() => item.changed = true}>
             <button
               type="button"
               class="toggleExposition"
@@ -387,7 +402,9 @@ li {
               <Icon icon={item.exposed ? 'eyeStriked' : 'eye'} />
             </button>
           </fieldset>
+          {#if can(connectionState.online, 'constants:write')}
           <button type="submit" class="button" class:needed={items[index].changed}>Save</button>
+          {/if}
         </form>
       </li>
     {/each}

@@ -250,6 +250,26 @@ describe('portalUrlFor', () => {
 });
 
 describe('ensureSession', () => {
+  // The token enforces a second factor its account no longer has: no session can ever be
+  // had, so the step-up ends with an explanation instead of a prompt.
+  test('ends the step-up without prompting when the account has no second factor', async () => {
+    Portal.tokenInfo.mockResolvedValue({ two_factor_required: true, two_factor_session: false });
+    Portal.twoFactorSession.mockRejectedValue(Object.assign(new Error('Request failed with status 403'), {
+      name: 'StatusCodeError',
+      statusCode: 403,
+      response: { statusCode: 403, body: { error: 'two_factor_not_enabled', errors: ['not enabled'] } }
+    }));
+    answers.push('123456');
+
+    const error = await ensureSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'long-lived' }).catch(e => e);
+
+    expect(error.name).toBe('TwoFactorError');
+    expect(error.message).toContain('two-factor authentication is not enabled on its account');
+    expect(Portal.twoFactorSession).toHaveBeenCalledTimes(1);
+    expect(answers).toEqual(['123456']);
+    expect(readSession(INSTANCE, PORTAL)).toBeFalsy();
+  });
+
   test('does nothing when the portal does not require a second factor', async () => {
     Portal.tokenInfo.mockResolvedValue({ two_factor_required: false, two_factor_session: false });
 
