@@ -1,0 +1,1 @@
+import{i as e,t}from"./B298A7v1.js";var n=n=>r=>(r instanceof t&&e.create(`error`,`Could not load ${n}: ${r.message}`),null);export{n as t};

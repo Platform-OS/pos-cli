@@ -1,4 +1,4 @@
-import{i as e}from"./DicxRUmZ.js";var t={get:t=>e({query:`
+import{r as e}from"./B298A7v1.js";var t={get:t=>e({query:`
       query(
         $per_page: Int
         $id: ID

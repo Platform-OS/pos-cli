@@ -1,0 +1,1 @@
+var e=(e,t)=>e==null?!0:Array.isArray(e)?e.includes(`*`)||t.endsWith(`:read`)&&e.includes(`*:read`)||e.includes(t):!1,t=(t,n)=>e(t?.scopes??null,n),n=e=>Array.isArray(e?.scopes)&&!e.scopes.includes(`*`);export{n,t};

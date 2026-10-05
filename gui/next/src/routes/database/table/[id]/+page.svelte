@@ -6,6 +6,7 @@
 import { goto, invalidate } from '$app/navigation';
 import { page } from '$app/state';
 import { connectionState } from '#lib/state/connection.svelte.js';
+import { can } from '#lib/scopes.js';
 import { databaseState } from '#lib/state/database.svelte.js';
 import { preferencesState, setView } from '#lib/state/preferences.svelte.js';
 import { queryHref } from '#lib/database/query.js';
@@ -179,10 +180,12 @@ nav {
 
     <div id="viewOptions">
 
+      {#if can(connectionState.online, 'records:write')}
       <button class="button" title="Create new record" onclick={event => { event.preventDefault(); databaseState.record = {}; }}>
         <Icon icon="plus" />
         <span class="label">Create new record</span>
       </button>
+      {/if}
 
       {#if preferencesState.view.database !== 'tiles'}
         <button
