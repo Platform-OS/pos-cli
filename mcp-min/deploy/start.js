@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import log from '../log.js';
 import { resolveAuth } from '../auth.js';
-import { ToolError } from '../tool-error.js';
+import { ToolError, classify } from '../tool-error.js';
 import files from '../../lib/files.js';
 import Gateway from '../../lib/proxy.js';
 import { makeArchive } from '../../lib/archive.js';
@@ -18,7 +18,8 @@ import { mintFor, originOf } from '../jobs/handle.js';
 import { trackUpload } from '../jobs/local-phases.js';
 import { deployAssetsForRelease } from './assets-task.js';
 import { makeWorkDir, removeWorkDir } from './work-dir.js';
-import jobStatusTool, { MAX_WAIT_MS } from '../jobs/status.js';
+import { waitForJob, waitMsProperty } from '../jobs/status.js';
+import { partialProperty, partialOf } from './partial.js';
 
 /**
  * Where this deploy's assets travel, asked before the archive is built because it decides what goes
@@ -54,18 +55,9 @@ const startDeployTool = {
     additionalProperties: false,
     properties: {
       ...authProperties,
-      // `true`, where `pos-cli deploy` defaults to the deleting mode. The two surfaces differ on
-      // purpose: a person running the CLI has the project in front of them and a shell to put
-      // things back with, and an agent reached through this tool has neither. Measured 2026-10-01
-      // in an agent evaluation — told to keep what was live, an agent deployed by omission and
-      // destroyed two pages it had never discovered, with the description warning of exactly that.
-      //
-      // Deleting is still one argument away, and `deploy-dry-run` defaults the same way so that a
-      // preview describes the deploy that would actually happen. What changed is which of the two
-      // you get by not deciding.
-      partial: { type: 'boolean', description: 'Leave files that are missing from the build in place.', default: true },
+      partial: partialProperty('Leave files that are missing from the build in place.'),
       // Moves the first status read into this call; the handle still comes back.
-      wait_ms: { type: 'integer', minimum: 0, maximum: MAX_WAIT_MS, description: 'Wait until the deploy is done or this long, whichever comes first.' }
+      wait_ms: { ...waitMsProperty, description: 'Wait until the deploy is done or this long, whichever comes first.' }
     }
   },
   handler: async (params, ctx = {}) => {
@@ -75,8 +67,7 @@ const startDeployTool = {
     const GatewayCtor = ctx.Gateway || Gateway;
     const gateway = new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email });
 
-    // Absent means partial, matching the schema default: omission must not be the deleting mode.
-    const partial = params.partial === undefined ? true : !!params.partial;
+    const partial = partialOf(params);
 
     // Nothing here is deployable, so there is nothing to send: the project is not ready.
     const availableDirs = dir.available();
@@ -148,15 +139,18 @@ const startDeployTool = {
       removeWorkDir(workDir);
     }
 
+    // What `parse` would read back out of the handle, so the wait below polls exactly that job.
+    // `assets` is whether there is a separate phase to wait for, which a server that did not
+    // start this deploy cannot know. Assets inside the release are not one.
+    const job = { kind: 'deploy', id: String(releaseId), origin, flags: { assets: plan.mode === 'direct' } };
+
     const answer = {
       id: releaseId,
       // Which project this deployed. Nothing in the call can choose it — the directories are
       // resolved against the server's own working directory — so the answer is where a caller
       // finds out, rather than inferring it from `check-run`, the one tool that happened to say.
       appPath: process.cwd(),
-      // `assets` is whether there is a separate phase to wait for, which a server that did not
-      // start this deploy cannot know. Assets inside the release are not one.
-      job_id: mintFor({ kind: 'deploy', id: releaseId, origin: auth.url, flags: { assets: plan.mode === 'direct' } }),
+      job_id: mintFor(job),
       // The instance's word for the release it just accepted, not a verdict on the deploy, which
       // is still running. `job-status` publishes the same value under the same name.
       instanceStatus: pushResponse.status,
@@ -167,26 +161,30 @@ const startDeployTool = {
       params: { partial }
     };
 
-    const waitMs = Number.isInteger(params?.wait_ms) ? params.wait_ms : 0;
-    if (waitMs <= 0) return answer;
+    if (!params.wait_ms) return answer;
 
-    // job-status's own handler, so the polling and its error diagnosis have one implementation.
-    // A child context: `runTool` reads `resolvedAuth` back off ctx for meta.auth and job-status
-    // assigns to it, and `mayChangeInstance` must be what job-status is, not what this tool is.
-    const waitCtx = { ...ctx, mayChangeInstance: false, resolvedAuth: undefined };
-    const credentials = ['env', 'url', 'email', 'token']
-      .filter((key) => params?.[key] !== undefined)
-      .reduce((carried, key) => ({ ...carried, [key]: params[key] }), {});
-
+    // The credentials and Gateway this deploy was pushed with: the job is on their instance by
+    // construction, so there is nothing for job-status's `authForJob` to resolve or compare.
     try {
-      answer.job = await jobStatusTool.handler({ job_id: answer.job_id, wait_ms: waitMs, ...credentials }, waitCtx);
+      answer.job = {
+        job_id: answer.job_id,
+        ...await waitForJob(job, auth, {
+          gateway,
+          waitMs: params.wait_ms,
+          request: ctx.request,
+          pollIntervalMs: ctx.pollIntervalMs,
+          signal: ctx.signal,
+          sendProgress: ctx.sendProgress
+        })
+      };
     } catch (err) {
+      const failure = classify(err);
       // A cancelled client must not be reported as a deploy whose status merely could not be read.
-      if (err?.kind === 'cancelled') throw err;
+      if (failure.kind === 'cancelled') throw failure;
       // The deploy started, so a failed status read cannot fail the call — nor be silent, or an
-      // absent `job` reads as a deploy that finished.
+      // absent `job` reads as a deploy that finished. Classified as `job-status` would answer it.
       log.debug('tool:deploy-start wait failed', { error: String(err) });
-      answer.jobWaitError = { code: err?.code ?? 'STATUS_UNREADABLE', message: String(err?.message ?? err) };
+      answer.jobWaitError = failure.toResult();
     }
     return answer;
   }

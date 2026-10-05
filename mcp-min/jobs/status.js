@@ -13,9 +13,15 @@ import { parse } from './handle.js';
 import { authForJob } from './auth-for-job.js';
 import { JobNotFoundError, absentOrUnwell, isServerError } from './errors.js';
 
-// Exported so `deploy-start`'s own wait_ms cannot drift from this one: both are bounded by what
-// the shutdown drain allows (SHUTDOWN_DEADLINE_MS, lifecycle.js).
+// The same bound as the shutdown drain (SHUTDOWN_DEADLINE_MS, lifecycle.js), so a `job-status`
+// wait finishes inside it. `deploy-start` waits only after its push, so its call can run longer.
 export const MAX_WAIT_MS = 120000;
+
+/** One wait, published by every tool that offers one; spread it and replace the description. */
+export const waitMsProperty = {
+  type: 'integer', minimum: 0, maximum: MAX_WAIT_MS,
+  description: 'Wait until the job is done or this long, whichever comes first.'
+};
 
 // 1 s between polls at first, easing off to 5 s, as lib/deploy/waitForAssetReport.js does:
 // getStatus returns the whole release record, and a flat 1 s refetches it 120 times per wait.
@@ -42,7 +48,7 @@ const jobStatusTool = {
     additionalProperties: false,
     properties: {
       job_id: { type: 'string', description: 'Opaque: pass back exactly what the starter returned.' },
-      wait_ms: { type: 'integer', minimum: 0, maximum: MAX_WAIT_MS, description: 'Wait until the job is done or this long, whichever comes first.' },
+      wait_ms: waitMsProperty,
       ...authProperties,
       env: { type: 'string', description: 'Must be the instance the job was started on; the job_id says which.' }
     },
@@ -77,87 +83,107 @@ const jobStatusTool = {
     // credentials actually used, not the ones that were reached for.
     ctx.resolvedAuth = auth;
 
-    const adapter = adapters.get(job.kind);
     const GatewayCtor = ctx.Gateway || Gateway;
-    const deps = {
-      // The URL comes from the credentials, never from the handle.
-      gateway: new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email }),
-      origin: job.origin,
-      auth: { url: auth.url, headers: testAuthHeaders(auth.token) },
-      request: ctx.request || makeRequest
+    return {
+      job_id: params.job_id,
+      ...await waitForJob(job, auth, {
+        waitMs: params?.wait_ms,
+        // The URL comes from the credentials, never from the handle.
+        gateway: new GatewayCtor({ url: auth.url, token: auth.token, email: auth.email }),
+        request: ctx.request,
+        pollIntervalMs: ctx.pollIntervalMs,
+        signal: ctx.signal,
+        sendProgress: ctx.sendProgress
+      })
     };
-
-    const deadline = Date.now() + (Number.isInteger(params?.wait_ms) ? params.wait_ms : 0);
-    // A seam, like ctx.Gateway and ctx.request: tests drive the interval rather than sleep it.
-    const pollInterval = ctx.pollIntervalMs ?? POLL_INTERVAL_MS;
-
-    // A 5xx means either "no such job" or "unwell" (`jobs/errors.js`), so one is not an answer.
-    let confirmed = false;
-
-    for (let poll = 0; ; poll++) {
-      if (ctx.signal?.aborted) throw cancelled();
-
-      let polled;
-      try {
-        polled = await adapter.poll(deps, job.id, job.flags);
-      } catch (e) {
-        // The instance has no such job: a bad argument, not a failed job.
-        if (e instanceof JobNotFoundError) throw jobNotFound(e);
-        log.debug('tool:job-status poll failed', { kind: job.kind, error: String(e) });
-
-        // Outside a wait there is nothing to retry into; inside one, a blip should not end a
-        // two-minute wait early. Giving up rethrows the original, so runTool classifies the
-        // status and body rather than burying them under a code named after this tool.
-        if (!isTransient(e) || Date.now() >= deadline) {
-          // The default wait is none at all, so without this a single slow answer for a real
-          // deploy would be reported as a job that never existed.
-          if (isServerError(e) && !confirmed) {
-            confirmed = true;
-            await abortableDelay(pollInterval, ctx.signal);
-            continue;
-          }
-
-          const settled = await absentOrUnwell(e, {
-            kind: job.kind,
-            id: job.id,
-            // Instance-wide, so it answers for every kind, including the test runner.
-            health: () => deps.gateway.getInstance()
-          });
-          throw settled instanceof JobNotFoundError ? jobNotFound(settled) : settled;
-        }
-
-        await abortableDelay(Math.min(intervalFor(poll, pollInterval), deadline - Date.now()), ctx.signal);
-        continue;
-      }
-
-      // A 5xx later in a long wait gets its own confirmation.
-      confirmed = false;
-
-      const done = polled.state !== 'running';
-      if (done || Date.now() >= deadline) {
-        // A job that failed is still a status call that worked: `state` carries the job's own
-        // outcome, and the call only fails when the status could not be read.
-        return {
-          job_id: params.job_id,
-          kind: job.kind,
-          state: polled.state,
-          done,
-          // The instance's own word for the job, under a name that cannot be read as a synonym for
-          // `state`. The two disagree on purpose — a deploy whose release is in while its assets
-          // are still uploading is `state: running` with the release at `success` — and published
-          // side by side as `state` and `status`, an evaluation took the second for the job's
-          // outcome and read the deploy as finished.
-          instanceStatus: polled.status,
-          ...(polled.error && { error: polled.error }),
-          ...(polled.warnings && { warnings: polled.warnings }),
-          result: polled.result
-        };
-      }
-
-      ctx.sendProgress?.({ progress: poll + 1, message: `${job.kind}: ${polled.status ?? 'running'}` });
-      await abortableDelay(Math.min(intervalFor(poll, pollInterval), deadline - Date.now()), ctx.signal);
-    }
   }
 };
+
+/**
+ * Poll a parsed job until it settles or `waitMs` runs out, against credentials already checked
+ * against the job's instance. `job-status` reaches it through `authForJob`; `deploy-start` holds
+ * the credentials and the Gateway it pushed with, so it passes those.
+ *
+ * Errors are thrown as they arrived, so whoever reports them classifies the status and body.
+ */
+export async function waitForJob(job, auth, { gateway, waitMs, request, pollIntervalMs, signal, sendProgress }) {
+  const adapter = adapters.get(job.kind);
+  const deps = {
+    gateway,
+    origin: job.origin,
+    auth: { url: auth.url, headers: testAuthHeaders(auth.token) },
+    request: request || makeRequest
+  };
+
+  const deadline = Date.now() + (Number.isInteger(waitMs) ? waitMs : 0);
+  // A seam, like ctx.Gateway and ctx.request: tests drive the interval rather than sleep it.
+  const pollInterval = pollIntervalMs ?? POLL_INTERVAL_MS;
+
+  // A 5xx means either "no such job" or "unwell" (`jobs/errors.js`), so one is not an answer.
+  let confirmed = false;
+
+  for (let poll = 0; ; poll++) {
+    if (signal?.aborted) throw cancelled();
+
+    let polled;
+    try {
+      polled = await adapter.poll(deps, job.id, job.flags);
+    } catch (e) {
+      // The instance has no such job: a bad argument, not a failed job.
+      if (e instanceof JobNotFoundError) throw jobNotFound(e);
+      log.debug('tool:job-status poll failed', { kind: job.kind, error: String(e) });
+
+      // Outside a wait there is nothing to retry into; inside one, a blip should not end a
+      // two-minute wait early. Giving up rethrows the original, so the caller classifies the
+      // status and body rather than burying them under a code named after this tool.
+      if (!isTransient(e) || Date.now() >= deadline) {
+        // The default wait is none at all, so without this a single slow answer for a real
+        // deploy would be reported as a job that never existed.
+        if (isServerError(e) && !confirmed) {
+          confirmed = true;
+          await abortableDelay(pollInterval, signal);
+          continue;
+        }
+
+        const settled = await absentOrUnwell(e, {
+          kind: job.kind,
+          id: job.id,
+          // Instance-wide, so it answers for every kind, including the test runner.
+          health: () => deps.gateway.getInstance()
+        });
+        throw settled instanceof JobNotFoundError ? jobNotFound(settled) : settled;
+      }
+
+      await abortableDelay(Math.min(intervalFor(poll, pollInterval), deadline - Date.now()), signal);
+      continue;
+    }
+
+    // A 5xx later in a long wait gets its own confirmation.
+    confirmed = false;
+
+    const done = polled.state !== 'running';
+    if (done || Date.now() >= deadline) {
+      // A job that failed is still a status call that worked: `state` carries the job's own
+      // outcome, and the call only fails when the status could not be read.
+      return {
+        kind: job.kind,
+        state: polled.state,
+        done,
+        // The instance's own word for the job, under a name that cannot be read as a synonym for
+        // `state`. The two disagree on purpose — a deploy whose release is in while its assets
+        // are still uploading is `state: running` with the release at `success` — and published
+        // side by side as `state` and `status`, an evaluation took the second for the job's
+        // outcome and read the deploy as finished.
+        instanceStatus: polled.status,
+        ...(polled.error && { error: polled.error }),
+        ...(polled.warnings && { warnings: polled.warnings }),
+        result: polled.result
+      };
+    }
+
+    sendProgress?.({ progress: poll + 1, message: `${job.kind}: ${polled.status ?? 'running'}` });
+    await abortableDelay(Math.min(intervalFor(poll, pollInterval), deadline - Date.now()), signal);
+  }
+}
 
 export default jobStatusTool;

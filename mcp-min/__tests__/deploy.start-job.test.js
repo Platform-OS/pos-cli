@@ -422,7 +422,6 @@ describe('a background upload does not export its credentials', () => {
  */
 describe('waiting for the deploy inside deploy-start', () => {
   test('omitting wait_ms answers exactly as before: a handle, and no job', async () => {
-    getAssets.mockResolvedValue([]);
     const { Gateway, polls } = gatewayWith(['success']);
 
     const result = await runTool(deployStart, AUTH, { Gateway });
@@ -436,7 +435,6 @@ describe('waiting for the deploy inside deploy-start', () => {
   });
 
   test('wait_ms carries the answer job-status would give, for the job this call started', async () => {
-    getAssets.mockResolvedValue([]);
     const { Gateway } = gatewayWith(['success']);
 
     const result = await runTool(deployStart, { ...AUTH, wait_ms: 5000 }, { Gateway, pollIntervalMs: 1 });
@@ -447,7 +445,6 @@ describe('waiting for the deploy inside deploy-start', () => {
   });
 
   test('it waits rather than answering the first running poll', async () => {
-    getAssets.mockResolvedValue([]);
     const { Gateway } = gatewayWith(['in_progress', 'in_progress', 'success']);
 
     const result = await runTool(deployStart, { ...AUTH, wait_ms: 5000 }, { Gateway, pollIntervalMs: 1 });
@@ -456,7 +453,6 @@ describe('waiting for the deploy inside deploy-start', () => {
   });
 
   test('a wait that runs out answers done false, which is the deploy still running', async () => {
-    getAssets.mockResolvedValue([]);
     const { Gateway } = gatewayWith(['in_progress']);
 
     const result = await runTool(deployStart, { ...AUTH, wait_ms: 1 }, { Gateway, pollIntervalMs: 1 });
@@ -467,14 +463,7 @@ describe('waiting for the deploy inside deploy-start', () => {
 
   // The instance has accepted the deploy; losing the handle would leave nobody able to ask about it.
   test('a status read that fails leaves the deploy started, and says so beside the handle', async () => {
-    getAssets.mockResolvedValue([]);
-    class Gateway {
-      async push(formData) {
-        const archive = formData['marketplace_builder[zip_file]'];
-        archive.on('error', () => {});
-        archive.destroy();
-        return { id: 4141, status: 'ready_for_import' };
-      }
+    class Gateway extends gatewayWith([]).Gateway {
       async getStatus() { throw new TypeError('reading the status blew up'); }
       async getInstance() { throw new TypeError('and so did the health probe'); }
     }
@@ -489,7 +478,6 @@ describe('waiting for the deploy inside deploy-start', () => {
 
   // A cancelled call must not come back as a successful deploy with an unreadable status.
   test('a client that cancels during the wait gets a cancellation, not a wait error', async () => {
-    getAssets.mockResolvedValue([]);
     const { Gateway } = gatewayWith(['in_progress']);
     const controller = new AbortController();
     controller.abort();

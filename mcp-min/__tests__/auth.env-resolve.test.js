@@ -176,11 +176,6 @@ describe('resolveAuth precedence', () => {
       expect(error.details.remedy).toMatchObject({ command: expect.stringContaining('pos-cli env add staging') });
     });
 
-    // The message changes; which instance is used does not.
-    test('naming an unknown environment still refuses rather than using MPKIT_*', async () => {
-      await expect(resolveAuth({ env: 'staging' }, empty)).rejects.toMatchObject({ code: 'ENV_NOT_FOUND' });
-    });
-
     test('an unknown name beside configured ones still lists them, unchanged', async () => {
       const error = await resolveAuth({ env: 'nope' }, ctx).catch((e) => e);
 

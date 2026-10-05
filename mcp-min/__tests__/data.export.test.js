@@ -10,7 +10,8 @@ vi.mock('../../lib/files', () => ({
 
 vi.mock('../../lib/settings', () => ({
   default: { settingsFromDotPos: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' }) },
-  settingsFromDotPos: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' })
+  settingsFromDotPos: (env) => ({ url: `https://${env}.example.com`, token: 'test-token', email: 'test@example.com' }),
+  settingsFromEnv: () => undefined
 }));
 
 describe('data-export tools', () => {

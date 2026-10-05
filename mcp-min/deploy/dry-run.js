@@ -28,6 +28,7 @@ import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
 import { releaseState, filesNotMatched, warningsExceptDiscarded, toCount } from '../jobs/adapters/deploy.js';
 import { makeWorkDir, removeWorkDir } from './work-dir.js';
+import { partialProperty, partialOf } from './partial.js';
 
 const POLL_MS = 1000;
 // Both phases are validation only — no import, no S3 — and settle in a second or two. A minute is
@@ -197,13 +198,11 @@ const dryRunDeployTool = {
     additionalProperties: false,
     properties: {
       ...authProperties,
-      // Matches deploy-start: a preview whose default differs from the deploy's would report
-      // deletions that the deploy it describes would never make.
-      partial: { type: 'boolean', description: 'Report the deploy that leaves missing files in place.', default: true }
+      partial: partialProperty('Report the deploy that leaves missing files in place.')
     }
   },
   handler: async (params, ctx = {}) => {
-    const partial = params?.partial === undefined ? true : !!params.partial;
+    const partial = partialOf(params);
     log.debug('tool:deploy-dry-run invoked', { env: params?.env, partial });
 
     const auth = await resolveAuth(params, ctx);

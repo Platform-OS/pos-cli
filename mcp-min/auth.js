@@ -1,6 +1,6 @@
 // Shared authentication utilities for mcp-min tools
 import files from '../lib/files.js';
-import { settingsFromDotPos } from '../lib/settings.js';
+import { settingsFromDotPos, settingsFromEnv } from '../lib/settings.js';
 import { mask } from './redact.js';
 import { ToolError } from './tool-error.js';
 
@@ -105,10 +105,8 @@ async function resolve(params, ctx, { anonymous = false } = {}) {
   }
 
   // Priority 3: MPKIT_* environment variables
-  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
-  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
-    return { url: MPKIT_URL, email: MPKIT_EMAIL, token: MPKIT_TOKEN, source: 'env' };
-  }
+  const fromEnv = settingsFromEnv();
+  if (fromEnv) return { ...fromEnv, source: 'env' };
 
   // Priority 4: First environment in .pos config
   const conf = filesModule.getConfig();
@@ -150,13 +148,12 @@ function envNotFound(name, filesModule) {
   }
 
   // Nothing in `.pos`. Before sending anyone to a terminal, check what resolveAuth would have
-  // reached for next: `MPKIT_*` is its step 3, three lines below the throw that brings us here.
+  // reached for next: `MPKIT_*` is its step 3, read by the same `settingsFromEnv`.
   // An agent evaluation lost five calls and gave up on deploy-dry-run to this error, deploying
   // blind and destroying two pages, because it was told a person had to run `env add` while
   // working credentials sat in its own environment. An error that names a dead end is worse than
   // no error: it is read as "you cannot proceed from here".
-  const { MPKIT_URL, MPKIT_EMAIL, MPKIT_TOKEN } = process.env;
-  if (MPKIT_URL && MPKIT_EMAIL && MPKIT_TOKEN) {
+  if (settingsFromEnv()) {
     return ToolError.not_found(
       'ENV_NOT_FOUND',
       `Environment '${name}' is not in .pos, which has no environments configured. MPKIT_URL, MPKIT_EMAIL and MPKIT_TOKEN are set, so omitting env uses the instance they name.`,
