@@ -4,7 +4,6 @@ ENV SOURCE=/tmp/src
 
 RUN mkdir $SOURCE
 
-#RUN apk update -qq && apk add vim curl ruby
 
 ADD . $SOURCE
 

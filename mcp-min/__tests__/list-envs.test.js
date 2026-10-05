@@ -1,12 +1,16 @@
 import http from 'http';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = 5920;
-const CONFIG_FILE = path.resolve(`.pos.test-${PORT}`);
+// In a directory of its own: the repository root is every test process's working directory
+// (see test/unit/test-isolation.test.js).
+const CONFIG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), `pos-cli-list-envs-${PORT}-`));
+const CONFIG_FILE = path.join(CONFIG_DIR, '.pos');
 
 function httpRequest({ method = 'GET', path: reqPath = '/', body = null, headers = {} }) {
   return new Promise((resolve, reject) => {
@@ -35,7 +39,8 @@ describe('mcp-min list-envs tool', () => {
     process.env.CONFIG_FILE_PATH = CONFIG_FILE;
 
     const { default: startHttp } = await import('../http-server.js');
-    server = await startHttp({ port: PORT });
+    const { defaultTools } = await import('./helpers/tools.js');
+    server = await startHttp({ port: PORT, tools: defaultTools() });
   });
 
   afterAll(() => {
@@ -44,31 +49,23 @@ describe('mcp-min list-envs tool', () => {
     delete process.env.CONFIG_FILE_PATH;
   });
 
-  test('HTTP /call envs-list returns ok with data.environments array', async () => {
-    const res = await httpRequest({ method: 'POST', path: '/call', body: { tool: 'envs-list', params: {} } });
-    expect(res.status).toBe(200);
-    const parsed = JSON.parse(res.body);
-    expect(parsed.result.ok).toBe(true);
-    expect(Array.isArray(parsed.result.data.environments)).toBe(true);
-    const names = parsed.result.data.environments.map(e => e.name);
-    expect(names).toEqual(expect.arrayContaining(['staging', 'prod']));
-  });
-
-  test('JSON-RPC tools/call returns text content with environments', async () => {
+  // Over /mcp, the one HTTP surface there is. The point of this file is that envs-list reads the
+  // .pos the process was pointed at, so it drives a real server with a real config file.
+  test('envs-list reports the environments in the .pos it was pointed at', async () => {
     const res = await httpRequest({
       method: 'POST',
-      path: '/call-stream',
+      path: '/mcp',
+      headers: { 'MCP-Protocol-Version': '2025-06-18', Accept: 'application/json, text/event-stream' },
       body: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'envs-list', arguments: {} } }
     });
+
     expect(res.status).toBe(200);
-    const parsed = JSON.parse(res.body);
-    expect(parsed.result).toBeDefined();
-    const content = parsed.result.content;
-    expect(Array.isArray(content)).toBe(true);
-    const decoded = JSON.parse(content[0].text);
+    // A 2025-era call is answered as one SSE message, which is how the SDK serves that revision.
+    const message = JSON.parse(res.body.split('data: ').at(-1));
+    const result = message.result;
+    expect(result.isError).toBeUndefined();
+    const decoded = JSON.parse(result.content[0].text);
     expect(decoded.ok).toBe(true);
-    expect(Array.isArray(decoded.data.environments)).toBe(true);
-    const names = decoded.data.environments.map(e => e.name);
-    expect(names).toEqual(expect.arrayContaining(['staging', 'prod']));
+    expect(decoded.data.environments.map(e => e.name)).toEqual(expect.arrayContaining(['staging', 'prod']));
   });
 });

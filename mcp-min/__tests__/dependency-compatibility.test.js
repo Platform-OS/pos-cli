@@ -55,7 +55,7 @@ describe('mcp-min dependency compatibility', () => {
       jsonrpc: '2.0',
       id: 1,
       method: 'initialize',
-      params: { protocolVersion: '2024-11-05', capabilities: {} }
+      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'pos-cli-tests', version: '1.0.0' } }
     }) + '\n';
 
     child.stdin.write(initMsg);

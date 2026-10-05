@@ -4,9 +4,10 @@ import { vi, describe, test, expect, beforeAll, afterAll, beforeEach, afterEach 
 import constantsListTool from '../constants/list.js';
 import constantsSetTool from '../constants/set.js';
 import constantsUnsetTool from '../constants/unset.js';
+import { runTool } from '../run-tool.js';
 
 const mockSettings = {
-  fetchSettings: (env) => {
+  settingsFromDotPos: (env) => {
     if (env === 'staging') {
       return { url: 'https://staging.example.com', email: 'test@example.com', token: 'secret123' };
     }
@@ -31,7 +32,7 @@ describe('constants-list', () => {
       }
     }
 
-    const res = await constantsListTool.handler(
+    const res = await runTool(constantsListTool, 
       { env: 'staging' },
       { Gateway: MockGateway, settings: mockSettings }
     );
@@ -50,7 +51,7 @@ describe('constants-list', () => {
       }
     }
 
-    const res = await constantsListTool.handler(
+    const res = await runTool(constantsListTool, 
       { env: 'staging' },
       { Gateway: MockGateway, settings: mockSettings }
     );
@@ -61,13 +62,13 @@ describe('constants-list', () => {
   });
 
   test('returns error when env not found', async () => {
-    const res = await constantsListTool.handler(
+    const res = await runTool(constantsListTool, 
       { env: 'unknown' },
       { settings: mockSettings }
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('CONSTANTS_LIST_FAILED');
+    expect(res.error.code).toBe('ENV_NOT_FOUND');
     expect(res.error.message).toContain('unknown');
   });
 
@@ -78,7 +79,7 @@ describe('constants-list', () => {
       }
     }
 
-    const res = await constantsListTool.handler(
+    const res = await runTool(constantsListTool, 
       { env: 'staging' },
       { Gateway: MockGateway, settings: mockSettings }
     );
@@ -111,7 +112,7 @@ describe('constants-set', () => {
       }
     }
 
-    const res = await constantsSetTool.handler(
+    const res = await runTool(constantsSetTool, 
       { env: 'staging', name: 'API_KEY', value: 'newvalue' },
       { Gateway: MockGateway, settings: mockSettings }
     );
@@ -132,7 +133,7 @@ describe('constants-set', () => {
       }
     }
 
-    await constantsSetTool.handler(
+    await runTool(constantsSetTool, 
       { env: 'staging', name: 'KEY"WITH"QUOTES', value: 'value"here' },
       { Gateway: MockGateway, settings: mockSettings }
     );
@@ -151,7 +152,7 @@ describe('constants-set', () => {
       }
     }
 
-    const res = await constantsSetTool.handler(
+    const res = await runTool(constantsSetTool, 
       { env: 'staging', name: 'PEM_KEY', value: multilineValue },
       { Gateway: MockGateway, settings: mockSettings }
     );
@@ -161,13 +162,13 @@ describe('constants-set', () => {
   });
 
   test('returns error when env not found', async () => {
-    const res = await constantsSetTool.handler(
+    const res = await runTool(constantsSetTool, 
       { env: 'unknown', name: 'KEY', value: 'val' },
       { settings: mockSettings }
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('CONSTANTS_SET_FAILED');
+    expect(res.error.code).toBe('ENV_NOT_FOUND');
   });
 
   test('handles GraphQL errors', async () => {
@@ -177,7 +178,7 @@ describe('constants-set', () => {
       }
     }
 
-    const res = await constantsSetTool.handler(
+    const res = await runTool(constantsSetTool, 
       { env: 'staging', name: 'BAD', value: 'val' },
       { Gateway: MockGateway, settings: mockSettings }
     );
@@ -206,7 +207,7 @@ describe('constants-unset', () => {
       }
     }
 
-    const res = await constantsUnsetTool.handler(
+    const res = await runTool(constantsUnsetTool, 
       { env: 'staging', name: 'OLD_KEY' },
       { Gateway: MockGateway, settings: mockSettings }
     );
@@ -225,7 +226,7 @@ describe('constants-unset', () => {
       }
     }
 
-    const res = await constantsUnsetTool.handler(
+    const res = await runTool(constantsUnsetTool, 
       { env: 'staging', name: 'NONEXISTENT' },
       { Gateway: MockGateway, settings: mockSettings }
     );
@@ -236,13 +237,13 @@ describe('constants-unset', () => {
   });
 
   test('returns error when env not found', async () => {
-    const res = await constantsUnsetTool.handler(
+    const res = await runTool(constantsUnsetTool, 
       { env: 'unknown', name: 'KEY' },
       { settings: mockSettings }
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('CONSTANTS_UNSET_FAILED');
+    expect(res.error.code).toBe('ENV_NOT_FOUND');
   });
 
   test('handles GraphQL errors', async () => {
@@ -252,7 +253,7 @@ describe('constants-unset', () => {
       }
     }
 
-    const res = await constantsUnsetTool.handler(
+    const res = await runTool(constantsUnsetTool, 
       { env: 'staging', name: 'KEY' },
       { Gateway: MockGateway, settings: mockSettings }
     );

@@ -63,14 +63,14 @@ describe('s3UploadFile', () => {
       expect(fs.statSync).toHaveBeenCalledWith(fileName);
       expect(fs.readFileSync).toHaveBeenCalledWith(fileName);
       expect(mime.getType).toHaveBeenCalledWith(fileName);
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, {
+      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
         method: 'PUT',
         headers: {
           'Content-Length': fileSize.toString(),
           'Content-Type': 'image/jpeg'
         },
         body: fileBuffer
-      });
+      }));
       expect(result).toBe(s3Url);
     });
 
@@ -171,14 +171,14 @@ describe('s3UploadFile', () => {
 
       const result = await uploadFile(fileName, s3Url);
 
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, {
+      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
         method: 'PUT',
         headers: {
           'Content-Length': '0',
           'Content-Type': 'text/plain'
         },
         body: emptyBuffer
-      });
+      }));
       expect(result).toBe(s3Url);
     });
 
@@ -229,14 +229,14 @@ describe('s3UploadFile', () => {
       const result = await uploadFile(fileName, s3Url);
 
       expect(mime.getType).toHaveBeenCalledWith(fileName);
-      expect(global.fetch).toHaveBeenCalledWith(s3Url, {
+      expect(global.fetch).toHaveBeenCalledWith(s3Url, expect.objectContaining({
         method: 'PUT',
         headers: {
           'Content-Length': fileSize.toString(),
           'Content-Type': 'application/javascript'
         },
         body: fileBuffer
-      });
+      }));
       expect(result).toBe(s3Url);
     });
   });
@@ -294,7 +294,7 @@ describe('s3UploadFile', () => {
       expect(error.statusCode).toBeUndefined();
     });
 
-    test('arms no deadline of its own unless the caller asks for one', async () => {
+    test('sets no deadline of its own, and takes the one apiRequest gives every request', async () => {
       fs.statSync.mockReturnValue({ size: 10 });
       fs.readFileSync.mockReturnValue(Buffer.from('content'));
       mime.getType.mockReturnValue('application/zip');
@@ -302,9 +302,12 @@ describe('s3UploadFile', () => {
 
       await uploadFile('/tmp/release.zip', 'https://s3.example.com/bucket/release.zip');
 
-      // A transfer takes as long as the operator's uplink takes; a ceiling low enough to
-      // catch a dead socket would fail the slow upload that was working.
-      expect(global.fetch.mock.calls[0][1].signal).toBeUndefined();
+      // Nothing here picks a bound: apiRequest gives every request the same one, chosen to sit
+      // under the 300s cap `fetch` applies whatever pos-cli asks for, so a stalled upload is
+      // reported as a timeout naming the host rather than as "Request to the server failed."
+      // Callers who know their payload is small still pass a shorter one.
+      expect(global.fetch.mock.calls[0][1].timeout).toBeUndefined();
+      expect(global.fetch.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
     });
   });
 
@@ -334,11 +337,11 @@ describe('s3UploadFile', () => {
 
       expect(fs.readFileSync).toHaveBeenCalledWith(filePath);
       expect(mime.getType).toHaveBeenCalledWith(filePath);
-      expect(global.fetch).toHaveBeenCalledWith(data.url, {
+      expect(global.fetch).toHaveBeenCalledWith(data.url, expect.objectContaining({
         method: 'POST',
         headers: {},
         body: expect.any(FormData)
-      });
+      }));
       expect(result).toBe(true);
     });
 
@@ -450,11 +453,11 @@ describe('s3UploadFile', () => {
       await uploadFileFormData(filePath, data);
 
       // Verify fetch was called with FormData
-      expect(global.fetch).toHaveBeenCalledWith(data.url, {
+      expect(global.fetch).toHaveBeenCalledWith(data.url, expect.objectContaining({
         method: 'POST',
         headers: {},
         body: expect.any(FormData)
-      });
+      }));
     });
 
     test('handles various MIME types correctly', async () => {

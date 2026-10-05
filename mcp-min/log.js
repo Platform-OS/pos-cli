@@ -1,44 +1,67 @@
-// Unified logging for mcp-min
-// - Never writes to stdout (safe for stdio JSON-RPC transport)
-// - Writes to file + stderr
-// - debug() gated on DEBUG/MCP_MIN_DEBUG flags
-import { mkdirSync, appendFileSync } from 'fs';
+// Logging for mcp-min: stderr and a file, never stdout (the stdio JSON-RPC channel). Every line
+// goes through redact.js first — the file outlives the session, and DEBUG=1 is what people turn on
+// precisely when credentials are moving through the server.
+import { mkdirSync, appendFileSync, existsSync } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
 import { DEBUG } from './config.js';
+import { redact, scrubString } from './redact.js';
+import { OWNER_ONLY, restrictToOwner } from '../lib/filePermissions.js';
 
 const LOG_DIR = path.join(homedir(), '.pos-cli', 'logs');
 const LOG_FILE = process.env.MCP_MIN_LOG_FILE || path.join(LOG_DIR, 'mcp-min.log');
 
 let logReady = false;
+let initAttempted = false;
 
+// Owner-only: the file records which instances this machine talks to and, historically, the
+// credentials it used. `appendFileSync`'s mode applies only on creation, so a file already there
+// is tightened once, at startup; one recreated later (logrotate) is not.
 function init() {
-  if (logReady) return;
+  if (initAttempted) return;
+  initAttempted = true;
   try {
     mkdirSync(path.dirname(LOG_FILE), { recursive: true });
     logReady = true;
+    // Only an existing file: chmod on a path that is not there yet would warn on every fresh
+    // install, and a new file is created owner-only below.
+    if (existsSync(LOG_FILE)) restrictToOwner(LOG_FILE);
   } catch {
     // ignore - logging is best-effort
   }
 }
 
+/** Never let a log line become the thing that fails a request. */
+function serialise(data) {
+  try {
+    return JSON.stringify(redact(data));
+  } catch {
+    return '"[unserialisable]"';
+  }
+}
+
 function write(level, message, data) {
   const ts = new Date().toISOString();
-  const suffix = data !== undefined ? ` ${JSON.stringify(data)}` : '';
-  const line = `[${level} ${ts}] ${message}${suffix}\n`;
+  // The message too: `String(x)` throws for an object with a null prototype, and tool handlers are
+  // handed this as `ctx.log`.
+  let line;
+  try {
+    const suffix = data !== undefined ? ` ${serialise(data)}` : '';
+    line = `[${level} ${ts}] ${scrubString(String(message))}${suffix}\n`;
+  } catch {
+    line = `[${level} ${ts}] [unloggable message]\n`;
+  }
 
-  // Always write to stderr (never stdout)
   try {
     process.stderr.write(line);
   } catch {
     // best-effort
   }
 
-  // Write to log file
   init();
   if (logReady) {
     try {
-      appendFileSync(LOG_FILE, line);
+      appendFileSync(LOG_FILE, line, { mode: OWNER_ONLY });
     } catch {
       // best-effort
     }

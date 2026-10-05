@@ -6,10 +6,11 @@ import os from 'os';
 
 // Import the tool directly
 import uploadsTool from '../uploads/push.js';
+import { runTool } from '../run-tool.js';
 
 // Mock settings that can be injected via context
 const mockSettings = {
-  fetchSettings: (env) => {
+  settingsFromDotPos: (env) => {
     if (env === 'staging') {
       return { url: 'https://staging.example.com', email: 'test@example.com', token: 'secret123' };
     }
@@ -48,7 +49,7 @@ describe('uploads-push', () => {
     });
     const mockUploadFile = vi.fn().mockResolvedValue('https://s3.example.com/upload');
 
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'staging', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
@@ -57,19 +58,19 @@ describe('uploads-push', () => {
     expect(res.data.instanceId).toBe('test-instance-123');
     expect(res.data.filePath).toBe(tempFile);
     expect(res.data.accessUrl).toBe('https://cdn.example.com/uploads.zip');
-    expect(res.meta.startedAt).toBeDefined();
-    expect(res.meta.finishedAt).toBeDefined();
+    expect(res.meta.durationMs).toBeGreaterThanOrEqual(0);
 
     // Verify mocks were called with correct arguments
     expect(mockPresignUrl).toHaveBeenCalledWith(
       'instances/test-instance-123/property_uploads/data.public_property_upload_import.zip',
-      tempFile
+      tempFile,
+      { url: 'https://staging.example.com', token: 'secret123' }
     );
     expect(mockUploadFile).toHaveBeenCalledWith(tempFile, 'https://s3.example.com/upload');
   });
 
   test('returns error when file not found', async () => {
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'staging', filePath: '/nonexistent/file.zip' },
       { settings: mockSettings }
     );
@@ -80,15 +81,15 @@ describe('uploads-push', () => {
   });
 
   test('returns error when env not found', async () => {
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'unknown-env', filePath: tempFile },
       { settings: mockSettings }
     );
 
     expect(res.ok).toBe(false);
-    expect(res.error.code).toBe('UPLOAD_FAILED');
+    expect(res.error.code).toBe('ENV_NOT_FOUND');
     expect(res.error.message).toContain('unknown-env');
-    expect(res.error.message).toContain('not found');
+    expect(res.error.details).toHaveProperty('environments');
   });
 
   test('has correct description and schema with required fields', () => {
@@ -109,7 +110,7 @@ describe('uploads-push', () => {
     const mockPresignUrl = vi.fn().mockRejectedValue(new Error('S3 service unavailable'));
     const mockUploadFile = vi.fn();
 
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'staging', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
@@ -133,7 +134,7 @@ describe('uploads-push', () => {
     });
     const mockUploadFile = vi.fn().mockRejectedValue(new Error('Upload timeout'));
 
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'staging', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
@@ -143,28 +144,71 @@ describe('uploads-push', () => {
     expect(res.error.message).toContain('Upload timeout');
   });
 
-  test('sets MARKETPLACE env vars for presignUrl', async () => {
+  /**
+   * The code says which leg failed; the kind says what to do about it, and that judgement is
+   * `classify`'s. This tool used to answer `unavailable` — "the same call may work later" — for
+   * anything without an HTTP status, so a defect of ours sent the agent round a retry loop that
+   * could never finish.
+   */
+  describe('the kind it reports is the one classify would', () => {
+    const failing = (error) => {
+      class MockGateway {
+        async getInstance() { return { id: 'test-instance-123' }; }
+      }
+      return runTool(uploadsTool,
+        { env: 'staging', filePath: tempFile },
+        {
+          Gateway: MockGateway,
+          presignUrl: vi.fn().mockResolvedValue({ uploadUrl: 'https://s3.example.com/upload', accessUrl: 'https://cdn.example.com/u.zip' }),
+          uploadFile: vi.fn().mockRejectedValue(error),
+          settings: mockSettings
+        }
+      );
+    };
+
+    const refused = Object.assign(new Error('fetch failed'), { name: 'RequestError', cause: Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }) });
+
+    test.each([
+      ['a programming error, which is ours to fix', new TypeError('uploadUrl is not a function'), 'internal'],
+      ['a rejected token, which retrying cannot mend', Object.assign(new Error('Forbidden'), { statusCode: 403 }), 'auth'],
+      ['a refused connection, which may work later', refused, 'unavailable']
+    ])('%s', async (_label, error, kind) => {
+      const res = await failing(error);
+
+      expect(res.error).toMatchObject({ kind, code: 'UPLOAD_FAILED' });
+      // The code and the file it was asked to send stay this tool's to report.
+      expect(res.error.details.filePath).toContain('test-uploads.zip');
+    });
+  });
+
+  /**
+   * This used to set MARKETPLACE_* around the presign call and assert that it had. `runWithAuth`
+   * sets them process-wide and restores them on the way out, so a deploy's background asset upload
+   * — which runs for as long as an import plus a CDN wait — could have them changed under it by
+   * this call, or cleared by this call finishing first. The credentials travel with the call now,
+   * and what this pins is that they are not exported at all.
+   */
+  test('passes its credentials to presignUrl instead of putting them in the environment', async () => {
     class MockGateway {
       async getInstance() {
         return { id: 'inst-001' };
       }
     }
 
-    let capturedToken, capturedUrl;
+    let duringTheCall;
     const mockPresignUrl = vi.fn().mockImplementation(() => {
-      capturedToken = process.env.MARKETPLACE_TOKEN;
-      capturedUrl = process.env.MARKETPLACE_URL;
+      duringTheCall = { token: process.env.MARKETPLACE_TOKEN, url: process.env.MARKETPLACE_URL };
       return Promise.resolve({ uploadUrl: 'https://s3.example.com/upload', accessUrl: 'https://cdn.example.com/file.zip' });
     });
     const mockUploadFile = vi.fn().mockResolvedValue('ok');
 
-    await uploadsTool.handler(
+    await runTool(uploadsTool, 
       { env: 'staging', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
 
-    expect(capturedToken).toBe('secret123');
-    expect(capturedUrl).toBe('https://staging.example.com');
+    expect(mockPresignUrl.mock.calls[0][2]).toEqual({ url: 'https://staging.example.com', token: 'secret123' });
+    expect(duringTheCall).toEqual({ token: undefined, url: undefined });
   });
 
   test('works with production environment', async () => {
@@ -180,7 +224,7 @@ describe('uploads-push', () => {
     });
     const mockUploadFile = vi.fn().mockResolvedValue('ok');
 
-    const res = await uploadsTool.handler(
+    const res = await runTool(uploadsTool, 
       { env: 'production', filePath: tempFile },
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );

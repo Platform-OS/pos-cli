@@ -85,7 +85,7 @@ Tests require `MPKIT_URL`, `MPKIT_EMAIL`, `MPKIT_TOKEN` environment variables fo
 
 **MCP Server** (`mcp-min/`): Model Context Protocol server
 - Tool definitions in modular files under feature directories
-- Stdio and HTTP transports for MCP communication
+- Stdio and HTTP transports for MCP communication (HTTP is unauthenticated: loopback bind + Host/Origin validation, see CLAUDE.md)
 - SSE streaming for real-time updates
 - Partner Portal API tools for instance management
 
@@ -111,7 +111,6 @@ pos-cli/
 │   ├── index.js      # Server entry point
 │   ├── stdio-server.js
 │   ├── http-server.js
-│   ├── sse.js        # Server-sent events
 │   └── portal/       # Partner Portal API tools
 ├── test/             # Tests and fixtures
 └── scripts/          # Utility scripts
