@@ -45,7 +45,7 @@ async function uploadAsset({ gateway, relPath, log }) {
   // Prepare direct upload data
   const instance = await gateway.getInstance();
   const remoteAssetsDir = `instances/${instance.id}/assets`;
-  const data = await presignDirectory(remoteAssetsDir);
+  const data = await presignDirectory(remoteAssetsDir, gateway);
 
   const dirname = path.posix.dirname(relPath);
   const fileSubdir = relPath.startsWith('app/assets')

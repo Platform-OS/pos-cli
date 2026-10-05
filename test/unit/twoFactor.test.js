@@ -69,6 +69,11 @@ const twoFactorBody = (code, message) => Object.assign(new Error('Request failed
 });
 
 const twoFactorInvalid = () => twoFactorBody('two_factor_invalid', 'Invalid two-factor code');
+const twoFactorNotEnabled = () => Object.assign(new Error('Request failed with status 403'), {
+  name: 'StatusCodeError',
+  statusCode: 403,
+  response: { statusCode: 403, body: { error: 'two_factor_not_enabled', errors: ['not enabled'] } }
+});
 const twoFactorLocked = () => twoFactorBody('two_factor_locked', 'Too many two-factor attempts');
 
 // A bodiless 401 — what a wrong password gets, and what a portal too old to send
@@ -126,6 +131,35 @@ describe('normalizeCode', () => {
 });
 
 describe('withTwoFactor', () => {
+  // No code can ever be accepted for an account without a second factor: prompting would
+  // loop forever, and a wrong-code warning would be a lie.
+  test('stops at once, without prompting, when the account has no second factor', async () => {
+    answers.push('123456');
+    const run = vi.fn(async () => { throw twoFactorNotEnabled(); });
+
+    const error = await withTwoFactor(run, { interactive: true }).catch(e => e);
+
+    expect(error.name).toBe('TwoFactorError');
+    expect(error.message).toContain('two-factor authentication is not enabled on its account');
+    expect(error.message).not.toContain('refresh-token');
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(readlineState.interfacesCreated).toBe(0);
+  });
+
+  test('stops, without asking again, when a code it prompted for meets an account with no second factor', async () => {
+    answers.push('123456', '654321');
+    const run = vi.fn(async code => {
+      if (!code) throw twoFactorRequired();
+      throw twoFactorNotEnabled();
+    });
+
+    const error = await withTwoFactor(run, { interactive: true }).catch(e => e);
+
+    expect(error.name).toBe('TwoFactorError');
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(answers).toEqual(['654321']);
+  });
+
   test('passes no code and never prompts for an account without 2FA', async () => {
     const run = vi.fn(async () => 'token');
 
@@ -380,6 +414,28 @@ describe('Portal requests carry the code', () => {
   afterEach(() => {
     delete process.env.PARTNER_PORTAL_HOST;
     nock.cleanAll();
+  });
+
+  // A global token's scopes are reported as they apply on one instance, so pos-cli names
+  // the instance when it knows it.
+  test('GET /oauth/token/info names the instance when one is given', async () => {
+    const scope = nock(PORTAL, { reqheaders: { Authorization: 'Bearer global-token' } })
+      .get('/oauth/token/info').query({ instance_uuid: 'uuid-1' })
+      .reply(200, { scopes_granted: ['*:read'] });
+
+    await expect(Portal.tokenInfo({ token: 'global-token', instanceUuid: 'uuid-1' }))
+      .resolves.toEqual({ scopes_granted: ['*:read'] });
+
+    scope.done();
+  });
+
+  test('GET /oauth/token/info sends no instance when none is known', async () => {
+    const scope = nock(PORTAL).get('/oauth/token/info').query(query => Object.keys(query).length === 0)
+      .reply(200, {});
+
+    await Portal.tokenInfo({ token: 'global-token' });
+
+    scope.done();
   });
 
   test('GET /api/user_tokens sends the code in the UserOtpCode header', async () => {

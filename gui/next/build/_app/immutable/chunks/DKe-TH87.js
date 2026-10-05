@@ -1,4 +1,4 @@
-import{t as e}from"./DlzbzFbm.js";var t={get:async t=>{let n=``;t?.id&&(n=`id: { value: "${t.id}" }`);let r=``;t?.type&&(r=`type: ${t.type}`);let i=`
+import{t as e}from"./Gy9kihEB.js";var t={get:async t=>{let n=``;t?.id&&(n=`id: { value: "${t.id}" }`);let r=``;t?.type&&(r=`type: ${t.type}`);let i=`
       query {
         admin_background_jobs(
           per_page: 20,

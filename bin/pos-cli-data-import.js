@@ -36,7 +36,7 @@ const dataImport = async (filename, rawIds, isZipFile) => {
     const instanceId = (await gateway.getInstance()).id;
     const uploadedFilename = `instances/${instanceId}/data_imports/${crypto.randomBytes(32).toString('hex')}`;
     try {
-      const { uploadUrl, accessUrl } = await presignUrl(uploadedFilename, filename);
+      const { uploadUrl, accessUrl } = await presignUrl(uploadedFilename, filename, gateway);
       await uploadFile(filename, uploadUrl);
       formData = { zip_file_url: accessUrl };
     } catch (error) {

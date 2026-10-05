@@ -29,7 +29,7 @@ const restore = async (event) => {
     record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
     state.notification.create('success', `Record ${restore.record_update.id} restored`);
   } else {
-    state.notification.create('error', `Record ${restore.record_update.id} could not be restored`);
+    state.notification.create('error', `Record ${restore.record_update?.id ?? ""} could not be restored`);
   }
 
 }

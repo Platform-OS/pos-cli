@@ -28,7 +28,7 @@ const remove = async (event) => {
       dispatch('itemsChanged');
       state.notification.create('success', `Background job ${remove.admin_background_job_delete.id} deleted`);
     } else {
-      state.notification.create('error', `Background job ${remove.admin_background_job_delete.id} could not be deleted`);
+      state.notification.create('error', `Background job ${remove.admin_background_job_delete?.id ?? ""} could not be deleted`);
     }
 
   }

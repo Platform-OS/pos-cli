@@ -32,7 +32,7 @@ const remove = async (event) => {
       record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
       state.notification.create('success', `Record ${remove.record_delete.id} deleted`);
     } else {
-      state.notification.create('error', `Record ${remove.record_delete.id} could not be deleted`);
+      state.notification.create('error', `Record ${remove.record_delete?.id ?? ""} could not be deleted`);
     }
 
   }

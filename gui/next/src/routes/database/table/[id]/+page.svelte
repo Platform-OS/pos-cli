@@ -5,6 +5,7 @@
 // ------------------------------------------------------------------------
 import { page } from '$app/stores';
 import { state } from '$lib/state';
+import { can } from '$lib/scopes.js';
 import { record } from '$lib/api/record';
 
 import Icon from '$lib/ui/Icon.svelte';
@@ -169,10 +170,12 @@ nav {
 
     <div id="viewOptions">
 
+      {#if can($state.online, 'records:write')}
       <button class="button" title="Create new record" on:click|preventDefault={ () => $state.record = {} }>
         <Icon icon="plus" />
         <span class="label">Create new record</span>
       </button>
+      {/if}
 
       {#if $state.view.database !== 'tiles'}
         <button

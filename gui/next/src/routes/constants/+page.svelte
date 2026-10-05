@@ -6,6 +6,7 @@
 import { fade } from 'svelte/transition';
 import { constant } from '$lib/api/constant.js';
 import { state } from '$lib/state.js';
+import { can } from '$lib/scopes.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 
@@ -19,7 +20,8 @@ let items = [];
 
 
 // get constants list
-(async () => await constant.get())().then(response => { items = response; });
+// a token without constants:read is refused, and the page says so instead of listing
+(async () => await constant.get())().then(response => { items = response || []; });
 
 
 // purpose:		adds a .hidden property to each log item if not matching the string
@@ -48,7 +50,7 @@ const update = async (event, itemIndex) => {
     state.highlight('constant', edit.constant_set.name);
     state.notification.create('success', `Constant ${edit.constant_set.name} updated`);
   } else {
-    state.notification.create('error', `Failed to update ${edit.constant_set.name} constant`);
+    state.notification.create('error', `Failed to update ${edit.constant_set?.name ?? ""} constant`);
   }
 };
 
@@ -64,7 +66,7 @@ const remove = async (event) => {
       state.notification.create('success', `Constant ${remove.constant_unset.name} deleted`);
       await constant.get().then(response => { items = response; });
     } else {
-      state.notification.create('success', `Failed to delete ${remove.constant_unset.name} constant`);
+      state.notification.create('success', `Failed to delete ${remove.constant_unset?.name ?? ""} constant`);
     }
 
   }
@@ -81,7 +83,7 @@ const create = async (event) => {
     state.notification.create('success', `Constant ${create.constant_set.name} created`);
     await constant.get().then(response => { items = response; state.highlight('constant', create.constant_set.name); })
   } else {
-    state.notification.create('error', `Failed to create ${create.constant_set.name} constant`);
+    state.notification.create('error', `Failed to create ${create.constant_set?.name ?? ""} constant`);
   }
 }
 
@@ -306,6 +308,12 @@ li {
   background-color: var(--color-highlight);
 }
 
+
+.noAccess {
+  margin-block-start: 1rem;
+
+  color: var(--color-text-secondary);
+}
 </style>
 
 
@@ -330,6 +338,7 @@ li {
     </form>
   </nav>
 
+  {#if can($state.online, 'constants:write')}
   <section class="create">
     <form on:submit|preventDefault={create}>
       <fieldset>
@@ -346,11 +355,17 @@ li {
       </button>
     </form>
   </section>
+  {/if}
+
+  {#if !can($state.online, 'constants:read')}
+  <p class="noAccess">This token does not have the constants:read scope, so the constants of this instance cannot be shown.</p>
+  {/if}
 
   <ul>
 
     {#each items as item, index}
       <li class:hidden={filter && isFiltered(item)} class:highlighted={$state.highlighted.constant === item.name} in:fade={{ duration: 100, delay: 10 * index }}>
+        {#if can($state.online, 'constants:write')}
         <form class="delete" on:submit|preventDefault={event => remove(event)}>
           <input type="hidden" name="name" value={item.name}>
           <button type="submit" title="Delete constant">
@@ -358,11 +373,12 @@ li {
             <Icon icon="x" size="14" />
           </button>
         </form>
+        {/if}
         <form class="edit"on:submit|preventDefault={event => update(event, index)}>
           <label for={item.name}>{item.name}</label>
           <input type="hidden" name="name" value={item.name}>
           <fieldset>
-            <input class:exposed={item.exposed} disabled={!item.exposed} name="value" value={item.value} id={item.name} on:input={() => item.changed = true}>
+            <input class:exposed={item.exposed} disabled={!item.exposed} readonly={!can($state.online, 'constants:write')} name="value" value={item.value} id={item.name} on:input={() => item.changed = true}>
             <button
               type="button"
               class="toggleExposition"
@@ -375,7 +391,9 @@ li {
               <Icon icon={item.exposed ? 'eyeStriked' : 'eye'} />
             </button>
           </fieldset>
+          {#if can($state.online, 'constants:write')}
           <button type="submit" class="button" class:needed={items[index].changed}>Save</button>
+          {/if}
         </form>
       </li>
     {/each}

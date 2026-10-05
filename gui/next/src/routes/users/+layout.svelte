@@ -5,6 +5,7 @@
 // ------------------------------------------------------------------------
 import { goto } from '$app/navigation';
 import { state } from '$lib/state.js';
+import { can } from '$lib/scopes.js';
 import { quintOut } from 'svelte/easing';
 import { page } from '$app/stores';
 import { user } from '$lib/api/user.js';
@@ -365,6 +366,7 @@ const submitForm = async function(event) {
               <span>
                 <div class="menu">
                   <div class="inner-menu">
+                    {#if can($state.online, 'users:write')}
                     <div class="combo">
                       <button class="button compact more" class:active={contextMenu.id === user.id} on:click={() => contextMenu.id = user.id}>
                         <span class="label">More options</span>
@@ -377,6 +379,7 @@ const submitForm = async function(event) {
                     </div>
                     {#if contextMenu.id === user.id}
                       <ContextMenu record={user} on:reload={() => reloadUsers() } on:close={() => contextMenu.id = null} />
+                    {/if}
                     {/if}
                   </div>
                 </div>
@@ -418,10 +421,12 @@ const submitForm = async function(event) {
       />
       of {filters.totalPages}
     </div>
+    {#if can($state.online, 'users:write')}
     <button class="button" title="Create user" on:click|preventDefault={ () => showCreateUserPopup() }>
       <Icon icon="plus" />
       <span class="label">Create a new user</span>
     </button>
+    {/if}
   </nav>
 
 </section>

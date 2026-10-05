@@ -10,6 +10,8 @@ import logger from '../lib/logger.js';
 import ServerError from '../lib/ServerError.js';
 import { ensureSessionForCommand } from '../lib/twoFactorSession.js';
 import { partnerPortalEnv } from '../lib/portal.js';
+import { guiSyncRefusal, tokenAccess } from '../lib/tokenAccess.js';
+import { ALL } from '../lib/utils/tokenScopes.js';
 
 const DEFAULT_CONCURRENCY = 3;
 
@@ -55,7 +57,25 @@ program
 
     try {
       const client = await SwaggerProxy.client(environment);
-      server(env, client, { restartCommand });
+
+      // A token with scopes -- a global token from the Partner Portal -- may be refused some
+      // of what the GUI offers, so the GUI is told up front and hides what would only be
+      // refused. Asked for this instance, so the scopes are the ones that apply here.
+      const { scopes } = await tokenAccess({
+        portalUrl: authData.partner_portal_url,
+        token: authData.token,
+        instanceUuid: client?.instance?.uuid
+      });
+      const syncRefusal = params.sync && guiSyncRefusal(scopes);
+      if (syncRefusal) {
+        await logger.Error(syncRefusal, { hideTimestamp: true });
+        return;
+      }
+      if (scopes && !scopes.includes(ALL)) {
+        await logger.Info(`This token is limited to: ${scopes.join(', ')}. The GUI hides what it cannot do.`, { hideTimestamp: true });
+      }
+
+      server(env, client, { restartCommand, scopes });
       if (params.open) {
         try {
           const open = (await import('open')).default;

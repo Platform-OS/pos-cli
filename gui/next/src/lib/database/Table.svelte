@@ -10,6 +10,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { state } from '$lib/state.js';
+import { can } from '$lib/scopes.js';
 import { parseValue } from '$lib/parseValue.js'
 
 import Icon from '$lib/ui/Icon.svelte';
@@ -188,6 +189,7 @@ td, th {
         <tr class:highlighted={$state.highlighted.record === record.id} class:hasContextMenu={contextMenu.id === record.id}>
           <td>
             <div class="id">
+              {#if can($state.online, 'records:write')}
               <div class="combo">
                 <button class="button compact more" class:active={contextMenu.id === record.id} on:click={() => contextMenu.id = record.id}>
                   <span class="label">More options</span>
@@ -200,6 +202,7 @@ td, th {
               </div>
               {#if contextMenu.id === record.id}
                 <ContextMenu record={record} on:close={() => contextMenu.id = null} />
+              {/if}
               {/if}
               {record.id}
             </div>

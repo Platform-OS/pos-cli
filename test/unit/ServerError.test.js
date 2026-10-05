@@ -36,6 +36,104 @@ describe('ServerError', () => {
    * it costs an operator a working credential while they hunt for a problem that was never
    * theirs, and it stops being reproducible the moment the Portal comes back.
    */
+  // A token missing a scope is valid; it is just not allowed to do this. The 401 advice
+  // -- refresh the token -- would only mint another one with the same scopes.
+  describe('the Partner Portal refusing a global token', () => {
+    const refusal = (error) => ({
+      name: 'StatusCodeError',
+      statusCode: 403,
+      options: { uri: 'https://partners.platformos.com/api/tasks/instance/deploy' },
+      response: { statusCode: 403, body: { error, errors: ['from the portal'] } }
+    });
+
+    test('explains an account without a second factor', async () => {
+      await ServerError.handler(refusal('two_factor_not_enabled'));
+
+      const [message] = logger.Error.mock.calls[0];
+      expect(message).toContain('two-factor authentication is not enabled on its account');
+      expect(message).not.toContain('To refresh your token');
+      expect(report).toHaveBeenCalledWith('[403] Two-factor authentication not enabled');
+    });
+
+    // The Portal answers it 401, like every two-factor refusal; it must not read as a
+    // credential to refresh.
+    test('explains an account without a second factor when it arrives as a 401', async () => {
+      const request = refusal('two_factor_not_enabled');
+      request.statusCode = 401;
+      request.response.statusCode = 401;
+
+      await ServerError.handler(request);
+
+      const [message] = logger.Error.mock.calls[0];
+      expect(message).toContain('two-factor authentication is not enabled on its account');
+      expect(message).not.toContain('To refresh your token');
+    });
+
+    // The URL is the Portal's, not the instance's, so it is not presented as the instance.
+    test('explains an instance the token does not reach, without naming the Portal as it', async () => {
+      await ServerError.handler(refusal('instance_not_covered'));
+
+      const [message] = logger.Error.mock.calls[0];
+      expect(message).toContain('This token does not reach this instance, or its owner cannot change it');
+      expect(message).not.toContain('partners.platformos.com');
+      expect(report).toHaveBeenCalledWith('[403] Instance not covered by token');
+    });
+  });
+
+  describe('insufficient scope', () => {
+    const refusal = (uri, body) => ({
+      name: 'StatusCodeError',
+      statusCode: 403,
+      options: { uri },
+      response: { statusCode: 403, body: { error: 'insufficient_scope', ...body } }
+    });
+
+    test('names the missing scope and the instance, and never suggests refresh-token as a fix', async () => {
+      await ServerError.handler(refusal('https://shop.example.com/api/app_builder/marketplace_releases', {
+        required_scopes: ['code:write'],
+        errors: [{ message: 'This token does not have the code:write scope' }]
+      }));
+
+      const [message, options] = logger.Error.mock.calls[0];
+      expect(message).toContain('This token does not have the code:write scope needed for this on shop.example.com.');
+      expect(message).toContain('Partner Portal Tokens page');
+      expect(message).not.toContain('To refresh your token');
+      expect(options).toEqual(expect.objectContaining({ exit: true }));
+      expect(report).toHaveBeenCalledWith('[403] Insufficient scope');
+    });
+
+    test('names every missing scope of a GraphQL operation, and keeps a graph session alive', async () => {
+      await ServerError.handler(refusal('https://shop.example.com/api/graph', {
+        required_scopes: ['records:write', 'users:write']
+      }));
+
+      const [message, options] = logger.Error.mock.calls[0];
+      expect(message).toContain('the records:write and users:write scopes');
+      expect(options).toEqual(expect.objectContaining({ exit: false }));
+    });
+
+    test.each([
+      ['GraphQL-shaped errors', [{ message: 'Liquid needs liquid:exec' }]],
+      ['plain string errors', ['Liquid needs liquid:exec']]
+    ])('falls back to the reason in %s when no scope is named', async (_name, errors) => {
+      await ServerError.handler(refusal('https://shop.example.com/api/app_builder/liquid_exec', { errors }));
+
+      expect(logger.Error.mock.calls[0][0]).toContain("This token's scopes do not allow this on shop.example.com.\nLiquid needs liquid:exec");
+    });
+
+    test('leaves any other 403 to the default report', async () => {
+      await ServerError.handler({
+        name: 'StatusCodeError',
+        statusCode: 403,
+        options: { uri: 'https://shop.example.com/x' },
+        response: { statusCode: 403, body: { error: 'forbidden' } }
+      });
+
+      expect(logger.Error.mock.calls[0][0]).not.toContain('scope');
+      expect(report).not.toHaveBeenCalled();
+    });
+  });
+
   describe('partner portal unavailable', () => {
     const unavailable = (body = {}) => ({
       name: 'StatusCodeError',
