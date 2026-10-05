@@ -6,6 +6,7 @@
 import { page } from '$app/stores';
 import { table } from '$lib/api/table';
 import { state } from '$lib/state';
+import { can, limited } from '$lib/scopes.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 
@@ -117,6 +118,17 @@ header {
   color: var(--color-interaction-hover);
 }
 
+.logo .limited {
+  margin-inline-start: .5em;
+  padding: .1em .5em;
+
+  border-radius: .2rem;
+  background-color: var(--color-middleground);
+
+  font-weight: 500;
+  color: var(--color-text);
+}
+
 /* navigation */
 ul {
   display: flex;
@@ -225,13 +237,16 @@ nav a:hover .label {
           <a href={$state.online?.MPKIT_URL}>
             {$state.online?.MPKIT_URL.replace('https://', '')}
           </a>
+          {#if limited($state.online)}
+            <span class="limited" title="This token is limited to: {$state.online.scopes.join(', ')}">Limited token</span>
+          {/if}
         {/if}
       </h1>
     </div>
 
     <nav>
       <ul>
-        {#if $state.header.includes('database')}
+        {#if $state.header.includes('database') && can($state.online, 'records:read')}
         <li>
           <a href="/database" class:active={$page.url.pathname.startsWith('/database')} on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
             <Icon icon="database" />
@@ -242,7 +257,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('users')}
+        {#if $state.header.includes('users') && can($state.online, 'users:read')}
         <li>
           <a href="/users" class:active={$page.url.pathname.startsWith('/users')}>
             <Icon icon="users" />
@@ -253,7 +268,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('logs')}
+        {#if $state.header.includes('logs') && can($state.online, 'logs:read')}
         <li>
           <a href="/logs" class:active={$page.url.pathname === '/logs'}>
             <Icon icon="log" />
@@ -286,7 +301,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('backgroundJobs')}
+        {#if $state.header.includes('backgroundJobs') && can($state.online, 'background_jobs:read')}
         <li>
           <a href="/backgroundJobs" class:active={$page.url.pathname.startsWith('/backgroundJobs')}>
             <Icon icon="backgroundJob" />
@@ -297,7 +312,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('constants')}
+        {#if $state.header.includes('constants') && can($state.online, 'constants:read')}
         <li>
           <a href="/constants" class:active={$page.url.pathname.startsWith('/constants')}>
             <Icon icon="constant" />
@@ -308,7 +323,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('liquid')}
+        {#if $state.header.includes('liquid') && can($state.online, 'liquid:exec')}
         {@const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}
         <li>
           <a href="{url}/gui/liquid">

@@ -94,7 +94,7 @@ describe('deploying to an instance that cannot presign an asset upload', () => {
 
     await directAssetsUploadStrategy({ env, authData, params });
 
-    expect(presignDirectory).toHaveBeenCalledWith('instances/1/assets');
+    expect(presignDirectory).toHaveBeenCalledWith('instances/1/assets', expect.anything());
   });
 
   test('uploads directly, as before, when the instance can presign', async () => {

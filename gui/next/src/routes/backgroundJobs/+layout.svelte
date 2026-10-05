@@ -9,6 +9,7 @@ import { page } from '$app/stores';
 import { backgroundJob } from '$lib/api/backgroundJob.js';
 import { relativeTime } from '$lib/relativeTime.js';
 import { state } from '$lib/state.js';
+import { can } from '$lib/scopes.js';
 
 import Icon from '$lib/ui/Icon.svelte';
 import Number from '$lib/ui/forms/Number.svelte';
@@ -309,6 +310,7 @@ menu :global(button:hover) {
         <td class="id" on:mouseleave={() => contextMenu.id = null}>
           <div>
 
+            {#if can($state.online, 'background_jobs:write')}
             <button class="button compact more" on:click={() => contextMenu.id = item.id}>
               <span class="label">More options</span>
               <Icon icon="navigationMenuVertical" size="16" />
@@ -326,6 +328,7 @@ menu :global(button:hover) {
                 </li>
               </ul>
             </menu>
+            {/if}
 
             <a href="/backgroundJobs/{filters.type.toLowerCase()}/{item.id}?{$page.url.searchParams.toString()}">
               {item.source_name || item.id}

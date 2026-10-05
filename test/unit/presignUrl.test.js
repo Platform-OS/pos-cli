@@ -124,3 +124,50 @@ describe('presignDirectory', () => {
     expect(error.statusCode).toBe(403);
   });
 });
+
+// Without a Gateway of the caller's, the credential comes from the MARKETPLACE_* hand-off,
+// and a session injected for this run stands in for the long-lived token.
+describe('presignUrl credential', () => {
+  let presignUrl;
+  let tmp;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    global.fetch.mockReset();
+    process.env.MARKETPLACE_URL = 'https://instance.example.com';
+    process.env.MARKETPLACE_TOKEN = 'instance-token';
+    process.env.CONFIG_FILE_PATH = '/nonexistent/.pos';
+    tmp = `${process.env.TMPDIR || '/tmp'}/presign-${process.pid}.txt`;
+    (await import('fs')).writeFileSync(tmp, 'x');
+
+    ({ presignUrl } = await import('#lib/presignUrl.js'));
+  });
+
+  afterEach(() => {
+    delete process.env.MARKETPLACE_URL;
+    delete process.env.MARKETPLACE_TOKEN;
+    delete process.env.POS_PORTAL_SESSION_TOKEN;
+    delete process.env.CONFIG_FILE_PATH;
+  });
+
+  const sentHeaders = () => global.fetch.mock.calls[0][1].headers;
+
+  test('sends the long-lived token when no session is in force', async () => {
+    global.fetch.mockResolvedValue(answer({ url: 'https://s3', accessUrl: 'https://s3/f' }));
+
+    await presignUrl('uploads/f', tmp);
+
+    expect(sentHeaders().token).toBe('instance-token');
+    expect(sentHeaders().marketplace_domain).toBe('instance.example.com');
+  });
+
+  test('sends the two-factor session when one is in force', async () => {
+    process.env.POS_PORTAL_SESSION_TOKEN = 'session-token';
+    global.fetch.mockResolvedValue(answer({ url: 'https://s3', accessUrl: 'https://s3/f' }));
+
+    await presignUrl('uploads/f', tmp);
+
+    expect(sentHeaders().token).toBe('session-token');
+  });
+});
