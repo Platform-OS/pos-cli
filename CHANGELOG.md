@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New Features
+
+* Partner Portal **global tokens** work with every command. A global token is one credential for many Instances — all the Instances its owner can reach, including later ones, or a chosen list plus any Instance created with the token — created in the portal with **scopes** (presets *Administrator* `*` and *Read-only administrator* `*:read`, or individual scopes such as `records:write`, `code:write`, `logs:read`), an expiry, and a choice of whether it requires a two-factor session; add it per environment with `pos-cli env add [environment] --url [url] --token [token]`. A two-factor session is still asked for, and cached, per Instance, so nothing about the step-up changes. A refusal for a missing scope — `403 insufficient_scope` from the Instance — is reported as `This token does not have the <scope> scope needed for this on <instance>`, with a note that `pos-cli env refresh-token` cannot fix it, where it used to be printed as the raw response (or, from `exec graphql`, `exec liquid`, `constants` and `data export`, as `Request failed with status 403`). `sync` stops on the first such refusal instead of reporting it once per saved file. The portal's own refusals of a global token are explained too: `two_factor_not_enabled` (the token needs a two-factor session but its account has no second factor) ends the step-up at once with what to do, instead of prompting for a code that can never be accepted, and `instance_not_covered` says the token does not reach that instance. `pos-cli gui serve` asks the portal for the token's scopes on the Instance up front: with a limited token it shows a **Limited token** badge, hides the pages and the record, user, constant and background-job actions and the Liquid evaluator it has no scope for, refuses `--sync` without `code:write`, and shows the Instance's refusal when a change is attempted anyway (the edit and delete panels used to fail silently on a refused mutation). Requires the matching Partner Portal and platformOS releases.
+
 ### Security
 
 * **A link to the admin GUI's Users page could rewrite the query it ran.** The list reads its filter from the url (`?attribute=email&value=…`), and the value was written into the GraphQL query inside quotes as it was, so a value containing a quote could end the filter and add to the query — a link could make the list show users other than the ones it named. The value is now written as an escaped string, the attribute can only be `email` or `id` and the page only a number.
@@ -11,6 +15,10 @@
 * **The admin GUI rendered text from the instance as HTML.** Notifications and the title of the details panel were written with `{@html}`, so a constant name, a user's email, a background job's source name or — on the Network page — the method and path of any request someone sent to the instance became markup in a page that holds the instance's credentials. All of them are text now. The two places that wanted formatting, the update notification and the method badge on a network request, pass a Svelte snippet instead, so markup comes only from the GUI's own templates.
 
 ### Fixes
+
+* Presigning an upload — deploy's asset archive, `sync`'s direct asset upload, `data import` and `uploads push` — now presents the two-factor session like every other instance request, and asks for one when the Instance wants it. It used to send the long-lived token straight from `MARKETPLACE_TOKEN`, so once an Instance required a session there, an enrolled account's asset uploads were refused with no step-up. Requires the matching platformOS release to matter; against an older Instance the request is simply accepted as before.
+
+* `pos-cli uploads push` no longer fails immediately with `ReferenceError: gateway is not defined`.
 
 * **The admin GUI's Users list could show the users from before a filter was applied.** The list was loaded once when the page opened and again after each filter, and whichever answer arrived last was shown. The list and the user details are now loaded by SvelteKit `load` functions from the url, which apply only the latest navigation; opening a user no longer loads the list again.
 

@@ -5,6 +5,9 @@
  * differently from every other HTTP failure pos-cli makes, so ServerError could not
  * explain them and the body the service sent was discarded unread.
  */
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('#lib/logger.js', () => ({
@@ -122,5 +125,55 @@ describe('presignDirectory', () => {
 
     expect(isDirectUploadUnavailable(error)).toBe(false);
     expect(error.statusCode).toBe(403);
+  });
+});
+
+// Without a Gateway of the caller's, the credential comes from the MARKETPLACE_* hand-off,
+// and a session injected for this run stands in for the long-lived token.
+describe('presignUrl credential', () => {
+  let presignUrl;
+  let tmpDir;
+  let tmp;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    global.fetch.mockReset();
+    process.env.MARKETPLACE_URL = 'https://instance.example.com';
+    process.env.MARKETPLACE_TOKEN = 'instance-token';
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-presign-'));
+    process.env.CONFIG_FILE_PATH = path.join(tmpDir, '.pos');
+    tmp = path.join(tmpDir, 'upload.txt');
+    fs.writeFileSync(tmp, 'x');
+
+    ({ presignUrl } = await import('#lib/presignUrl.js'));
+  });
+
+  afterEach(() => {
+    delete process.env.MARKETPLACE_URL;
+    delete process.env.MARKETPLACE_TOKEN;
+    delete process.env.POS_PORTAL_SESSION_TOKEN;
+    delete process.env.CONFIG_FILE_PATH;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const sentHeaders = () => global.fetch.mock.calls[0][1].headers;
+
+  test('sends the long-lived token when no session is in force', async () => {
+    global.fetch.mockResolvedValue(answer({ url: 'https://s3', accessUrl: 'https://s3/f' }));
+
+    await presignUrl('uploads/f', tmp);
+
+    expect(sentHeaders().token).toBe('instance-token');
+    expect(sentHeaders().marketplace_domain).toBe('instance.example.com');
+  });
+
+  test('sends the two-factor session when one is in force', async () => {
+    process.env.POS_PORTAL_SESSION_TOKEN = 'session-token';
+    global.fetch.mockResolvedValue(answer({ url: 'https://s3', accessUrl: 'https://s3/f' }));
+
+    await presignUrl('uploads/f', tmp);
+
+    expect(sentHeaders().token).toBe('session-token');
   });
 });

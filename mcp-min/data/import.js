@@ -70,7 +70,7 @@ const dataImportTool = {
 
     // Passed, not exported: MARKETPLACE_* is process-wide, so this call and a deploy's
     // background upload could each restore the other's values.
-    const presignUrlFn = ctx.presignUrl || ((s3Path, filePath) => presignUrl(s3Path, filePath, { url: auth.url, token: auth.token }));
+    const presignUrlFn = ctx.presignUrl || ((s3Path, filePath) => presignUrl(s3Path, filePath, gateway));
     const uploadFileFn = ctx.uploadFile || uploadFile;
 
     const {

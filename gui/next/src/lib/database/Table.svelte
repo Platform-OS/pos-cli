@@ -9,9 +9,11 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { connectionState } from '#lib/state/connection.svelte.js';
 import { databaseState } from '#lib/state/database.svelte.js';
 import { highlightState } from '#lib/state/highlight.svelte.js';
 import { preferencesState } from '#lib/state/preferences.svelte.js';
+import { can } from '#lib/scopes.js';
 import { parseValue } from '#lib/parseValue.js'
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -196,6 +198,7 @@ td, th {
         <tr class:highlighted={highlightState.record === record.id} class:hasContextMenu={contextMenu.id === record.id}>
           <td>
             <div class="id">
+              {#if can(connectionState.online, 'records:write')}
               <div class="combo">
                 <button class="button compact more" class:active={contextMenu.id === record.id} onclick={() => contextMenu.id = record.id}>
                   <span class="label">More options</span>
@@ -208,6 +211,7 @@ td, th {
               </div>
               {#if contextMenu.id === record.id}
                 <ContextMenu record={record} deleted={deleted} on:close={() => contextMenu.id = null} />
+              {/if}
               {/if}
               {record.id}
             </div>

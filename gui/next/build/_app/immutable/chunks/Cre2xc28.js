@@ -1,4 +1,4 @@
-import{t as e}from"./ZX03xpO1.js";var t=[`SCHEDULED`,`DEAD`,`RUNNING`],n={get:async n=>{let r=parseInt(n?.page)>0?parseInt(n.page):1,i=``;n?.id&&(i=`id: { value: ${JSON.stringify(String(n.id))} }`);let a=``;t.includes(n?.type)&&(a=`type: ${n.type}`);let o=`
+import{t as e}from"./BY_WCETB.js";var t=[`SCHEDULED`,`DEAD`,`RUNNING`],n={get:async n=>{let r=parseInt(n?.page)>0?parseInt(n.page):1,i=``;n?.id&&(i=`id: { value: ${JSON.stringify(String(n.id))} }`);let a=``;t.includes(n?.type)&&(a=`type: ${n.type}`);let o=`
       query {
         admin_background_jobs(
           per_page: 20,
