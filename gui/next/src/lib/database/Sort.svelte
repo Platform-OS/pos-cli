@@ -3,10 +3,10 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { state } from '$lib/state.js';
-import { record } from '$lib/api/record.js';
+import { state } from '#lib/state.js';
+import { record } from '#lib/api/record.js';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 // properties

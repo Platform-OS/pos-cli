@@ -6,12 +6,12 @@
 import { tick, afterUpdate, onMount, beforeUpdate } from 'svelte';
 import { fade } from 'svelte/transition';
 import { browser } from '$app/environment';
-import { state } from '$lib/state.js';
-import { logs } from '$lib/api/logs';
+import { state } from '#lib/state.js';
+import { logs } from '#lib/api/logs';
 
-import Icon from '$lib/ui/Icon.svelte';
-import Aside from '$lib/ui/Aside.svelte';
-import Diagnostic from '$lib/ui/Diagnostic.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import Aside from '#lib/ui/Aside.svelte';
+import Diagnostic from '#lib/ui/Diagnostic.svelte';
 
 
 // properties

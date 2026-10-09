@@ -5,7 +5,7 @@
 // ------------------------------------------------------------------------
 import { fade } from 'svelte/transition';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 // properties

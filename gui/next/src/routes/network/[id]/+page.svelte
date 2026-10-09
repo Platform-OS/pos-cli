@@ -3,12 +3,12 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '$app/stores';
-import { network } from '$lib/api/network';
-import { state } from '$lib/state.js';
-import { httpStatusCodes } from '$lib/helpers/httpStatusCodes.js';
+import { page } from '#lib/page.js';
+import { network } from '#lib/api/network';
+import { state } from '#lib/state.js';
+import { httpStatusCodes } from '#lib/helpers/httpStatusCodes.js';
 
-import Aside from '$lib/ui/Aside.svelte';
+import Aside from '#lib/ui/Aside.svelte';
 
 
 

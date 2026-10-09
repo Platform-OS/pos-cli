@@ -4,7 +4,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { graphql } from '$lib/api/graphql';
+import { graphql } from '#lib/api/graphql';
 
 
 

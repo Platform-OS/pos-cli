@@ -3,11 +3,11 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '$app/stores';
-import { table } from '$lib/api/table';
-import { state } from '$lib/state';
+import { page } from '#lib/page.js';
+import { table } from '#lib/api/table';
+import { state } from '#lib/state';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 

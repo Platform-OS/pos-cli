@@ -1,6 +1,6 @@
 // imports
 // ------------------------------------------------------------------------
-import { tryParseJSON } from '$lib/tryParseJSON.js';
+import { tryParseJSON } from '#lib/tryParseJSON.js';
 
 
 
