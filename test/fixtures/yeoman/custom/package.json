@@ -2,6 +2,6 @@
   "name": "custom-generator-test",
   "type": "module",
   "dependencies": {
-    "yeoman-generator": "^9.2.0"
+    "yeoman-generator": "^10.0.1"
   }
 }

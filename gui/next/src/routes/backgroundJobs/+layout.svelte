@@ -5,15 +5,15 @@
 // ------------------------------------------------------------------------
 import { onDestroy } from 'svelte';
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
-import { backgroundJob } from '$lib/api/backgroundJob.js';
-import { relativeTime } from '$lib/relativeTime.js';
-import { state } from '$lib/state.js';
+import { page } from '#lib/page.js';
+import { backgroundJob } from '#lib/api/backgroundJob.js';
+import { relativeTime } from '#lib/relativeTime.js';
+import { state } from '#lib/state.js';
 
-import Icon from '$lib/ui/Icon.svelte';
-import Number from '$lib/ui/forms/Number.svelte';
-import Retry from '$lib/backgroundJob/Retry.svelte';
-import Delete from '$lib/backgroundJob/Delete.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import Number from '#lib/ui/forms/Number.svelte';
+import Retry from '#lib/backgroundJob/Retry.svelte';
+import Delete from '#lib/backgroundJob/Delete.svelte';
 
 
 // properties

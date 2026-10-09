@@ -6,7 +6,7 @@
 import { createEventDispatcher } from 'svelte';
 import { onNavigate } from '$app/navigation';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 // properties

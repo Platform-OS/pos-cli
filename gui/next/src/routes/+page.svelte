@@ -4,10 +4,10 @@
 // imports
 // ------------------------------------------------------------------------
 import { fade } from 'svelte/transition';
-import { state } from '$lib/state';
-import { table } from '$lib/api/table';
+import { state } from '#lib/state';
+import { table } from '#lib/api/table';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 

@@ -10,12 +10,12 @@
 // imports
 // ------------------------------------------------------------------------
 import { createEventDispatcher } from 'svelte';
-import { clickOutside } from '$lib/helpers/clickOutside.js';
-import { state } from '$lib/state.js';
+import { clickOutside } from '#lib/helpers/clickOutside.js';
+import { state } from '#lib/state.js';
 
-import Delete from '$lib/database/Delete.svelte';
-import Restore from '$lib/database/Restore.svelte';
-import Icon from '$lib/ui/Icon.svelte';
+import Delete from '#lib/database/Delete.svelte';
+import Restore from '#lib/database/Restore.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------

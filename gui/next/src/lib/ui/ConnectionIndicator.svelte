@@ -3,7 +3,7 @@
 
 import { onMount } from 'svelte';
 import { browser } from '$app/environment';
-import { state } from '$lib/state';
+import { state } from '#lib/state';
 
 
 // properties

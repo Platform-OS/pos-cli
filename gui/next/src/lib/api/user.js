@@ -5,8 +5,8 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { graphql } from '$lib/api/graphql';
-import { buildMutationIngredients } from '$lib/helpers/buildMutationIngredients';
+import { graphql } from '#lib/api/graphql';
+import { buildMutationIngredients } from '#lib/helpers/buildMutationIngredients';
 
 const user = {
 
