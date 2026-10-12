@@ -4,11 +4,11 @@
 // imports
 // ------------------------------------------------------------------------
 import { createEventDispatcher } from 'svelte';
-import { page } from '$app/stores';
-import { record } from '$lib/api/record';
-import { state } from '$lib/state';
+import { page } from '#lib/page.js';
+import { record } from '#lib/api/record';
+import { state } from '#lib/state';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 export let table;

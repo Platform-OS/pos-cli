@@ -10,9 +10,9 @@
 // imports
 // ------------------------------------------------------------------------
 import { createEventDispatcher } from 'svelte';
-import { clickOutside } from '$lib/helpers/clickOutside.js';
+import { clickOutside } from '#lib/helpers/clickOutside.js';
 
-import Delete from '$lib/users/Delete.svelte';
+import Delete from '#lib/users/Delete.svelte';
 
 // properties
 // ------------------------------------------------------------------------

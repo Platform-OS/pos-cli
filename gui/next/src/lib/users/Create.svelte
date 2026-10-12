@@ -5,13 +5,13 @@
 // ------------------------------------------------------------------------
 import { onMount, createEventDispatcher } from 'svelte';
 import { quintOut } from 'svelte/easing';
-import { state } from '$lib/state.js';
-import { user } from '$lib/api/user.js';
-import { parseValue } from '$lib/parseValue.js';
-import { tryParseJSON } from '$lib/tryParseJSON.js';
+import { state } from '#lib/state.js';
+import { user } from '#lib/api/user.js';
+import { parseValue } from '#lib/parseValue.js';
+import { tryParseJSON } from '#lib/tryParseJSON.js';
 
-import Icon from '$lib/ui/Icon.svelte';
-import Toggle from '$lib/ui/forms/Toggle.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import Toggle from '#lib/ui/forms/Toggle.svelte';
 
 
 // properties

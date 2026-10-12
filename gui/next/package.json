@@ -10,20 +10,22 @@
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
-    "@sveltejs/adapter-auto": "^7.0.1",
-    "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/adapter-auto": "^8.0.0",
+    "@sveltejs/adapter-static": "^4.0.0",
+    "@sveltejs/kit": "^3.0.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "svelte": "^5.57.1",
-    "vite": "^8.3.1"
+    "vite": "^8.3.4"
   },
   "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
   "dependencies": {
     "svelte-autosize": "^1.1.5",
     "svelte-json-tree": "^2.2.0"
   },
   "overrides": {
-    "cookie": "^0.7.0",
     "svelte-json-tree": {
       "svelte": "$svelte"
     }

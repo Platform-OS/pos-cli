@@ -3,12 +3,12 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '$app/stores';
-import { backgroundJob } from '$lib/api/backgroundJob.js';
+import { page } from '#lib/page.js';
+import { backgroundJob } from '#lib/api/backgroundJob.js';
 
-import Aside from '$lib/ui/Aside.svelte';
-import Code from '$lib/ui/Code.svelte';
-import JSONTree from '$lib/ui/JSONTree.svelte';
+import Aside from '#lib/ui/Aside.svelte';
+import Code from '#lib/ui/Code.svelte';
+import JSONTree from '#lib/ui/JSONTree.svelte';
 
 
 // properties

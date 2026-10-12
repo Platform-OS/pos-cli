@@ -9,12 +9,12 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { state } from '$lib/state.js';
-import { parseValue } from '$lib/parseValue.js'
+import { state } from '#lib/state.js';
+import { parseValue } from '#lib/parseValue.js'
 
-import Icon from '$lib/ui/Icon.svelte';
-import ContextMenu from '$lib/database/ContextMenu.svelte';
-import JSONTree from '$lib/ui/JSONTree.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import ContextMenu from '#lib/database/ContextMenu.svelte';
+import JSONTree from '#lib/ui/JSONTree.svelte';
 
 
 // properties

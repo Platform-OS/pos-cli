@@ -30,6 +30,12 @@ beforeAll(async () => {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({ instance: { id: 1, uuid: 'u' } }));
     }
+    // As an instance keeping its logs in Redis answers: a whole-number cursor other than `0` gets
+    // one error row instead of the log (measured 2026-10-12).
+    if (/^[0-9]+$/.test(url.searchParams.get('last_id')) && url.searchParams.get('last_id') !== '0') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ logs: [{ id: 0, message: 'Error. Your pos-cli version is not supported. Update required.' }] }));
+    }
     const rows = serve ? serve(url.searchParams.get('last_id')) : (pages.shift() ?? []);
     if (rows === undefined) {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -89,7 +95,8 @@ describe('pos-cli fetch-logs', () => {
 
     await run([]);
 
-    expect(asked.some(u => u.includes('last_id=1'))).toBe(true);
+    // `1.0`, not `1`: an instance keeping its logs in Redis answers a whole number with an error row.
+    expect(asked.some(u => /last_id=1\.0(&|$)/.test(u))).toBe(true);
     expect(asked.some(u => /last_id=0(&|$)/.test(u))).toBe(false);
   });
 
@@ -183,8 +190,8 @@ describe('pos-cli fetch-logs', () => {
   test('an inclusive last_id reaching the end is not reported as stopping early', async () => {
     const rows = [{ id: '1790097411.216', message: 'a' }, { id: '1790097411.999', message: 'b' }];
     serve = (cursor) => {
-      // The default cursor is now `1`, which is older than every row: the whole list.
-      const from = cursor === '1' ? 0 : rows.findIndex(r => r.id === cursor);
+      // The default cursor is `1`, sent as `1.0`, which is older than every row: the whole list.
+      const from = cursor === '1.0' ? 0 : rows.findIndex(r => r.id === cursor);
       return rows.slice(from === -1 ? rows.length : from);
     };
 

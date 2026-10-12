@@ -1,0 +1,1 @@
+import{P as e,St as t,X as n,Z as r}from"../chunks/DX_aJUWp.js";import"../chunks/tlrytz-0.js";function i(i,a){var o=r(),s=t(o);e(s,a,`default`,{},null),n(i,o)}export{i as component};

@@ -9,8 +9,8 @@ import '../style/general.css';
 import '../style/button.css';
 import '../style/forms.css';
 
-import Header from '$lib/ui/Header.svelte';
-import Notifications from '$lib/ui/Notifications.svelte';
+import Header from '#lib/ui/Header.svelte';
+import Notifications from '#lib/ui/Notifications.svelte';
 
 </script>
 

@@ -5,10 +5,10 @@
 // ------------------------------------------------------------------------
 import { fade } from 'svelte/transition';
 import { afterUpdate } from 'svelte';
-import { state } from '$lib/state';
+import { state } from '#lib/state';
 
-import Icon from '$lib/ui/Icon.svelte';
-import ConnectionIndicator from '$lib/ui/ConnectionIndicator.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import ConnectionIndicator from '#lib/ui/ConnectionIndicator.svelte';
 
 let height = 0;
 

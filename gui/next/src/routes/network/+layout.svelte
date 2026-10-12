@@ -5,14 +5,14 @@
 // ------------------------------------------------------------------------
 import { onMount, tick } from 'svelte';
 import { beforeNavigate, afterNavigate } from '$app/navigation';
-import { page } from '$app/stores';
-import { network } from '$lib/api/network.js';
-import { state } from '$lib/state.js';
-import { clickOutside } from '$lib/helpers/clickOutside.js';
+import { page } from '#lib/page.js';
+import { network } from '#lib/api/network.js';
+import { state } from '#lib/state.js';
+import { clickOutside } from '#lib/helpers/clickOutside.js';
 
-import Icon from '$lib/ui/Icon.svelte';
-import Toggle from '$lib/ui/forms/Toggle.svelte';
-import Presets from '$lib/network/Presets.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import Toggle from '#lib/ui/forms/Toggle.svelte';
+import Presets from '#lib/network/Presets.svelte';
 
 
 // properties

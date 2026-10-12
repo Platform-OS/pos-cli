@@ -550,6 +550,14 @@ Four tools start work that outlives the call (`deploy-start`, `data-import`, `da
   `bin/pos-cli-logs.js` want the tail and are right to pass `0`, so the value alone cannot say
   which is meant.
 
+  **A whole number is never sent as one.** That measurement was on an instance that keeps no logs
+  in Redis. One that does reads any whole-number `last_id` other than `0` as an id from a pos-cli
+  that predates row ids, and answers with a single "pos-cli version is not supported" row —
+  measured 2026-10-12, for `1` and for `1787477369`, while `1.0` returned the log. `wireCursor`
+  (`lib/logRowId.js`), applied in `Gateway.logs`, appends `.0`: the same instant, nothing parsed.
+  `OLDEST_RETAINED` stays `'1'` everywhere else, and the `fetch-logs` test server answers the way
+  such an instance does, so a cursor that reaches the wire bare fails the suite.
+
   **What reaches that log.** Deployed code writes there, `{% log %}` included; a `liquid-exec`
   render's **Liquid errors** are written too, and only its `{% log %}` is not — so a template
   debugged that way reports its failures in the log and leaves no trace of its own logging. This

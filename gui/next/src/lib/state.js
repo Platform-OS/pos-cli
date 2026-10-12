@@ -1,7 +1,7 @@
 /*
   store that handles all the state and data related objects
 
-  usage: import { state } from '$lib/state.js' and then use
+  usage: import { state } from '#lib/state.js' and then use
   the methods provided in the return statement for navigating through
   the state.
 */

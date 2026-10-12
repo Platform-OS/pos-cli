@@ -88,7 +88,7 @@ describe('Logs API - Unit Tests', () => {
     test('fetches logs after specific lastId', async () => {
       nock(TEST_URL)
         .get('/api/app_builder/logs')
-        .query({ last_id: 2 })
+        .query({ last_id: '2.0' })
         .reply(200, [mockResponses.logs.withEntries[2]]);
 
       const Gateway = (await import('#lib/proxy.js')).default;
@@ -103,7 +103,7 @@ describe('Logs API - Unit Tests', () => {
     test('returns empty array when no new logs', async () => {
       nock(TEST_URL)
         .get('/api/app_builder/logs')
-        .query({ last_id: 100 })
+        .query({ last_id: '100.0' })
         .reply(200, mockResponses.logs.empty);
 
       const Gateway = (await import('#lib/proxy.js')).default;

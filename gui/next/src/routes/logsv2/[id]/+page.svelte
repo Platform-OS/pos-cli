@@ -3,14 +3,14 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '$app/stores';
-import { logs } from '$lib/api/logsv2.js';
-import { state } from '$lib/state.js';
-import { tryParseJSON } from '$lib/tryParseJSON.js';
+import { page } from '#lib/page.js';
+import { logs } from '#lib/api/logsv2.js';
+import { state } from '#lib/state.js';
+import { tryParseJSON } from '#lib/tryParseJSON.js';
 
-import Aside from '$lib/ui/Aside.svelte';
-import JSONTree from '$lib/ui/JSONTree.svelte';
-import Copy from '$lib/ui/Copy.svelte';
+import Aside from '#lib/ui/Aside.svelte';
+import JSONTree from '#lib/ui/JSONTree.svelte';
+import Copy from '#lib/ui/Copy.svelte';
 
 
 

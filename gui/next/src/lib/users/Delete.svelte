@@ -4,10 +4,10 @@
 // imports
 // ------------------------------------------------------------------------
 import { createEventDispatcher } from 'svelte';
-import { user } from '$lib/api/user';
-import { state } from '$lib/state';
+import { user } from '#lib/api/user';
+import { state } from '#lib/state';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 export let id;

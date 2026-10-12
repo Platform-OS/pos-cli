@@ -12,9 +12,9 @@
 -->
 <script>
 
-import { isStructuredDiagnostic, displayType, frameLabel } from '$lib/diagnostics.js';
-import { tryParseJSON } from '$lib/tryParseJSON.js';
-import JSONTree from '$lib/ui/JSONTree.svelte';
+import { isStructuredDiagnostic, displayType, frameLabel } from '#lib/diagnostics.js';
+import { tryParseJSON } from '#lib/tryParseJSON.js';
+import JSONTree from '#lib/ui/JSONTree.svelte';
 
 // the full log-table row ({ error_type, message, data, ... })
 export let log;

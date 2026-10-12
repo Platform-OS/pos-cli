@@ -5,7 +5,7 @@
 // ------------------------------------------------------------------------
 import { onMount } from 'svelte';
 
-import Tables from '$lib/database/Tables.svelte';
+import Tables from '#lib/database/Tables.svelte';
 
 
 // properties

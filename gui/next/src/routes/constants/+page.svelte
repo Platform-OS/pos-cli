@@ -4,10 +4,10 @@
 // imports
 // ------------------------------------------------------------------------
 import { fade } from 'svelte/transition';
-import { constant } from '$lib/api/constant.js';
-import { state } from '$lib/state.js';
+import { constant } from '#lib/api/constant.js';
+import { state } from '#lib/state.js';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 // properties

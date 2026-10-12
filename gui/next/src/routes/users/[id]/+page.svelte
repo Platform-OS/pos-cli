@@ -3,13 +3,13 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '$app/stores';
-import { user } from '$lib/api/user.js';
-import { state } from '$lib/state.js';
-import { tryParseJSON } from '$lib/tryParseJSON.js';
+import { page } from '#lib/page.js';
+import { user } from '#lib/api/user.js';
+import { state } from '#lib/state.js';
+import { tryParseJSON } from '#lib/tryParseJSON.js';
 
-import Aside from '$lib/ui/Aside.svelte';
-import JSONTree from '$lib/ui/JSONTree.svelte';
+import Aside from '#lib/ui/Aside.svelte';
+import JSONTree from '#lib/ui/JSONTree.svelte';
 
 
 // properties

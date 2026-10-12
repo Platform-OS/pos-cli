@@ -3,16 +3,16 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '$app/stores';
-import { state } from '$lib/state';
-import { record } from '$lib/api/record';
+import { page } from '#lib/page.js';
+import { state } from '#lib/state';
+import { record } from '#lib/api/record';
 
-import Icon from '$lib/ui/Icon.svelte';
-import Filters from '$lib/database/Filters.svelte';
-import Sort from '$lib/database/Sort.svelte';
-import Table from '$lib/database/Table.svelte';
-import RecordCreate from '$lib/database/Create.svelte';
-import Number from '$lib/ui/forms/Number.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import Filters from '#lib/database/Filters.svelte';
+import Sort from '#lib/database/Sort.svelte';
+import Table from '#lib/database/Table.svelte';
+import RecordCreate from '#lib/database/Create.svelte';
+import Number from '#lib/ui/forms/Number.svelte';
 
 
 // properties

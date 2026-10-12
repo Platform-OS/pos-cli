@@ -11,11 +11,11 @@
 // ------------------------------------------------------------------------
 import { onMount, createEventDispatcher } from 'svelte';
 import { fade } from 'svelte/transition';
-import { page } from '$app/stores';
-import { state } from '$lib/state';
-import { table } from '$lib/api/table';
+import { page } from '#lib/page.js';
+import { state } from '#lib/state';
+import { table } from '#lib/api/table';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 // properties

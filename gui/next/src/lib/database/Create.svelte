@@ -5,15 +5,15 @@
 // ------------------------------------------------------------------------
 import { onMount, tick } from 'svelte';
 import { quintOut } from 'svelte/easing';
-import { page } from '$app/stores.js';
-import { state } from '$lib/state.js';
-import { record } from '$lib/api/record.js';
-import { parseValue } from '$lib/parseValue.js';
-import { tryParseJSON } from '$lib/tryParseJSON.js';
+import { page } from '#lib/page.js';
+import { state } from '#lib/state.js';
+import { record } from '#lib/api/record.js';
+import { parseValue } from '#lib/parseValue.js';
+import { tryParseJSON } from '#lib/tryParseJSON.js';
 import autosize from 'svelte-autosize';
 
-import Icon from '$lib/ui/Icon.svelte';
-import Toggle from '$lib/ui/forms/Toggle.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import Toggle from '#lib/ui/forms/Toggle.svelte';
 
 
 // properties

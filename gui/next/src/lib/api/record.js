@@ -5,9 +5,9 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { graphql } from '$lib/api/graphql';
-import { state } from '$lib/state';
-import { buildMutationIngredients, columnTypeToVariableType } from '$lib/helpers/buildMutationIngredients';
+import { graphql } from '#lib/api/graphql';
+import { state } from '#lib/state';
+import { buildMutationIngredients, columnTypeToVariableType } from '#lib/helpers/buildMutationIngredients';
 
 
 // purpose:		build the strings and objects needed to pass with GraphQL request to filter the properties

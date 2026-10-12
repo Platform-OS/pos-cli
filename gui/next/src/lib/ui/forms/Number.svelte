@@ -5,7 +5,7 @@
 // ------------------------------------------------------------------------
 import { tick, createEventDispatcher } from 'svelte';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 
 // properties

@@ -4,9 +4,9 @@
 // imports
 // ------------------------------------------------------------------------
 import { quintOut } from 'svelte/easing';
-import { state } from '$lib/state.js';
+import { state } from '#lib/state.js';
 
-import Icon from '$lib/ui/Icon.svelte';
+import Icon from '#lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------

@@ -4,16 +4,16 @@
 // imports
 // ------------------------------------------------------------------------
 import { goto } from '$app/navigation';
-import { state } from '$lib/state.js';
+import { state } from '#lib/state.js';
 import { quintOut } from 'svelte/easing';
-import { page } from '$app/stores';
-import { user } from '$lib/api/user.js';
-import ContextMenu from '$lib/users/ContextMenu.svelte';
-import CreateUser from '$lib/users/Create.svelte';
+import { page } from '#lib/page.js';
+import { user } from '#lib/api/user.js';
+import ContextMenu from '#lib/users/ContextMenu.svelte';
+import CreateUser from '#lib/users/Create.svelte';
 import { tick } from 'svelte';
 
-import Icon from '$lib/ui/Icon.svelte';
-import Number from '$lib/ui/forms/Number.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import Number from '#lib/ui/forms/Number.svelte';
 
 
 // properties

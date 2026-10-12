@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { PassThrough } from 'stream';
 import { serveStdio, StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { selectTools, describeSelection } from './tool-selection.js';
 import { createServerFactory } from './protocol/server-factory.js';
@@ -22,11 +23,15 @@ export default function startStdio({ tools, shutdown = createShutdown() } = {}) 
 
   const stdin = process.stdin;
 
-  // The SDK does not end the connection when stdin ends, so calls already running still write
-  // their responses; its handle is deliberately never closed on shutdown, which would abort them.
+  // Since SDK 2.1.0 the stdio transport closes itself at stdin EOF and aborts the calls still
+  // running, unanswered. It therefore reads a copy of stdin that carries the data but never the
+  // end, so those calls still write their responses and the session's end is decided below. Its
+  // handle is deliberately never closed on shutdown either, which would abort them the same way.
+  const input = new PassThrough();
+  stdin.pipe(input, { end: false });
   serveStdio(factory, {
     legacy: 'serve',
-    transport: new StdioServerTransport(stdin, process.stdout),
+    transport: new StdioServerTransport(input, process.stdout),
     onerror: err => log.debug('stdio transport error', { error: err.message })
   });
 

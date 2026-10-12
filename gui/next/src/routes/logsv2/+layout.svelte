@@ -5,12 +5,12 @@
 // ------------------------------------------------------------------------
 import { tick } from 'svelte';
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
-import { logs } from '$lib/api/logsv2.js';
-import { state } from '$lib/state.js';
+import { page } from '#lib/page.js';
+import { logs } from '#lib/api/logsv2.js';
+import { state } from '#lib/state.js';
 
-import Icon from '$lib/ui/Icon.svelte';
-import Number from '$lib/ui/forms/Number.svelte';
+import Icon from '#lib/ui/Icon.svelte';
+import Number from '#lib/ui/forms/Number.svelte';
 
 
 // properties
