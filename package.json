@@ -84,7 +84,7 @@
     "yaml": "^2.9.1",
     "yazl": "^3.3.1",
     "yeoman-environment": "^7.2.0",
-    "yeoman-generator": "^9.2.0"
+    "yeoman-generator": "^10.0.1"
   },
   "preferGlobal": true,
   "bin": {
