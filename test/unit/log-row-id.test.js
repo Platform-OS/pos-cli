@@ -1,6 +1,6 @@
 // Ordering log row ids, which neither `Number` nor `<` gets right. Both mistakes have shipped.
 import { describe, test, expect } from 'vitest';
-import { isNewer, newerOf, epochSecondsOf } from '#lib/logRowId.js';
+import { isNewer, newerOf, epochSecondsOf, wireCursor, OLDEST_RETAINED, NEWEST_PAGE } from '#lib/logRowId.js';
 
 describe('the two comparisons that look right and are not', () => {
   // The 17th significant digit is past what a double holds, so these parse to one value.
@@ -110,5 +110,30 @@ describe('epochSecondsOf', () => {
     ['null', null]
   ])('%s is not an instant', (_label, value) => {
     expect(epochSecondsOf(value)).toBeNull();
+  });
+});
+
+// An instance keeping its logs in Redis answers a whole-number cursor other than `0` with a single
+// "pos-cli version is not supported" row — measured 2026-10-12 for `1` and `1787477369`, while
+// `1.0` returned the log. `0` must stay exactly `0`: it is the one value read as no cursor.
+describe('the cursor as it goes out', () => {
+  test('a whole number gains a fraction naming the same instant', () => {
+    expect(wireCursor(OLDEST_RETAINED)).toBe('1.0');
+    expect(wireCursor('1787477369')).toBe('1787477369.0');
+    expect(wireCursor(1787477369)).toBe('1787477369.0');
+  });
+
+  test('the newest-page cursor is left alone', () => {
+    expect(wireCursor(NEWEST_PAGE)).toBe('0');
+  });
+
+  test('a row id is passed through verbatim', () => {
+    expect(wireCursor('1790008926.7639065')).toBe('1790008926.7639065');
+    expect(wireCursor('1790008926.7600000')).toBe('1790008926.7600000');
+  });
+
+  test('a value that is not a cursor is not repaired into one', () => {
+    expect(wireCursor('1&per_page=5')).toBe('1&per_page=5');
+    expect(wireCursor('')).toBe('');
   });
 });

@@ -15,7 +15,9 @@ import { page as current } from '$app/state';
 import { toStore } from 'svelte/store';
 
 
-const page = toStore(() => ({
+// built on subscribe rather than on import: on the server `toStore` reads its getter at once,
+// and `page` from $app/state can only be read while a component is rendering
+const read = () => ({
   data: current.data,
   error: current.error,
   form: current.form,
@@ -24,7 +26,11 @@ const page = toStore(() => ({
   state: current.state,
   status: current.status,
   url: current.url
-}));
+});
+
+const page = {
+  subscribe: (run, invalidate) => toStore(read).subscribe(run, invalidate)
+};
 
 
 export { page };
