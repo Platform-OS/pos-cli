@@ -306,7 +306,9 @@ describe('apiRequest', () => {
   });
 
   describe('buildFormData - edge cases', () => {
-    test('handles empty FormData object', async () => {
+    // A multipart body with no parts is only its closing delimiter, and the Instance
+    // answers that with a 400 -- which is what `pos-cli pull` used to send.
+    test('sends no body for an empty formData object', async () => {
       const formData = {};
 
       global.fetch.mockResolvedValue({
@@ -321,12 +323,26 @@ describe('apiRequest', () => {
         formData
       });
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://example.com/api/test',
-        expect.objectContaining({
-          body: expect.any(FormData)
-        })
-      );
+      const [, fetchOptions] = global.fetch.mock.calls[0];
+      expect(fetchOptions.method).toBe('POST');
+      expect(fetchOptions.body).toBeUndefined();
+    });
+
+    test('sends no body when every formData value is skipped', async () => {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('{}')
+      });
+
+      await apiRequest({
+        method: 'POST',
+        uri: 'https://example.com/api/test',
+        formData: { module_name: undefined, other: null }
+      });
+
+      const [, fetchOptions] = global.fetch.mock.calls[0];
+      expect(fetchOptions.body).toBeUndefined();
     });
 
     test('handles object without path property', async () => {
