@@ -1016,6 +1016,26 @@ If you script `pos-cli ai init --tool <tool>` and want it to keep writing only t
 
 **The server used to be called `platformos`** and is now `platformos-cli`, after the command it runs — the old name said nothing about what it was, and the supervisor is platformOS too. `pos-cli ai init` renames an entry it wrote, in place, and removes the old one so the server is not registered twice. An entry you have customised is left under the old name, with a message saying what the new one would be: rename it yourself, or keep it — nothing breaks either way, since the name is only how your AI tool refers to the server.
 
+##### The platformOS agent kit (Claude Code only)
+
+Choosing **Claude Code** adds one more optional step: installing the **platformOS agent kit** into `.claude/` in your project. The kit is platformOS rules, knowledge files, a coding-agent definition and a diagnostics hook — the platform behaviour that fails silently and that no linter catches, written for an agent to read. It is downloaded from the documentation site:
+
+    https://documentation.platformos.com/assets/platformos-agent-kit.zip
+
+It is offered for Claude Code and no other tool, because the archive *is* a `.claude/` directory — that layout belongs to Claude Code and nothing else reads it.
+
+    pos-cli ai init --tool claude --agent-kit     # install it without being asked
+    pos-cli ai init --tool claude --no-agent-kit  # never install it, never ask
+
+With neither flag, the question is asked only when the run is interactive. Naming `--tool` means "do not ask me", so a scripted run installs the kit only if it also passes `--agent-kit`.
+
+Two things it will not do:
+
+- **It never overwrites an existing `.claude/`.** That directory holds your own rules and settings, and merging a kit into it would replace them. If you already have one, pos-cli says so and prints the URL so you can unpack and merge it yourself.
+- **It never fails `ai init`.** The MCP servers are registered before the kit is offered, so a download failure is a warning with the URL in it, not a failed command.
+
+Every entry in the archive is checked before anything is written: a path that is absolute, that carries a Windows drive, or that climbs out of `.claude/` rejects the whole archive.
+
 #### Starting the MCP Server
 
     pos-cli-mcp
