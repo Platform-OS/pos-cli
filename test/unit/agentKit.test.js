@@ -172,17 +172,41 @@ describe('installAgentKit', () => {
     expect(fs.readFileSync(path.join(existing, 'CLAUDE.md'), 'utf8')).toBe('mine');
   });
 
-  test('leaves no staging directory behind, on success or on failure', async () => {
-    const stagingBase = path.join(getTmpDir(), 'tmp', 'pos-cli-agent-kit');
+  test('leaves no tmp/ behind on a project that had none, on success or on failure', async () => {
+    const tmpRoot = path.join(getTmpDir(), 'tmp');
 
     serves(KIT);
     await installAgentKit({ rootPath: getTmpDir() });
-    expect(fs.existsSync(stagingBase) ? fs.readdirSync(stagingBase) : []).toEqual([]);
+    expect(fs.existsSync(tmpRoot)).toBe(false);
 
     fs.rmSync(path.join(getTmpDir(), '.claude'), { recursive: true });
     servesHostile('.claude/../escape.md');
     await expect(installAgentKit({ rootPath: getTmpDir() })).rejects.toThrow();
-    expect(fs.existsSync(stagingBase) ? fs.readdirSync(stagingBase) : []).toEqual([]);
+    expect(fs.existsSync(tmpRoot)).toBe(false);
+  });
+
+  // tmp/release.zip is pos-cli's own scratch file; an install must not sweep it up.
+  test('never removes a tmp/ the project already had, or anything in it', async () => {
+    const tmpRoot = path.join(getTmpDir(), 'tmp');
+    fs.mkdirSync(tmpRoot, { recursive: true });
+    fs.writeFileSync(path.join(tmpRoot, 'release.zip'), 'not ours');
+    serves(KIT);
+
+    await installAgentKit({ rootPath: getTmpDir() });
+
+    expect(fs.readdirSync(tmpRoot)).toEqual(['release.zip']);
+    expect(fs.readFileSync(path.join(tmpRoot, 'release.zip'), 'utf8')).toBe('not ours');
+  });
+
+  test('leaves an empty pre-existing tmp/ in place rather than tidying it away', async () => {
+    const tmpRoot = path.join(getTmpDir(), 'tmp');
+    fs.mkdirSync(tmpRoot, { recursive: true });
+    serves(KIT);
+
+    await installAgentKit({ rootPath: getTmpDir() });
+
+    expect(fs.existsSync(tmpRoot)).toBe(true);
+    expect(fs.readdirSync(tmpRoot)).toEqual([]);
   });
 
   test('propagates a download failure rather than writing a partial kit', async () => {
