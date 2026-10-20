@@ -8,7 +8,7 @@ Run all commands from the project root directory, one level above the `app` or `
 
 ### Requirements
 
-`pos-cli` requires Node.js 22.18.0 or later on the 22 line, or 24.11.0 or later, to function correctly. [See instructions for installing Node.js on your platform](https://nodejs.org/en/download/).
+`pos-cli` requires Node.js 22.22.2 or later on the 22 line, 24.15.0 or later on the 24 line, or 26.0.0 or later, to function correctly. [See instructions for installing Node.js on your platform](https://nodejs.org/en/download/).
 
 ## Installation and Update
 
