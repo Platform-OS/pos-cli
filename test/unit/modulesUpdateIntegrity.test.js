@@ -12,7 +12,7 @@ import { describe, test, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import glob from 'fast-glob';
+import { globSync } from 'tinyglobby';
 import prepareArchive from '#lib/prepareArchive.js';
 import { withTmpDir } from '#test/utils/withTmpDir.js';
 import { makeFileHelpers } from '#test/utils/fileHelpers.js';
@@ -88,7 +88,7 @@ const installed = (name, version, files = {}) => {
 const filesOf = (name) => {
   const dir = path.join(process.cwd(), 'modules', name);
   if (!fs.existsSync(dir)) return null;
-  return glob.sync('**/*', { cwd: dir, onlyFiles: true, dot: true }).sort();
+  return globSync('**/*', { cwd: dir, onlyFiles: true, dot: true }).sort();
 };
 
 const fileHelpers = makeFileHelpers(withTmpDir('pos-cli-update-integrity-'));

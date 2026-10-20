@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { program } from '../lib/program.js';
-import glob from 'fast-glob';
+import { glob } from 'tinyglobby';
 import table from 'text-table';
 import logger from '../lib/logger.js';
 
