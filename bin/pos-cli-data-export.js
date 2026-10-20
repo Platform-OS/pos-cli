@@ -2,7 +2,6 @@
 
 import fs from 'fs';
 import { program } from '../lib/program.js';
-import shell from 'shelljs';
 import Gateway from '../lib/proxy.js';
 import { fetchSettings } from '../lib/settings.js';
 import fetchFiles from '../lib/data/fetchFiles.js';
@@ -76,7 +75,7 @@ program
     };
 
     const handleJsonFileExport = (exportTask, filename) => {
-      shell.mkdir('-p', 'tmp');
+      fs.mkdirSync('tmp', { recursive: true });
       fs.writeFileSync('tmp/exported.json', JSON.stringify(exportTask.data));
       let data = transform(exportTask.data);
       spinner.succeed('Downloading files');
