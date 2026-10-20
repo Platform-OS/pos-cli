@@ -1,11 +1,11 @@
 import path from 'path';
 import table from 'text-table';
 import { execaSync } from 'execa';
-import fastGlob from 'fast-glob';
+import { globSync as tinyGlobSync } from 'tinyglobby';
 import yeoman from 'yeoman-environment';
 
 function listGeneratorPathsSync(globSync) {
-  const glob = globSync || fastGlob.sync;
+  const glob = globSync || tinyGlobSync;
   const files = glob('**/generators/*/index.js', { dot: false, ignore: ['**/node_modules/**', '**/.git/**'] });
   const entries = files.map((f) => {
     const generatorPath = f.replace(/\/index\.js$/, '');

@@ -2,7 +2,6 @@
 
 import fs from 'fs';
 import { program } from '../lib/program.js';
-import shell from 'shelljs';
 
 import Gateway from '../lib/proxy.js';
 import logger from '../lib/logger.js';
@@ -24,7 +23,7 @@ program
 
     gateway.generateMigration(formData).then(body => {
       const path = `${migrationsDir}/${body['name']}.liquid`;
-      shell.mkdir('-p', migrationsDir);
+      fs.mkdirSync(migrationsDir, { recursive: true });
 
       fs.writeFileSync(path, body['body'], logger.Error);
 

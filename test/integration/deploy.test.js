@@ -5,7 +5,6 @@ import unzip from 'unzipper';
 import fs from 'fs';
 import path from 'path';
 import { requireRealCredentials } from '#test/utils/credentials';
-import shell from 'shelljs';
 
 vi.setConfig({ testTimeout: 40000 });
 
@@ -14,7 +13,7 @@ const cwd = name => path.join(process.cwd(), 'test', 'fixtures', 'deploy', name)
 const cleanupTmp = () => {
   const tmpDir = path.join(process.cwd(), 'test', 'fixtures', 'deploy', 'correct', 'tmp');
   if (fs.existsSync(tmpDir)) {
-    shell.rm('-rf', tmpDir);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 };
 
