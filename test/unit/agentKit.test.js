@@ -33,8 +33,6 @@ const makeZip = (filePath, entries) =>
  */
 const makeHostileZip = async (filePath, hostilePath, otherEntries = {}) => {
   const placeholder = `${KIT_DIR}/${'X'.repeat(hostilePath.length - KIT_DIR.length - 1)}`;
-  if (placeholder.length !== hostilePath.length) throw new Error('placeholder length mismatch');
-
   await makeZip(filePath, { ...otherEntries, [placeholder]: 'payload' });
 
   const bytes = fs.readFileSync(filePath);
@@ -53,19 +51,16 @@ const makeHostileZip = async (filePath, hostilePath, otherEntries = {}) => {
   fs.writeFileSync(filePath, bytes);
 };
 
-/** Makes `downloadFile` deliver `entries` as the archive it was asked to fetch. */
-const serves = (entries) => {
+/** Makes `downloadFile` deliver whatever `build` writes as the archive it was asked to fetch. */
+const servesArchive = (build) => {
   downloadFile.mockImplementation(async (_url, fileName) => {
-    await makeZip(fileName, entries);
+    await build(fileName);
   });
 };
 
-/** The same, for an archive carrying one hostile entry name beside optional benign ones. */
-const servesHostile = (hostilePath, otherEntries) => {
-  downloadFile.mockImplementation(async (_url, fileName) => {
-    await makeHostileZip(fileName, hostilePath, otherEntries);
-  });
-};
+const serves = (entries) => servesArchive((fileName) => makeZip(fileName, entries));
+const servesHostile = (hostilePath, otherEntries) =>
+  servesArchive((fileName) => makeHostileZip(fileName, hostilePath, otherEntries));
 
 const KIT = {
   '.claude/CLAUDE.md': '# platformOS',
@@ -75,13 +70,17 @@ const KIT = {
 
 describe('isInsideKitDir', () => {
   test.each([
-    ['.claude', true],
-    ['.claude/', true],
-    ['.claude/CLAUDE.md', true],
-    ['.claude/rules/00-project-rules.md', true],
-    ['.claude/a/b/c.md', true]
-  ])('accepts %s', (entry, expected) => {
-    expect(isInsideKitDir(entry)).toBe(expected);
+    '.claude',
+    '.claude/',
+    '.claude/CLAUDE.md',
+    '.claude/rules/00-project-rules.md',
+    '.claude/a/b/c.md',
+    // normalize-path collapses these; they are legal spellings in a zip, not escapes.
+    '.claude//CLAUDE.md',
+    '.claude\\rules\\x.md',
+    './.claude/x'
+  ])('accepts %s', (entry) => {
+    expect(isInsideKitDir(entry)).toBe(true);
   });
 
   test.each([
@@ -139,15 +138,13 @@ describe('installAgentKit', () => {
     expect(fs.existsSync(path.join(path.dirname(getTmpDir()), 'escaped.md'))).toBe(false);
   });
 
-  test('refuses an archive carrying an absolute path', async () => {
-    servesHostile('/tmp/pos-cli-agent-kit-absolute.md', { '.claude/CLAUDE.md': 'ok' });
-
-    await expect(installAgentKit({ rootPath: getTmpDir() })).rejects.toThrow(/outside \.claude\//);
-    expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
-  });
-
-  test('refuses an archive whose entries are not the kit at all', async () => {
-    serves({ 'app/views/pages/index.liquid': 'not the kit' });
+  // The names themselves are covered by the table above; what these add is that a whole
+  // archive is refused and nothing is written, for a hostile name and for a merely wrong tree.
+  test.each([
+    ['an absolute path', () => servesHostile('/tmp/pos-cli-agent-kit-absolute.md', { '.claude/CLAUDE.md': 'ok' })],
+    ['entries that are not the kit at all', () => serves({ 'app/views/pages/index.liquid': 'not the kit' })]
+  ])('refuses an archive with %s', async (_label, arrange) => {
+    arrange();
 
     await expect(installAgentKit({ rootPath: getTmpDir() })).rejects.toThrow(/outside \.claude\//);
     expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
