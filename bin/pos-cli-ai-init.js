@@ -20,17 +20,17 @@ program
       .choices(DOCS_SCOPES)
   )
   .addOption(new Option('--no-docs', 'do not register the documentation servers'))
-  // Declared before --no-agent-kit so the pair has NO default: unset means "ask when
+  // Declared before --no-agent-playbook so the pair has NO default: unset means "ask when
   // interactive", which is a third state neither flag can express on its own.
   .addOption(
-    new Option('--agent-kit', 'also install the platformOS agent kit in .claude/ (Claude Code only)')
+    new Option('--agent-playbook', 'also install the platformOS Agent Playbook in .claude/ (Claude Code only)')
   )
-  .addOption(new Option('--no-agent-kit', 'do not install the agent kit, and do not ask'))
+  .addOption(new Option('--no-agent-playbook', 'do not install the Agent Playbook, and do not ask'))
   .action(async (options) => {
     await init({
       tool: options.tool,
       docs: options.docs === false ? 'none' : options.docs,
-      agentKit: options.agentKit
+      agentPlaybook: options.agentPlaybook
     });
   });
 

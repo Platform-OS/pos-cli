@@ -10,7 +10,7 @@ import { withTmpDir } from '#test/utils/withTmpDir.js';
 const downloadFile = vi.fn();
 vi.mock('#lib/downloadFile.js', () => ({ default: (...args) => downloadFile(...args) }));
 
-const { installAgentKit, isInsideKitDir, KIT_DIR } = await import('#lib/agentKit.js');
+const { installAgentPlaybook, isInsidePlaybookDir, PLAYBOOK_DIR } = await import('#lib/agentPlaybook.js');
 
 const getTmpDir = withTmpDir();
 
@@ -32,7 +32,7 @@ const makeZip = (filePath, entries) =>
  * archive whose entry name is hostile. Patching lengths would mean rewriting the offsets.
  */
 const makeHostileZip = async (filePath, hostilePath, otherEntries = {}) => {
-  const placeholder = `${KIT_DIR}/${'X'.repeat(hostilePath.length - KIT_DIR.length - 1)}`;
+  const placeholder = `${PLAYBOOK_DIR}/${'X'.repeat(hostilePath.length - PLAYBOOK_DIR.length - 1)}`;
   await makeZip(filePath, { ...otherEntries, [placeholder]: 'payload' });
 
   const bytes = fs.readFileSync(filePath);
@@ -68,7 +68,7 @@ const KIT = {
   '.claude/settings.json': '{}'
 };
 
-describe('isInsideKitDir', () => {
+describe('isInsidePlaybookDir', () => {
   test.each([
     '.claude',
     '.claude/',
@@ -80,7 +80,7 @@ describe('isInsideKitDir', () => {
     '.claude\\rules\\x.md',
     './.claude/x'
   ])('accepts %s', (entry) => {
-    expect(isInsideKitDir(entry)).toBe(true);
+    expect(isInsidePlaybookDir(entry)).toBe(true);
   });
 
   test.each([
@@ -97,11 +97,11 @@ describe('isInsideKitDir', () => {
     [''],
     [null]
   ])('refuses %s', (entry) => {
-    expect(isInsideKitDir(entry)).toBe(false);
+    expect(isInsidePlaybookDir(entry)).toBe(false);
   });
 });
 
-describe('installAgentKit', () => {
+describe('installAgentPlaybook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -109,7 +109,7 @@ describe('installAgentKit', () => {
   test('unpacks the archive into .claude/', async () => {
     serves(KIT);
 
-    const result = await installAgentKit({ rootPath: getTmpDir(), url: 'https://example.test/kit.zip' });
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), url: 'https://example.test/kit.zip' });
 
     expect(result.status).toBe('installed');
     expect(result.files).toBe(3);
@@ -120,7 +120,7 @@ describe('installAgentKit', () => {
   test('passes an abort signal so a hung download cannot stall the wizard', async () => {
     serves(KIT);
 
-    await installAgentKit({ rootPath: getTmpDir() });
+    await installAgentPlaybook({ rootPath: getTmpDir() });
 
     expect(downloadFile).toHaveBeenCalledWith(
       expect.any(String),
@@ -132,7 +132,7 @@ describe('installAgentKit', () => {
   test('refuses an archive that climbs out of .claude/, and writes nothing', async () => {
     servesHostile('.claude/../../escaped.md', { '.claude/CLAUDE.md': 'ok' });
 
-    await expect(installAgentKit({ rootPath: getTmpDir() })).rejects.toThrow(/outside \.claude\//);
+    await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow(/outside \.claude\//);
 
     expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
     expect(fs.existsSync(path.join(path.dirname(getTmpDir()), 'escaped.md'))).toBe(false);
@@ -141,19 +141,19 @@ describe('installAgentKit', () => {
   // The names themselves are covered by the table above; what these add is that a whole
   // archive is refused and nothing is written, for a hostile name and for a merely wrong tree.
   test.each([
-    ['an absolute path', () => servesHostile('/tmp/pos-cli-agent-kit-absolute.md', { '.claude/CLAUDE.md': 'ok' })],
+    ['an absolute path', () => servesHostile('/tmp/pos-cli-agent-playbook-absolute.md', { '.claude/CLAUDE.md': 'ok' })],
     ['entries that are not the kit at all', () => serves({ 'app/views/pages/index.liquid': 'not the kit' })]
   ])('refuses an archive with %s', async (_label, arrange) => {
     arrange();
 
-    await expect(installAgentKit({ rootPath: getTmpDir() })).rejects.toThrow(/outside \.claude\//);
+    await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow(/outside \.claude\//);
     expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
   });
 
   test('refuses an empty archive', async () => {
     serves({});
 
-    await expect(installAgentKit({ rootPath: getTmpDir() })).rejects.toThrow(/empty/);
+    await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow(/empty/);
   });
 
   test('never overwrites an existing .claude/, and does not download', async () => {
@@ -162,7 +162,7 @@ describe('installAgentKit', () => {
     fs.writeFileSync(path.join(existing, 'CLAUDE.md'), 'mine');
     serves(KIT);
 
-    const result = await installAgentKit({ rootPath: getTmpDir() });
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
 
     expect(result.status).toBe('exists');
     expect(downloadFile).not.toHaveBeenCalled();
@@ -173,12 +173,12 @@ describe('installAgentKit', () => {
     const tmpRoot = path.join(getTmpDir(), 'tmp');
 
     serves(KIT);
-    await installAgentKit({ rootPath: getTmpDir() });
+    await installAgentPlaybook({ rootPath: getTmpDir() });
     expect(fs.existsSync(tmpRoot)).toBe(false);
 
     fs.rmSync(path.join(getTmpDir(), '.claude'), { recursive: true });
     servesHostile('.claude/../escape.md');
-    await expect(installAgentKit({ rootPath: getTmpDir() })).rejects.toThrow();
+    await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow();
     expect(fs.existsSync(tmpRoot)).toBe(false);
   });
 
@@ -189,7 +189,7 @@ describe('installAgentKit', () => {
     fs.writeFileSync(path.join(tmpRoot, 'release.zip'), 'not ours');
     serves(KIT);
 
-    await installAgentKit({ rootPath: getTmpDir() });
+    await installAgentPlaybook({ rootPath: getTmpDir() });
 
     expect(fs.readdirSync(tmpRoot)).toEqual(['release.zip']);
     expect(fs.readFileSync(path.join(tmpRoot, 'release.zip'), 'utf8')).toBe('not ours');
@@ -200,7 +200,7 @@ describe('installAgentKit', () => {
     fs.mkdirSync(tmpRoot, { recursive: true });
     serves(KIT);
 
-    await installAgentKit({ rootPath: getTmpDir() });
+    await installAgentPlaybook({ rootPath: getTmpDir() });
 
     expect(fs.existsSync(tmpRoot)).toBe(true);
     expect(fs.readdirSync(tmpRoot)).toEqual([]);
@@ -209,7 +209,7 @@ describe('installAgentKit', () => {
   test('propagates a download failure rather than writing a partial kit', async () => {
     downloadFile.mockRejectedValue(new Error('Download failed with HTTP 404: https://example.test/kit.zip'));
 
-    await expect(installAgentKit({ rootPath: getTmpDir() })).rejects.toThrow(/404/);
+    await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow(/404/);
     expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
   });
 });

@@ -8,10 +8,10 @@ import { init, SERVERS, DOCS_SERVERS, RENAMED_FROM } from '#lib/ai.js';
 const select = vi.fn();
 vi.mock('@inquirer/prompts', () => ({ select: (...args) => select(...args) }));
 
-const installAgentKit = vi.fn(async () => ({ status: 'installed', files: 34 }));
-vi.mock('#lib/agentKit.js', async (importOriginal) => ({
+const installAgentPlaybook = vi.fn(async () => ({ status: 'installed', files: 34 }));
+vi.mock('#lib/agentPlaybook.js', async (importOriginal) => ({
   ...(await importOriginal()),
-  installAgentKit: (...args) => installAgentKit(...args)
+  installAgentPlaybook: (...args) => installAgentPlaybook(...args)
 }));
 
 vi.mock('#lib/logger.js', () => ({
@@ -43,7 +43,7 @@ const readJson = (...segments) => JSON.parse(fs.readFileSync(configPath(...segme
 describe('ai init', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    installAgentKit.mockResolvedValue({ status: 'installed', files: 34 });
+    installAgentPlaybook.mockResolvedValue({ status: 'installed', files: 34 });
   });
 
   test('claude - creates .mcp.json with both local servers', async () => {
@@ -527,27 +527,27 @@ describe('ai init', () => {
   });
 
 
-  describe("the agent kit", () => {
+  describe("the Agent Playbook", () => {
     const kitPath = () => path.join(getTmpDir(), ".claude");
 
-    test("--agent-kit installs it without asking", async () => {
-      await init({ tool: "claude", docs: "none", agentKit: true, rootPath: getTmpDir() });
+    test("--agent-playbook installs it without asking", async () => {
+      await init({ tool: "claude", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
 
-      expect(installAgentKit).toHaveBeenCalledWith({ rootPath: getTmpDir() });
+      expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir() });
       expect(select).not.toHaveBeenCalled();
       expect(logger.Success).toHaveBeenCalledWith(
-        "Installed the platformOS agent kit (34 files) in .claude/"
+        "Installed the platformOS Agent Playbook (34 files) in .claude/"
       );
     });
 
-    test("--no-agent-kit never asks and never installs", async () => {
+    test("--no-agent-playbook never asks and never installs", async () => {
       select.mockResolvedValueOnce("claude").mockResolvedValueOnce("none");
 
-      await init({ agentKit: false, rootPath: getTmpDir() });
+      await init({ agentPlaybook: false, rootPath: getTmpDir() });
 
-      expect(installAgentKit).not.toHaveBeenCalled();
+      expect(installAgentPlaybook).not.toHaveBeenCalled();
       const asked = select.mock.calls.map(call => call[0].message);
-      expect(asked.some(message => /agent kit/.test(message))).toBe(false);
+      expect(asked.some(message => /Agent Playbook/.test(message))).toBe(false);
       expect(asked).toHaveLength(2);
     });
 
@@ -556,7 +556,7 @@ describe('ai init', () => {
       await init({ tool: "claude", docs: "none", rootPath: getTmpDir() });
 
       expect(select).not.toHaveBeenCalled();
-      expect(installAgentKit).not.toHaveBeenCalled();
+      expect(installAgentPlaybook).not.toHaveBeenCalled();
     });
 
     test("answering the interactive question installs it", async () => {
@@ -564,7 +564,7 @@ describe('ai init', () => {
 
       await init({ rootPath: getTmpDir() });
 
-      expect(installAgentKit).toHaveBeenCalledWith({ rootPath: getTmpDir() });
+      expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir() });
     });
 
     test("declining the interactive question does not install it", async () => {
@@ -572,7 +572,7 @@ describe('ai init', () => {
 
       await init({ rootPath: getTmpDir() });
 
-      expect(installAgentKit).not.toHaveBeenCalled();
+      expect(installAgentPlaybook).not.toHaveBeenCalled();
     });
 
     test.each(["cursor", "vscode", "opencode"])(
@@ -582,16 +582,16 @@ describe('ai init', () => {
 
         await init({ rootPath: getTmpDir() });
 
-        expect(installAgentKit).not.toHaveBeenCalled();
+        expect(installAgentPlaybook).not.toHaveBeenCalled();
         expect(select).toHaveBeenCalledTimes(2);
       }
     );
 
     // A flag the user typed is never silently ignored.
-    test("--agent-kit with another tool says why it was skipped", async () => {
-      await init({ tool: "cursor", docs: "none", agentKit: true, rootPath: getTmpDir() });
+    test("--agent-playbook with another tool says why it was skipped", async () => {
+      await init({ tool: "cursor", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
 
-      expect(installAgentKit).not.toHaveBeenCalled();
+      expect(installAgentPlaybook).not.toHaveBeenCalled();
       expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/Claude Code only/));
     });
 
@@ -602,7 +602,7 @@ describe('ai init', () => {
 
       await init({ rootPath: getTmpDir() });
 
-      expect(installAgentKit).not.toHaveBeenCalled();
+      expect(installAgentPlaybook).not.toHaveBeenCalled();
       expect(select).toHaveBeenCalledTimes(2);
       expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/already has a \.claude\/ directory/));
       expect(fs.readFileSync(path.join(kitPath(), "CLAUDE.md"), "utf8")).toBe("mine");
@@ -611,9 +611,9 @@ describe('ai init', () => {
     // The servers are registered by the time the kit is offered, so a failure here is a
     // warning. Failing the command would make a convenience step able to break the real one.
     test("a failed install warns but leaves the servers registered", async () => {
-      installAgentKit.mockRejectedValue(new Error("Download failed with HTTP 503"));
+      installAgentPlaybook.mockRejectedValue(new Error("Download failed with HTTP 503"));
 
-      await init({ tool: "claude", docs: "none", agentKit: true, rootPath: getTmpDir() });
+      await init({ tool: "claude", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
 
       expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/Could not install.*503/s));
       expect(Object.keys(readJson(".mcp.json").mcpServers)).toEqual([NAME, "platformos-supervisor"]);
@@ -639,7 +639,7 @@ describe('ai init', () => {
       expect(select.mock.calls[1][0].message).toMatch(/documentation servers/);
       // The first choice is what Enter takes, and the step is opt-out.
       expect(select.mock.calls[1][0].choices.map(choice => choice.value)).toEqual(['project', 'global', 'none']);
-      expect(select.mock.calls[2][0].message).toMatch(/agent kit/);
+      expect(select.mock.calls[2][0].message).toMatch(/Agent Playbook/);
       expect(JSON.parse(fs.readFileSync(path.join(homeDir(), '.claude.json'), 'utf8')).mcpServers).toEqual({
         'platformos-liquid': { type: 'http', url: 'https://pos-mcp-tools.ps-01-platformos.com/liquid-mcp' },
         'platformos-graphql': { type: 'http', url: 'https://pos-mcp-tools.ps-01-platformos.com/graphql-mcp' }
@@ -651,7 +651,7 @@ describe('ai init', () => {
 
       await init({ docs: 'none', rootPath: getTmpDir(), homePath: homeDir() });
 
-      // The tool question is skipped by --docs; the agent-kit question is not.
+      // The tool question is skipped by --docs; the agent-playbook question is not.
       expect(select).toHaveBeenCalledTimes(2);
       expect(Object.keys(readJson('.mcp.json').mcpServers)).toEqual([NAME, 'platformos-supervisor']);
     });
