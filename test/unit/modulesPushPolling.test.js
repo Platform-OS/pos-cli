@@ -31,7 +31,7 @@ vi.mock('#lib/logger.js', () => ({
   default: { Debug: vi.fn(), Warn: vi.fn(), Error: vi.fn(), Info: vi.fn(), Success: vi.fn(), Log: vi.fn() }
 }));
 vi.mock('#lib/portal.js', () => ({ default: portal, partnerPortalEnv: () => ({}) }));
-vi.mock('fast-glob', () => ({ default: vi.fn(async () => ['public/views/pages/index.liquid']) }));
+vi.mock('tinyglobby', () => ({ glob: vi.fn(async () => ['public/views/pages/index.liquid']) }));
 vi.mock('#lib/prepareArchive.js', () => ({
   default: vi.fn(() => ({ addFile: vi.fn(), addBuffer: vi.fn(), finalize: vi.fn(), done: Promise.resolve(2) }))
 }));

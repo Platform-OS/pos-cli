@@ -32,7 +32,7 @@
   ],
   "main": "./bin/pos-cli.js",
   "engines": {
-    "node": "^22.18.0 || >=24.11.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "keywords": [
     "pos-cli",
@@ -58,7 +58,6 @@
     "execa": "^10.0.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
-    "fast-glob": "^3.3.3",
     "ignore": "^7.0.10",
     "inquirer": "^14.2.2",
     "is-stream": "^4.0.1",
@@ -75,16 +74,16 @@
     "ora": "^9.4.1",
     "prompts": "^2.4.2",
     "semver": "^7.8.5",
-    "shelljs": "^0.10.0",
     "strip-ansi": "^7.2.0",
     "text-table": "^0.2.0",
+    "tinyglobby": "^0.2.17",
     "toasted-notifier": "^10.1.0",
     "unzipper": "^0.12.5",
     "update-notifier": "^7.3.1",
     "yaml": "^2.9.1",
     "yazl": "^3.3.1",
-    "yeoman-environment": "^7.2.0",
-    "yeoman-generator": "^10.0.1"
+    "yeoman-environment": "^8.2.0",
+    "yeoman-generator": "^10.2.0"
   },
   "preferGlobal": true,
   "bin": {
@@ -141,8 +140,7 @@
   },
   "bundleDependencies": [
     "commander",
-    "degit",
-    "shelljs"
+    "degit"
   ],
   "optionalDependencies": {
     "fsevents": "^2.3.3"

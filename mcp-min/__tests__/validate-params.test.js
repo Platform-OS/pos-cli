@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import fg from 'fast-glob';
+import { globSync } from 'tinyglobby';
 import registry from '../tools.js';
 import { validateToolParams, TOOL_SCHEMA_DIALECT } from '../validate-params.js';
 import { runTool } from '../run-tool.js';
@@ -15,8 +15,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 // same assertion passed on Linux -- a failure only CI could find.
 const repoPath = (file) => path.relative(repoRoot, file).split(path.sep).join('/');
 
-const authFileList = fg
-  .sync('mcp-min/**/*.js', { cwd: repoRoot, absolute: true, ignore: ['**/__tests__/**', '**/node_modules/**'] })
+const authFileList = globSync('mcp-min/**/*.js', { cwd: repoRoot, absolute: true, ignore: ['**/__tests__/**', '**/node_modules/**'] })
   .filter(file => !file.endsWith(`${path.sep}auth.js`))
   .filter(file => /\bresolveAuth\(/.test(fs.readFileSync(file, 'utf8')));
 

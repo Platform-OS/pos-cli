@@ -7,7 +7,7 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fg from 'fast-glob';
+import { glob } from 'tinyglobby';
 import { makeSpinner } from '#test/utils/spinnerMock.js';
 
 const oraFactory = vi.fn(() => makeSpinner());
@@ -51,7 +51,7 @@ describe('ora wrapper', () => {
   // a command that reaches for 'ora' directly gets the raw-mode default back and
   // becomes impossible to interrupt.
   test('no command imports ora directly', async () => {
-    const files = await fg(['bin/**/*.js', 'lib/**/*.js', 'mcp-min/**/*.js', 'scripts/**/*.js'], {
+    const files = await glob(['bin/**/*.js', 'lib/**/*.js', 'mcp-min/**/*.js', 'scripts/**/*.js'], {
       cwd: repoRoot,
       ignore: ['**/node_modules/**', 'lib/ora.js']
     });

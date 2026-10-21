@@ -18,21 +18,15 @@ vi.mock('#lib/logger.js', () => ({
 // Mock fs
 vi.mock('fs', () => ({
   default: {
-    existsSync: vi.fn()
+    existsSync: vi.fn(),
+    readdirSync: vi.fn()
   },
-  existsSync: vi.fn()
-}));
-
-// Mock shelljs
-vi.mock('shelljs', () => ({
-  default: {
-    ls: vi.fn()
-  }
+  existsSync: vi.fn(),
+  readdirSync: vi.fn()
 }));
 
 import logger from '#lib/logger.js';
 import fs from 'fs';
-import shell from 'shelljs';
 
 describe('validators', () => {
   beforeEach(() => {
@@ -314,7 +308,8 @@ describe('validators', () => {
 
   describe('directoryEmpty validator', () => {
     test('does not log error when directory is not empty', async () => {
-      shell.ls.mockReturnValue(['file1.js', 'file2.js']);
+      fs.existsSync.mockReturnValue(true);
+      fs.readdirSync.mockReturnValue(['file1.js', 'file2.js']);
       const directoryEmpty = (await import('#lib/validators/directoryEmpty.js')).default;
 
       directoryEmpty({ path: '/path/with/files' });
@@ -323,7 +318,8 @@ describe('validators', () => {
     });
 
     test('logs error when directory is empty', async () => {
-      shell.ls.mockReturnValue([]);
+      fs.existsSync.mockReturnValue(true);
+      fs.readdirSync.mockReturnValue([]);
       const directoryEmpty = (await import('#lib/validators/directoryEmpty.js')).default;
 
       directoryEmpty({ path: '/empty/path' });
@@ -335,7 +331,8 @@ describe('validators', () => {
     });
 
     test('logs custom message when directory is empty', async () => {
-      shell.ls.mockReturnValue([]);
+      fs.existsSync.mockReturnValue(true);
+      fs.readdirSync.mockReturnValue([]);
       const directoryEmpty = (await import('#lib/validators/directoryEmpty.js')).default;
 
       directoryEmpty({
@@ -350,7 +347,8 @@ describe('validators', () => {
     });
 
     test('calls fail callback when directory is empty', async () => {
-      shell.ls.mockReturnValue([]);
+      fs.existsSync.mockReturnValue(true);
+      fs.readdirSync.mockReturnValue([]);
       const directoryEmpty = (await import('#lib/validators/directoryEmpty.js')).default;
       const failCallback = vi.fn();
 
@@ -359,8 +357,29 @@ describe('validators', () => {
       expect(failCallback).toHaveBeenCalled();
     });
 
+    test('treats a directory with only dotfiles as empty', async () => {
+      fs.existsSync.mockReturnValue(true);
+      fs.readdirSync.mockReturnValue(['.gitkeep']);
+      const directoryEmpty = (await import('#lib/validators/directoryEmpty.js')).default;
+
+      directoryEmpty({ path: '/path/with/dotfiles' });
+
+      expect(logger.Error).toHaveBeenCalledWith('Directory is empty.', expect.objectContaining({ hideTimestamp: true }));
+    });
+
+    test('treats a missing directory as empty', async () => {
+      fs.existsSync.mockReturnValue(false);
+      const directoryEmpty = (await import('#lib/validators/directoryEmpty.js')).default;
+
+      directoryEmpty({ path: '/missing/path' });
+
+      expect(fs.readdirSync).not.toHaveBeenCalled();
+      expect(logger.Error).toHaveBeenCalledWith('Directory is empty.', expect.objectContaining({ hideTimestamp: true }));
+    });
+
     test('does not call fail callback when directory has files', async () => {
-      shell.ls.mockReturnValue(['file.js']);
+      fs.existsSync.mockReturnValue(true);
+      fs.readdirSync.mockReturnValue(['file.js']);
       const directoryEmpty = (await import('#lib/validators/directoryEmpty.js')).default;
       const failCallback = vi.fn();
 
