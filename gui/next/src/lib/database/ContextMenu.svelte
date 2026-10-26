@@ -11,7 +11,7 @@
 // ------------------------------------------------------------------------
 import { createEventDispatcher } from 'svelte';
 import { clickOutside } from '#lib/helpers/clickOutside.js';
-import { state } from '#lib/state.js';
+import { databaseState } from '#lib/state/database.svelte.js';
 
 import Delete from '#lib/database/Delete.svelte';
 import Restore from '#lib/database/Restore.svelte';
@@ -83,16 +83,16 @@ menu li:last-child :global(button) {
 <menu class="content-context" use:clickOutside={() => dispatch('close')}>
   <ul>
     <li>
-      <button type="button" on:click={() => { dispatch('close'); $state.record = {...record}; $state.record.id = null; } }>
+      <button type="button" on:click={() => { dispatch('close'); databaseState.record = {...record}; databaseState.record.id = null; } }>
         <Icon icon="copy" size="22" />
         Copy record
       </button>
     </li>
     <li>
-      {#if $state.filters.deleted === 'true'}
-        <Restore table={$state.table} id={record.id} on:success={() => dispatch('close')} />
+      {#if databaseState.filters.deleted === 'true'}
+        <Restore table={databaseState.table} id={record.id} on:success={() => dispatch('close')} />
       {:else}
-        <Delete table={$state.table} id={record.id} on:success={() => dispatch('close')} />
+        <Delete table={databaseState.table} id={record.id} on:success={() => dispatch('close')} />
       {/if}
     </li>
   </ul>

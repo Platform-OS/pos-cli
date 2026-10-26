@@ -5,7 +5,9 @@
 // ------------------------------------------------------------------------
 import { fade } from 'svelte/transition';
 import { constant } from '#lib/api/constant.js';
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { highlight, highlightState } from '#lib/state/highlight.svelte.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -45,10 +47,10 @@ const update = async (event, itemIndex) => {
 
   if(!edit.errors){
     items[itemIndex].changed = false;
-    state.highlight('constant', edit.constant_set.name);
-    state.notification.create('success', `Constant ${edit.constant_set.name} updated`);
+    highlight('constant', edit.constant_set.name);
+    notificationsState.create('success', `Constant ${edit.constant_set.name} updated`);
   } else {
-    state.notification.create('error', `Failed to update ${edit.constant_set.name} constant`);
+    notificationsState.create('error', `Failed to update ${edit.constant_set.name} constant`);
   }
 };
 
@@ -61,10 +63,10 @@ const remove = async (event) => {
     const remove = await constant.delete(new FormData(event.target));
 
     if(!remove.errors){
-      state.notification.create('success', `Constant ${remove.constant_unset.name} deleted`);
+      notificationsState.create('success', `Constant ${remove.constant_unset.name} deleted`);
       await constant.get().then(response => { items = response; });
     } else {
-      state.notification.create('success', `Failed to delete ${remove.constant_unset.name} constant`);
+      notificationsState.create('success', `Failed to delete ${remove.constant_unset.name} constant`);
     }
 
   }
@@ -78,10 +80,10 @@ const create = async (event) => {
 
   if(!create.errors){
     event.target.reset();
-    state.notification.create('success', `Constant ${create.constant_set.name} created`);
-    await constant.get().then(response => { items = response; state.highlight('constant', create.constant_set.name); })
+    notificationsState.create('success', `Constant ${create.constant_set.name} created`);
+    await constant.get().then(response => { items = response; highlight('constant', create.constant_set.name); })
   } else {
-    state.notification.create('error', `Failed to create ${create.constant_set.name} constant`);
+    notificationsState.create('error', `Failed to create ${create.constant_set.name} constant`);
   }
 }
 
@@ -312,7 +314,7 @@ li {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Constants{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Constants{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 <div class="container">
@@ -350,7 +352,7 @@ li {
   <ul>
 
     {#each items as item, index}
-      <li class:hidden={filter && isFiltered(item)} class:highlighted={$state.highlighted.constant === item.name} in:fade={{ duration: 100, delay: 10 * index }}>
+      <li class:hidden={filter && isFiltered(item)} class:highlighted={highlightState.constant === item.name} in:fade={{ duration: 100, delay: 10 * index }}>
         <form class="delete" on:submit|preventDefault={event => remove(event)}>
           <input type="hidden" name="name" value={item.name}>
           <button type="submit" title="Delete constant">

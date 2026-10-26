@@ -6,7 +6,8 @@
 import { createEventDispatcher } from 'svelte';
 import { page } from '#lib/page.js';
 import { record } from '#lib/api/record';
-import { state } from '#lib/state';
+import { databaseState } from '#lib/state/database.svelte.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -26,10 +27,10 @@ const restore = async (event) => {
   const restore = await record.restore({ table: table.name, properties: new FormData(form) });
 
   if(!restore.errors){
-    record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
-    state.notification.create('success', `Record ${restore.record_update.id} restored`);
+    record.get({ table: $page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted });
+    notificationsState.create('success', `Record ${restore.record_update.id} restored`);
   } else {
-    state.notification.create('error', `Record ${restore.record_update.id} could not be restored`);
+    notificationsState.create('error', `Record ${restore.record_update.id} could not be restored`);
   }
 
 }

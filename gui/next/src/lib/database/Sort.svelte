@@ -3,7 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { state } from '#lib/state.js';
+import { databaseState } from '#lib/state/database.svelte.js';
 import { record } from '#lib/api/record.js';
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -18,9 +18,9 @@ let form;
 // purpose:		parses the <form>, saves new sorting to filters in the store and triggers records reload
 // ------------------------------------------------------------------------
 const filter = () => {
-  $state.filters.page = 1;
+  databaseState.filters.page = 1;
 
-  record.get({ table: $state.table.id, filters: $state.filters, sort: Object.fromEntries((new FormData(form)).entries()), deleted: $state.filters.deleted });
+  record.get({ table: databaseState.table.id, filters: databaseState.filters, sort: Object.fromEntries((new FormData(form)).entries()), deleted: databaseState.filters.deleted });
 }
 
 </script>
@@ -79,26 +79,26 @@ select:focus-visible + label {
 <!-- ================================================================== -->
 <form bind:this={form} on:submit|preventDefault={filter}>
 
-  {#if $state.table?.properties}
+  {#if databaseState.table?.properties}
 
-    <select name="by" id="sort_by" bind:value={$state.sort.by} on:change={() => form.requestSubmit()}>
+    <select name="by" id="sort_by" bind:value={databaseState.sort.by} on:change={() => form.requestSubmit()}>
       <option value="created_at">created at</option>
       <option value="updated_at">updated at</option>
       <option value="id">id</option>
-      {#each $state.table.properties as property}
+      {#each databaseState.table.properties as property}
         <option value={property.name}>
           {property.name}
         </option>
       {/each}
     </select>
 
-    <select name="order" id="sort_order" bind:value={$state.sort.order} on:change={() => form.requestSubmit()}>
+    <select name="order" id="sort_order" bind:value={databaseState.sort.order} on:change={() => form.requestSubmit()}>
       <option value="DESC">DESC [Z→A]</option>
       <option value="ASC">ASC [A→Z]</option>
     </select>
 
     <label for="sort_order" class="button">
-      {#if $state.sort.order === 'DESC'}
+      {#if databaseState.sort.order === 'DESC'}
         <Icon icon="sortZA" />
       {:else}
         <Icon icon="sortAZ" />

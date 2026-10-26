@@ -3,9 +3,10 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '#lib/page.js';
+import { untrack } from 'svelte';
+import { page } from '$app/state';
 import { user } from '#lib/api/user.js';
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
 import { tryParseJSON } from '#lib/tryParseJSON.js';
 
 import Aside from '#lib/ui/Aside.svelte';
@@ -15,7 +16,7 @@ import JSONTree from '#lib/ui/JSONTree.svelte';
 // properties
 // ------------------------------------------------------------------------
 // currently viewed user data (object)
-let item;
+let item = $state();
 
 
 // purpose:		  gets the user data
@@ -26,7 +27,7 @@ const load = async () => {
   
   const filters = {
     attribute: 'id',
-    value: $page.params.id
+    value: page.params.id
   };
 
   await user.get(filters).then(response => {
@@ -34,7 +35,11 @@ const load = async () => {
   });
 }
 
-$: $page.params.id && load();
+// load again whenever the route id changes, but not when the data load() reads changes
+$effect(() => {
+  const id = page.params.id;
+  untrack(() => id && load());
+});
 
 </script>
 
@@ -82,10 +87,10 @@ time {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>{item?.email ?? 'Users'}{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>{item?.email ?? 'Users'}{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
-<Aside title={item?.email ?? item?.id ?? 'Loading…'} closeUrl="/users?{$page.url.searchParams.toString()}">
+<Aside title={item?.email ?? item?.id ?? 'Loading…'} closeUrl="/users?{page.url.searchParams.toString()}">
 
   <div>
     <div class="info">

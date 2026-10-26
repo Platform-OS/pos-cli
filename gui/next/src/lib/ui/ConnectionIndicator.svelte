@@ -3,7 +3,7 @@
 
 import { onMount } from 'svelte';
 import { browser } from '$app/environment';
-import { state } from '#lib/state';
+import { connectionState } from '#lib/state/connection.svelte.js';
 
 
 // properties
@@ -25,7 +25,7 @@ onMount(async () => {
 });
 
 // purpose:		checks if the app is connected to the instance by fetching /info
-// effect:		updates the $state.online store (bool)
+// effect:		updates the connectionState.online store (bool)
 // ------------------------------------------------------------------------
 const checkIfOnline = async () => {
   if(browser && document.visibilityState !== 'hidden'){
@@ -33,10 +33,10 @@ const checkIfOnline = async () => {
 
     fetch(`${url}/info`).then(response => response.json()).then(data => {
       if(data){
-        $state.online = data;
+        connectionState.online = data;
       }
     }).catch(e => {
-      $state.online = false;
+      connectionState.online = false;
     });
   }
 };
@@ -86,8 +86,8 @@ const checkIfOnline = async () => {
 
 
 <!-- ================================================================== -->
-{#if $state.online === false}
-  <div class="connectionIndicator" class:offline={$state.online === false}>
+{#if connectionState.online === false}
+  <div class="connectionIndicator" class:offline={connectionState.online === false}>
     Disconnected from the instance
   </div>
 {/if}

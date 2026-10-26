@@ -4,7 +4,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { createEventDispatcher } from 'svelte';
-import { state } from '#lib/state.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
 import { backgroundJob } from '#lib/api/backgroundJob';
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -26,9 +26,9 @@ const remove = async (event) => {
 
     if(!remove.errors){
       dispatch('itemsChanged');
-      state.notification.create('success', `Background job ${remove.admin_background_job_delete.id} deleted`);
+      notificationsState.create('success', `Background job ${remove.admin_background_job_delete.id} deleted`);
     } else {
-      state.notification.create('error', `Background job ${remove.admin_background_job_delete.id} could not be deleted`);
+      notificationsState.create('error', `Background job ${remove.admin_background_job_delete.id} could not be deleted`);
     }
 
   }

@@ -5,7 +5,8 @@
 // ------------------------------------------------------------------------
 import { onMount, createEventDispatcher } from 'svelte';
 import { quintOut } from 'svelte/easing';
-import { state } from '#lib/state.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
+import { usersState } from '#lib/state/users.svelte.js';
 import { user } from '#lib/api/user.js';
 import { parseValue } from '#lib/parseValue.js';
 import { tryParseJSON } from '#lib/tryParseJSON.js';
@@ -67,7 +68,7 @@ document.addEventListener('keydown', event => {
   if(event.key === 'Escape'){
     event.preventDefault();
 
-    $state.user = undefined;
+    usersState.user = undefined;
   }
 }, { once: true });
 
@@ -108,8 +109,8 @@ const save = async (event) => {
       properties.delete('password');
       const create = await user.create(email, password, properties);
       if(!create.errors){
-        $state.user = undefined;
-        state.notification.create('success', `User ${create.user.id} created`);
+        usersState.user = undefined;
+        notificationsState.create('success', `User ${create.user.id} created`);
         dispatch('success');
       }
       else {
@@ -121,8 +122,8 @@ const save = async (event) => {
       properties.delete('email');
       const edit = await user.edit(userToEdit.id, email, properties);
       if(!edit.errors){
-        $state.user = undefined;
-        state.notification.create('success', `User ${edit.user_update.id} edited`);
+        usersState.user = undefined;
+        notificationsState.create('success', `User ${edit.user_update.id} edited`);
         dispatch('success');
       }
       else {
@@ -341,7 +342,7 @@ textarea {
           {/each}
         </ul>
         <fieldset class="actions">
-          <button type="button" class="button" on:click={() => $state.user = undefined}>Cancel</button>
+          <button type="button" class="button" on:click={() => usersState.user = undefined}>Cancel</button>
           <button type="submit" class="button">
             {#if userToEdit === null}Create user{:else}Edit user{/if}
             <Icon icon="arrowRight" />

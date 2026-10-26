@@ -7,7 +7,8 @@ import { onMount, tick } from 'svelte';
 import { beforeNavigate, afterNavigate } from '$app/navigation';
 import { page } from '#lib/page.js';
 import { network } from '#lib/api/network.js';
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { networkState } from '#lib/state/network.svelte.js';
 import { clickOutside } from '#lib/helpers/clickOutside.js';
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -44,13 +45,13 @@ let presetsToggleButton;
 
 // purpose:   load new logs each time query params change
 // arguments: filters to use on the query (object)
-// effect:    updates $state.networks
+// effect:    updates networkState.networks
 // ------------------------------------------------------------------------
 function load(filters){
-  if($state.networks.aggs){
-    $state.networks.aggs.results = [];
+  if(networkState.networks.aggs){
+    networkState.networks.aggs.results = [];
   }
-  network.get(filters).then(data => { $state.networks = data; });
+  network.get(filters).then(data => { networkState.networks = data; });
 }
 
 
@@ -482,7 +483,7 @@ table {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Logs{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Logs{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 
@@ -573,9 +574,9 @@ table {
           bind:value={lb_status_codes}
         >
 
-        {#if $state.networks?.aggs?.filters}
+        {#if networkState.networks?.aggs?.filters}
           <ul class="separated">
-            {#each $state.networks.aggs.filters as status}
+            {#each networkState.networks.aggs.filters as status}
               <li>
                 <label>
                   <input
@@ -620,9 +621,9 @@ table {
               </th>
             </tr>
           </thead>
-          {#if $state.networks?.aggs?.results}
+          {#if networkState.networks?.aggs?.results}
             <tbody>
-              {#each $state.networks.aggs.results as log}
+              {#each networkState.networks.aggs.results as log}
                 <tr
                   class:active={log._timestamp && $page.params.id == log._timestamp}
                 >
