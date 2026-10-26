@@ -88,7 +88,17 @@ dd {
 
 
 <!-- ================================================================== -->
-<Aside title={networkState.network.lb_status_code ? `<span class="log-detail-method">${networkState.network.http_request_method}</span> ${networkState.network.http_request_path}` : 'Loading…'} closeUrl="/network?{page.url.searchParams.toString()}">
+<Aside closeUrl="/network?{page.url.searchParams.toString()}">
+
+  <!-- the method and path come from requests anyone can send to the instance, so they are text, never markup -->
+  {#snippet title()}
+    {#if networkState.network.lb_status_code}
+      <span class="log-detail-method">{networkState.network.http_request_method}</span> {networkState.network.http_request_path}
+    {:else}
+      Loading…
+    {/if}
+  {/snippet}
+
 
   {#if networkState.network._timestamp}
     <dl class="definitions">

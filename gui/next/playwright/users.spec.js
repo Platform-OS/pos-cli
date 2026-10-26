@@ -97,3 +97,19 @@ test('deleting an existing user', async ({ page }) => {
 
   await expect(page.getByRole('cell', { name: 'testdelete@test.test' })).toBeHidden();
 });
+
+
+test('closing the user form with Escape after typing in it', async ({ page }) => {
+  await page.goto(url);
+
+  // a document listener added with { once: true } was used up by the first key typed into the form
+  await page.getByRole('button', { name: 'Create a new user' }).click();
+  await page.getByLabel('Email').pressSequentially('typed');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog')).toBeHidden();
+
+  await page.getByRole('button', { name: 'Create a new user' }).click();
+  await expect(page.locator('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog')).toBeHidden();
+});

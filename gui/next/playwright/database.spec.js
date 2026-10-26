@@ -681,3 +681,77 @@ test('restoring deleted record', async ({ page }) => {
   await expect(page.getByRole('columnheader', { name: 'deleted at' })).toBeHidden();
   await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeVisible();
 });
+
+
+
+test('closing the record form with Escape after typing in it', async ({ page }) => {
+  await page.goto(url);
+  await page.getByText('qa_table_1').click();
+
+  // a document listener added with { once: true } was used up by the first key typed into the
+  // form, so Escape only closed the <dialog> natively and the form could not be opened again
+  await page.getByRole('button', { name: 'Create new record' }).click();
+  await page.getByLabel('qa_table_1_string').pressSequentially('typed');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog')).toBeHidden();
+
+  await page.getByRole('button', { name: 'Create new record' }).click();
+  await expect(page.locator('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog')).toBeHidden();
+});
+
+
+test('leaving the database page and coming back does not add keyboard listeners', async ({ page }) => {
+  // count the keydown listeners on document: one added and never removed per visit is a leak
+  // that nothing on screen shows, because the stale one toggles a layout that no longer exists
+  await page.addInitScript(() => {
+    const listeners = new Set();
+    const add = EventTarget.prototype.addEventListener;
+    const remove = EventTarget.prototype.removeEventListener;
+    EventTarget.prototype.addEventListener = function(type, listener, options){
+      if(this === document && type === 'keydown'){ listeners.add(listener); }
+      return add.call(this, type, listener, options);
+    };
+    EventTarget.prototype.removeEventListener = function(type, listener, options){
+      if(this === document && type === 'keydown'){ listeners.delete(listener); }
+      return remove.call(this, type, listener, options);
+    };
+    window.keydownListenerCount = () => listeners.size;
+  });
+
+  // the listeners are added as the components mount, after the page shows, so the count is read
+  // once it has stopped changing
+  const settledCount = async () => {
+    let previous;
+    let current = await page.evaluate(() => window.keydownListenerCount());
+    do {
+      previous = current;
+      await page.waitForTimeout(250);
+      current = await page.evaluate(() => window.keydownListenerCount());
+    } while(current !== previous);
+    return current;
+  };
+
+  await page.goto(url);
+  await expect(page.getByText('qa_table_1')).toBeVisible();
+  const onFirstVisit = await settledCount();
+  expect(onFirstVisit).toBeGreaterThan(0);
+
+  for(let visit = 0; visit < 3; visit++){
+    await page.getByRole('link', { name: 'Users', exact: true }).first().click();
+    await expect(page).toHaveURL(/users/);
+    await page.getByRole('link', { name: 'Database', exact: true }).first().click();
+    await expect(page.getByText('qa_table_1')).toBeVisible();
+  }
+
+  expect(await settledCount()).toBe(onFirstVisit);
+
+  // and the shortcut still works: the tables filter takes focus on load, so leave it first
+  const layout = page.locator('div.container:has(.tables-container)');
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.keyboard.press('b');
+  await expect(layout).toHaveClass(/tablesHidden/);
+  await page.keyboard.press('b');
+  await expect(layout).not.toHaveClass(/tablesHidden/);
+});

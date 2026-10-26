@@ -3,8 +3,6 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount } from 'svelte';
-
 import Tables from '#lib/database/Tables.svelte';
 
 
@@ -13,20 +11,18 @@ import Tables from '#lib/database/Tables.svelte';
 let tablesHidden = false;
 
 
-
-onMount(() => {
-
-  // global hotkeys
-  // ------------------------------------------------------------------------
-  document.addEventListener('keydown', (event) => {
-    // hide the sidebar on pressing 'b' when no input is active
-    if(!event.target.matches('input, textarea') && event.key === 'b'){
-      tablesHidden = !tablesHidden;
-      localStorage.tablesHidden = tablesHidden;
-    }
-  });
-
-});
+// purpose:   global hotkeys
+//            (on <svelte:document>, so the listener goes away with the layout instead of
+//            piling up one more on every visit)
+// arguments: keyboard event (object)
+// ------------------------------------------------------------------------
+const keyboardShortcuts = (event) => {
+  // hide the sidebar on pressing 'b' when no input is active
+  if(!event.target.matches('input, textarea') && event.key === 'b'){
+    tablesHidden = !tablesHidden;
+    localStorage.tablesHidden = tablesHidden;
+  }
+};
 
 
 </script>
@@ -56,6 +52,8 @@ onMount(() => {
 
 
 <!-- ================================================================== -->
+<svelte:document on:keydown={keyboardShortcuts} />
+
 <div class="container" class:tablesHidden={tablesHidden}>
 
   <div class="tables-container">

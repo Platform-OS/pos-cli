@@ -106,7 +106,11 @@ button:hover {
       class:info={notification.type === 'info'}
       transition:fade={{ duration: 100 }}
     >
-      {@html notification.message}
+      {#if typeof notification.message === 'function'}
+        {@render notification.message()}
+      {:else}
+        {notification.message}
+      {/if}
 
       <button on:click={() => notificationsState.remove(notification.id)}>
         <Icon icon="x" size="10" />

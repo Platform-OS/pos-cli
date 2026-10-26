@@ -71,7 +71,7 @@ const getLatestPosCliVersion = async () => {
 const handleUpdate = () => {
   navigator.clipboard.writeText(`npm i -g @platformos/pos-cli@latest`)
     .then(() => {
-      notificationsState.create('info', `<div>Update command copied to clipboard <small>Run <code>npm i -g @platformos/pos-cli@latest</code> in the terminal</small></div>`);
+      notificationsState.create('info', updateCopiedMessage);
     })
     .catch(e => {
       copying = false;
@@ -351,6 +351,10 @@ footer ul {
 <svelte:head>
   <title>platformOS{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
+
+{#snippet updateCopiedMessage()}
+  <div>Update command copied to clipboard <small>Run <code>npm i -g @platformos/pos-cli@latest</code> in the terminal</small></div>
+{/snippet}
 
 <nav>
 
