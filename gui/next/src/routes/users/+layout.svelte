@@ -4,9 +4,11 @@
 // imports
 // ------------------------------------------------------------------------
 import { goto } from '$app/navigation';
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
+import { usersState } from '#lib/state/users.svelte.js';
 import { quintOut } from 'svelte/easing';
-import { page } from '#lib/page.js';
+import { page } from '$app/state';
 import { user } from '#lib/api/user.js';
 import ContextMenu from '#lib/users/ContextMenu.svelte';
 import CreateUser from '#lib/users/Create.svelte';
@@ -18,12 +20,14 @@ import Number from '#lib/ui/forms/Number.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+// the user details, shown when a user is opened (snippet)
+let { children } = $props();
 // filters form (dom node)
 let form;
 // list of users (array)
-let items = [];
+let items = $state([]);
 // list of custom user schema properties (array) or null
-let userProperties = null;
+let userProperties = $state(null);
 // default filters (object)
 let defaultFilters = {
   page: 1,
@@ -31,33 +35,34 @@ let defaultFilters = {
   value: ''
 };
 // currently active filters (object)
-let filters = {
+let filters = $state({
   page: 1,
   totalPages: 1,
   attribute: 'email',
   value: '',
 
-  ...Object.fromEntries($page.url.searchParams)
-};
-$state.user = undefined;
+  ...Object.fromEntries(page.url.searchParams)
+});
+usersState.user = undefined;
 
-let contextMenu = {
+let contextMenu = $state({
   // item id for which the context menu is opened for
   id: null
-};
+});
 
 
-// purpose:   load data each time query params change
+// purpose:   load the users for the current query params
+//            (on load here, and again after each change made through this page)
 // ------------------------------------------------------------------------
-$: reloadUsers();
-
 const reloadUsers = function() {
-  const params = Object.fromEntries($page.url.searchParams);
+  const params = Object.fromEntries(page.url.searchParams);
   user.get(params).then(data => {
     items = data.results;
     filters.totalPages = data.total_pages;
   });
 }
+
+reloadUsers();
 
 // transition:    zooms from nothing to full size
 // options: 	delay (int), duration (int)
@@ -80,13 +85,13 @@ const showCreateUserPopup = function(userToEdit = null) {
   if (userProperties === null) {
     user.getCustomProperties().then(properties => {
       userProperties = properties;
-      $state.user = userToEdit;
+      usersState.user = userToEdit;
     }).catch(() => {
-      state.notification.create('error', 'Could not load table properties. Please try again later.');
+      notificationsState.create('error', 'Could not load table properties. Please try again later.');
     });
   }
   else {
-    $state.user = userToEdit;
+    usersState.user = userToEdit;
   }
 }
 
@@ -98,7 +103,7 @@ const clearFilters = async function() {
 
 const submitForm = async function(event) {
   event.preventDefault();
-  const currentUrlParams = $page.url.searchParams;
+  const currentUrlParams = page.url.searchParams;
   const params = new URLSearchParams(new FormData(event.target));
   if (currentUrlParams.get('value') !== params.get('value')) {
     params.set('page', 1);
@@ -309,7 +314,7 @@ const submitForm = async function(event) {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Users{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Users{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 
@@ -322,17 +327,17 @@ const submitForm = async function(event) {
       action=""
       bind:this={form}
       id="filters"
-      on:submit={event => submitForm(event, false)}
+      onsubmit={event => submitForm(event, false)}
     >
       <label for="filters_attribute">Filter by</label>
       <fieldset class="search">
-        <select id="filters_attribute" name="attribute" bind:value={filters.attribute} on:change={() => filters.value = ''}>
+        <select id="filters_attribute" name="attribute" bind:value={filters.attribute} onchange={() => filters.value = ''}>
           <option value="email">email</option>
           <option value="id">id</option>
         </select>
         <input type="text" name="value" bind:value={filters.value}>
         {#if filters.value}
-          <button type="button" class="clear" transition:appear on:click={clearFilters}>
+          <button type="button" class="clear" transition:appear onclick={clearFilters}>
             <span class="label">Clear filters</span>
             <Icon icon="x" size=14 />
           </button>
@@ -358,7 +363,7 @@ const submitForm = async function(event) {
         <tbody>
           {#each items as user}
             <tr
-              class:active={$page.params.id == user.id}
+              class:active={page.params.id == user.id}
               class:context={contextMenu.id === user.id} 
             >
             <td>
@@ -366,11 +371,11 @@ const submitForm = async function(event) {
                 <div class="menu">
                   <div class="inner-menu">
                     <div class="combo">
-                      <button class="button compact more" class:active={contextMenu.id === user.id} on:click={() => contextMenu.id = user.id}>
+                      <button class="button compact more" class:active={contextMenu.id === user.id} onclick={() => contextMenu.id = user.id}>
                         <span class="label">More options</span>
                         <Icon icon="navigationMenuVertical" size="16" />
                       </button>
-                      <button class="button compact edit" title="Edit user" on:click={() => { showCreateUserPopup(user) }}>
+                      <button class="button compact edit" title="Edit user" onclick={() => { showCreateUserPopup(user) }}>
                         <span class="label">Edit user</span>
                         <Icon icon="pencil" size="16" />
                       </button>
@@ -383,12 +388,12 @@ const submitForm = async function(event) {
               </span>
             </td>
               <td class="table-id">
-                <a href="/users/{user.id}?{$page.url.searchParams.toString()}">
+                <a href="/users/{user.id}?{page.url.searchParams.toString()}">
                   {user.id}
                 </a>
               </td>
               <td>
-                <a href="/users/{user.id}?{$page.url.searchParams.toString()}">
+                <a href="/users/{user.id}?{page.url.searchParams.toString()}">
                   {user.email}
                 </a>
               </td>
@@ -418,7 +423,7 @@ const submitForm = async function(event) {
       />
       of {filters.totalPages}
     </div>
-    <button class="button" title="Create user" on:click|preventDefault={ () => showCreateUserPopup() }>
+    <button class="button" title="Create user" onclick={event => { event.preventDefault(); showCreateUserPopup(); }}>
       <Icon icon="plus" />
       <span class="label">Create a new user</span>
     </button>
@@ -426,12 +431,12 @@ const submitForm = async function(event) {
 
 </section>
 
-{#if $page.params.id}
-  <slot></slot>
+{#if page.params.id}
+  {@render children?.()}
 {/if}
 
-{#if $state.user !== undefined}
-<CreateUser userProperties={userProperties} userToEdit={$state.user} on:success={() => reloadUsers() } />
+{#if usersState.user !== undefined}
+<CreateUser userProperties={userProperties} userToEdit={usersState.user} on:success={() => reloadUsers() } />
 {/if}
 
 

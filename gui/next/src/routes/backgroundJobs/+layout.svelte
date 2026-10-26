@@ -3,12 +3,12 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onDestroy } from 'svelte';
+import { onDestroy, untrack } from 'svelte';
 import { goto } from '$app/navigation';
-import { page } from '#lib/page.js';
+import { page } from '$app/state';
 import { backgroundJob } from '#lib/api/backgroundJob.js';
 import { relativeTime } from '#lib/relativeTime.js';
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import Number from '#lib/ui/forms/Number.svelte';
@@ -18,21 +18,23 @@ import Delete from '#lib/backgroundJob/Delete.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+// the job details, shown when a job is opened (snippet)
+let { children } = $props();
 // query results (object)
-let items = {
+let items = $state({
   results: []
-};
+});
 // the extended menu for the background job
-let contextMenu = {
+let contextMenu = $state({
   // job id for which the context menu is opened for
   id: null
-};
+});
 // stores currently applied filters (object)
-let filters = {
+let filters = $state({
   page: 1,
   type: 'SCHEDULED',
-  ...Object.fromEntries($page.url.searchParams)
-}
+  ...Object.fromEntries(page.url.searchParams)
+});
 // main form with the filters (dom node)
 let form;
 
@@ -58,7 +60,12 @@ const getItems = async () => {
 
 };
 
-$: filters && getItems();
+// reload whenever any of the filters changes
+$effect(() => {
+  $state.snapshot(filters);
+
+  untrack(() => getItems());
+});
 
 onDestroy(() => {
   clearInterval(runsAtUpdateInterval);
@@ -256,7 +263,7 @@ menu :global(button:hover) {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Jobs{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Jobs{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 
@@ -268,7 +275,7 @@ menu :global(button:hover) {
       <form id="filters" bind:this={form}>
         <fieldset>
           <label for="filter-type">Type:</label>
-          <select name="type" id="filter-type" bind:value={filters.type} on:change={form.requestSubmit()}>
+          <select name="type" id="filter-type" bind:value={filters.type} onchange={() => form.requestSubmit()}>
             <option value="SCHEDULED">Scheduled</option>
             <option value="DEAD">Failed</option>
             <option value="RUNNING">Running</option>
@@ -306,10 +313,10 @@ menu :global(button:hover) {
     {#each items.results as item}
 
       <tr>
-        <td class="id" on:mouseleave={() => contextMenu.id = null}>
+        <td class="id" onmouseleave={() => contextMenu.id = null}>
           <div>
 
-            <button class="button compact more" on:click={() => contextMenu.id = item.id}>
+            <button class="button compact more" onclick={() => contextMenu.id = item.id}>
               <span class="label">More options</span>
               <Icon icon="navigationMenuVertical" size="16" />
             </button>
@@ -327,7 +334,7 @@ menu :global(button:hover) {
               </ul>
             </menu>
 
-            <a href="/backgroundJobs/{filters.type.toLowerCase()}/{item.id}?{$page.url.searchParams.toString()}">
+            <a href="/backgroundJobs/{filters.type.toLowerCase()}/{item.id}?{page.url.searchParams.toString()}">
               {item.source_name || item.id}
             </a>
 
@@ -361,13 +368,13 @@ menu :global(button:hover) {
         decreaseLabel="Previous page"
         increaseLabel="Next page"
         style="navigation"
-        on:input={form.requestSubmit()}
+        on:input={() => form.requestSubmit()}
       />
       of {items.total_pages || 1}
     </nav>
 
   </div>
 
-  <slot />
+  {@render children?.()}
 
 </div>

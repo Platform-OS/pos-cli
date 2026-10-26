@@ -6,7 +6,9 @@
 import { onMount, tick } from 'svelte';
 import { quintOut } from 'svelte/easing';
 import { page } from '#lib/page.js';
-import { state } from '#lib/state.js';
+import { databaseState } from '#lib/state/database.svelte.js';
+import { highlight } from '#lib/state/highlight.svelte.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
 import { record } from '#lib/api/record.js';
 import { parseValue } from '#lib/parseValue.js';
 import { tryParseJSON } from '#lib/tryParseJSON.js';
@@ -67,7 +69,7 @@ document.addEventListener('keydown', event => {
   if(event.key === 'Escape'){
     event.preventDefault();
 
-    $state.record = null;
+    databaseState.record = null;
   }
 }, { once: true });
 
@@ -103,28 +105,28 @@ const save = async (event) => {
   } else {
 
     // create new record
-    if(!$state.record.id){
-      const create = await record.create({ table: $state.table.name, properties: properties });
+    if(!databaseState.record.id){
+      const create = await record.create({ table: databaseState.table.name, properties: properties });
 
       if(!create.errors){
-        state.clearFilters();
-        record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
-        state.highlight('record', create.record_create.id);
-        state.notification.create('success', `Record ${create.record_create.id} created`);
-        $state.record = null;
+        databaseState.clearFilters();
+        record.get({ table: $page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted });
+        highlight('record', create.record_create.id);
+        notificationsState.create('success', `Record ${create.record_create.id} created`);
+        databaseState.record = null;
       } else {
         errors = create.errors;
       }
     }
     // edit existing record
     else {
-      const edit = await record.edit({ table: $state.table.name, id: $state.record.id, properties: properties });
+      const edit = await record.edit({ table: databaseState.table.name, id: databaseState.record.id, properties: properties });
 
       if(!edit.errors){
-        record.get({table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
-        state.highlight('record', edit.record_update.id);
-        state.notification.create('success', `Record ${edit.record_update.id} updated`);
-        $state.record = null;
+        record.get({table: $page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted });
+        highlight('record', edit.record_update.id);
+        notificationsState.create('success', `Record ${edit.record_update.id} updated`);
+        databaseState.record = null;
       } else {
         errors = edit.errors;
       }
@@ -258,7 +260,7 @@ select {
 
     <form bind:this={form} on:submit|preventDefault={save}>
 
-      <input type="hidden" name="tableName" value={$state.table.name}>
+      <input type="hidden" name="tableName" value={databaseState.table.name}>
       {#if editing.id}
         <input type="hidden" name="recordId" value={editing.id}>
       {/if}
@@ -319,7 +321,7 @@ select {
           {/each}
         </ul>
         <fieldset class="actions">
-          <button type="button" class="button" on:click={() => $state.record = null}>Cancel</button>
+          <button type="button" class="button" on:click={() => databaseState.record = null}>Cancel</button>
           <button type="submit" class="button">
             {#if editing.id}
               Edit record

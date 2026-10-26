@@ -4,7 +4,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { quintOut } from 'svelte/easing';
-import { state } from '#lib/state.js';
+import { preferencesState } from '#lib/state/preferences.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -33,7 +33,7 @@ const appear = function(node, {
     css: (t) => {
       const eased = quintOut(t);
 
-      return `min-width: 0; width: calc(${$state.asideWidth || '30vw'} * ${eased});` }
+      return `min-width: 0; width: calc(${preferencesState.asideWidth || '30vw'} * ${eased});` }
   }
 };
 
@@ -54,22 +54,22 @@ const resizingEnd = () => {
   window.removeEventListener('mousemove', resize, false);
   window.removeEventListener('mouseup', resizingEnd, false);
   resizing = false;
-  localStorage.asideWidth = $state.asideWidth;
+  localStorage.asideWidth = preferencesState.asideWidth;
 };
 
 // purpose:   updates the width of the panel to match the mouse position
-// returns:   changes the $state.asideWidth
+// returns:   changes the preferencesState.asideWidth
 // ------------------------------------------------------------------------
 const resize = event => {
-  $state.asideWidth = windowWidth - event.clientX - 6 + 'px';
+  preferencesState.asideWidth = windowWidth - event.clientX - 6 + 'px';
 };
 
 // purpose:   resets the size to default when double clicked
-// effect:    clears localStorage and $state.asideWidth
+// effect:    clears localStorage and preferencesState.asideWidth
 // ------------------------------------------------------------------------
 const resizingReset = event => {
   if(event.detail === 2){
-    $state.asideWidth = false;
+    preferencesState.asideWidth = false;
     localStorage.removeItem('asideWidth');
   }
 }
@@ -189,7 +189,7 @@ h2 {
 <!-- ================================================================== -->
 <svelte:window bind:outerWidth={windowWidth} />
 
-<aside transition:appear style={$state.asideWidth ? `--width: ${$state.asideWidth}` : ''}>
+<aside transition:appear style={preferencesState.asideWidth ? `--width: ${preferencesState.asideWidth}` : ''}>
 
   <button class="resizer" class:active={resizing} on:mousedown={resizingStart} on:click={resizingReset}>
     <span class="label">Drag to resize panel</span>

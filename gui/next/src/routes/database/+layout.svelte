@@ -59,7 +59,7 @@ onMount(() => {
 <div class="container" class:tablesHidden={tablesHidden}>
 
   <div class="tables-container">
-    <Tables on:sidebarNeeded={() => tablesHidden = false} />
+    <Tables onSidebarNeeded={() => tablesHidden = false} />
   </div>
 
   <slot></slot>

@@ -6,7 +6,8 @@
 import { tick, afterUpdate, onMount, beforeUpdate } from 'svelte';
 import { fade } from 'svelte/transition';
 import { browser } from '$app/environment';
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { logsState } from '#lib/state/logs.svelte.js';
 import { logs } from '#lib/api/logs';
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -38,28 +39,28 @@ onMount(() => {
 
 
 const load = async () => {
-  const last = $state.logs.logs?.at(-1)?.id ?? null;
+  const last = logsState.logs.logs?.at(-1)?.id ?? null;
   const newLogs = await logs.get({ last: last });
 
   // if already showing logs, just append the new ones
   if(last){
     if(newLogs.logs?.length){
-      $state.logs.logs = [...$state.logs.logs, ...newLogs.logs];
+      logsState.logs.logs = [...logsState.logs.logs, ...newLogs.logs];
 
       // store the times when logs were downloaded to mark new ones
-      $state.logs.downloaded_at.push(Date.now());
-      if($state.logs.downloaded_at.length > 2){
-        $state.logs.downloaded_at.splice(0, 1);
+      logsState.logs.downloaded_at.push(Date.now());
+      if(logsState.logs.downloaded_at.length > 2){
+        logsState.logs.downloaded_at.splice(0, 1);
       }
     }
   }
   // if fresh start, create the logs object
   else {
-    if(!$state.logs.logs){
-      $state.logs = newLogs;
+    if(!logsState.logs.logs){
+      logsState.logs = newLogs;
 
-      if(!$state.logs.downloaded_at){
-        $state.logs.downloaded_at = [Date.now()];
+      if(!logsState.logs.downloaded_at){
+        logsState.logs.downloaded_at = [Date.now()];
       }
     }
   }
@@ -99,7 +100,7 @@ afterUpdate(async () => {
   if(!scrolled){
     await tick();
     document.querySelector('footer').scrollIntoView();
-    if($state.logs.logs?.length){
+    if(logsState.logs.logs?.length){
       scrolled = true;
     }
   }
@@ -323,7 +324,7 @@ footer {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Logs{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Logs{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 
@@ -343,7 +344,7 @@ footer {
         {/if}
       </form>
       <div>
-        <button type="button" class="button" on:click={() => $state.logs.logs.forEach((log, index) => $state.logs.logs[index].hidden = true) }>Clear screen</button>
+        <button type="button" class="button" on:click={() => logsState.logs.logs.forEach((log, index) => logsState.logs.logs[index].hidden = true) }>Clear screen</button>
         <button type="button" title="Toggle pinned logs panel" class="button" on:click={togglePinnedPanel}>
           <span class="label">Toggle pinned logs panel</span>
           <Icon icon="pin" />
@@ -351,13 +352,13 @@ footer {
       </div>
     </nav>
 
-    {#if $state.logs.logs}
+    {#if logsState.logs.logs}
       <table>
-        {#each $state.logs.logs as log}
+        {#each logsState.logs.logs as log}
           <tr
             class:hidden={filter && isFiltered(log) || log.hidden}
             class:error={log.error_type.match(/error/i)}
-            class:fresh={log.downloaded_at > $state.logs.downloaded_at[0]}
+            class:fresh={log.downloaded_at > logsState.logs.downloaded_at[0]}
             in:fade|local={{ duration: 200 }}
           >
             <td class="date">

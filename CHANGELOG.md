@@ -134,6 +134,8 @@
 
 ### Fixes
 
+* **The admin GUI's Background Jobs list kept showing the time a job would run as it was when the list loaded**: "in 10 minutes" stayed "in 10 minutes". A timer updated each job every second, but through a variable the old component syntax did not watch, so nothing re-rendered. Two other things that ran on their own also stopped: the highlight on a record or constant just saved cleared itself and then re-armed its own timer, every 7 seconds for the rest of the session, and the Ctrl+K shortcut on the Database page added a listener on every visit without removing it. All three came with moving the GUI's single global store to Svelte 5 runes — one module per concern, each exporting `[something]State` — and moving the components that read it in a `$:` statement to runes too, since a legacy `$:` stops a component's template from tracking rune state.
+
 * **`pos-cli modules remove` says why an instance refused.** An instance refuses to remove a module whose tables still hold records, and answers with the reason and the mutation that deletes them; the command printed only `Failed to remove the module StatusCodeError: Request failed with status 422`. Failures now go through the same reporting as every other command, so the instance's own message is what you read.
 
 * **Every tool result carries `meta.durationMs` instead of `meta.startedAt` and `meta.finishedAt`.** The two ISO instants were 80 bytes of every result where the duration they described is 19, paid by the model on every call — 3.6 KB across a sixty-call session — and a wall-clock instant answered a question nobody had asked. `meta.auth` is unchanged. A client reading the old fields sees them gone; nothing in pos-cli read them.

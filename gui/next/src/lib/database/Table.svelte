@@ -9,7 +9,9 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { state } from '#lib/state.js';
+import { databaseState } from '#lib/state/database.svelte.js';
+import { highlightState } from '#lib/state/highlight.svelte.js';
+import { preferencesState } from '#lib/state/preferences.svelte.js';
 import { parseValue } from '#lib/parseValue.js'
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -168,24 +170,24 @@ td, th {
 
 
 <!-- ================================================================== -->
-{#if $state.table?.properties}
-  <table class={$state.view.tableStyle}>
+{#if databaseState.table?.properties}
+  <table class={preferencesState.view.tableStyle}>
     <thead>
       <tr>
         <th class="id">id</th>
-          {#each $state.table.properties as property}
+          {#each databaseState.table.properties as property}
             <th>{property.name} <small class="type">({property.attribute_type})</small></th>
           {/each}
         <th>created at</th>
         <th>updated at</th>
-        {#if $state.filters.deleted === 'true'}
+        {#if databaseState.filters.deleted === 'true'}
           <th>deleted at</th>
         {/if}
       </tr>
     </thead>
-    {#if $state.records?.results?.length}
-      {#each $state.records?.results as record (record.id)}
-        <tr class:highlighted={$state.highlighted.record === record.id} class:hasContextMenu={contextMenu.id === record.id}>
+    {#if databaseState.records?.results?.length}
+      {#each databaseState.records?.results as record (record.id)}
+        <tr class:highlighted={highlightState.record === record.id} class:hasContextMenu={contextMenu.id === record.id}>
           <td>
             <div class="id">
               <div class="combo">
@@ -193,7 +195,7 @@ td, th {
                   <span class="label">More options</span>
                   <Icon icon="navigationMenuVertical" size="16" />
                 </button>
-                <button class="button compact edit" title="Edit record" on:click={() => { $state.record = record; }}>
+                <button class="button compact edit" title="Edit record" on:click={() => { databaseState.record = record; }}>
                   <span class="label">Edit record</span>
                   <Icon icon="pencil" size="16" />
                 </button>
@@ -204,7 +206,7 @@ td, th {
               {record.id}
             </div>
           </td>
-          {#each $state.table.properties as property}
+          {#each databaseState.table.properties as property}
             {@const value = parseValue(record.properties[property.name], property.attribute_type)}
             <td class:value-null={value.type === 'null'}>
               {#if value.value !== undefined}
@@ -212,7 +214,7 @@ td, th {
                   <!-- svelte renders a null value as an empty string -->
                   null
                 {:else if value.type === 'json' || value.type === 'jsonEscaped'}
-                  {#if $state.view.tableStyle === 'expanded'}
+                  {#if preferencesState.view.tableStyle === 'expanded'}
                     <JSONTree value={value.value} />
                   {:else}
                     {JSON.stringify(value.value)}
@@ -231,7 +233,7 @@ td, th {
             {(new Date(record?.updated_at)).toLocaleDateString(undefined, {})}
             <span>{(new Date(record?.updated_at)).toLocaleTimeString(undefined, {})}</span>
           </td>
-          {#if $state.filters.deleted === 'true'}
+          {#if databaseState.filters.deleted === 'true'}
             <td class="date">
               {(new Date(record?.deleted_at)).toLocaleDateString(undefined, {})}
               <span>{(new Date(record?.deleted_at)).toLocaleTimeString(undefined, {})}</span>

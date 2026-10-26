@@ -6,7 +6,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { graphql } from '#lib/api/graphql';
-import { state } from '#lib/state';
+import { databaseState } from '#lib/state/database.svelte.js';
 import { buildMutationIngredients, columnTypeToVariableType } from '#lib/helpers/buildMutationIngredients';
 
 
@@ -170,7 +170,7 @@ const record = {
       }`;
 
     return graphql({ query, variables: propertiesFilterData.variables }).then(data => {
-      state.data('records', data.records); 
+      databaseState.records = data.records; 
     });
   },
 

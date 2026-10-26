@@ -5,7 +5,7 @@
 // ------------------------------------------------------------------------
 import { createEventDispatcher } from 'svelte';
 import { user } from '#lib/api/user';
-import { state } from '#lib/state';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -25,10 +25,10 @@ const deleteUser = async (event) => {
     const remove = await user.delete(id);
 
     if(!remove.errors){
-      state.notification.create('success', `Record ${id} deleted`);
+      notificationsState.create('success', `Record ${id} deleted`);
       dispatch('success');
     } else {
-      state.notification.create('error', `Record ${id} could not be deleted`);
+      notificationsState.create('error', `Record ${id} could not be deleted`);
     }
   }
 }

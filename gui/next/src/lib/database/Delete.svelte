@@ -6,7 +6,8 @@
 import { createEventDispatcher } from 'svelte';
 import { page } from '#lib/page.js';
 import { record } from '#lib/api/record';
-import { state } from '#lib/state';
+import { databaseState } from '#lib/state/database.svelte.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -29,10 +30,10 @@ const remove = async (event) => {
     const remove = await record.delete({ table: table.name, properties: new FormData(form) });
 
     if(!remove.errors){
-      record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
-      state.notification.create('success', `Record ${remove.record_delete.id} deleted`);
+      record.get({ table: $page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted });
+      notificationsState.create('success', `Record ${remove.record_delete.id} deleted`);
     } else {
-      state.notification.create('error', `Record ${remove.record_delete.id} could not be deleted`);
+      notificationsState.create('error', `Record ${remove.record_delete.id} could not be deleted`);
     }
 
   }

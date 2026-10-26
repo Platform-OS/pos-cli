@@ -3,7 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { state } from '#lib/state.js';
+import { databaseState } from '#lib/state/database.svelte.js';
 import { record } from '#lib/api/record.js';
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -34,9 +34,9 @@ const operations = {
 // purpose:		parses the <form>, saves new filters to the store and triggers records reload
 // ------------------------------------------------------------------------
 const filter = () => {
-  $state.filters = { page: 1, attributes: [ Object.fromEntries((new FormData(form)).entries()) ], deleted: $state.filters.deleted };
+  databaseState.filters = { page: 1, attributes: [ Object.fromEntries((new FormData(form)).entries()) ], deleted: databaseState.filters.deleted };
 
-  record.get({ table: $state.table.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
+  record.get({ table: databaseState.table.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted });
 }
 
 </script>
@@ -98,16 +98,16 @@ button[type="submit"] {
 <!-- ================================================================== -->
 <form bind:this={form} on:submit|preventDefault={filter}>
 
-  {#if $state.table?.properties}
+  {#if databaseState.table?.properties}
 
-    {#each $state.filters.attributes as attribute}
+    {#each databaseState.filters.attributes as attribute}
       <fieldset>
 
         <label for="">Filter by:</label>
 
-        <select name="name" bind:value={attribute.name} on:change={ () => { attribute.attribute_type = ($state.table.properties.find(property => property.name === attribute.name))?.attribute_type || 'id'; } }>
+        <select name="name" bind:value={attribute.name} on:change={ () => { attribute.attribute_type = (databaseState.table.properties.find(property => property.name === attribute.name))?.attribute_type || 'id'; } }>
           <option value="id">id</option>
-          {#each $state.table.properties as property}
+          {#each databaseState.table.properties as property}
             <option value={property.name}>
               {property.name}
             </option>
