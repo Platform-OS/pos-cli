@@ -113,3 +113,32 @@ test('closing the user form with Escape after typing in it', async ({ page }) =>
   await page.keyboard.press('Escape');
   await expect(page.locator('dialog')).toBeHidden();
 });
+
+
+test('keeping the filter after a reload', async ({ page }) => {
+  await page.goto(url);
+
+  await page.locator('[name="value"]').fill('user2');
+  await page.getByRole('button', { name: 'Apply filter' }).click();
+  await expect(page.getByRole('cell', { name: 'user1@example.com' })).toBeHidden();
+
+  // the filter is the url, so a reload shows the same users
+  await page.reload();
+  await expect(page.locator('[name="value"]')).toHaveValue('user2');
+  await expect(page.getByRole('cell', { name: 'user2@example.com' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'user1@example.com' })).toBeHidden();
+});
+
+
+test('treating a filter value from the url as text, not as part of the query', async ({ page }) => {
+  // written into the query as it was, this value would end the filter early and make the
+  // list match user1; as a string it matches no one
+  const value = 'user1" } }) { current_page total_pages results { id email properties } } other: users(per_page: 1, filter: { email: { contains: "user2';
+
+  await page.goto(`${url}?attribute=email&value=${encodeURIComponent(value)}`);
+
+  await expect(page.locator('[name="value"]')).toHaveValue(value);
+  await expect(page.getByText('of 1')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'user1@example.com' })).toBeHidden();
+  await expect(page.getByRole('cell', { name: 'user2@example.com' })).toBeHidden();
+});

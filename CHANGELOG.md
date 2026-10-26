@@ -4,9 +4,13 @@
 
 ### Security
 
+* **A link to the admin GUI's Users page could rewrite the query it ran.** The list reads its filter from the url (`?attribute=email&value=…`), and the value was written into the GraphQL query inside quotes as it was, so a value containing a quote could end the filter and add to the query — a link could make the list show users other than the ones it named. The value is now written as an escaped string, the attribute can only be `email` or `id` and the page only a number.
+
 * **The admin GUI rendered text from the instance as HTML.** Notifications and the title of the details panel were written with `{@html}`, so a constant name, a user's email, a background job's source name or — on the Network page — the method and path of any request someone sent to the instance became markup in a page that holds the instance's credentials. All of them are text now. The two places that wanted formatting, the update notification and the method badge on a network request, pass a Svelte snippet instead, so markup comes only from the GUI's own templates.
 
 ### Fixes
+
+* **The admin GUI's Users list could show the users from before a filter was applied.** The list was loaded once when the page opened and again after each filter, and whichever answer arrived last was shown. The list and the user details are now loaded by SvelteKit `load` functions from the url, which apply only the latest navigation; opening a user no longer loads the list again.
 
 * **The admin GUI's Database page could show records sorted, filtered or paged by an earlier choice than the one on screen.** Each change to the sorting, the filter, the page or the deleted switch sent its own request and whichever answer arrived last was shown, so changing the sort field and then the order quickly could leave the list in the first order — measured, about 3 times in 10. The view now lives in the url (`?sort_by=id&sort_order=ASC&page=2…`) and the records are loaded by the page's SvelteKit `load` function, which applies only the latest navigation. That also makes a filtered or sorted view something you can reload, bookmark or go back to. The values read from the url are checked before they reach the GraphQL query, since a link can carry anything; one that is not valid falls back to the default view.
 

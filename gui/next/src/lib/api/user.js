@@ -11,26 +11,31 @@ import { buildMutationIngredients } from '#lib/helpers/buildMutationIngredients'
 const user = {
 
   // purpose:		gets users from the database
-  // arguments:	properties to filter (object)
-  //				id of the user (int)
-  //				email (string)
-  //				first_name (string)
-  //				last_name (string)
-  //				page (int)
-  // returns:		array of users as they appear in the database (array of objects)
+  // arguments:	filters (object)
+  //				  attribute to filter by ('email' or 'id')
+  //				  value to filter with (string)
+  //				  page (int)
+  //				options (object), with fetch to use, such as the one a load function receives
+  // returns:		users page as it appears in the database (object)
   // ------------------------------------------------------------------------
-  get: async (filters = {}) => {
+  get: async (filters = {}, options) => {
+    // these are written into the query text and can come from a url, so the attribute is
+    // one of the two names, the page a number and the value a quoted, escaped string
+    const attribute = filters.attribute === 'id' ? 'id' : 'email';
+    const page = parseInt(filters.page) > 0 ? parseInt(filters.page) : 1;
+    const value = filters.value ? JSON.stringify(String(filters.value)) : '';
+
     let filtersString = '';
     let details = '';
 
-    if(filters.value){
-      if(filters.attribute === 'email'){
-        filtersString += `${filters.attribute}: { contains: "${filters.value}" }`;
+    if(value){
+      if(attribute === 'email'){
+        filtersString += `email: { contains: ${value} }`;
       } else {
-        filtersString += `${filters.attribute}: { value: "${filters.value}" }`;
+        filtersString += `id: { value: ${value} }`;
       }
 
-      if(filters?.attribute === 'id' && filters?.value){
+      if(attribute === 'id'){
         details = `
           deleted_at
           created_at
@@ -50,7 +55,7 @@ const user = {
     const query = `
       query {
         users(
-          page: ${filters?.page ?? 1}
+          page: ${page}
           per_page: 50
           sort: { id: { order: DESC } }
           filter: {
@@ -68,7 +73,7 @@ const user = {
         }
       }`;
 
-    return graphql({ query }, false).then(data => data.users );
+    return graphql({ query }, options).then(data => data.users);
   },
 
   // purpose:		delete users from the database
