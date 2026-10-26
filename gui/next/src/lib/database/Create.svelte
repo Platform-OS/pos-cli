@@ -5,7 +5,8 @@
 // ------------------------------------------------------------------------
 import { onMount, tick } from 'svelte';
 import { quintOut } from 'svelte/easing';
-import { page } from '#lib/page.js';
+import { goto, invalidate } from '$app/navigation';
+import { page } from '$app/state';
 import { databaseState } from '#lib/state/database.svelte.js';
 import { highlight } from '#lib/state/highlight.svelte.js';
 import { notificationsState } from '#lib/state/notifications.svelte.js';
@@ -117,8 +118,12 @@ const save = async (event) => {
       const create = await record.create({ table: databaseState.table.name, properties: properties });
 
       if(!create.errors){
-        databaseState.clearFilters();
-        record.get({ table: $page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted });
+        // back to the unfiltered, newest-first view, where the new record is at the top
+        if(page.url.search){
+          goto(page.url.pathname, { reset: false });
+        } else {
+          invalidate('app:records');
+        }
         highlight('record', create.record_create.id);
         notificationsState.create('success', `Record ${create.record_create.id} created`);
         databaseState.record = null;
@@ -131,7 +136,7 @@ const save = async (event) => {
       const edit = await record.edit({ table: databaseState.table.name, id: databaseState.record.id, properties: properties });
 
       if(!edit.errors){
-        record.get({table: $page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted });
+        invalidate('app:records');
         highlight('record', edit.record_update.id);
         notificationsState.create('success', `Record ${edit.record_update.id} updated`);
         databaseState.record = null;

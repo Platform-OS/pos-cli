@@ -21,6 +21,8 @@ import Icon from '#lib/ui/Icon.svelte';
 // ------------------------------------------------------------------------
 // record that the context menu corresponds to (object)
 export let record;
+// if the record is a deleted one (bool)
+export let deleted = false;
 // event dispatcher
 const dispatch = createEventDispatcher();
 
@@ -89,7 +91,7 @@ menu li:last-child :global(button) {
       </button>
     </li>
     <li>
-      {#if databaseState.filters.deleted === 'true'}
+      {#if deleted}
         <Restore table={databaseState.table} id={record.id} on:success={() => dispatch('close')} />
       {:else}
         <Delete table={databaseState.table} id={record.id} on:success={() => dispatch('close')} />

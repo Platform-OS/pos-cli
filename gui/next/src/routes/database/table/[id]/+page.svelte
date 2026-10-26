@@ -3,12 +3,12 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { untrack } from 'svelte';
+import { goto, invalidate } from '$app/navigation';
 import { page } from '$app/state';
 import { connectionState } from '#lib/state/connection.svelte.js';
 import { databaseState } from '#lib/state/database.svelte.js';
 import { preferencesState, setView } from '#lib/state/preferences.svelte.js';
-import { record } from '#lib/api/record';
+import { queryHref } from '#lib/database/query.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import Filters from '#lib/database/Filters.svelte';
@@ -20,35 +20,33 @@ import Number from '#lib/ui/forms/Number.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+// records, and the filters and sort they were loaded with, from +page.js (object)
+let { data } = $props();
 // if the current view is being refreshed currently (bool)
 let refreshing = $state(false);
+// page number in the pagination field, following the url until it is edited (int)
+let pageNumber = $derived(data.filters.page);
 
 
-
-// purpose:		set current table in the state and reload the records each time the table id changes
+// purpose:		set current table in the state
 //				(databaseState.table is derived from the id, so it also follows the tables loading later)
 // ------------------------------------------------------------------------
 $effect.pre(() => {
-  const id = page.params.id;
-
-  // only the id decides when this runs, not the state it reads and writes
-  untrack(() => {
-    databaseState.tableId = id;
-
-    if(id){
-      record.get({ table: id });
-      databaseState.clearFilters();
-    }
-  });
+  databaseState.tableId = page.params.id;
 });
 
 
+// purpose:		shows the records with part of the view changed, through the url
+// arguments:	what to change, see queryHref in #lib/database/query.js (object)
+// ------------------------------------------------------------------------
+const show = (changes) => goto(queryHref(page.url, changes), { reset: false });
+
+
 // purpose:		refresh current data without reloading the whole page
-// returns:		updates the store with freshly downloaded records for current view
 // ------------------------------------------------------------------------
 const refresh = () => {
   refreshing = true;
-  record.get({ table: page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted }).then(() => refreshing = false);
+  invalidate('app:records').then(() => refreshing = false);
 };
 
 
@@ -143,9 +141,9 @@ nav {
 
   <nav>
 
-    <Filters />
+    <Filters filters={data.filters} onfilter={filter => show({ filter, page: 1 })} />
 
-    <Sort />
+    <Sort sort={data.sort} onsort={sort => show({ sort, page: 1 })} />
 
     <button class="button" title="Refresh current view (R)" class:refreshing onclick={refresh}>
       <span class="label">Refresh current view</span>
@@ -155,7 +153,7 @@ nav {
   </nav>
 
   {#if preferencesState.view.database !== 'tiles'}
-    <Table />
+    <Table records={data.records} deleted={data.filters.deleted === 'true'} />
   {:else}
     Work in progress :)
   {/if}
@@ -167,16 +165,16 @@ nav {
       </label>
       <Number
         name="page"
-        bind:value={databaseState.filters.page}
+        bind:value={pageNumber}
         min={1}
-        max={databaseState.records?.total_pages}
+        max={data.records?.total_pages}
         step={1}
         decreaseLabel="Previous page"
         increaseLabel="Next page"
         style="navigation"
-        on:input={() => { record.get({ table: page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted }); } }
+        on:input={() => show({ page: pageNumber })}
       />
-      of {databaseState.records?.total_pages || 1}
+      of {data.records?.total_pages || 1}
     </div>
 
     <div id="viewOptions">
@@ -209,40 +207,40 @@ nav {
           type="radio"
           name="deleted"
           id="deletedTrue"
-          bind:group={databaseState.filters.deleted}
+          checked={data.filters.deleted === 'false'}
           value="false"
-          disabled={databaseState.filters.deleted === 'false'}
-          onchange={() => { record.get({ table: page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted }); } }
+          disabled={data.filters.deleted === 'false'}
+          onchange={event => show({ deleted: event.target.value })}
         >
         <label
           for="deletedTrue"
           class="button"
-          class:active={databaseState.filters.deleted === 'false'}
-          class:disabled={databaseState.filters.deleted === 'false'}
-          title="Show{databaseState.filters.deleted === 'false' ? 'ing' : ''} current database state"
+          class:active={data.filters.deleted === 'false'}
+          class:disabled={data.filters.deleted === 'false'}
+          title="Show{data.filters.deleted === 'false' ? 'ing' : ''} current database state"
         >
           <Icon icon="leaf" />
-          <span class="label">Show{databaseState.filters.deleted === 'false' ? 'ing' : ''} current database state</span>
+          <span class="label">Show{data.filters.deleted === 'false' ? 'ing' : ''} current database state</span>
         </label>
 
         <label
           for="deletedFalse"
           class="button"
-          class:active={databaseState.filters.deleted === 'true'}
-          class:disabled={databaseState.filters.deleted === 'true'}
-          title="Show{databaseState.filters.deleted === 'true' ? 'ing' : ''} deleted records"
+          class:active={data.filters.deleted === 'true'}
+          class:disabled={data.filters.deleted === 'true'}
+          title="Show{data.filters.deleted === 'true' ? 'ing' : ''} deleted records"
         >
           <Icon icon="recycle" />
-          <span class="label">Show{databaseState.filters.deleted === 'true' ? 'ing' : ''} deleted records</span>
+          <span class="label">Show{data.filters.deleted === 'true' ? 'ing' : ''} deleted records</span>
         </label>
         <input
           type="radio"
           name="deleted"
           id="deletedFalse"
-          bind:group={databaseState.filters.deleted}
+          checked={data.filters.deleted === 'true'}
           value="true"
-          disabled={databaseState.filters.deleted === 'true'}
-          onchange={() => { record.get({ table: page.params.id, filters: databaseState.filters, sort: databaseState.sort, deleted: databaseState.filters.deleted }); } }
+          disabled={data.filters.deleted === 'true'}
+          onchange={event => show({ deleted: event.target.value })}
         >
 
       </div>

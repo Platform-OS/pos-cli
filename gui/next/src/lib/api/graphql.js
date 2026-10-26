@@ -13,13 +13,17 @@ import { graphQLErrors } from '../../../../../lib/graph/response.js';
 
 // purpose:		run a graphql query
 // arguments:	body of the query (string)
+//				options (object), with fetch to use instead of the global one, such as
+//				the one a SvelteKit load function receives (function)
 // returns:		data returned from the database (object)
 // ------------------------------------------------------------------------
-const graphql = (body) => {
+const graphql = (body, options) => {
+  const fetchFn = options?.fetch ?? fetch;
+
   // the URL to use to connect to the API, in development or preview mode we are using the default pos-cli gui serve port
   const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}/api/graph` : 'http://localhost:3333/api/graph';
 
-  return fetch(url, {
+  return fetchFn(url, {
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
     body: JSON.stringify(body)
