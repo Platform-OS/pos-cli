@@ -1,4 +1,4 @@
-import{t as e}from"./ZX03xpO1.js";import{t}from"./B_bKnyWZ.js";var n={get:async(t={})=>{let n=``,r=``;t.value&&(t.attribute===`email`?n+=`${t.attribute}: { contains: "${t.value}" }`:n+=`${t.attribute}: { value: "${t.value}" }`,t?.attribute===`id`&&t?.value&&(r=`
+import{t as e}from"./ZX03xpO1.js";import{t}from"./B_bKnyWZ.js";var n={get:async(t={},n)=>{let r=t.attribute===`id`?`id`:`email`,i=parseInt(t.page)>0?parseInt(t.page):1,a=t.value?JSON.stringify(String(t.value)):``,o=``,s=``;a&&(o+=r===`email`?`email: { contains: ${a} }`:`id: { value: ${a} }`,r===`id`&&(s=`
           deleted_at
           created_at
           external_id
@@ -10,14 +10,14 @@ import{t as e}from"./ZX03xpO1.js";import{t}from"./B_bKnyWZ.js";var n={get:async(
           last_name
           slug
           language
-        `));let i=`
+        `));let c=`
       query {
         users(
-          page: ${t?.page??1}
+          page: ${i}
           per_page: 50
           sort: { id: { order: DESC } }
           filter: {
-            ${n}
+            ${o}
           }
         ) {
           current_page
@@ -25,11 +25,11 @@ import{t as e}from"./ZX03xpO1.js";import{t}from"./B_bKnyWZ.js";var n={get:async(
           results {
             id
             email
-            ${r}
+            ${s}
             properties
           }
         }
-      }`;return e({query:i},!1).then(e=>e.users)},delete:async t=>{let n=`
+      }`;return e({query:c},n).then(e=>e.users)},delete:async t=>{let n=`
       mutation {
         user_delete(id: ${t}){ id }
       }

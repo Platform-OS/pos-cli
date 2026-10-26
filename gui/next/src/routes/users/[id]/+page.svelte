@@ -3,9 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { untrack } from 'svelte';
 import { page } from '$app/state';
-import { user } from '#lib/api/user.js';
 import { connectionState } from '#lib/state/connection.svelte.js';
 import { tryParseJSON } from '#lib/tryParseJSON.js';
 
@@ -15,31 +13,10 @@ import JSONTree from '#lib/ui/JSONTree.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// currently viewed user data (object)
-let item = $state();
-
-
-// purpose:		  gets the user data
-// attributes:	id of the user (int)
-// returns:		  a single user data object from the database (object)
-// ------------------------------------------------------------------------
-const load = async () => {
-  
-  const filters = {
-    attribute: 'id',
-    value: page.params.id
-  };
-
-  await user.get(filters).then(response => {
-    item = response.results[0];
-  });
-}
-
-// load again whenever the route id changes, but not when the data load() reads changes
-$effect(() => {
-  const id = page.params.id;
-  untrack(() => id && load());
-});
+// the user, from +page.js (object)
+let { data } = $props();
+// currently viewed user data (object or null)
+let item = $derived(data.item);
 
 </script>
 
