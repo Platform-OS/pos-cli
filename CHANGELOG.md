@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+* **The admin GUI's Background Jobs list kept showing the time a job would run as it was when the list loaded**: "in 10 minutes" stayed "in 10 minutes". A timer updated each job every second, but through a variable the old component syntax did not watch, so nothing re-rendered. Two other things that ran on their own also stopped: the highlight on a record or constant just saved cleared itself and then re-armed its own timer, every 7 seconds for the rest of the session, and the Ctrl+K shortcut on the Database page added a listener on every visit without removing it. All three came with moving the GUI's single global store to Svelte 5 runes — one module per concern, each exporting `[something]State` — and moving the components that read it in a `$:` statement to runes too, since a legacy `$:` stops a component's template from tracking rune state.
+
 ## 6.6.0 (2026-10-26)
 
 ### New Features
@@ -137,8 +143,6 @@
 * Dependencies updated to their latest releases, clearing two security advisories: `multer` 2.4.0 (a denial of service through disk writes left behind by aborted uploads; the GUI server keeps uploads in memory, so it did not write those files) and `fast-uri` 3.1.8 (host confusion through an unclosed bracket in a URI authority; pulled in by `ajv` for resolving schema URIs). The bundled web GUIs were rebuilt: the admin panel on Vite 8, and the GraphQL browser on GraphiQL 5.4 and React 19.3.
 
 ### Fixes
-
-* **The admin GUI's Background Jobs list kept showing the time a job would run as it was when the list loaded**: "in 10 minutes" stayed "in 10 minutes". A timer updated each job every second, but through a variable the old component syntax did not watch, so nothing re-rendered. Two other things that ran on their own also stopped: the highlight on a record or constant just saved cleared itself and then re-armed its own timer, every 7 seconds for the rest of the session, and the Ctrl+K shortcut on the Database page added a listener on every visit without removing it. All three came with moving the GUI's single global store to Svelte 5 runes — one module per concern, each exporting `[something]State` — and moving the components that read it in a `$:` statement to runes too, since a legacy `$:` stops a component's template from tracking rune state.
 
 * **`pos-cli modules remove` says why an instance refused.** An instance refuses to remove a module whose tables still hold records, and answers with the reason and the mutation that deletes them; the command printed only `Failed to remove the module StatusCodeError: Request failed with status 422`. Failures now go through the same reporting as every other command, so the instance's own message is what you read.
 
