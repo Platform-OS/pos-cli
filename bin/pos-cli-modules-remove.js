@@ -4,6 +4,7 @@ import { program } from '../lib/program.js';
 import Gateway from '../lib/proxy.js';
 import logger from '../lib/logger.js';
 import { fetchSettings } from '../lib/settings.js';
+import { reportCommandError } from '../lib/reportCommandError.js';
 
 program
   .name('pos-cli modules remove')
@@ -20,7 +21,7 @@ program
         logger.Debug(`Removing module, server response: ${data}`);
         logger.Success(`[Module Remove] Successfully removed module ${name}`);
       })
-      .catch(error => logger.Error(`Failed to remove the module ${error}`));
+      .catch(error => reportCommandError(error, { prefix: `Failed to remove the module ${name}` }));
   });
 
 program.showHelpAfterError();
