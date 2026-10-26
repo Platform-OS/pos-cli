@@ -134,6 +134,8 @@
 
 ### Fixes
 
+* **`pos-cli modules remove` says why an instance refused.** An instance refuses to remove a module whose tables still hold records, and answers with the reason and the mutation that deletes them; the command printed only `Failed to remove the module StatusCodeError: Request failed with status 422`. Failures now go through the same reporting as every other command, so the instance's own message is what you read.
+
 * **Every tool result carries `meta.durationMs` instead of `meta.startedAt` and `meta.finishedAt`.** The two ISO instants were 80 bytes of every result where the duration they described is 19, paid by the model on every call — 3.6 KB across a sixty-call session — and a wall-clock instant answered a question nobody had asked. `meta.auth` is unchanged. A client reading the old fields sees them gone; nothing in pos-cli read them.
 
 * **A request that is never answered now ends by itself, and says so.** Nothing passed a timeout to `fetch`, so an instance that accepted a connection and then said nothing held the call for as long as the process lived. On the command line a person presses Ctrl-C; the MCP server is long-lived, answers concurrently, and its cancellation signal fires only when the *client* gives up — which an agent waiting on a tool result does not do. `page-fetch` was the sharpest case, since a GET runs that page's Liquid.
