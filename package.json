@@ -1,6 +1,6 @@
 {
   "name": "@platformos/pos-cli",
-  "version": "6.5.1",
+  "version": "6.6.0",
   "description": "Manage your platformOS application",
   "type": "module",
   "imports": {
@@ -42,10 +42,10 @@
   "dependencies": {
     "@inquirer/prompts": "^8.7.2",
     "@modelcontextprotocol/server": "^2.0.0",
-    "@platformos/platformos-check-node": "^1.1.0",
+    "@platformos/platformos-check-node": "^1.2.0",
     "@platformos/platformos-common": "^0.2.0",
-    "@platformos/platformos-language-server-node": "^0.1.1",
-    "@platformos/platformos-mcp-supervisor": "^0.2.0",
+    "@platformos/platformos-language-server-node": "^0.1.2",
+    "@platformos/platformos-mcp-supervisor": "^0.2.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "async": "^3.2.6",
