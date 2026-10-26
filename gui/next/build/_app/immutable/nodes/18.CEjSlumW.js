@@ -1,0 +1,1 @@
+import"../chunks/BiJN387j.js";import"../chunks/DPEfOFef.js";function e(e){}export{e as component};
