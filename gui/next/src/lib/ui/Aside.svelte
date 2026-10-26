@@ -3,21 +3,27 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { onDestroy } from 'svelte';
 import { quintOut } from 'svelte/easing';
+import { browser } from '$app/environment';
 import { preferencesState } from '#lib/state/preferences.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// close button url (string)
-export let closeUrl;
-// the panel title (string)
-export let title = '';
+let {
+  // close button url (string)
+  closeUrl,
+  // the panel title, shown as text; pass a snippet when it needs markup (string or snippet)
+  title = '',
+  // the panel content (snippet)
+  children
+} = $props();
 // width of the whole document in pixels (int)
-let windowWidth;
+let windowWidth = $state();
 // if the user is currently resizing the panel (bool)
-let resizing = false;
+let resizing = $state(false);
 
 
 // transition: 	slides from right
@@ -56,6 +62,15 @@ const resizingEnd = () => {
   resizing = false;
   localStorage.asideWidth = preferencesState.asideWidth;
 };
+
+// purpose:   drops the resize listeners if the panel closes while it is being resized
+// ------------------------------------------------------------------------
+onDestroy(() => {
+  if(browser){
+    window.removeEventListener('mousemove', resize, false);
+    window.removeEventListener('mouseup', resizingEnd, false);
+  }
+});
 
 // purpose:   updates the width of the panel to match the mouse position
 // returns:   changes the preferencesState.asideWidth
@@ -191,7 +206,7 @@ h2 {
 
 <aside transition:appear style={preferencesState.asideWidth ? `--width: ${preferencesState.asideWidth}` : ''}>
 
-  <button class="resizer" class:active={resizing} on:mousedown={resizingStart} on:click={resizingReset}>
+  <button class="resizer" class:active={resizing} onmousedown={resizingStart} onclick={resizingReset}>
     <span class="label">Drag to resize panel</span>
     <Icon icon="resizeHorizontal" size="7" />
   </button>
@@ -201,7 +216,13 @@ h2 {
     {#if title || closeUrl}
       <header>
         {#if title}
-          <h2>{@html title}</h2>
+          <h2>
+            {#if typeof title === 'function'}
+              {@render title()}
+            {:else}
+              {title}
+            {/if}
+          </h2>
         {/if}
 
         {#if closeUrl}
@@ -213,7 +234,7 @@ h2 {
       </header>
     {/if}
 
-    <slot></slot>
+    {@render children?.()}
 
   </div>
 

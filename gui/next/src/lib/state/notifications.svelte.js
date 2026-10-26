@@ -14,7 +14,8 @@ const list = $state([]);
 
 // purpose:		creates new notification, removed by itself unless it is an error
 // arguments:	notification type ('success', 'error', 'info')
-//				notification text message for the user (string)
+//				message for the user, shown as text; a snippet when it needs markup
+//				(string or snippet)
 // ------------------------------------------------------------------------
 const create = (type, message) => {
   const id = Date.now();

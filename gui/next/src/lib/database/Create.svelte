@@ -63,15 +63,23 @@ onMount(() => {
 });
 
 
-// purpose: 	handles keyboard shortcuts
+// purpose: 	closes the form on Escape
+//				(handled on the dialog itself, so the listener goes with the form: a document
+//				listener added with { once: true } was used up by the first key typed into the
+//				form, and one never pressed outlived the form; the browser's own Escape handling
+//				of a modal dialog does not fire reliably, so it is not relied on)
+// arguments:	keyboard event (object)
 // ------------------------------------------------------------------------
-document.addEventListener('keydown', event => {
+const close = () => {
+  databaseState.record = null;
+};
+
+const keyboardShortcuts = event => {
   if(event.key === 'Escape'){
     event.preventDefault();
-
-    databaseState.record = null;
+    close();
   }
-}, { once: true });
+};
 
 
 
@@ -254,7 +262,7 @@ select {
 
 
 <!-- ================================================================== -->
-<dialog bind:this={container} transition:appear>
+<dialog bind:this={container} transition:appear on:keydown={keyboardShortcuts} on:close={close}>
 
   <div class="content content-context">
 

@@ -78,3 +78,23 @@ test('filtering constants', async ({ page }) => {
   await expect(page.getByLabel('TEST_CONSTANT_4')).toBeVisible();
   await expect(page.getByLabel('TEST_CONSTANT_5')).toBeVisible();
 });
+
+
+test('showing a constant name with markup as text in the notification', async ({ page }) => {
+  // notifications used to be rendered as HTML, so a name like this one became a <b> element
+  const name = 'TEST_CONSTANT_<b>MARKUP</b>';
+
+  page.on('dialog', dialog => dialog.accept());
+
+  await page.goto(url);
+
+  await page.getByLabel('Name').fill(name);
+  await page.getByLabel('Value').fill('TEST_VALUE_MARKUP');
+  await page.getByRole('button', { name: 'Add' }).click();
+
+  await expect(page.getByText(`Constant ${name} created`)).toBeVisible();
+  await expect(page.locator('[aria-live] b')).toHaveCount(0);
+
+  await page.locator(`li:has-text("${name}")`).getByRole('button', { name: 'Delete constant' }).click();
+  await expect(page.getByText(`Constant ${name} deleted`)).toBeVisible();
+});

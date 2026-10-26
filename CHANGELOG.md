@@ -2,7 +2,13 @@
 
 ## Unreleased
 
+### Security
+
+* **The admin GUI rendered text from the instance as HTML.** Notifications and the title of the details panel were written with `{@html}`, so a constant name, a user's email, a background job's source name or — on the Network page — the method and path of any request someone sent to the instance became markup in a page that holds the instance's credentials. All of them are text now. The two places that wanted formatting, the update notification and the method badge on a network request, pass a Svelte snippet instead, so markup comes only from the GUI's own templates.
+
 ### Fixes
+
+* **Escape stopped closing the record and user forms once you had typed in them**, and the form then could not be opened again. Each form closed itself through a document listener added with `{ once: true }`, which the first key typed into the form used up; Escape after that closed the `<dialog>` natively but left the form mounted, and one never pressed outlived the form. Escape is now handled on the dialog itself. The Database page's `b` shortcut also added a document listener on every visit and never removed it, and the details panel kept its resize listeners if it closed mid-drag; both are now removed with their component.
 
 * **The admin GUI's Background Jobs list kept showing the time a job would run as it was when the list loaded**: "in 10 minutes" stayed "in 10 minutes". A timer updated each job every second, but through a variable the old component syntax did not watch, so nothing re-rendered. Two other things that ran on their own also stopped: the highlight on a record or constant just saved cleared itself and then re-armed its own timer, every 7 seconds for the rest of the session, and the Ctrl+K shortcut on the Database page added a listener on every visit without removing it. All three came with moving the GUI's single global store to Svelte 5 runes — one module per concern, each exporting `[something]State` — and moving the components that read it in a `$:` statement to runes too, since a legacy `$:` stops a component's template from tracking rune state.
 
