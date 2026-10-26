@@ -21,11 +21,17 @@ import JSONTree from '#lib/ui/JSONTree.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+let {
+  // records page to show, from the table page's load function (object)
+  records,
+  // if the records shown are the deleted ones (bool)
+  deleted = false
+} = $props();
 // the extended menu for editing an record
-let contextMenu = {
+let contextMenu = $state({
   // item id for which the context menu is opened for
   id: null
-};
+});
 
 </script>
 
@@ -180,28 +186,28 @@ td, th {
           {/each}
         <th>created at</th>
         <th>updated at</th>
-        {#if databaseState.filters.deleted === 'true'}
+        {#if deleted}
           <th>deleted at</th>
         {/if}
       </tr>
     </thead>
-    {#if databaseState.records?.results?.length}
-      {#each databaseState.records?.results as record (record.id)}
+    {#if records?.results?.length}
+      {#each records?.results as record (record.id)}
         <tr class:highlighted={highlightState.record === record.id} class:hasContextMenu={contextMenu.id === record.id}>
           <td>
             <div class="id">
               <div class="combo">
-                <button class="button compact more" class:active={contextMenu.id === record.id} on:click={() => contextMenu.id = record.id}>
+                <button class="button compact more" class:active={contextMenu.id === record.id} onclick={() => contextMenu.id = record.id}>
                   <span class="label">More options</span>
                   <Icon icon="navigationMenuVertical" size="16" />
                 </button>
-                <button class="button compact edit" title="Edit record" on:click={() => { databaseState.record = record; }}>
+                <button class="button compact edit" title="Edit record" onclick={() => { databaseState.record = record; }}>
                   <span class="label">Edit record</span>
                   <Icon icon="pencil" size="16" />
                 </button>
               </div>
               {#if contextMenu.id === record.id}
-                <ContextMenu record={record} on:close={() => contextMenu.id = null} />
+                <ContextMenu record={record} deleted={deleted} on:close={() => contextMenu.id = null} />
               {/if}
               {record.id}
             </div>
@@ -233,7 +239,7 @@ td, th {
             {(new Date(record?.updated_at)).toLocaleDateString(undefined, {})}
             <span>{(new Date(record?.updated_at)).toLocaleTimeString(undefined, {})}</span>
           </td>
-          {#if databaseState.filters.deleted === 'true'}
+          {#if deleted}
             <td class="date">
               {(new Date(record?.deleted_at)).toLocaleDateString(undefined, {})}
               <span>{(new Date(record?.deleted_at)).toLocaleTimeString(undefined, {})}</span>

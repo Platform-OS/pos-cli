@@ -755,3 +755,49 @@ test('leaving the database page and coming back does not add keyboard listeners'
   await page.keyboard.press('b');
   await expect(layout).not.toHaveClass(/tablesHidden/);
 });
+
+
+test('keeping the sorting and page in the url', async ({ page }) => {
+  await page.goto(url);
+  await page.getByText('qa_table_3').click();
+  await expect(page.getByText('of 2')).toBeVisible();
+
+  await page.locator('select[name="by"]').selectOption('id');
+  await page.locator('select[name="order"]').selectOption('ASC');
+  await expect(page).toHaveURL(/sort_by=id/);
+  await expect(page).toHaveURL(/sort_order=ASC/);
+
+  await page.getByRole('button', { name: 'Next page' }).click();
+  await expect(page).toHaveURL(/page=2/);
+  const firstOnSecondPage = await page.locator('table > tr:first-of-type td:first-child').innerText();
+
+  // the view is the url, so a reload shows the same records
+  await page.reload();
+  await expect(page.locator('select[name="by"]')).toHaveValue('id');
+  await expect(page.locator('select[name="order"]')).toHaveValue('ASC');
+  await expect(page.getByLabel('Page:')).toHaveValue('2');
+  await expect(page.locator('table > tr:first-of-type td:first-child')).toHaveText(firstOnSecondPage);
+});
+
+
+test('ignoring a sorting or filter in the url that is not valid', async ({ page }) => {
+  await page.goto(url);
+  await page.getByText('qa_table_1').click();
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
+
+  // these end up in the text of a GraphQL query, so a link must not be able to write into it
+  const tableUrl = new URL(page.url());
+  tableUrl.search = new URLSearchParams({
+    sort_by: 'id: { order: ASC } }) { total_entries } x: records(per_page: 1',
+    sort_order: 'SIDEWAYS',
+    filter_name: 'id',
+    filter_type: 'id',
+    filter_operation: 'value',
+    filter_value: '1 } }) { total_entries'
+  }).toString();
+  await page.goto(tableUrl.toString());
+
+  await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
+  await expect(page.locator('select[name="by"]')).toHaveValue('created_at');
+  await expect(page.locator('select[name="order"]')).toHaveValue('DESC');
+});

@@ -4,23 +4,29 @@
 // imports
 // ------------------------------------------------------------------------
 import { databaseState } from '#lib/state/database.svelte.js';
-import { record } from '#lib/api/record.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
 
 // properties
 // ------------------------------------------------------------------------
+let {
+  // sorting the records are shown with, from the url (object)
+  sort,
+  // called with the sorting to apply, { by, order } (function)
+  onsort
+} = $props();
 // main sorting form (dom node)
 let form;
 
 
-// purpose:		parses the <form>, saves new sorting to filters in the store and triggers records reload
+// purpose:		parses the <form> and applies it as the sorting
+// arguments:	submit event (object)
 // ------------------------------------------------------------------------
-const filter = () => {
-  databaseState.filters.page = 1;
+const filter = (event) => {
+  event.preventDefault();
 
-  record.get({ table: databaseState.table.id, filters: databaseState.filters, sort: Object.fromEntries((new FormData(form)).entries()), deleted: databaseState.filters.deleted });
+  onsort(Object.fromEntries((new FormData(form)).entries()));
 }
 
 </script>
@@ -77,11 +83,11 @@ select:focus-visible + label {
 
 
 <!-- ================================================================== -->
-<form bind:this={form} on:submit|preventDefault={filter}>
+<form bind:this={form} onsubmit={filter}>
 
   {#if databaseState.table?.properties}
 
-    <select name="by" id="sort_by" bind:value={databaseState.sort.by} on:change={() => form.requestSubmit()}>
+    <select name="by" id="sort_by" value={sort.by} onchange={() => form.requestSubmit()}>
       <option value="created_at">created at</option>
       <option value="updated_at">updated at</option>
       <option value="id">id</option>
@@ -92,13 +98,13 @@ select:focus-visible + label {
       {/each}
     </select>
 
-    <select name="order" id="sort_order" bind:value={databaseState.sort.order} on:change={() => form.requestSubmit()}>
+    <select name="order" id="sort_order" value={sort.order} onchange={() => form.requestSubmit()}>
       <option value="DESC">DESC [Z→A]</option>
       <option value="ASC">ASC [A→Z]</option>
     </select>
 
     <label for="sort_order" class="button">
-      {#if databaseState.sort.order === 'DESC'}
+      {#if sort.order === 'DESC'}
         <Icon icon="sortZA" />
       {:else}
         <Icon icon="sortAZ" />

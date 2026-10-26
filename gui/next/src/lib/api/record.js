@@ -6,7 +6,6 @@
 // imports
 // ------------------------------------------------------------------------
 import { graphql } from '#lib/api/graphql';
-import { databaseState } from '#lib/state/database.svelte.js';
 import { buildMutationIngredients, columnTypeToVariableType } from '#lib/helpers/buildMutationIngredients';
 
 
@@ -109,7 +108,8 @@ const record = {
   //				    id of the table that you need the records for (int)
   //				    filters to the graphql query (object)
   //				    if you want to get also the deleted items (bool)
-  // returns:		array of records as they appear in the database (array)
+  //				    fetch to use, such as the one a load function receives (function)
+  // returns:		records page as it appears in the database (object)
   // ------------------------------------------------------------------------
   get: (args) => {
 
@@ -169,9 +169,7 @@ const record = {
         }
       }`;
 
-    return graphql({ query, variables: propertiesFilterData.variables }).then(data => {
-      databaseState.records = data.records; 
-    });
+    return graphql({ query, variables: propertiesFilterData.variables }, { fetch: params.fetch }).then(data => data.records);
   },
 
 

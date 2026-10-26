@@ -1,1 +1,0 @@
-import{Ot as e}from"./B80JikZ8.js";var t=7e3,n=e({record:null,constant:null}),r,i=(e,i)=>{n[e]=i,clearTimeout(r),r=setTimeout(()=>{n.record=null,n.constant=null},t)};export{n,i as t};
