@@ -1,11 +1,11 @@
-import{t as e}from"./ZX03xpO1.js";var t={get:async t=>{let n=``;t?.id&&(n=`id: { value: "${t.id}" }`);let r=``;t?.type&&(r=`type: ${t.type}`);let i=`
+import{t as e}from"./ZX03xpO1.js";var t=[`SCHEDULED`,`DEAD`,`RUNNING`],n={get:async n=>{let r=parseInt(n?.page)>0?parseInt(n.page):1,i=``;n?.id&&(i=`id: { value: ${JSON.stringify(String(n.id))} }`);let a=``;t.includes(n?.type)&&(a=`type: ${n.type}`);let o=`
       query {
         admin_background_jobs(
           per_page: 20,
-          page: ${t?.page||1}
+          page: ${r}
           filter: {
-            ${n}
-            ${r}
+            ${i}
+            ${a}
           }
         ) {
           has_next_page,
@@ -39,16 +39,16 @@ import{t as e}from"./ZX03xpO1.js";var t={get:async t=>{let n=``;t?.id&&(n=`id: {
             updated_at
           }
         }
-      }`;return e({query:i},!1).then(e=>e.admin_background_jobs)},delete:async t=>{let n=`
+      }`;return e({query:o},!1).then(e=>e.admin_background_jobs)},delete:async t=>{let n=Object.fromEntries(t.properties.entries()).id,r=`
       mutation {
-        admin_background_job_delete(id: "${Object.fromEntries(t.properties.entries()).id}") {
+        admin_background_job_delete(id: ${JSON.stringify(String(n))}) {
           id
         }
       }
-    `;return e({query:n},!1)},retry:async t=>{let n=`
+    `;return e({query:r},!1)},retry:async t=>{let n=Object.fromEntries(t.properties.entries()).id,r=`
       mutation {
-        admin_background_job_retry(id: "${Object.fromEntries(t.properties.entries()).id}"){
+        admin_background_job_retry(id: ${JSON.stringify(String(n))}){
           id
         }
       }
-    `;return e({query:n},!1)}};export{t};
+    `;return e({query:r},!1)}};export{n as t};

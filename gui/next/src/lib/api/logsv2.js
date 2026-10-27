@@ -4,20 +4,59 @@
 
 
 
+// purpose:		quotes a value as an SQL string literal
+// arguments: the value (string)
+// returns:		the literal, with any single quote doubled (string)
+// ------------------------------------------------------------------------
+const sqlString = (value) => `'${String(value).replaceAll('\'', '\'\'')}'`;
+
+
+// purpose:		sends a search to the API
+// arguments: the request (object)
+// returns:		logs in json format
+// ------------------------------------------------------------------------
+const search = (request) => {
+  // the URL to use to connect to the API, in development or preview mode we are using the default pos-cli gui serve port
+  const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}/api/logsv2` : 'http://localhost:3333/api/logsv2';
+
+  return fetch(`${url}`, {
+    method: 'POST',
+    body: JSON.stringify(request),
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+    .then(response => {
+      if(response.ok){
+        return response.json();
+      }
+
+      return Promise.reject(response);
+    })
+    .then(data => {
+      return data;
+    })
+    .catch(error => {
+      return { error: error };
+    });
+};
+
+
+
 const logs = {
 
   // purpose:		downloads logs from API
-  // arguments:
+  // arguments: filters from the url: page, start_time (YYYY-MM-DD) and message (object)
   // returns:		logs in json format
   // ------------------------------------------------------------------------
   get: async (filters = {}) => {
-    // the URL to use to connect to the API, in development or preview mode we are using the default pos-cli gui serve port
-    const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}/api/logsv2` : 'http://localhost:3333/api/logsv2';
+    // the filters come from the url, so only these are read, and the message is written
+    // into the query as an escaped string literal
+    const size = 20;
+    const page = parseInt(filters.page) > 0 ? parseInt(filters.page) - 1 : 0;
 
-    filters.page = filters.page ? parseInt(filters.page) - 1 : 0;
-    filters.size = filters.size ?? 20;
-    filters.from = filters.page * filters.size;
-    filters.stream_name = filters.stream_name ?? 'logs';
+    let start_time = 0;
+    let end_time = 0;
 
     // parse the dates from YYYY-MM-DD
     if(filters.start_time){
@@ -25,45 +64,51 @@ const logs = {
       let date = new Date(filters.start_time);
       date.setHours(23, 59, 59);
 
-      filters.end_time = Math.floor(date.getTime() * 1000);
-      filters.start_time = Math.floor(date.getTime() - 24 * 60 * 60 * 1000 * 3);
+      end_time = Math.floor(date.getTime() * 1000);
+      start_time = Math.floor(date.getTime() - 24 * 60 * 60 * 1000 * 3);
     }
+
+    let sql = 'SELECT * FROM logs';
 
     if(filters.message){
-      filters.sql = `SELECT * FROM logs where message ILIKE '%${filters.message}%' OR type ILIKE '%${filters.message}%' OR options_data_url ILIKE '%${filters.message}%'`;
+      const pattern = sqlString(`%${filters.message}%`);
+      sql = `SELECT * FROM logs where message ILIKE ${pattern} OR type ILIKE ${pattern} OR options_data_url ILIKE ${pattern}`;
     }
 
-    const request = {
+    return search({
       query: {
-        sql: filters.sql || `SELECT * FROM ${filters.stream_name}`,
-        from: filters.from,
-        size: filters.size,
-        start_time: filters.start_time || 0,
-        end_time: filters.end_time || 0,
+        sql: sql,
+        from: page * size,
+        size: size,
+        start_time: start_time || 0,
+        end_time: end_time || 0,
         track_total_hits: true
       }
-    };
+    });
 
-    return fetch(`${url}`, {
-      method: 'POST',
-      body: JSON.stringify(request),
-      headers: {
-        'Content-Type': 'application/json'
+  },
+
+
+  // purpose:		downloads a single log entry from API
+  // arguments: the _timestamp of the entry (string of digits)
+  // returns:		logs in json format, with the entry as the only hit, or none when the timestamp is not a number
+  // ------------------------------------------------------------------------
+  getOne: async (timestamp) => {
+    // the timestamp comes from the url and is written into the query as a number
+    if(!/^\d+$/.test(timestamp)){
+      return { hits: [] };
+    }
+
+    return search({
+      query: {
+        sql: `select * from logs where _timestamp = ${timestamp}`,
+        from: 0,
+        size: 1,
+        start_time: 0,
+        end_time: 0,
+        track_total_hits: true
       }
-    })
-      .then(response => {
-        if(response.ok){
-          return response.json();
-        }
-
-        return Promise.reject(response);
-      })
-      .then(data => {
-        return data;
-      })
-      .catch(error => {
-        return { error: error };
-      });
+    });
 
   }
 

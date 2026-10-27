@@ -26,12 +26,7 @@ const load = async () => {
   }
   // make the api request only for log that is not currenly loaded on page
   else {
-    const filters = {
-      size: 1,
-      sql: `select * from requests where _timestamp = ${page.params.id}`
-    };
-
-    await network.get(filters).then(response => {
+    await network.getOne(page.params.id).then(response => {
       networkState.network = response.hits[0];
     });
   }
