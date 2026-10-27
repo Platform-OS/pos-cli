@@ -26,7 +26,7 @@ const retry = async (event) => {
     dispatch('itemsChanged');
     notificationsState.create('success', `Background job ${retry.admin_background_job_retry.id} planned to run again`);
   } else {
-    notificationsState.create('error', `Background job ${retry.admin_background_job_retry.id} could not be run again`);
+    notificationsState.create('error', `Background job ${retry.admin_background_job_retry?.id ?? ""} could not be run again`);
   }
 
 };

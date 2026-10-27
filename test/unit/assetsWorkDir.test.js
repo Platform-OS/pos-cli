@@ -80,14 +80,14 @@ describe('the credentials that sign the upload', () => {
 
     await deployAssets(gateway, { releaseId: 1 });
 
-    expect(presignUrl.mock.calls[0][2]).toEqual({ url: gateway.url, token: gateway.token });
+    expect(presignUrl.mock.calls[0][2]).toBe(gateway);
     vi.unstubAllEnvs();
   });
 
   test('are the Gateway\'s when asking whether a direct upload is possible at all', async () => {
     await canPresignAssetUpload(gateway);
 
-    expect(presignDirectory).toHaveBeenCalledWith('instances/7/assets', { url: gateway.url, token: gateway.token });
+    expect(presignDirectory).toHaveBeenCalledWith('instances/7/assets', gateway);
   });
 
   // The one answer that means "this instance has no object storage"; everything else is a failure

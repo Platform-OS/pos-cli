@@ -56,6 +56,11 @@
       })
         .then(response => response.json())
         .then((data) => {
+          if (data.error === 'insufficient_scope') {
+            o.textContent = '';
+            e.textContent = noLiquidMessage;
+            return;
+          }
           o.innerHTML = data.result;
           e.innerHTML = data.error;
         });
@@ -69,9 +74,23 @@
       executeLiquid();
     });
 
+    // Liquid can do anything -- a graphql tag runs mutations, background schedules jobs --
+    // so the instance only evaluates it for a token with the liquid:exec scope.
+    var noLiquidMessage = 'This token does not have the liquid:exec scope, so the Liquid evaluator is not available with it. ' +
+      'Use the GraphiQL IDE to run queries, or a token that has liquid:exec.';
+
+    // Same rule as lib/utils/tokenScopes.js: null scopes is full access.
+    var canExecLiquid = scopes => !Array.isArray(scopes) || scopes.includes('*') || scopes.includes('liquid:exec');
+
     let printConnectionInfo = env => {
       document.querySelector("#status-bar")
-              .textContent = `Connected to ${env.MPKIT_URL}`;
+              .textContent = `Connected to ${env.MPKIT_URL}` + (canExecLiquid(env.scopes) ? '' : ' (no liquid:exec scope)');
+
+      if (!canExecLiquid(env.scopes)) {
+        t.disabled = true;
+        f.querySelector('input[type=submit]').disabled = true;
+        e.textContent = noLiquidMessage;
+      }
     };
 
     fetch("/info")

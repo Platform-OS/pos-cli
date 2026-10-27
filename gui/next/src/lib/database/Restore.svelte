@@ -29,7 +29,7 @@ const restore = async (event) => {
     invalidate('app:records');
     notificationsState.create('success', `Record ${restore.record_update.id} restored`);
   } else {
-    notificationsState.create('error', `Record ${restore.record_update.id} could not be restored`);
+    notificationsState.create('error', `Record ${restore.record_update?.id ?? ""} could not be restored`);
   }
 
 }

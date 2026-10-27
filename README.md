@@ -81,6 +81,46 @@ For scripted runs, set `POS_PORTAL_OTP_CODE`: it works for **every** command, wh
 
 pos-cli stops after three rejected codes. The Partner Portal locks an account for 15 minutes after five, and that counter is shared with the web UI, so the remaining attempts are left for you to spend deliberately. If the account is already locked, pos-cli says so and stops without asking for a code — while the lock holds, even a correct code is refused unread.
 
+#### Global Tokens
+
+A global token is created in the Partner Portal (your account's **Tokens** page) rather than by `env add`, and one token can work against many Instances. Add it once per environment with `--token`:
+
+    pos-cli env add staging --url https://my-app-staging.staging.oregon.platform-os.com --token [global token]
+    pos-cli env add production --url https://my-app.prod01.oregon.platform-os.com --token [global token]
+
+or, without a `.pos` entry, through `MPKIT_URL`, `MPKIT_EMAIL` and `MPKIT_TOKEN` (all three are required).
+
+**Always use the Instance's system URL** — the one under the stack's own domain, as above — never a custom domain added to the Instance. A custom domain resolves wherever its owner points it, so a global token sent there can be captured, and it then works on every other Instance the token reaches, not just that one.
+
+You need two-factor authentication on your account to create a global token.
+
+When you create one you choose:
+
+* **Instances** — *All* covers every Instance your account can reach, including ones you are given access to or create later. Otherwise the token covers only the Instances you pick, plus any Instance created with the token itself. Either way it never reaches further than your own access: where you can only read an Instance, the token can only read it too.
+* **Scopes** — what the token may do on those Instances. Two presets cover the common cases: *Administrator* (`*`, every scope, including ones added later) and *Read-only administrator* (`*:read`, every read scope, including ones added later). Or pick scopes one by one:
+
+  | Scope | Lets pos-cli |
+  |---|---|
+  | `instance:read` | read the Instance, its settings, installed modules and migrations |
+  | `instance:manage` | create backups, clone the Instance |
+  | `logs:read` | `pos-cli logs`, the GUI's Logs |
+  | `code:read` / `code:write` | `pos-cli pull` / `deploy`, `sync`, migrations, `modules remove`, uploads |
+  | `records:read` / `records:write` | read / change records (GUI Database, GraphQL) |
+  | `users:read` / `users:write` | read / change users (GUI Users, GraphQL) |
+  | `constants:read` / `constants:write` | `pos-cli constants list` / `set`, `unset` |
+  | `documents:read` / `documents:write` | read / change search documents and embeddings |
+  | `background_jobs:read` / `background_jobs:write` | the GUI's Background Jobs / retrying and deleting jobs |
+  | `data_import:read` | `pos-cli data export` |
+  | `data_import:write` | `pos-cli data import`, `data update` |
+  | `data:clean` | `pos-cli data clean` |
+  | `notifications:read` / `notifications:send` | read sent notifications / send email, SMS, API calls |
+  | `activities:read` / `activities:write` | read / change activities and feeds |
+  | `liquid:exec` | `pos-cli exec liquid` and the Liquid evaluator — Liquid can run any mutation, so this is as good as administrator access |
+
+  A GraphQL query or mutation needs the scope of every root field it selects. The Instance refuses anything else, and pos-cli reports it as `This token does not have the records:write scope needed for this on <instance>` rather than as a bad token. `pos-cli env refresh-token` cannot help with that refusal: the token is valid, it just does not have that scope. With a limited token `gui serve` shows a **Limited token** badge listing its scopes and hides what would be refused, and `gui serve --sync` refuses to start without `code:write`.
+* **Expiry** — one hour, one day, one week or never.
+* **Two-factor enforcement** — an enforced token behaves like any other for an account with 2FA: each Instance asks for a [session](#instance-sessions), started with a code the first time a command needs one. Scripted runs pass `POS_PORTAL_OTP_CODE` exactly as above. An unenforced token never asks for a code — meant for server-side integrations with nobody to type one — and the portal asks for your code when you create it instead. Treat it as the password-equivalent it is: revoke it in the portal the moment it may have leaked.
+
 The configuration for your environments is stored in the `.pos` file.
 
 ### Syncing Changes

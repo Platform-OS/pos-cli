@@ -18,7 +18,7 @@ const uploadZip = async (filepath, gateway) => {
     const instanceId = (await gateway.getInstance()).id;
     const propertyUploadsDirectory = `instances/${instanceId}/property_uploads/data.public_property_upload_import.zip`;
     logger.Debug(propertyUploadsDirectory);
-    const { uploadUrl } = await presignUrl(propertyUploadsDirectory, filepath);
+    const { uploadUrl } = await presignUrl(propertyUploadsDirectory, filepath, gateway);
     await uploadFile(filepath, uploadUrl);
 
     spinner.stopAndPersist().succeed('Upload done.');
@@ -40,8 +40,8 @@ program
     Object.assign(process.env, { MARKETPLACE_TOKEN: authData.token, MARKETPLACE_URL: authData.url });
 
     if (!fs.existsSync(path)) logger.Error(`File not found: ${path}`);
-    gateway = new Gateway(authData);
-    uploadZip(path, gateway);
+    const gateway = new Gateway(authData);
+    await uploadZip(path, gateway);
   });
 
 program.parse(process.argv);

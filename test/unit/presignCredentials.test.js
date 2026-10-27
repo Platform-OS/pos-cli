@@ -1,17 +1,18 @@
 /**
  * Whose credentials the presign service is given. Reading `MARKETPLACE_*` off the process is fine
  * for a CLI that runs one deploy and exits, and not for a server whose asset upload runs in the
- * background while other calls set and restore those same variables. So both take the credentials
- * as an argument, with the environment as the fallback that keeps CLI callers unchanged.
+ * background while other calls set and restore those same variables. So both take the caller's
+ * Gateway as an argument, with the environment as the fallback that keeps CLI callers unchanged.
  */
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import Gateway from '#lib/proxy.js';
 import { presignUrl, presignDirectory } from '#lib/presignUrl.js';
 
-const PASSED = { url: 'https://passed-in.example.com', token: 'passed-in-token' };
+let PASSED;
 
 let calls;
 let filePath;
@@ -20,6 +21,10 @@ let tmpDir;
 beforeEach(() => {
   calls = [];
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pos-cli-presign-'));
+  // no .pos, so no two-factor session stands in for the token
+  vi.stubEnv('CONFIG_FILE_PATH', path.join(tmpDir, '.pos'));
+  vi.stubEnv('POS_PORTAL_SESSION_TOKEN', undefined);
+  PASSED = new Gateway({ url: 'https://passed-in.example.com', token: 'passed-in-token' });
   filePath = path.join(tmpDir, 'assets.zip');
   fs.writeFileSync(filePath, 'zip');
 

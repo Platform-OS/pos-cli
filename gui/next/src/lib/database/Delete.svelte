@@ -32,7 +32,7 @@ const remove = async (event) => {
       invalidate('app:records');
       notificationsState.create('success', `Record ${remove.record_delete.id} deleted`);
     } else {
-      notificationsState.create('error', `Record ${remove.record_delete.id} could not be deleted`);
+      notificationsState.create('error', `Record ${remove.record_delete?.id ?? ""} could not be deleted`);
     }
 
   }

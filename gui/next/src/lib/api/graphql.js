@@ -8,6 +8,20 @@
 // "this response failed" means. The module is dependency-free, so vite
 // bundles it into this app without pulling anything Node-only in.
 import { graphQLErrors } from '../../../../../lib/graph/response.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
+
+
+// purpose:		tells the user the instance refused a request the token has no scope for
+// arguments:	response body from the instance (object)
+// ------------------------------------------------------------------------
+const notifyInsufficientScope = (res) => {
+  const scopes = Array.isArray(res.required_scopes) ? res.required_scopes : [];
+  const reason = scopes.length
+    ? `It needs ${scopes.join(', ')}.`
+    : (res.errors || []).map(error => typeof error === 'string' ? error : error?.message).filter(Boolean).join(' ');
+
+  notificationsState.create('error', `This token's scopes do not allow that, so the instance refused it.${reason ? ` ${reason}` : ''}`);
+};
 
 
 
@@ -30,6 +44,12 @@ const graphql = (body, options) => {
   })
     .then((res) => res.json())
     .then((res) => {
+      // refused by the instance because the token lacks a scope; the body still carries
+      // `errors`, so callers take their usual failure path after the notification
+      if(res?.error === 'insufficient_scope') {
+        notifyInsufficientScope(res);
+      }
+
       const errors = graphQLErrors(res);
 
       if(errors) {
