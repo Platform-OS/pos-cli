@@ -351,7 +351,7 @@ menu :global(button:hover) {
         decreaseLabel="Previous page"
         increaseLabel="Next page"
         style="navigation"
-        on:input={event => form.requestSubmit(event.detail.submitter)}
+        oninput={({ submitter }) => form.requestSubmit(submitter)}
       />
       of {data.jobs?.total_pages || 1}
     </nav>

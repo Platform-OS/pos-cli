@@ -125,3 +125,50 @@ test('highlighting the code of a background job opened from a link', async ({ pa
   await expect(code).toContainText(`assign greeting = '${name}'`);
   await expect(code.locator('.token.keyword').first()).toBeVisible();
 });
+
+
+
+// purpose:   deletes every scheduled background job with the given source name
+// arguments: Playwright's request fixture, the jobs' source name (string)
+// ------------------------------------------------------------------------
+const deleteScheduledJobs = async (request, name) => {
+  const graph = async (query) => {
+    const response = await request.post('http://127.0.0.1:3333/api/graph', { data: { query } });
+    expect(response.ok()).toBeTruthy();
+    return (await response.json()).data;
+  };
+
+  const { admin_background_jobs: jobs } = await graph('{ admin_background_jobs(per_page: 100, filter: { type: SCHEDULED }) { results { id source_name } } }');
+
+  for(const job of jobs.results.filter(job => job.source_name === name)){
+    await graph(`mutation { admin_background_job_delete(id: ${JSON.stringify(job.id)}) { id } }`);
+  }
+};
+
+
+test('paging through scheduled background jobs', async ({ page, request }) => {
+  const name = 'paging job';
+  // jobs left by a run that did not finish would push the other tests' jobs off the first page
+  await deleteScheduledJobs(request, name);
+
+  try {
+    // more than the 20 jobs that fit on one page
+    const response = await request.post('http://127.0.0.1:3333/api/liquid', {
+      data: { content: `{% for i in (1..21) %}{% background source_name: '${name}', delay: 10 %}{% assign i = i %}{% endbackground %}{% endfor %}` }
+    });
+    expect(response.ok()).toBeTruthy();
+
+    await page.goto(url);
+    await expect(page.getByLabel('Page:')).toHaveValue('1');
+
+    await page.getByRole('button', { name: 'Next page' }).click();
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.getByLabel('Page:')).toHaveValue('2');
+
+    await page.getByRole('button', { name: 'Previous page' }).click();
+    await expect(page).toHaveURL(/page=1/);
+    await expect(page.getByLabel('Page:')).toHaveValue('1');
+  } finally {
+    await deleteScheduledJobs(request, name);
+  }
+});

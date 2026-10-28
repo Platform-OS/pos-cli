@@ -370,7 +370,7 @@ table {
           decreaseLabel="Previous page"
           increaseLabel="Next page"
           style="navigation"
-          on:input={event => { form.requestSubmit(event.detail.submitter); }}
+          oninput={({ submitter }) => form.requestSubmit(submitter)}
         />
         of <span class="info" title="{data.logs?.total ?? 0} logs total">{totalPages}</span>
       </nav>

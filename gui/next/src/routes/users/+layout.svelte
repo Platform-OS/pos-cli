@@ -400,7 +400,7 @@ const submitForm = function(event) {
         decreaseLabel="Previous page"
         increaseLabel="Next page"
         style="navigation"
-        on:input={event => { form.requestSubmit(event.detail.submitter); }}
+        oninput={({ submitter }) => form.requestSubmit(submitter)}
       />
       of {data.users?.total_pages || 1}
     </div>

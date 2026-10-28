@@ -9,6 +9,7 @@ import { databaseState } from '#lib/state/database.svelte.js';
 import { notificationsState } from '#lib/state/notifications.svelte.js';
 import { preferencesState } from '#lib/state/preferences.svelte.js';
 import { table } from '#lib/api/table';
+import { serverUrl } from '#lib/api/address.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -513,7 +514,7 @@ footer ul {
   <ul class="applications">
 
     <li class="application" class:showDescription={showDescriptionFor.includes('liquid')}>
-      <a href="{(typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}/gui/liquid">
+      <a href={serverUrl('/gui/liquid')}>
         <div class="icon" style="color: #aeb0b3;">
           <Icon icon="liquid" size="48" />
         </div>
@@ -543,7 +544,7 @@ footer ul {
     </li>
 
     <li class="application" class:showDescription={showDescriptionFor.includes('graphiql')}>
-      <a href="{(typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}/gui/graphql">
+      <a href={serverUrl('/gui/graphql')}>
         <div class="icon" style="color: #f30e9c;">
           <Icon icon="graphql" size="48" />
         </div>

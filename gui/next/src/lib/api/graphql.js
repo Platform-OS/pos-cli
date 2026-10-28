@@ -8,6 +8,7 @@
 // "this response failed" means. The module is dependency-free, so vite
 // bundles it into this app without pulling anything Node-only in.
 import { graphQLErrors } from '../../../../../lib/graph/response.js';
+import { serverUrl } from '#lib/api/address.js';
 
 
 
@@ -20,8 +21,7 @@ import { graphQLErrors } from '../../../../../lib/graph/response.js';
 const graphql = (body, options) => {
   const fetchFn = options?.fetch ?? fetch;
 
-  // the URL to use to connect to the API, in development or preview mode we are using the default pos-cli gui serve port
-  const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}/api/graph` : 'http://localhost:3333/api/graph';
+  const url = serverUrl('/api/graph');
 
   return fetchFn(url, {
     headers: { 'Content-Type': 'application/json' },

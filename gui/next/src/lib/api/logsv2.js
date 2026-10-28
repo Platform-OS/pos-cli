@@ -2,6 +2,10 @@
   handles downloading logs from API
 */
 
+// imports
+// ------------------------------------------------------------------------
+import { serverUrl } from '#lib/api/address.js';
+
 
 
 // purpose:		quotes a value as an SQL string literal
@@ -19,8 +23,7 @@ const sqlString = (value) => `'${String(value).replaceAll('\'', '\'\'')}'`;
 const search = (request, options) => {
   const fetchFn = options?.fetch ?? fetch;
 
-  // the URL to use to connect to the API, in development or preview mode we are using the default pos-cli gui serve port
-  const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}/api/logsv2` : 'http://localhost:3333/api/logsv2';
+  const url = serverUrl('/api/logsv2');
 
   return fetchFn(`${url}`, {
     method: 'POST',

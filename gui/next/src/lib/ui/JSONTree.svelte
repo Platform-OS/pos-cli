@@ -8,12 +8,14 @@ import JSONTree from 'svelte-json-tree';
 
 // properties
 // ------------------------------------------------------------------------
-// JSON to show as a tree (object)
-export let value;
-// if you want to output the full value instead of trimming long lines (bool)
-export let showFullLines = false;
-// how many lines to expand by default (int)
-export let expandedLines = 2;
+let {
+  // JSON to show as a tree (object)
+  value,
+  // if you want to output the full value instead of trimming long lines (bool)
+  showFullLines = false,
+  // how many lines to expand by default (int)
+  expandedLines = 2
+} = $props();
 
 </script>
 

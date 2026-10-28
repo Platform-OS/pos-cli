@@ -26,6 +26,8 @@
 
 * **The admin GUI's Background Jobs list kept showing the time a job would run as it was when the list loaded**: "in 10 minutes" stayed "in 10 minutes". A timer updated each job every second, but through a variable the old component syntax did not watch, so nothing re-rendered. Two other things that ran on their own also stopped: the highlight on a record or constant just saved cleared itself and then re-armed its own timer, every 7 seconds for the rest of the session, and the Ctrl+K shortcut on the Database page added a listener on every visit without removing it. All three came with moving the GUI's single global store to Svelte 5 runes — one module per concern, each exporting `[something]State` — and moving the components that read it in a `$:` statement to runes too, since a legacy `$:` stops a component's template from tracking rune state.
 
+* **The admin GUI's shared components are written in Svelte 5 runes.** The header, notifications, icons, JSON tree, copy button, log diagnostic, connection indicator and the number and toggle fields no longer use the Svelte 4 syntax; the number field calls an `oninput` prop and the toggle an `onchange` prop instead of sending component events. The address of the gui server, copied into nine places, is one `serverUrl` helper. Hovering the Database link while its tables were still loading asked for them again; it now asks once.
+
 ## 6.6.0 (2026-10-26)
 
 ### New Features

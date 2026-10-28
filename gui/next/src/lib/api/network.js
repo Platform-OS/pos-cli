@@ -2,6 +2,10 @@
   handles downloading requests log from the API
 */
 
+// imports
+// ------------------------------------------------------------------------
+import { serverUrl } from '#lib/api/address.js';
+
 
 
 // the columns the results can be sorted by, for plain and for aggregated results (array)
@@ -17,8 +21,7 @@ const aggregatedOrderColumns = ['count', 'http_request_path', 'median_target_pro
 const search = (request, options) => {
   const fetchFn = options?.fetch ?? fetch;
 
-  // the URL to use to connect to the API, in development or preview mode we are using the default pos-cli gui serve port
-  const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}/api/logsv2` : 'http://localhost:3333/api/logsv2';
+  const url = serverUrl('/api/logsv2');
 
   return fetchFn(`${url}`, {
     method: 'POST',
