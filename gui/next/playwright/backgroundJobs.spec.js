@@ -172,3 +172,73 @@ test('paging through scheduled background jobs', async ({ page, request }) => {
     await deleteScheduledJobs(request, name);
   }
 });
+
+
+// purpose:   shows one dead job in the 'Dead' list and answers retrying or deleting it the given way,
+//            so the test does not depend on a job having failed on the instance
+// arguments: page (object), answer for the retry and delete mutations (object)
+// ------------------------------------------------------------------------
+const deadJob = { id: '999999', source_name: 'dead background job', queue: 'high', attempts: 3, created_at: new Date().toISOString(), dead_at: new Date().toISOString(), error_message: 'it failed' };
+
+const routeDeadJob = async (page, answer) => {
+  await page.route('**/api/graph', async route => {
+    const query = route.request().postData() ?? '';
+
+    if(query.includes('admin_background_jobs(') && query.includes('type: DEAD')){
+      await route.fulfill({ json: { data: { admin_background_jobs: { has_next_page: false, has_previous_page: false, total_pages: 1, results: [deadJob] } } } });
+    } else if(query.includes('admin_background_job_retry') || query.includes('admin_background_job_delete')){
+      await route.fulfill({ json: answer });
+    } else {
+      await route.fallback();
+    }
+  });
+};
+
+
+test('retrying a dead background job', async ({ page }) => {
+  await routeDeadJob(page, { data: { admin_background_job_retry: { id: deadJob.id } } });
+
+  await page.goto(url + '?type=DEAD');
+
+  const row = page.locator('tr:has-text("dead background job")');
+  await row.getByRole('button', { name: 'More options' }).click();
+  await row.getByRole('button', { name: 'Retry' }).click();
+
+  await expect(page.getByText(`Background job ${deadJob.id} planned to run again`)).toBeVisible();
+});
+
+
+test('telling that a background job could not be run again', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+
+  // the instance refuses, answering the way GraphQL does: errors, and no job
+  await routeDeadJob(page, { errors: [{ message: 'refused' }], data: { admin_background_job_retry: null } });
+
+  await page.goto(url + '?type=DEAD');
+
+  const row = page.locator('tr:has-text("dead background job")');
+  await row.getByRole('button', { name: 'More options' }).click();
+  await row.getByRole('button', { name: 'Retry' }).click();
+
+  await expect(page.getByText(`Background job ${deadJob.id} could not be run again`)).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+
+test('telling that a background job could not be deleted', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('dialog', dialog => dialog.accept());
+
+  await routeDeadJob(page, { errors: [{ message: 'refused' }], data: { admin_background_job_delete: null } });
+
+  await page.goto(url + '?type=DEAD');
+
+  const row = page.locator('tr:has-text("dead background job")');
+  await row.getByRole('button', { name: 'More options' }).click();
+  await row.getByRole('button', { name: 'Delete background job' }).click();
+
+  await expect(page.getByText(`Background job ${deadJob.id} could not be deleted`)).toBeVisible();
+  expect(errors).toEqual([]);
+});

@@ -3,7 +3,6 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { createEventDispatcher } from 'svelte';
 import { onNavigate } from '$app/navigation';
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -11,12 +10,16 @@ import Icon from '#lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+let {
+  // called when the popup should close (function)
+  onclose
+} = $props();
 // container for the presets (dom node)
-let container;
+let container = $state();
 // input with name for new presets to save (dom node)
-let createPresetNameInput;
+let createPresetNameInput = $state();
 // presets list containing 'url' and 'name' for each preset (array of objects)
-let presets = (localStorage.posNetworkLogsPresets && JSON.parse(localStorage.posNetworkLogsPresets)) || [{
+let presets = $state((localStorage.posNetworkLogsPresets && JSON.parse(localStorage.posNetworkLogsPresets)) || [{
   url: "order_by=target_processing_time&order=DESC",
   name: "Slowest requests"
 },
@@ -31,11 +34,7 @@ let presets = (localStorage.posNetworkLogsPresets && JSON.parse(localStorage.pos
 {
   url: "order_by=_timestamp&order=DESC&lb_status_codes=500,501,502,503,504,505,506,507,508,510,511",
   name: "Responded with 5∗∗ error"
-}];
-
-
-// event dispatcher
-const dispatch = createEventDispatcher();
+}]);
 
 
 // purpose:   triggers corresponding actions when keyboard shortcuts are used
@@ -45,7 +44,7 @@ function handleKayboardShortcuts(event){
 
   // close popup
   if(event.key === 'Escape'){
-    dispatch('close');
+    onclose?.();
   }
 
   // move down in the list
@@ -89,7 +88,7 @@ function handleKayboardShortcuts(event){
 // purpose:   close popup when user navigates away
 // ------------------------------------------------------------------------
 onNavigate(() => {
-  dispatch('close');
+  onclose?.();
 });
 
 
@@ -97,14 +96,16 @@ onNavigate(() => {
 // arguments: form submit event (event)
 // ------------------------------------------------------------------------
 function createPreset(event){
+  event.preventDefault();
+
   let query = new URLSearchParams(document.location.search);
   // we don't need the time filter stored as it should be universal
   query.delete('start_time');
 
-  presets = [...presets, {
+  presets.push({
     url: query.toString(),
     name: createPresetNameInput.value
-  }];
+  });
 
   localStorage.posNetworkLogsPresets = JSON.stringify(presets);
 
@@ -116,6 +117,8 @@ function createPreset(event){
 // arguments: form submit event (event)
 // ------------------------------------------------------------------------
 function deletePreset(event){
+  event.preventDefault();
+
   const data = new FormData(event.target);
   const index = data.get('id');
   const name = data.get('name');
@@ -123,8 +126,6 @@ function deletePreset(event){
   if(window.confirm(`Are you sure that you want to delete '${name}' preset?`)){
 
     presets.splice(index, 1);
-
-    presets = presets;
 
     localStorage.posNetworkLogsPresets = JSON.stringify(presets);
   }
@@ -250,11 +251,11 @@ li button {
 
 
 <!-- ================================================================== -->
-<svelte:window on:keydown={handleKayboardShortcuts}></svelte:window>
+<svelte:window onkeydown={handleKayboardShortcuts}></svelte:window>
 
 
 <div bind:this={container}>
-  <form class="create" on:submit|preventDefault={createPreset}>
+  <form class="create" onsubmit={createPreset}>
     <input type="text" required placeholder="Save current view" bind:this={createPresetNameInput}>
     <button type="submit">
       <span class="label">Save currently selected filters as new preset</span>
@@ -262,10 +263,11 @@ li button {
     </button>
   </form>
   <ul>
+    <!-- not keyed: the same filters can be saved twice under the same name -->
     {#each presets as preset, index}
       <li>
         <a href="/network?{preset.url}">{preset.name}</a>
-        <form on:submit|preventDefault={deletePreset}>
+        <form onsubmit={deletePreset}>
           <input type="hidden" name="id" value={index}>
           <input type="hidden" name="name" value={preset.name}>
           <button type="submit">

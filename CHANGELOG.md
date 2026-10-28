@@ -32,6 +32,8 @@
 
 * **The admin GUI's user form threw on a value that is not valid JSON or a valid array** instead of scrolling to the message: it waited for `tick()`, which it never imported. The Users components (`ContextMenu`, `Create`, `Delete`) are written in Svelte 5 runes, with `onclose`, `onreload` and `onsuccess` props instead of component events, and deleting a user now says "User … deleted" rather than "Record … deleted".
 
+* **A background job the admin GUI could not retry or delete is reported again.** A refused retry or deletion answered with errors and no job, and the message read the job's id from there, so it threw and no notification appeared. Both now name the job that was asked for. The Background Jobs components (`Delete`, `Retry`) and the Network filters presets are written in Svelte 5 runes, with `onsuccess` and `onclose` props instead of component events, and the presets tests run again: they intercept `/api/logsv2`, so they no longer need an instance that serves it.
+
 ## 6.6.0 (2026-10-26)
 
 ### New Features

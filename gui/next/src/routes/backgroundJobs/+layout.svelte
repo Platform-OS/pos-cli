@@ -308,11 +308,11 @@ menu :global(button:hover) {
               <ul>
                 {#if item.dead_at}
                   <li>
-                    <Retry id={item.id} on:itemsChanged={reloadJobs} />
+                    <Retry id={item.id} onsuccess={reloadJobs} />
                   </li>
                 {/if}
                 <li>
-                  <Delete id={item.id} on:itemsChanged={reloadJobs} />
+                  <Delete id={item.id} onsuccess={reloadJobs} />
                 </li>
               </ul>
             </menu>

@@ -3,18 +3,22 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { createEventDispatcher } from 'svelte';
 import { notificationsState } from '#lib/state/notifications.svelte.js';
 import { backgroundJob } from '#lib/api/backgroundJob';
 
 import Icon from '#lib/ui/Icon.svelte';
 
 
-export let id;
-
-let form;
-
-const dispatch = createEventDispatcher();
+// properties
+// ------------------------------------------------------------------------
+let {
+  // id of the background job (string)
+  id,
+  // called once the job was deleted (function)
+  onsuccess
+} = $props();
+// the form with the job id (dom node)
+let form = $state();
 
 const remove = async (event) => {
 
@@ -25,10 +29,10 @@ const remove = async (event) => {
     const remove = await backgroundJob.delete({ properties: new FormData(form) });
 
     if(!remove.errors){
-      dispatch('itemsChanged');
+      onsuccess?.();
       notificationsState.create('success', `Background job ${remove.admin_background_job_delete.id} deleted`);
     } else {
-      notificationsState.create('error', `Background job ${remove.admin_background_job_delete.id} could not be deleted`);
+      notificationsState.create('error', `Background job ${id} could not be deleted`);
     }
 
   }
@@ -50,7 +54,7 @@ i {
 
 
 <!-- ================================================================== -->
-<form bind:this={form} on:submit={remove}>
+<form bind:this={form} onsubmit={remove}>
   <input type="hidden" name="id" value={id}>
   <button class="danger">
     <i>

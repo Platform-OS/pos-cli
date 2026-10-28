@@ -1,0 +1,1 @@
+import{yt as e}from"./BzOU8i1z.js";var t=7e3,n=e([]),r=(e,r)=>{let a=Date.now();n.push({id:a,type:e,message:r}),(e===`success`||e===`info`)&&setTimeout(()=>i(a),t)},i=e=>{let t=n.findIndex(t=>t.id===e);t>-1&&n.splice(t,1)},a={get list(){return n},create:r,remove:i};export{a as t};
