@@ -3,12 +3,10 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount, tick } from 'svelte';
-import { beforeNavigate, afterNavigate } from '$app/navigation';
-import { page } from '#lib/page.js';
-import { network } from '#lib/api/network.js';
+import { tick } from 'svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/state';
 import { connectionState } from '#lib/state/connection.svelte.js';
-import { networkState } from '#lib/state/network.svelte.js';
 import { clickOutside } from '#lib/helpers/clickOutside.js';
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -18,8 +16,12 @@ import Presets from '#lib/network/Presets.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// main content container (dom node)
-let container;
+let {
+  // the requests log for the filters in the url, from +layout.js (object)
+  data,
+  // the request details, shown when a request is opened (snippet)
+  children
+} = $props();
 // filters form (dom node)
 let form;
 // todays date (Date object)
@@ -31,54 +33,34 @@ const minAllowedDate = new Date(today -  dayInterval * 3);
 let order_by;
 // input that sets the order (dom node)
 let order;
-// if the results are currently aggregated (bool)
-let aggregated = $page.url.searchParams.get('aggregated') ? true : false;
-// currently selected status codes (array)
-let lb_status_codes = $page.url.searchParams.get('lb_status_codes')?.split(',') || [];
+// if the results are aggregated, following the url until the toggle is switched (bool)
+let aggregated = $derived(!!page.url.searchParams.get('aggregate'));
+// currently selected status codes, following the url until they are edited (array)
+let lb_status_codes = $derived(page.url.searchParams.get('lb_status_codes')?.split(',') || []);
 // popup window with the prests list (dom node)
-let presetsDialog = false;
+let presetsDialog;
 // if the presetrs dialog is currently visible (bool)
-let presetsDialogActive = false;
+let presetsDialogActive = $state(false);
 // button that toggles the presets popup (dom node)
 let presetsToggleButton;
 
 
-// purpose:   load new logs each time query params change
-// arguments: filters to use on the query (object)
-// effect:    updates networkState.networks
+// purpose:   shows the requests for the filters in the form, through the url
+//            (the layout's load function runs again for the new query)
+// arguments: submit event (object)
 // ------------------------------------------------------------------------
-function load(filters){
-  if(networkState.networks.aggs){
-    networkState.networks.aggs.results = [];
+const submitForm = function(event) {
+  event.preventDefault();
+  const params = new URLSearchParams(new FormData(form));
+  // the status code checkboxes are outside the form, the selection is kept here
+  if(lb_status_codes.length){
+    params.set('lb_status_codes', lb_status_codes.join(','));
   }
-  network.get(filters).then(data => { networkState.networks = data; });
+  goto(page.url.pathname + '?' + params.toString(), { keepFocus: true, noScroll: true });
 }
 
 
-// purpose:   load data on initial page render
-// ------------------------------------------------------------------------
-onMount(() => {
-  load(Object.fromEntries($page.url.searchParams));
-});
-
-
-// purpose:   reload data when the search params change due to form submit or browser navigation
-// ------------------------------------------------------------------------
-let previousFilters = $page.url.searchParams.toString();
-beforeNavigate(() => {
-  previousFilters = $page.url.searchParams.toString();
-});
-
-afterNavigate(() => {
-  if(previousFilters !== $page.url.searchParams.toString()){
-    load(Object.fromEntries($page.url.searchParams));
-    previousFilters = $page.url.searchParams.toString();
-    lb_status_codes = $page.url.searchParams.get('lb_status_codes')?.split(',') || [];
-  }
-});
-
-
-function togglePresetsDialog(event){
+function togglePresetsDialog(){
   if(!presetsDialog.open){
     presetsDialog.show();
     presetsDialogActive = true;
@@ -272,10 +254,6 @@ function togglePresetsDialog(event){
 
   .filters input[type="date"] {
     width: 100%;
-  }
-
-  .filters input[name="lb_status_codes"] {
-    display: none;
   }
 
   .filters .toggle {
@@ -487,13 +465,13 @@ table {
 </svelte:head>
 
 
-<div class="page" bind:this={container}>
+<div class="page">
 
   <nav class="filters">
     <header>
       <h2>Filters</h2>
       <nav>
-        <button type="button" title="Saved filters presets" bind:this={presetsToggleButton} class:active={presetsDialogActive} on:click={togglePresetsDialog}>
+        <button type="button" title="Saved filters presets" bind:this={presetsToggleButton} class:active={presetsDialogActive} onclick={togglePresetsDialog}>
           <span class="label">Choose filters preset</span>
           <Icon icon="controlls" />
         </button>
@@ -510,14 +488,14 @@ table {
       {/if}
     </dialog>
 
-    <form action="" id="filters" bind:this={form}>
+    <form action="" id="filters" bind:this={form} onsubmit={submitForm}>
 
       <fieldset class="toggle">
         <Toggle
           name="aggregate"
           options={[{value: 'http_request_path', label: 'Aggregate requests'}]}
-          checked={$page.url.searchParams.get('aggregate')}
-          on:change={async event => { aggregated = event.target.checked ? true : false; await tick(); order_by.value = event.target.checked ? 'count' : '_timestamp'; console.log(order_by.value); order.value = 'DESC'; await tick(); form.requestSubmit(); }}
+          checked={page.url.searchParams.get('aggregate')}
+          on:change={async event => { aggregated = event.target.checked ? true : false; await tick(); order_by.value = event.target.checked ? 'count' : '_timestamp'; order.value = 'DESC'; await tick(); form.requestSubmit(); }}
         />
       </fieldset>
 
@@ -526,23 +504,23 @@ table {
           <label for="order_by">Sorting</label>
         </h3>
         <div>
-          <select name="order_by" id="order_by" bind:this={order_by} on:change={() => form.requestSubmit()}>
-              <option selected={$page.url.searchParams.get('order_by') === 'count'} value="count" hidden={!$page.url.searchParams.get('aggregate') && !aggregated}>Count</option>
-              <option selected={$page.url.searchParams.get('order_by') === 'http_request_path'} value="http_request_path" hidden={!$page.url.searchParams.get('aggregate') && !aggregated}>Request path</option>
-              <option selected={$page.url.searchParams.get('order_by') === 'median_target_processing_time'} value="median_target_processing_time" hidden={!$page.url.searchParams.get('aggregate') && !aggregated}>Processing time</option>
+          <select name="order_by" id="order_by" bind:this={order_by} onchange={() => form.requestSubmit()}>
+              <option selected={page.url.searchParams.get('order_by') === 'count'} value="count" hidden={!aggregated}>Count</option>
+              <option selected={page.url.searchParams.get('order_by') === 'http_request_path'} value="http_request_path" hidden={!aggregated}>Request path</option>
+              <option selected={page.url.searchParams.get('order_by') === 'median_target_processing_time'} value="median_target_processing_time" hidden={!aggregated}>Processing time</option>
 
-              <option selected={$page.url.searchParams.get('order_by') === '_timestamp' || !$page.url.searchParams.get('order_by') && !$page.url.searchParams.get('aggregate')} value="_timestamp" hidden={$page.url.searchParams.get('aggregate') || aggregated}>Time</option>
-              <option selected={$page.url.searchParams.get('order_by') === 'http_request_path'} value="http_request_path" hidden={$page.url.searchParams.get('aggregate') || aggregated}>Request path</option>
-              <option selected={$page.url.searchParams.get('order_by') === 'target_processing_time'} value="target_processing_time" hidden={$page.url.searchParams.get('aggregate') || aggregated}>Processing Time</option>
+              <option selected={page.url.searchParams.get('order_by') === '_timestamp' || !page.url.searchParams.get('order_by') && !page.url.searchParams.get('aggregate')} value="_timestamp" hidden={aggregated}>Time</option>
+              <option selected={page.url.searchParams.get('order_by') === 'http_request_path'} value="http_request_path" hidden={aggregated}>Request path</option>
+              <option selected={page.url.searchParams.get('order_by') === 'target_processing_time'} value="target_processing_time" hidden={aggregated}>Processing Time</option>
           </select>
 
-          <select name="order" id="order" bind:this={order} on:change={() => form.requestSubmit()}>
-            <option value="DESC" selected={$page.url.searchParams.get('order') === 'DESC'}>DESC [Z→A]</option>
-            <option value="ASC" selected={$page.url.searchParams.get('order') === 'ASC'}>ASC [A→Z]</option>
+          <select name="order" id="order" bind:this={order} onchange={() => form.requestSubmit()}>
+            <option value="DESC" selected={page.url.searchParams.get('order') === 'DESC'}>DESC [Z→A]</option>
+            <option value="ASC" selected={page.url.searchParams.get('order') === 'ASC'}>ASC [A→Z]</option>
           </select>
 
           <label for="order" class="button">
-            {#if $page.url.searchParams.get('order') === 'DESC' || !$page.url.searchParams.get('order')}
+            {#if page.url.searchParams.get('order') === 'DESC' || !page.url.searchParams.get('order')}
               <Icon icon="sortZA" />
             {:else}
               <Icon icon="sortAZ" />
@@ -561,22 +539,16 @@ table {
           id="start_time"
           min={minAllowedDate.toISOString().split('T')[0]}
           max={today.toISOString().split('T')[0]}
-          value={$page.url.searchParams.get('start_time') || today.toISOString().split('T')[0]}
-          on:input={form.requestSubmit()}
+          value={page.url.searchParams.get('start_time') || today.toISOString().split('T')[0]}
+          oninput={() => form.requestSubmit()}
         >
       </fieldset>
 
       <fieldset>
         <h3>Status Code</h3>
-        <input
-          type="text"
-          name="lb_status_codes"
-          bind:value={lb_status_codes}
-        >
-
-        {#if networkState.networks?.aggs?.filters}
+        {#if data.network?.aggs?.filters}
           <ul class="separated">
-            {#each networkState.networks.aggs.filters as status}
+            {#each data.network.aggs.filters as status (status.lb_status_code)}
               <li>
                 <label>
                   <input
@@ -584,7 +556,7 @@ table {
                     type="checkbox"
                     value={status.lb_status_code.toString()}
                     bind:group={lb_status_codes}
-                    on:change={() => { form.requestSubmit(); }}
+                    onchange={() => form.requestSubmit()}
                   >
                   {status.lb_status_code}
                 </label>
@@ -605,7 +577,7 @@ table {
         <table>
           <thead>
             <tr>
-              {#if $page.url.searchParams.get('aggregate')}
+              {#if page.url.searchParams.get('aggregate')}
                 <th>
                   Count
                 </th>
@@ -614,20 +586,20 @@ table {
                 <th>Status</th>
               {/if}
               <th>
-                {$page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Aggregated ' : ''}Request{$page.url.searchParams.get('aggregate') == 'http_request_path' ? 's' : ''}
+                {page.url.searchParams.get('aggregate') == 'http_request_path' ? 'Aggregated ' : ''}Request{page.url.searchParams.get('aggregate') == 'http_request_path' ? 's' : ''}
               </th>
               <th class="duration">
                 Processing Time
               </th>
             </tr>
           </thead>
-          {#if networkState.networks?.aggs?.results}
+          {#if data.network?.aggs?.results}
             <tbody>
-              {#each networkState.networks.aggs.results as log}
+              {#each data.network.aggs.results as log}
                 <tr
-                  class:active={log._timestamp && $page.params.id == log._timestamp}
+                  class:active={log._timestamp && page.params.id == log._timestamp}
                 >
-                  {#if $page.url.searchParams.get('aggregate')}
+                  {#if page.url.searchParams.get('aggregate')}
                     <td class="count">
                       <div>
                         {log.count}
@@ -635,7 +607,7 @@ table {
                     </td>
                   {:else}
                     <td class="time">
-                      <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                      <a href="/network/{log._timestamp}?{page.url.searchParams.toString()}">
                         {new Date(log._timestamp / 1000).toLocaleString()}
                       </a>
                     </td>
@@ -645,14 +617,14 @@ table {
                       class:info={log.lb_status_code >= 300 && log.lb_status_code < 400}
                       class:error={log.lb_status_code >= 400 && log.lb_status_code < 600}
                     >
-                      <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                      <a href="/network/{log._timestamp}?{page.url.searchParams.toString()}">
                         {log.lb_status_code}
                       </a>
                     </td>
                   {/if}
                   <td class="request">
-                    {#if !$page.url.searchParams.get('aggregate')}
-                      <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                    {#if !page.url.searchParams.get('aggregate')}
+                      <a href="/network/{log._timestamp}?{page.url.searchParams.toString()}">
                         <div>
                           <span class="method">{log.http_request_method}</span> {log.http_request_path}
                         </div>
@@ -664,8 +636,8 @@ table {
                     {/if}
                   </td>
                   <td class="duration">
-                    {#if !$page.url.searchParams.get('aggregate')}
-                      <a href="/network/{log._timestamp}?{$page.url.searchParams.toString()}">
+                    {#if !page.url.searchParams.get('aggregate')}
+                      <a href="/network/{log._timestamp}?{page.url.searchParams.toString()}">
                         {Math.round((parseFloat(log.target_processing_time) + Number.EPSILON) * 1000) / 1000}s
                       </a>
                     {:else}
@@ -683,8 +655,8 @@ table {
 
   </section>
 
-  {#if $page.params.id}
-    <slot></slot>
+  {#if page.params.id}
+    {@render children?.()}
   {/if}
 
 </div>

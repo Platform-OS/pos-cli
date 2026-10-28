@@ -3,7 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '#lib/page.js';
+import { page } from '$app/state';
 import { table } from '#lib/api/table';
 import { connectionState } from '#lib/state/connection.svelte.js';
 import { databaseState } from '#lib/state/database.svelte.js';
@@ -235,7 +235,7 @@ nav a:hover .label {
       <ul>
         {#if preferencesState.header.includes('database')}
         <li>
-          <a href="/database" class:active={$page.url.pathname.startsWith('/database')} on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
+          <a href="/database" class:active={page.url.pathname.startsWith('/database')} on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
             <Icon icon="database" />
             <span class="label">
               Database
@@ -246,7 +246,7 @@ nav a:hover .label {
 
         {#if preferencesState.header.includes('users')}
         <li>
-          <a href="/users" class:active={$page.url.pathname.startsWith('/users')}>
+          <a href="/users" class:active={page.url.pathname.startsWith('/users')}>
             <Icon icon="users" />
             <span class="label">
               Users
@@ -257,7 +257,7 @@ nav a:hover .label {
 
         {#if preferencesState.header.includes('logs')}
         <li>
-          <a href="/logs" class:active={$page.url.pathname === '/logs'}>
+          <a href="/logs" class:active={page.url.pathname === '/logs'}>
             <Icon icon="log" />
             <span class="label">
               Logs
@@ -268,7 +268,7 @@ nav a:hover .label {
 
         {#if preferencesState.header.includes('logsv2')}
         <li>
-          <a href="/logsv2" class:active={$page.url.pathname.startsWith('/logsv2')}>
+          <a href="/logsv2" class:active={page.url.pathname.startsWith('/logsv2')}>
             <Icon icon="logFresh" />
             <span class="label">
               Logs v2
@@ -279,7 +279,7 @@ nav a:hover .label {
 
         {#if preferencesState.header.includes('network')}
         <li>
-          <a href="/network" class:active={$page.url.pathname.startsWith('/network')}>
+          <a href="/network" class:active={page.url.pathname.startsWith('/network')}>
             <Icon icon="globeMessage" />
             <span class="label">
               Network Logs
@@ -290,7 +290,7 @@ nav a:hover .label {
 
         {#if preferencesState.header.includes('backgroundJobs')}
         <li>
-          <a href="/backgroundJobs" class:active={$page.url.pathname.startsWith('/backgroundJobs')}>
+          <a href="/backgroundJobs" class:active={page.url.pathname.startsWith('/backgroundJobs')}>
             <Icon icon="backgroundJob" />
             <span class="label">
               Background Jobs
@@ -301,7 +301,7 @@ nav a:hover .label {
 
         {#if preferencesState.header.includes('constants')}
         <li>
-          <a href="/constants" class:active={$page.url.pathname.startsWith('/constants')}>
+          <a href="/constants" class:active={page.url.pathname.startsWith('/constants')}>
             <Icon icon="constant" />
             <span class="label">
               Constants

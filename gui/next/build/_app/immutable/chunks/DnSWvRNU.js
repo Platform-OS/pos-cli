@@ -1,1 +1,0 @@
-import{t as e}from"./DhLJKKVL.js";import"./8mNFGjg3.js";import{t}from"./D4sQSdYM.js";var n=()=>({data:e.data,error:e.error,form:e.form,params:e.params,route:e.route,state:e.state,status:e.status,url:e.url}),r={subscribe:(e,r)=>t(n).subscribe(e,r)};export{r as t};

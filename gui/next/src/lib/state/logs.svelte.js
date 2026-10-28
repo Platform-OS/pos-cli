@@ -8,11 +8,7 @@
 
 const logsState = $state({
   // logs data (object)
-  logs: {},
-  // new logs data (object)
-  logsv2: {},
-  // currently active log (object)
-  logv2: {}
+  logs: {}
 });
 
 

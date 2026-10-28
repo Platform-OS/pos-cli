@@ -15,9 +15,10 @@ const backgroundJob = {
 
   // purpose:		downloads background jobs list from API
   // arguments: filters to apply to query (object)
+  //				options (object), with fetch to use, such as the one a load function receives
   // returns:		background jobs in json format (array of objects)
   // ------------------------------------------------------------------------
-  get: async (filters) => {
+  get: async (filters, options) => {
 
     // these are written into the query text and can come from a url, so the type is one
     // of the known names, the page a number and the id a quoted, escaped string
@@ -76,7 +77,7 @@ const backgroundJob = {
         }
       }`;
 
-    return graphql({ query }, false).then(data => data.admin_background_jobs);
+    return graphql({ query }, options).then(data => data.admin_background_jobs);
 
   },
 

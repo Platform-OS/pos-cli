@@ -1,10 +1,13 @@
 /*
   shows dates as relative from current
+
+  usage: relativeTime(date) or relativeTime(date, now), where passing the current time
+  (milliseconds) lets a template that keeps it in state show the date again as time passes
 */
 
 
 
-const relativeTime = input => {
+const relativeTime = (input, now = Date.now()) => {
 
   const date = (input instanceof Date) ? input : new Date(input);
   const formatter = new Intl.RelativeTimeFormat('en');
@@ -17,7 +20,7 @@ const relativeTime = input => {
     minutes: 60,
     seconds: 1
   };
-  const secondsElapsed = (date.getTime() - Date.now()) / 1000;
+  const secondsElapsed = (date.getTime() - now) / 1000;
 
   for (let key in ranges) {
     if (ranges[key] < Math.abs(secondsElapsed)) {

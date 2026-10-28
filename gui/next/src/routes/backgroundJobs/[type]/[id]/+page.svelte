@@ -3,8 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '#lib/page.js';
-import { backgroundJob } from '#lib/api/backgroundJob.js';
+import { page } from '$app/state';
 
 import Aside from '#lib/ui/Aside.svelte';
 import Code from '#lib/ui/Code.svelte';
@@ -13,15 +12,12 @@ import JSONTree from '#lib/ui/JSONTree.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// background jobs (object)
-let item = {};
-
-// get background job details
-const load = async () => {
-  await backgroundJob.get({ id: $page.params.id, type: $page.params.type.toUpperCase() }).then(response => { response.results.length ? item = response.results[0] : item = null; });
-};
-
-$: $page.params.id && load($page.params.id);
+let {
+  // the background job, or null when there is no such job, from +page.js (object)
+  data
+} = $props();
+// background job (object) or null
+let item = $derived(data.item);
 
 </script>
 
@@ -92,7 +88,7 @@ code {
   <script src="/prism.js" data-manual></script>
 </svelte:head>
 
-<Aside title={item.source_name || item.id || 'Loading…'} closeUrl="/backgroundJobs?{$page.url.searchParams.toString()}">
+<Aside title={item?.source_name || item?.id || 'No such background job'} closeUrl="/backgroundJobs?{page.url.searchParams.toString()}">
 
   {#if item === null}
 

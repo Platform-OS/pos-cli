@@ -1,0 +1,1 @@
+import{P as e,X as t,Z as n,bt as r}from"../chunks/DLwHCEpx.js";import"../chunks/DqLd_7md.js";function i(i,a){var o=n(),s=r(o);e(s,a,`default`,{},null),t(i,o)}export{i as component};
