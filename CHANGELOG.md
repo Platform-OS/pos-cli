@@ -28,6 +28,8 @@
 
 * **The admin GUI's shared components are written in Svelte 5 runes.** The header, notifications, icons, JSON tree, copy button, log diagnostic, connection indicator and the number and toggle fields no longer use the Svelte 4 syntax; the number field calls an `oninput` prop and the toggle an `onchange` prop instead of sending component events. The address of the gui server, copied into nine places, is one `serverUrl` helper. Hovering the Database link while its tables were still loading asked for them again; it now asks once.
 
+* **A record the admin GUI could not delete or restore is reported again.** A refused deletion answered with errors and no `record_delete`, and the message read its id from there, so it threw and no notification appeared; restoring did the same. Both now name the record that was asked for. The Database components (`ContextMenu`, `Create`, `Delete`, `Restore`) are written in Svelte 5 runes, with `onclose` and `onsuccess` props instead of component events, and the records table puts its rows in a `<tbody>`.
+
 ## 6.6.0 (2026-10-26)
 
 ### New Features

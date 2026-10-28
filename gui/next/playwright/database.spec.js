@@ -456,9 +456,9 @@ test('distinguishing between boolean data and false values', async ({ page }) =>
   await page.getByText('qa_table_1').click();
   await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
-  await expect(page.locator('table > tr').nth(0).locator('td').nth(2)).toContainText('true');
-  await expect(page.locator('table > tr').nth(1).locator('td').nth(2)).toContainText('false');
-  await expect(page.locator('table > tr').nth(2).locator('td').nth(2)).toContainText('null');
+  await expect(page.locator('table > tbody > tr').nth(0).locator('td').nth(2)).toContainText('true');
+  await expect(page.locator('table > tbody > tr').nth(1).locator('td').nth(2)).toContainText('false');
+  await expect(page.locator('table > tbody > tr').nth(2).locator('td').nth(2)).toContainText('null');
 });
 
 test('filtering record boolean by value_boolean', async ({ page }) => {
@@ -492,17 +492,17 @@ test('reordering records', async ({ page }) => {
   await page.getByText('qa_table_1').click();
   await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
 
-  await expect(page.locator('table > tr:first-of-type td:first-child')).not.toContainText('1');
+  await expect(page.locator('table > tbody > tr:first-of-type td:first-child')).not.toContainText('1');
 
   await page.locator('select[name="by"]').selectOption('id');
   await page.locator('select[name="order"]').selectOption('ASC');
 
-  await expect(page.locator('table > tr:first-of-type td:first-child')).toContainText('1');
+  await expect(page.locator('table > tbody > tr:first-of-type td:first-child')).toContainText('1');
 
   await page.locator('select[name="by"]').selectOption('qa_table_1_int');
   await page.locator('select[name="order"]').selectOption('DESC');
 
-  await expect(page.locator('table > tr:first-of-type td:nth-child(5)')).toContainText('2137');
+  await expect(page.locator('table > tbody > tr:first-of-type td:nth-child(5)')).toContainText('2137');
 });
 
 
@@ -615,6 +615,32 @@ test('deleting a record', async ({ page }, testInfo) => {
   await expect(createdCell).toBeHidden();
 });
 
+
+
+test('telling that a record could not be deleted', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('dialog', dialog => dialog.accept());
+
+  // the instance refuses the deletion, answering the way GraphQL does: errors, and no record
+  await page.route('**/api/graph', async route => {
+    if(route.request().postData()?.includes('record_delete')){
+      await route.fulfill({ json: { errors: [{ message: 'refused' }], data: { record_delete: null } } });
+    } else {
+      await route.fallback();
+    }
+  });
+
+  await page.goto(url);
+  await page.getByText('qa_table_1').click();
+
+  const row = page.locator('tbody tr').first();
+  await row.getByRole('button', { name: 'More options' }).click();
+  await row.getByRole('button', { name: 'Delete record' }).click();
+
+  await expect(page.getByText(/Record \d+ could not be deleted/)).toBeVisible();
+  expect(errors).toEqual([]);
+});
 
 test('pagination', async ({ page }) => {
   await page.goto(url);
@@ -769,14 +795,14 @@ test('keeping the sorting and page in the url', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page).toHaveURL(/page=2/);
-  const firstOnSecondPage = await page.locator('table > tr:first-of-type td:first-child').innerText();
+  const firstOnSecondPage = await page.locator('table > tbody > tr:first-of-type td:first-child').innerText();
 
   // the view is the url, so a reload shows the same records
   await page.reload();
   await expect(page.locator('select[name="by"]')).toHaveValue('id');
   await expect(page.locator('select[name="order"]')).toHaveValue('ASC');
   await expect(page.getByLabel('Page:')).toHaveValue('2');
-  await expect(page.locator('table > tr:first-of-type td:first-child')).toHaveText(firstOnSecondPage);
+  await expect(page.locator('table > tbody > tr:first-of-type td:first-child')).toHaveText(firstOnSecondPage);
 });
 
 

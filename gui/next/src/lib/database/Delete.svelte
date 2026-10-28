@@ -3,7 +3,6 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { createEventDispatcher } from 'svelte';
 import { invalidate } from '$app/navigation';
 import { record } from '#lib/api/record';
 import { notificationsState } from '#lib/state/notifications.svelte.js';
@@ -11,12 +10,23 @@ import { notificationsState } from '#lib/state/notifications.svelte.js';
 import Icon from '#lib/ui/Icon.svelte';
 
 
-export let table;
-export let id;
+// properties
+// ------------------------------------------------------------------------
+let {
+  // table the record belongs to (object)
+  table,
+  // id of the record to delete (string)
+  id,
+  // called once the deletion is confirmed, before it is sent (function)
+  onsuccess
+} = $props();
+// the form with the record's identifiers (dom node)
+let form = $state();
 
-let form;
-let dispatch = createEventDispatcher();
 
+// purpose:   deletes the record after asking for confirmation
+// arguments: submit event (object)
+// ------------------------------------------------------------------------
 const remove = async (event) => {
 
   event.preventDefault();
@@ -24,7 +34,7 @@ const remove = async (event) => {
 
   if(confirm('Are you sure you want to delete this record?')){
 
-    dispatch('success');
+    onsuccess?.();
 
     const remove = await record.delete({ table: table.name, properties: new FormData(form) });
 
@@ -32,7 +42,8 @@ const remove = async (event) => {
       invalidate('app:records');
       notificationsState.create('success', `Record ${remove.record_delete.id} deleted`);
     } else {
-      notificationsState.create('error', `Record ${remove.record_delete.id} could not be deleted`);
+      // there is no record_delete in a failed answer, so the id is the one that was asked for
+      notificationsState.create('error', `Record ${id} could not be deleted`);
     }
 
   }
@@ -54,7 +65,7 @@ i {
 
 
 <!-- ================================================================== -->
-<form bind:this={form} on:submit={remove}>
+<form bind:this={form} onsubmit={remove}>
   <input type="hidden" name="tableName" value={table.name}>
   <input type="hidden" name="recordId" value={id}>
   <button class="danger">

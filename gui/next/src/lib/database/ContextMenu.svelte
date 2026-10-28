@@ -9,7 +9,6 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { createEventDispatcher } from 'svelte';
 import { clickOutside } from '#lib/helpers/clickOutside.js';
 import { databaseState } from '#lib/state/database.svelte.js';
 
@@ -19,20 +18,22 @@ import Icon from '#lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// record that the context menu corresponds to (object)
-export let record;
-// if the record is a deleted one (bool)
-export let deleted = false;
-// event dispatcher
-const dispatch = createEventDispatcher();
+let {
+  // record that the context menu corresponds to (object)
+  record,
+  // if the record is a deleted one (bool)
+  deleted = false,
+  // called when the menu should close (function)
+  onclose
+} = $props();
 
 
 // purpose:   handles closing the context menu with Esc
-// effect:    dispatches a 'close' event to parent component
+// effect:    calls onclose
 // ------------------------------------------------------------------------
 const keyboardShortcut = event => {
   if(event.key === 'Escape'){
-    dispatch('close');
+    onclose?.();
   }
 };
 
@@ -80,21 +81,21 @@ menu li:last-child :global(button) {
 
 
 <!-- ================================================================== -->
-<svelte:window on:keyup={keyboardShortcut} />
+<svelte:window onkeyup={keyboardShortcut} />
 
-<menu class="content-context" use:clickOutside={() => dispatch('close')}>
+<menu class="content-context" use:clickOutside={() => onclose?.()}>
   <ul>
     <li>
-      <button type="button" on:click={() => { dispatch('close'); databaseState.record = {...record}; databaseState.record.id = null; } }>
+      <button type="button" onclick={() => { onclose?.(); databaseState.record = {...record}; databaseState.record.id = null; } }>
         <Icon icon="copy" size="22" />
         Copy record
       </button>
     </li>
     <li>
       {#if deleted}
-        <Restore table={databaseState.table} id={record.id} on:success={() => dispatch('close')} />
+        <Restore table={databaseState.table} id={record.id} onsuccess={() => onclose?.()} />
       {:else}
-        <Delete table={databaseState.table} id={record.id} on:success={() => dispatch('close')} />
+        <Delete table={databaseState.table} id={record.id} onsuccess={() => onclose?.()} />
       {/if}
     </li>
   </ul>
