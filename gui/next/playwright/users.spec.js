@@ -74,12 +74,25 @@ test('adding a user with a broken array and expecting a validation error', async
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
 
+  // the form shows the instance's custom user properties; give it an array one, whatever the
+  // instance has, and answer the final create without sending a property it may not know
+  await page.route('**/api/graph', async route => {
+    const query = route.request().postData() ?? '';
+    if(query.includes('admin_user_schema')){
+      await route.fulfill({ json: { data: { admin_user_schema: { properties: [{ name: 'testArray', attribute_type: 'array' }] } } } });
+    } else if(query.includes('user_create')){
+      await route.fulfill({ json: { data: { user: { id: '999999' } } } });
+    } else {
+      await route.fallback();
+    }
+  });
+
   await page.goto(url);
   await page.getByRole('button', { name: 'Create a new user' }).click();
 
   await page.getByLabel('Email').fill('testbroken@test.test');
   await page.getByLabel('Password').fill('testpassword');
-  await page.getByLabel('customPropertyArray').fill('["not closed"');
+  await page.getByLabel('testArray').fill('["not closed"');
 
   await page.getByRole('button', { name: 'Create user' }).click();
 
@@ -87,12 +100,13 @@ test('adding a user with a broken array and expecting a validation error', async
   await expect(page.locator('dialog')).toBeVisible();
 
   // once corrected, the same form creates the user
-  await page.getByLabel('customPropertyArray').fill('["closed"]');
+  await page.getByLabel('testArray').fill('["closed"]');
   await page.getByRole('button', { name: 'Create user' }).click();
-  await expect(page.getByRole('cell', { name: 'testbroken@test.test' })).toBeVisible();
+  await expect(page.getByText('User 999999 created')).toBeVisible();
 
   expect(errors).toEqual([]);
 });
+
 
 test('editing an existing user', async ({ page }) => {
   await page.goto(url);
