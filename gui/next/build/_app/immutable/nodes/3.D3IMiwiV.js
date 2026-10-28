@@ -1,1 +1,0 @@
-import{Et as e,P as t,X as n,Z as r}from"../chunks/DDBogsT7.js";import"../chunks/C45-i4rR.js";function i(i,a){var o=r(),s=e(o);t(s,a,`default`,{},null),n(i,o)}export{i as component};

@@ -3,40 +3,20 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { untrack } from 'svelte';
 import { page } from '$app/state';
-import { network } from '#lib/api/network';
-import { networkState } from '#lib/state/network.svelte.js';
 import { httpStatusCodes } from '#lib/helpers/httpStatusCodes.js';
 
 import Aside from '#lib/ui/Aside.svelte';
 
 
-
-// purpose:   loads log detail from api or from cached logs if available
-// effect:    updated networkState.network
+// properties
 // ------------------------------------------------------------------------
-const load = async () => {
-
-  // try to find the viewed log details in all the logs we have currently loaded on page
-  const logFoundInCached = networkState.networks.hits?.find(log => log._timestamp == page.params.id);
-
-  if(logFoundInCached){
-    networkState.network = logFoundInCached;
-  }
-  // make the api request only for log that is not currenly loaded on page
-  else {
-    await network.getOne(page.params.id).then(response => {
-      networkState.network = response.hits[0];
-    });
-  }
-};
-
-// load again whenever the route id changes, but not when the data load() reads changes
-$effect(() => {
-  const id = page.params.id;
-  untrack(() => id && load());
-});
+let {
+  // the request, or null when there is no such request, from +page.js (object)
+  data
+} = $props();
+// the request log entry (object) or null
+let request = $derived(data.request);
 
 </script>
 
@@ -87,32 +67,32 @@ dd {
 
   <!-- the method and path come from requests anyone can send to the instance, so they are text, never markup -->
   {#snippet title()}
-    {#if networkState.network.lb_status_code}
-      <span class="log-detail-method">{networkState.network.http_request_method}</span> {networkState.network.http_request_path}
+    {#if request}
+      <span class="log-detail-method">{request.http_request_method}</span> {request.http_request_path}
     {:else}
-      Loading…
+      No such request
     {/if}
   {/snippet}
 
 
-  {#if networkState.network._timestamp}
+  {#if request}
     <dl class="definitions">
 
-      <dt>Time</dt> <dd>{new Date(networkState.network._timestamp / 1000).toLocaleString()}</dd>
+      <dt>Time</dt> <dd>{new Date(request._timestamp / 1000).toLocaleString()}</dd>
 
-      <dt>Request path</dt> <dd><a href={networkState.network.http_request_url}>{networkState.network.http_request_path}</a></dd>
+      <dt>Request path</dt> <dd><a href={request.http_request_url}>{request.http_request_path}</a></dd>
 
-      <dt>Request method</dt> <dd>{networkState.network.http_request_method}</dd>
+      <dt>Request method</dt> <dd>{request.http_request_method}</dd>
 
-      <dt>Status</dt> <dd class:success={networkState.network.lb_status_code >= 200 && networkState.network.lb_status_code < 300} class:error={networkState.network.http_request_protocol.lb_status_code >= 400 && networkState.network.http_request_protocol.lb_status_code < 600}>{networkState.network.lb_status_code} {httpStatusCodes[networkState.network.lb_status_code]}</dd>
+      <dt>Status</dt> <dd class:success={request.lb_status_code >= 200 && request.lb_status_code < 300} class:error={request.lb_status_code >= 400 && request.lb_status_code < 600}>{request.lb_status_code} {httpStatusCodes[request.lb_status_code]}</dd>
 
-      <dt>Client IP</dt> <dd>{networkState.network.client}</dd>
+      <dt>Client IP</dt> <dd>{request.client}</dd>
 
-      <dt>Client user agent</dt> <dd>{networkState.network.user_agent}</dd>
+      <dt>Client user agent</dt> <dd>{request.user_agent}</dd>
 
-      <dt>Processing time</dt> <dd>{parseFloat(networkState.network.request_processing_time) + parseFloat(networkState.network.target_processing_time)}s</dd>
+      <dt>Processing time</dt> <dd>{parseFloat(request.request_processing_time) + parseFloat(request.target_processing_time)}s</dd>
 
-      <dt>Response size</dt> <dd>{parseInt(networkState.network.sent_bytes)} bytes</dd>
+      <dt>Response size</dt> <dd>{parseInt(request.sent_bytes)} bytes</dd>
 
     </dl>
   {/if}

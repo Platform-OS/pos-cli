@@ -63,3 +63,18 @@ test('deleting scheduled background job', async ({ page }) => {
     await expect(job).toBeHidden(20000);
   }
 });
+
+
+test('going back to the previous job type', async ({ page }) => {
+  await page.goto(url);
+  await expect(page.getByRole('columnheader', { name: 'Runs' })).toBeVisible();
+
+  await page.getByLabel('Type:').selectOption('DEAD');
+  await expect(page).toHaveURL(/type=DEAD/);
+  await expect(page.getByRole('columnheader', { name: 'Failed' })).toBeVisible();
+
+  // the list follows the url, so going back shows the scheduled jobs again
+  await page.goBack();
+  await expect(page.getByRole('columnheader', { name: 'Runs' })).toBeVisible();
+  await expect(page.getByLabel('Type:')).toHaveValue('SCHEDULED');
+});

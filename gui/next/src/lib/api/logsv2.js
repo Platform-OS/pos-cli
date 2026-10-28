@@ -13,13 +13,16 @@ const sqlString = (value) => `'${String(value).replaceAll('\'', '\'\'')}'`;
 
 // purpose:		sends a search to the API
 // arguments: the request (object)
+//				options (object), with fetch to use, such as the one a load function receives
 // returns:		logs in json format
 // ------------------------------------------------------------------------
-const search = (request) => {
+const search = (request, options) => {
+  const fetchFn = options?.fetch ?? fetch;
+
   // the URL to use to connect to the API, in development or preview mode we are using the default pos-cli gui serve port
   const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}/api/logsv2` : 'http://localhost:3333/api/logsv2';
 
-  return fetch(`${url}`, {
+  return fetchFn(`${url}`, {
     method: 'POST',
     body: JSON.stringify(request),
     headers: {
@@ -49,7 +52,7 @@ const logs = {
   // arguments: filters from the url: page, start_time (YYYY-MM-DD) and message (object)
   // returns:		logs in json format
   // ------------------------------------------------------------------------
-  get: async (filters = {}) => {
+  get: async (filters = {}, options) => {
     // the filters come from the url, so only these are read, and the message is written
     // into the query as an escaped string literal
     const size = 20;
@@ -84,7 +87,7 @@ const logs = {
         end_time: end_time || 0,
         track_total_hits: true
       }
-    });
+    }, options);
 
   },
 
@@ -93,7 +96,7 @@ const logs = {
   // arguments: the _timestamp of the entry (string of digits)
   // returns:		logs in json format, with the entry as the only hit, or none when the timestamp is not a number
   // ------------------------------------------------------------------------
-  getOne: async (timestamp) => {
+  getOne: async (timestamp, options) => {
     // the timestamp comes from the url and is written into the query as a number
     if(!/^\d+$/.test(timestamp)){
       return { hits: [] };
@@ -108,7 +111,7 @@ const logs = {
         end_time: 0,
         track_total_hits: true
       }
-    });
+    }, options);
 
   }
 

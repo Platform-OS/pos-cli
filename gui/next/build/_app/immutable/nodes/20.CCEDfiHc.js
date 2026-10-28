@@ -1,1 +1,0 @@
-import{Bt as e,Ct as t,ht as n,j as r,u as i,zt as a}from"../chunks/DDBogsT7.js";import"../chunks/C45-i4rR.js";import{t as o}from"../chunks/BhDQyeen.js";function s(s,c){e(c,!1),i(),r(`9fk07v`,e=>{n(e=>{t.title=`Users${e??``}`},[()=>o.online?.MPKIT_URL?`: `+o.online.MPKIT_URL.replace(`https://`,``):``])}),a()}export{s as component};
