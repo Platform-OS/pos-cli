@@ -62,11 +62,6 @@ a:hover {
 
 
 
-<!-- ================================================================== -->
-<svelte:head>
-  <script src="/prism.js" data-manual></script>
-</svelte:head>
-
 <Aside title={log?.type ?? 'No such log'} closeUrl="/logsv2?{page.url.searchParams.toString()}">
 
   {#if log}

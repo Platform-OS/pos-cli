@@ -3,7 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { tick, afterUpdate, onMount, beforeUpdate } from 'svelte';
+import { onMount } from 'svelte';
 import { fade } from 'svelte/transition';
 import { browser } from '$app/environment';
 import { connectionState } from '#lib/state/connection.svelte.js';
@@ -17,14 +17,16 @@ import Diagnostic from '#lib/ui/Diagnostic.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// main content container (dom node)
-let container;
+// the scrolling list of logs (dom node)
+let list;
+// the end of the list, scrolled to as new logs arrive (dom node), absent while filtering
+let footer = $state();
 // string used for filtering (string)
-let filter = '';
+let filter = $state('');
 // pinned logs (array of objects)
-let pinned = [];
+let pinned = $state([]);
 // if the pinned pannel should be visible (bool)
-let pinnedPanel;
+let pinnedPanel = $state(false);
 // interval for checking for new logs (interval)
 let newLogsInterval;
 
@@ -84,23 +86,27 @@ const isFiltered = (log) => {
 
 // purpose:		scroll to bottom on load and when new logs appear and the scrollbar position is on bottom
 // ------------------------------------------------------------------------
+// whether the list was scrolled to the bottom since the logs last changed (bool)
 let scrolled = false;
 
-beforeUpdate(() => {
-  if(browser){
-    const container = document.querySelector('.logs');
+// before the list changes: if it is at the bottom now, keep it there afterwards
+$effect.pre(() => {
+  logsState.logs.logs?.length;
+  filter;
 
-    if(container && Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 10){
-      scrolled = false;
-    }
+  if(list && Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) < 10){
+    scrolled = false;
   }
 });
 
-afterUpdate(async () => {
-  if(!scrolled){
-    await tick();
-    document.querySelector('footer').scrollIntoView();
-    if(logsState.logs.logs?.length){
+// after the list changes
+$effect(() => {
+  const length = logsState.logs.logs?.length;
+  filter;
+
+  if(!scrolled && footer){
+    footer.scrollIntoView();
+    if(length){
       scrolled = true;
     }
   }
@@ -328,24 +334,24 @@ footer {
 </svelte:head>
 
 
-<div class="container" bind:this={container}>
+<div class="container">
 
-  <section class="logs">
+  <section class="logs" bind:this={list}>
 
     <nav>
       <form>
         <label for="filter">Filter:</label>
         <input type="text" id="filter" bind:value={filter}>
         {#if filter}
-          <button class="clearFilter" on:click={() => filter = ''}>
+          <button class="clearFilter" onclick={() => filter = ''}>
             <span class="label">Clear filter</span>
             <Icon icon="x" size=12 />
           </button>
         {/if}
       </form>
       <div>
-        <button type="button" class="button" on:click={() => logsState.logs.logs.forEach((log, index) => logsState.logs.logs[index].hidden = true) }>Clear screen</button>
-        <button type="button" title="Toggle pinned logs panel" class="button" on:click={togglePinnedPanel}>
+        <button type="button" class="button" onclick={() => logsState.logs.logs.forEach((log, index) => logsState.logs.logs[index].hidden = true) }>Clear screen</button>
+        <button type="button" title="Toggle pinned logs panel" class="button" onclick={togglePinnedPanel}>
           <span class="label">Toggle pinned logs panel</span>
           <Icon icon="pin" />
         </button>
@@ -359,7 +365,7 @@ footer {
             class:hidden={filter && isFiltered(log) || log.hidden}
             class:error={log.error_type.match(/error/i)}
             class:fresh={log.downloaded_at > logsState.logs.downloaded_at[0]}
-            in:fade|local={{ duration: 200 }}
+            in:fade={{ duration: 200 }}
           >
             <td class="date">
               <time datetime={log.created_at}>
@@ -372,11 +378,11 @@ footer {
             </td>
             <td class="actions">
               <div>
-                <button type="button" class="button" title="Copy message" on:click={(event) => navigator.clipboard.writeText(log.message).then(() => { event.target.classList.add('confirmation'); setTimeout(() => event.target.classList.remove('confirmation'), 1000); }) }>
+                <button type="button" class="button" title="Copy message" onclick={(event) => navigator.clipboard.writeText(log.message).then(() => { event.target.classList.add('confirmation'); setTimeout(() => event.target.classList.remove('confirmation'), 1000); }) }>
                   <span class="label">Copy message</span>
                   <Icon icon="copy" />
                 </button>
-                <button type="button" class="button" title="Pin this log" class:active={pinned.find(pin => pin.id === log.id)} on:click|preventDefault={() => pin(log)}>
+                <button type="button" class="button" title="Pin this log" class:active={pinned.find(pin => pin.id === log.id)} onclick={(event) => { event.preventDefault(); pin(log); }}>
                   <span class="label">Pin this log</span>
                   <Icon icon="pin" />
                 </button>
@@ -388,7 +394,7 @@ footer {
     {/if}
 
     {#if !filter}
-      <footer>
+      <footer bind:this={footer}>
         No newer logs to show<br>Checking every 3 seconds
       </footer>
     {/if}
@@ -402,7 +408,7 @@ footer {
       <div class="pins">
 
         <nav class="asideNav">
-          <button type="button" class="button" on:click={() => { localStorage.pinnedLogs = []; pinned = []; }}>
+          <button type="button" class="button" onclick={() => { localStorage.pinnedLogs = []; pinned = []; }}>
             Clear pinned logs
           </button>
         </nav>
@@ -416,7 +422,7 @@ footer {
                     {(new Date(log.created_at)).toLocaleDateString(undefined, {})}
                     {(new Date(log.created_at)).toLocaleTimeString(undefined, {})}
                   </time>
-                  <button type="button" title="Remove log from pinned panel" on:click={() => pin(log)}>
+                  <button type="button" title="Remove log from pinned panel" onclick={() => pin(log)}>
                     <span class="label">Remove log from pinned panel</span>
                     <Icon icon="trash" size="18" />
                   </button>

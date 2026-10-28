@@ -78,3 +78,50 @@ test('going back to the previous job type', async ({ page }) => {
   await expect(page.getByRole('columnheader', { name: 'Runs' })).toBeVisible();
   await expect(page.getByLabel('Type:')).toHaveValue('SCHEDULED');
 });
+
+
+// purpose:   schedules a background job with its code inline, so it has a liquid_body to show
+// arguments: Playwright's request fixture, the job's source name (string)
+// ------------------------------------------------------------------------
+const scheduleInlineJob = async (request, name) => {
+  const response = await request.post('http://127.0.0.1:3333/api/liquid', {
+    data: { content: `{% background source_name: '${name}', delay: 10 %}{% assign greeting = '${name}' %}{% endbackground %}` }
+  });
+  expect(response.ok()).toBeTruthy();
+};
+
+
+test('highlighting the code of a background job', async ({ page, request }) => {
+  const first = `inline job ${Date.now()}`;
+  const second = `${first} second`;
+  await scheduleInlineJob(request, first);
+  await scheduleInlineJob(request, second);
+
+  await page.goto(url);
+  await page.getByRole('link', { name: first, exact: true }).click();
+
+  const code = page.getByRole('complementary').locator('pre code');
+  await expect(code).toContainText(`assign greeting = '${first}'`);
+  await expect(code.locator('.token.keyword').first()).toBeVisible();
+
+  // opening another job shows its code, highlighted, and only that one
+  await page.getByRole('link', { name: second, exact: true }).click();
+  await expect(code).toContainText(`assign greeting = '${second}'`);
+  await expect(code).toHaveCount(1);
+  await expect(code.locator('.token.keyword').first()).toBeVisible();
+});
+
+
+test('highlighting the code of a background job opened from a link', async ({ page, request }) => {
+  const name = `inline job ${Date.now()} linked`;
+  await scheduleInlineJob(request, name);
+
+  await page.goto(url);
+  const href = await page.getByRole('link', { name, exact: true }).getAttribute('href');
+
+  await page.goto('.' + href);
+
+  const code = page.getByRole('complementary').locator('pre code');
+  await expect(code).toContainText(`assign greeting = '${name}'`);
+  await expect(code.locator('.token.keyword').first()).toBeVisible();
+});

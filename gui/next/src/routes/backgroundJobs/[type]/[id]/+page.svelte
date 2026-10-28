@@ -83,11 +83,6 @@ code {
 
 
 
-<!-- ================================================================== -->
-<svelte:head>
-  <script src="/prism.js" data-manual></script>
-</svelte:head>
-
 <Aside title={item?.source_name || item?.id || 'No such background job'} closeUrl="/backgroundJobs?{page.url.searchParams.toString()}">
 
   {#if item === null}
@@ -136,9 +131,7 @@ code {
 
     {#if item.liquid_body}
       <h2>Background job code:</h2>
-      <Code language="liquid">
-        {item.liquid_body}
-      </Code>
+      <Code language="liquid" code={item.liquid_body} />
     {/if}
 
     {#if item.partial_name}

@@ -1,29 +1,60 @@
 <!-- ================================================================== -->
+<script module>
+
+// purpose:   loads the Prism highlighter from /prism.js, once for the whole app
+// returns:   Prism (promise of object)
+// ------------------------------------------------------------------------
+let prism;
+const loadPrism = () => prism ??= new Promise((resolve, reject) => {
+  if(window.Prism?.highlightElement){
+    resolve(window.Prism);
+    return;
+  }
+
+  // only highlight what is asked for, not every code block once the script has loaded
+  window.Prism = window.Prism || {};
+  window.Prism.manual = true;
+
+  const script = document.createElement('script');
+  script.src = '/prism.js';
+  script.onload = () => resolve(window.Prism);
+  script.onerror = () => { prism = undefined; reject(new Error('Could not load /prism.js')); };
+  document.head.append(script);
+});
+
+</script>
+
+
 <script>
 
 // imports
 // ------------------------------------------------------------------------
-import { afterUpdate, tick } from 'svelte';
 import '../../style/code.css';
 
 // properties
 // ------------------------------------------------------------------------
-// code language name for the highligher (string)
-export let language;
-// the template that will be cloned and used to show the highlighted code (dom node)
-let template;
+let {
+  // code language name for the highlighter (string)
+  language,
+  // the code to show (string)
+  code = ''
+} = $props();
 
 
-// a little hacky way to use Prism highlighting with dynamic code
+// purpose:   shows the code in the element and highlights it, again whenever the code changes
+// arguments: the code (string)
+// returns:   an attachment for the <code> element (function)
 // ------------------------------------------------------------------------
-afterUpdate(async() => {
-  await tick();
-  document.querySelector('#code')?.remove();
-  const clone = template.content.cloneNode(true);
-  clone.firstChild.id = 'code';
-  template.after(clone);
-  Prism.highlightAll();
-});
+// the element's content is written here rather than by the template, because Prism
+// replaces it with its own markup, which the template would not know about
+const highlight = (code) => (node) => {
+  node.textContent = code;
+
+  loadPrism()
+    .then(Prism => { if(node.isConnected && node.textContent === code){ Prism.highlightElement(node); } })
+    // the code stays on screen as plain text
+    .catch(() => {});
+};
 
 </script>
 
@@ -31,12 +62,12 @@ afterUpdate(async() => {
 <!-- ================================================================== -->
 <style>
 
-:global(#code) {
+pre {
   border-radius: 1rem;
   border-start-start-radius: 0;
 }
 
-:global(#code[class*=language-]) {
+pre[class*=language-] {
   background-color: var(--color-context);
 }
 
@@ -45,6 +76,4 @@ afterUpdate(async() => {
 
 
 <!-- ================================================================== -->
-<template bind:this={template}>
-  <pre class="line-numbers language-{language}"><code class="language-{language}"><slot></slot></code></pre>
-</template>
+<pre class="line-numbers language-{language}"><code class="language-{language}" {@attach highlight(code)}></code></pre>

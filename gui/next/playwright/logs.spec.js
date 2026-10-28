@@ -92,3 +92,20 @@ test('clearing logs from the screen', async ({ page }) => {
 
   await expect(page.getByText('Log for clearing logs from the screen tests').filter({ visible: true })).toHaveCount(0);
 });
+
+
+test('filtering logs while the list is scrolled to the bottom', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+
+  await page.goto(url);
+  await expect(page.getByText('No newer logs to show')).toBeVisible();
+
+  // typing a filter hides the footer the page scrolls to, and re-renders the list
+  await page.getByLabel('Filter:').fill('a filter that matches no log');
+  await expect(page.getByText('No newer logs to show')).toBeHidden();
+  await page.getByLabel('Filter:').fill('a filter that matches no log at all');
+  await page.waitForTimeout(500);
+
+  expect(errors).toEqual([]);
+});
