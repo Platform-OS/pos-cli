@@ -83,7 +83,7 @@ const user = {
   delete: async (id) => {
     const query = `
       mutation {
-        user_delete(id: ${id}){ id }
+        user_delete(id: ${JSON.stringify(String(id))}){ id }
       }
     `;
 
@@ -97,9 +97,11 @@ const user = {
   // ------------------------------------------------------------------------
   create: async (email, password, properties) => {
     const ingredients = buildMutationIngredients(properties);
+    // what was typed is written into the query text, so each value is a quoted, escaped string
+    // (not a variable: the custom properties already take theirs from their own names)
     const userQuery = `
       mutation${ingredients.variablesDefinition} {
-        user: user_create(user: { email: "${email}", password: "${password}", properties: [${ingredients.properties}] }) {
+        user: user_create(user: { email: ${JSON.stringify(String(email))}, password: ${JSON.stringify(String(password))}, properties: [${ingredients.properties}] }) {
           id
         }
       }
@@ -119,7 +121,7 @@ const user = {
     const ingredients = buildMutationIngredients(properties);
     const userQuery = `
       mutation${ingredients.variablesDefinition} {
-        user_update(user: { email: "${email}",  properties: [${ingredients.properties}] }, id: ${id}) {
+        user_update(user: { email: ${JSON.stringify(String(email))}, properties: [${ingredients.properties}] }, id: ${JSON.stringify(String(id))}) {
           id
         }
       }

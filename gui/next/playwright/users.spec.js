@@ -181,3 +181,45 @@ test('treating a filter value from the url as text, not as part of the query', a
   await expect(page.getByRole('cell', { name: 'user1@example.com' })).toBeHidden();
   await expect(page.getByRole('cell', { name: 'user2@example.com' })).toBeHidden();
 });
+
+
+// purpose:   runs a GraphQL query against the instance through the GUI server
+// arguments: Playwright's request fixture, the query (string), its variables (object)
+// returns:   the query's data (object)
+// ------------------------------------------------------------------------
+const graph = async (request, query, variables) => {
+  const response = await request.post('http://127.0.0.1:3333/api/graph', { data: { query, variables } });
+  expect(response.ok()).toBeTruthy();
+  return (await response.json()).data;
+};
+
+test('adding a user with quotes and backslashes in the password', async ({ page, request }) => {
+  // written into the query as it was, the quote would end the string early and
+  // the backslash-n would be stored as a new line
+  // (an email of its own, so a run that stopped half way cannot block the next)
+  const email = `quoted.password.${Date.now()}@test.test`;
+  const password = 'say "hi"\\n and \\ go';
+
+  const findUser = async () => {
+    const { users } = await graph(request, 'query($email: String, $password: String!) { users(per_page: 1, filter: { email: { value: $email } }) { results { id authenticate { password(password: $password) } } } }', { email, password });
+    return users.results[0];
+  };
+
+  try {
+    await page.goto(url);
+    await page.getByRole('button', { name: 'Create a new user' }).click();
+    await page.getByLabel('Email').fill(email);
+    await page.getByLabel('Password').fill(password);
+    await page.getByRole('button', { name: 'Create user' }).click();
+
+    await expect(page.getByText(/User \d+ created/)).toBeVisible();
+
+    // the password is stored as it was typed
+    expect((await findUser())?.authenticate.password).toBe(true);
+  } finally {
+    const created = await findUser();
+    if(created){
+      await graph(request, 'mutation($id: ID!) { user_delete(id: $id) { id } }', { id: created.id });
+    }
+  }
+});

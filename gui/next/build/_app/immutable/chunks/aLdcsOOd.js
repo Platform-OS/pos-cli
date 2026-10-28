@@ -31,17 +31,17 @@ import{t as e}from"./CvYPGyd7.js";import{t}from"./B_bKnyWZ.js";var n={get:async(
         }
       }`;return e({query:c},n).then(e=>e.users)},delete:async t=>{let n=`
       mutation {
-        user_delete(id: ${t}){ id }
+        user_delete(id: ${JSON.stringify(String(t))}){ id }
       }
     `;return e({query:n},!1)},create:async(n,r,i)=>{let a=t(i),o=`
       mutation${a.variablesDefinition} {
-        user: user_create(user: { email: "${n}", password: "${r}", properties: [${a.properties}] }) {
+        user: user_create(user: { email: ${JSON.stringify(String(n))}, password: ${JSON.stringify(String(r))}, properties: [${a.properties}] }) {
           id
         }
       }
     `;return e({query:o,variables:a.variables},!1)},edit:async(n,r,i)=>{let a=t(i),o=`
       mutation${a.variablesDefinition} {
-        user_update(user: { email: "${r}",  properties: [${a.properties}] }, id: ${n}) {
+        user_update(user: { email: ${JSON.stringify(String(r))}, properties: [${a.properties}] }, id: ${JSON.stringify(String(n))}) {
           id
         }
       }
