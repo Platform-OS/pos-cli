@@ -484,7 +484,7 @@ table {
 
     <dialog use:clickOutside={event => presetsDialogActive && event.target !== presetsToggleButton && togglePresetsDialog()} bind:this={presetsDialog} class="presets content-context">
       {#if presetsDialogActive}
-        <Presets on:close={togglePresetsDialog} />
+        <Presets onclose={togglePresetsDialog} />
       {/if}
     </dialog>
 
