@@ -191,6 +191,7 @@ td, th {
         {/if}
       </tr>
     </thead>
+    <tbody>
     {#if records?.results?.length}
       {#each records?.results as record (record.id)}
         <tr class:highlighted={highlightState.record === record.id} class:hasContextMenu={contextMenu.id === record.id}>
@@ -207,7 +208,7 @@ td, th {
                 </button>
               </div>
               {#if contextMenu.id === record.id}
-                <ContextMenu record={record} deleted={deleted} on:close={() => contextMenu.id = null} />
+                <ContextMenu record={record} deleted={deleted} onclose={() => contextMenu.id = null} />
               {/if}
               {record.id}
             </div>
@@ -248,5 +249,6 @@ td, th {
         </tr>
       {/each}
     {/if}
+    </tbody>
   </table>
 {/if}

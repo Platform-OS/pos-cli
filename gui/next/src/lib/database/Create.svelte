@@ -3,7 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount, tick } from 'svelte';
+import { tick } from 'svelte';
 import { quintOut } from 'svelte/easing';
 import { goto, invalidate } from '$app/navigation';
 import { page } from '$app/state';
@@ -21,20 +21,22 @@ import Toggle from '#lib/ui/forms/Toggle.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// list of properties for given record (array)
-export let properties;
-// record data, if editing (object)
-export let editing;
+let {
+  // list of properties for given record (array)
+  properties,
+  // record data, if editing (object)
+  editing
+} = $props();
 // main container for the component (dom node)
-let container;
+let container = $state();
 // edit form (dom node)
-let form;
+let form = $state();
 // list of errors for the current form taken from back-end (array of objects)
-let errors = [];
+let errors = $state([]);
 // list of inline validation errors for the current form (object)
-let validation = {};
+let validation = $state({});
 // if we should original values instead of parsed JSON for string types (bool)
-let dontParseStringedJson = false;
+const dontParseStringedJson = false;
 
 
 // transition: 	fades and resizes from 0
@@ -57,10 +59,12 @@ const appear = function(node, {
 
 // purpose: 	use JS to open the modal on mount to get all of the <modal> benefits
 // ------------------------------------------------------------------------
-onMount(() => {
-  setTimeout(() => {
+$effect(() => {
+  const opening = setTimeout(() => {
     container.showModal();
   }, 10);
+
+  return () => clearTimeout(opening);
 });
 
 
@@ -88,16 +92,16 @@ const save = async (event) => {
   event.preventDefault();
 
   // form data as object with properties
-  const properties = new FormData(form);
+  const formData = new FormData(form);
 
   // validation
   validation = {};
 
-  for(const property of properties.entries()){
+  for(const property of formData.entries()){
     if(property[0].endsWith('[type]')){
       if(property[1] === 'json' || property[1] === 'array'){
         const propertyName = property[0].replace('[type]', '');
-        const propertyValue = properties.get(propertyName + '[value]')
+        const propertyValue = formData.get(propertyName + '[value]')
         if(propertyValue !== '' && !tryParseJSON(propertyValue)){
           validation[propertyName] = { property: propertyName, message: `Not a valid ${property[1]}` };
         }
@@ -115,7 +119,7 @@ const save = async (event) => {
 
     // create new record
     if(!databaseState.record.id){
-      const create = await record.create({ table: databaseState.table.name, properties: properties });
+      const create = await record.create({ table: databaseState.table.name, properties: formData });
 
       if(!create.errors){
         // back to the unfiltered, newest-first view, where the new record is at the top
@@ -133,7 +137,7 @@ const save = async (event) => {
     }
     // edit existing record
     else {
-      const edit = await record.edit({ table: databaseState.table.name, id: databaseState.record.id, properties: properties });
+      const edit = await record.edit({ table: databaseState.table.name, id: databaseState.record.id, properties: formData });
 
       if(!edit.errors){
         invalidate('app:records');
@@ -267,18 +271,18 @@ select {
 
 
 <!-- ================================================================== -->
-<dialog bind:this={container} transition:appear on:keydown={keyboardShortcuts} on:close={close}>
+<dialog bind:this={container} transition:appear onkeydown={keyboardShortcuts} onclose={close}>
 
   <div class="content content-context">
 
-    <form bind:this={form} on:submit|preventDefault={save}>
+    <form bind:this={form} onsubmit={save}>
 
       <input type="hidden" name="tableName" value={databaseState.table.name}>
       {#if editing.id}
         <input type="hidden" name="recordId" value={editing.id}>
       {/if}
 
-      {#each properties as property}
+      {#each properties as property (property.name)}
         {@const value = editing.properties ? parseValue(editing.properties[property.name], property.attribute_type) : {type: property.attribute_type, value: ''}}
         <fieldset>
           <dir>
@@ -334,7 +338,7 @@ select {
           {/each}
         </ul>
         <fieldset class="actions">
-          <button type="button" class="button" on:click={() => databaseState.record = null}>Cancel</button>
+          <button type="button" class="button" onclick={() => databaseState.record = null}>Cancel</button>
           <button type="submit" class="button">
             {#if editing.id}
               Edit record
