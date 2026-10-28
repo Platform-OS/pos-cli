@@ -1,10 +1,13 @@
 <!-- ================================================================== -->
+<svelte:options runes />
+
 <script>
 
 // imports
 // ------------------------------------------------------------------------
 import { page } from '$app/state';
 import { table } from '#lib/api/table';
+import { serverUrl } from '#lib/api/address.js';
 import { connectionState } from '#lib/state/connection.svelte.js';
 import { databaseState } from '#lib/state/database.svelte.js';
 import { preferencesState } from '#lib/state/preferences.svelte.js';
@@ -12,15 +15,19 @@ import { preferencesState } from '#lib/state/preferences.svelte.js';
 import Icon from '#lib/ui/Icon.svelte';
 
 
+// the tables being preloaded, so hovering again while they load does not ask twice (promise)
+let preloading;
 
 // purpose:		preload tables data into the state store for faster navigation
 // returns:		loads the tables into the databaseState.tables (array)
 // ------------------------------------------------------------------------
-const preloadTables = async () => {
+const preloadTables = () => {
   if(!databaseState.tables.length){
-    databaseState.tables = await table.get();
+    preloading ??= table.get()
+      .then(tables => { databaseState.tables = tables; })
+      .finally(() => { preloading = undefined; });
   }
-}
+};
 
 </script>
 
@@ -228,6 +235,7 @@ nav a:hover .label {
             {connectionState.online?.MPKIT_URL.replace('https://', '')}
           </a>
         {/if}
+        </span>
       </h1>
     </div>
 
@@ -235,7 +243,7 @@ nav a:hover .label {
       <ul>
         {#if preferencesState.header.includes('database')}
         <li>
-          <a href="/database" class:active={page.url.pathname.startsWith('/database')} on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
+          <a href="/database" class:active={page.url.pathname.startsWith('/database')} onfocus={preloadTables} onmouseover={preloadTables}>
             <Icon icon="database" />
             <span class="label">
               Database
@@ -311,9 +319,8 @@ nav a:hover .label {
         {/if}
 
         {#if preferencesState.header.includes('liquid')}
-        {@const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}
         <li>
-          <a href="{url}/gui/liquid">
+          <a href={serverUrl('/gui/liquid')}>
             <Icon icon="liquid" />
             <span class="label">
               Liquid Evaluator
@@ -323,9 +330,8 @@ nav a:hover .label {
         {/if}
 
         {#if preferencesState.header.includes('graphiql')}
-        {@const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}
         <li>
-          <a href="{url}/gui/graphql">
+          <a href={serverUrl('/gui/graphql')}>
             <Icon icon="graphql" />
             <span class="label">
               GraphiQL

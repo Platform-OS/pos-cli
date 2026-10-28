@@ -172,7 +172,7 @@ nav {
         decreaseLabel="Previous page"
         increaseLabel="Next page"
         style="navigation"
-        on:input={() => show({ page: pageNumber })}
+        oninput={() => show({ page: pageNumber })}
       />
       of {data.records?.total_pages || 1}
     </div>

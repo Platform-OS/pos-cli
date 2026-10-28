@@ -1,1 +1,0 @@
-import{Rt as e}from"./DSrnb0yw.js";e();

@@ -495,7 +495,7 @@ table {
           name="aggregate"
           options={[{value: 'http_request_path', label: 'Aggregate requests'}]}
           checked={page.url.searchParams.get('aggregate')}
-          on:change={async event => { aggregated = event.target.checked ? true : false; await tick(); order_by.value = event.target.checked ? 'count' : '_timestamp'; order.value = 'DESC'; await tick(); form.requestSubmit(); }}
+          onchange={async event => { aggregated = event.target.checked ? true : false; await tick(); order_by.value = event.target.checked ? 'count' : '_timestamp'; order.value = 'DESC'; await tick(); form.requestSubmit(); }}
         />
       </fieldset>
 

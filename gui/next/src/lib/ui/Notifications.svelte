@@ -10,7 +10,8 @@ import { notificationsState } from '#lib/state/notifications.svelte.js';
 import Icon from '#lib/ui/Icon.svelte';
 import ConnectionIndicator from '#lib/ui/ConnectionIndicator.svelte';
 
-let height = 0;
+// height of the notifications stack, to slide it above the bottom edge (int)
+let height = $state(0);
 
 </script>
 
@@ -112,7 +113,7 @@ button:hover {
         {notification.message}
       {/if}
 
-      <button on:click={() => notificationsState.remove(notification.id)}>
+      <button onclick={() => notificationsState.remove(notification.id)}>
         <Icon icon="x" size="10" />
       </button>
     </div>

@@ -1,0 +1,1 @@
+import{n as e}from"./mHJT8NLV.js";var t=e=>e&&Array.isArray(e.errors)&&e.errors.length>0?e.errors:null,n=(n,r)=>(r?.fetch??fetch)(e(`/api/graph`),{headers:{"Content-Type":`application/json`},method:`POST`,body:JSON.stringify(n)}).then(e=>e.json()).then(e=>{let r=t(e);return r?(r.forEach(e=>{console.log(n.query),console.info(e)}),e):e&&e.data});export{n as t};

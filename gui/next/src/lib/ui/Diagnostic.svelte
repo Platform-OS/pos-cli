@@ -16,22 +16,24 @@ import { isStructuredDiagnostic, displayType, frameLabel } from '#lib/diagnostic
 import { tryParseJSON } from '#lib/tryParseJSON.js';
 import JSONTree from '#lib/ui/JSONTree.svelte';
 
-// the full log-table row ({ error_type, message, data, ... })
-export let log;
+let {
+  // the full log-table row ({ error_type, message, data, ... })
+  log
+} = $props();
 
 const maxMessageLength = 262144;
-let showFull = false;
+let showFull = $state(false);
 
-$: data = log.data || {};
-$: structured = isStructuredDiagnostic(data);
-$: isError = !!data.type;
-$: type = displayType(log);
+let data = $derived(log.data || {});
+let structured = $derived(isStructuredDiagnostic(data));
+let isError = $derived(!!data.type);
+let type = $derived(displayType(log));
 // errors carry the bare message in data.message; logs use the row's message.
-$: messageText = data.message != null ? String(data.message) : (log.message == null ? '' : String(log.message));
-$: parsedMessage = messageText.length < maxMessageLength && tryParseJSON(messageText);
-$: stack = structured && Array.isArray(data.stack) ? data.stack : [];
-$: location = frameLabel(stack[0]);
-$: context = (structured && data.context) || {};
+let messageText = $derived(data.message != null ? String(data.message) : (log.message == null ? '' : String(log.message)));
+let parsedMessage = $derived(messageText.length < maxMessageLength && tryParseJSON(messageText));
+let stack = $derived(structured && Array.isArray(data.stack) ? data.stack : []);
+let location = $derived(frameLabel(stack[0]));
+let context = $derived((structured && data.context) || {});
 
 </script>
 
@@ -165,7 +167,7 @@ $: context = (structured && data.context) || {};
       {:else}
         {messageText.substr(0, maxMessageLength)}
         <span class="longStringInfo">
-          <button type="button" on:click={() => showFull = true}>
+          <button type="button" onclick={() => showFull = true}>
             {messageText.length - maxMessageLength} more characters
           </button>
         </span>
