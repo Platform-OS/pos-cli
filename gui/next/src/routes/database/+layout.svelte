@@ -8,7 +8,9 @@ import Tables from '#lib/database/Tables.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-let tablesHidden = false;
+let { children } = $props();
+
+let tablesHidden = $state(false);
 
 
 // purpose:   global hotkeys
@@ -52,7 +54,7 @@ const keyboardShortcuts = (event) => {
 
 
 <!-- ================================================================== -->
-<svelte:document on:keydown={keyboardShortcuts} />
+<svelte:document onkeydown={keyboardShortcuts} />
 
 <div class="container" class:tablesHidden={tablesHidden}>
 
@@ -60,6 +62,6 @@ const keyboardShortcuts = (event) => {
     <Tables onSidebarNeeded={() => tablesHidden = false} />
   </div>
 
-  <slot></slot>
+  {@render children()}
 
 </div>
