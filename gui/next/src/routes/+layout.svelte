@@ -12,6 +12,11 @@ import '../style/forms.css';
 import Header from '#lib/ui/Header.svelte';
 import Notifications from '#lib/ui/Notifications.svelte';
 
+
+// properties
+// ------------------------------------------------------------------------
+let { children } = $props();
+
 </script>
 
 
@@ -19,6 +24,6 @@ import Notifications from '#lib/ui/Notifications.svelte';
 <!-- ================================================================== -->
 <Header />
 
-<slot></slot>
+{@render children()}
 
 <Notifications />
