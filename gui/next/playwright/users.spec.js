@@ -69,6 +69,31 @@ test('adding a new user successfully', async ({ page }) => {
 });
 
 
+
+test('adding a user with a broken array and expecting a validation error', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Create a new user' }).click();
+
+  await page.getByLabel('Email').fill('testbroken@test.test');
+  await page.getByLabel('Password').fill('testpassword');
+  await page.getByLabel('customPropertyArray').fill('["not closed"');
+
+  await page.getByRole('button', { name: 'Create user' }).click();
+
+  await expect(page.getByRole('alert').filter({ hasText: 'Not a valid array' })).toBeVisible();
+  await expect(page.locator('dialog')).toBeVisible();
+
+  // once corrected, the same form creates the user
+  await page.getByLabel('customPropertyArray').fill('["closed"]');
+  await page.getByRole('button', { name: 'Create user' }).click();
+  await expect(page.getByRole('cell', { name: 'testbroken@test.test' })).toBeVisible();
+
+  expect(errors).toEqual([]);
+});
+
 test('editing an existing user', async ({ page }) => {
   await page.goto(url);
   await page.getByRole('button', { name: 'Edit user' }).nth(1).click();

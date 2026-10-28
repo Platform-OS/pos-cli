@@ -362,7 +362,7 @@ const submitForm = function(event) {
                       </button>
                     </div>
                     {#if contextMenu.id === user.id}
-                      <ContextMenu record={user} on:reload={() => reloadUsers() } on:close={() => contextMenu.id = null} />
+                      <ContextMenu record={user} onreload={() => reloadUsers()} onclose={() => contextMenu.id = null} />
                     {/if}
                   </div>
                 </div>
@@ -417,7 +417,7 @@ const submitForm = function(event) {
 {/if}
 
 {#if usersState.user !== undefined}
-<CreateUser userProperties={userProperties} userToEdit={usersState.user} on:success={() => reloadUsers() } />
+<CreateUser userProperties={userProperties} userToEdit={usersState.user} onsuccess={() => reloadUsers()} />
 {/if}
 
 

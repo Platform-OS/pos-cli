@@ -30,6 +30,8 @@
 
 * **A record the admin GUI could not delete or restore is reported again.** A refused deletion answered with errors and no `record_delete`, and the message read its id from there, so it threw and no notification appeared; restoring did the same. Both now name the record that was asked for. The Database components (`ContextMenu`, `Create`, `Delete`, `Restore`) are written in Svelte 5 runes, with `onclose` and `onsuccess` props instead of component events, and the records table puts its rows in a `<tbody>`.
 
+* **The admin GUI's user form threw on a value that is not valid JSON or a valid array** instead of scrolling to the message: it waited for `tick()`, which it never imported. The Users components (`ContextMenu`, `Create`, `Delete`) are written in Svelte 5 runes, with `onclose`, `onreload` and `onsuccess` props instead of component events, and deleting a user now says "User … deleted" rather than "Record … deleted".
+
 ## 6.6.0 (2026-10-26)
 
 ### New Features

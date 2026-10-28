@@ -3,32 +3,43 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { createEventDispatcher } from 'svelte';
 import { user } from '#lib/api/user';
 import { notificationsState } from '#lib/state/notifications.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
 
-export let id;
+// properties
+// ------------------------------------------------------------------------
+let {
+  // id of the user to delete (string)
+  id,
+  // called once the user is deleted (function)
+  onsuccess,
+  // called once the deletion is confirmed, to close the menu (function)
+  onclose
+} = $props();
+// the form with the user's id (dom node)
+let form = $state();
 
-let form;
-let dispatch = createEventDispatcher();
 
+// purpose:   deletes the user after asking for confirmation
+// arguments: submit event (object)
+// ------------------------------------------------------------------------
 const deleteUser = async (event) => {
   event.preventDefault();
   if(confirm('Are you sure you want to delete this user?')){
-    dispatch('close');
+    onclose?.();
 
     const formData = new FormData(form);
     const id = formData.get('id')
     const remove = await user.delete(id);
 
     if(!remove.errors){
-      notificationsState.create('success', `Record ${id} deleted`);
-      dispatch('success');
+      notificationsState.create('success', `User ${id} deleted`);
+      onsuccess?.();
     } else {
-      notificationsState.create('error', `Record ${id} could not be deleted`);
+      notificationsState.create('error', `User ${id} could not be deleted`);
     }
   }
 }
@@ -48,7 +59,7 @@ i {
 
 
 <!-- ================================================================== -->
-<form bind:this={form} on:submit={deleteUser}>
+<form bind:this={form} onsubmit={deleteUser}>
   <input type="hidden" name="id" value={id}>
   <button class="danger">
     <i>
