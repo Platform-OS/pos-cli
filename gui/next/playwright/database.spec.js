@@ -672,7 +672,20 @@ test('expanded view', async ({ page }) => {
 });
 
 
-test('restoring deleted record', async ({ page }) => {
+test('restoring deleted record', async ({ page, request }) => {
+  const graph = async (query, variables) => {
+    const response = await request.post('http://127.0.0.1:3333/api/graph', { data: { query, variables } });
+    expect(response.ok()).toBeTruthy();
+    return (await response.json()).data;
+  };
+
+  // an attempt that stopped half way leaves the record deleted, and a retry has to start from
+  // the record in place
+  const { records } = await graph('{ records(per_page: 100, filter: { deleted_at: { exists: true } }) { results { id table properties } } }');
+  for(const deleted of records.results.filter(item => item.table === 'qa_table_4' && item.properties.qa_table_4_string === 'Record to delete and restore')){
+    await graph('mutation($id: ID!, $table: String!) { record_update(id: $id, record: { table: $table, deleted_at: null }) { id } }', { id: deleted.id, table: deleted.table });
+  }
+
   page.on('dialog', async dialog => {
     expect(dialog.message()).toEqual('Are you sure you want to delete this record?');
     await dialog.accept();
@@ -693,6 +706,8 @@ test('restoring deleted record', async ({ page }) => {
 
   await page.getByRole('button', { name: 'More options' }).first().click();
   await page.getByRole('button', { name: 'Delete record' }).click();
+  // the list follows the instance's answer, which a slow instance gives after several seconds
+  await expect(page.getByText(/Record \d+ deleted/)).toBeVisible({ timeout: 20000 });
 
   await page.getByTitle('Show deleted records').click();
   await expect(page.getByRole('columnheader', { name: 'deleted at' })).toBeVisible();
@@ -700,6 +715,7 @@ test('restoring deleted record', async ({ page }) => {
 
   await page.getByRole('button', { name: 'More options' }).first().click();
   await page.getByRole('button', { name: 'Restore record' }).click();
+  await expect(page.getByText(/Record \d+ restored/)).toBeVisible({ timeout: 20000 });
 
   await expect(page.getByRole('cell', { name: 'Record to delete and restore' })).toBeHidden();
 
