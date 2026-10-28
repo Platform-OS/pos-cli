@@ -109,7 +109,7 @@ const save = async (event) => {
 
     // if there is an inline validation error, scroll to it
     await tick();
-    document.querySelector('[role="alert"]:not(:empty)').scrollIntoView({behavior: 'smooth', block: 'center'})
+    form.querySelector('[role="alert"]:not(:empty)')?.scrollIntoView({behavior: 'smooth', block: 'center'})
 
   } else {
 
