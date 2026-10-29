@@ -181,7 +181,7 @@ td, th {
     <thead>
       <tr>
         <th class="id">id</th>
-          {#each databaseState.table.properties as property}
+          {#each databaseState.table.properties as property (property.name)}
             <th>{property.name} <small class="type">({property.attribute_type})</small></th>
           {/each}
         <th>created at</th>
@@ -213,7 +213,7 @@ td, th {
               {record.id}
             </div>
           </td>
-          {#each databaseState.table.properties as property}
+          {#each databaseState.table.properties as property (property.name)}
             {@const value = parseValue(record.properties[property.name], property.attribute_type)}
             <td class:value-null={value.type === 'null'}>
               {#if value.value !== undefined}

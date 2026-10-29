@@ -5,7 +5,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { graphql } from '#lib/api/graphql';
+import { graphql, graphqlData } from '#lib/api/graphql';
 import { buildMutationIngredients, columnTypeToVariableType } from '#lib/helpers/buildMutationIngredients';
 
 
@@ -169,7 +169,7 @@ const record = {
         }
       }`;
 
-    return graphql({ query, variables: propertiesFilterData.variables }, { fetch: params.fetch }).then(data => data.records);
+    return graphqlData({ query, variables: propertiesFilterData.variables }, { fetch: params.fetch }).then(data => data.records);
   },
 
 

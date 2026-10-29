@@ -29,6 +29,8 @@ let pinned = $state([]);
 let pinnedPanel = $state(false);
 // interval for checking for new logs (interval)
 let newLogsInterval;
+// if a request for logs has not answered yet (bool)
+let loading = false;
 
 
 onMount(() => {
@@ -41,8 +43,16 @@ onMount(() => {
 
 
 const load = async () => {
+  // a poll that started while the previous one was still waiting would ask from the same last
+  // log, and both would add the same logs to the list
+  if(loading){
+    return;
+  }
+
+  loading = true;
+
   const last = logsState.logs.logs?.at(-1)?.id ?? null;
-  const newLogs = await logs.get({ last: last });
+  const newLogs = await logs.get({ last: last }).finally(() => { loading = false; });
 
   // if already showing logs, just append the new ones
   if(last){
@@ -360,36 +370,38 @@ footer {
 
     {#if logsState.logs.logs}
       <table>
-        {#each logsState.logs.logs as log}
-          <tr
-            class:hidden={filter && isFiltered(log) || log.hidden}
-            class:error={log.error_type.match(/error/i)}
-            class:fresh={log.downloaded_at > logsState.logs.downloaded_at[0]}
-            in:fade={{ duration: 200 }}
-          >
-            <td class="date">
-              <time datetime={log.created_at}>
-                {(new Date(log.created_at)).toLocaleDateString(undefined, {})}
-                {(new Date(log.created_at)).toLocaleTimeString(undefined, {})}
-              </time>
-            </td>
-            <td class="message">
-              <Diagnostic {log} />
-            </td>
-            <td class="actions">
-              <div>
-                <button type="button" class="button" title="Copy message" onclick={(event) => navigator.clipboard.writeText(log.message).then(() => { event.target.classList.add('confirmation'); setTimeout(() => event.target.classList.remove('confirmation'), 1000); }) }>
-                  <span class="label">Copy message</span>
-                  <Icon icon="copy" />
-                </button>
-                <button type="button" class="button" title="Pin this log" class:active={pinned.find(pin => pin.id === log.id)} onclick={(event) => { event.preventDefault(); pin(log); }}>
-                  <span class="label">Pin this log</span>
-                  <Icon icon="pin" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        {/each}
+        <tbody>
+          {#each logsState.logs.logs as log (log.id)}
+            <tr
+              class:hidden={filter && isFiltered(log) || log.hidden}
+              class:error={log.error_type.match(/error/i)}
+              class:fresh={log.downloaded_at > logsState.logs.downloaded_at[0]}
+              in:fade={{ duration: 200 }}
+            >
+              <td class="date">
+                <time datetime={log.created_at}>
+                  {(new Date(log.created_at)).toLocaleDateString(undefined, {})}
+                  {(new Date(log.created_at)).toLocaleTimeString(undefined, {})}
+                </time>
+              </td>
+              <td class="message">
+                <Diagnostic {log} />
+              </td>
+              <td class="actions">
+                <div>
+                  <button type="button" class="button" title="Copy message" onclick={(event) => navigator.clipboard.writeText(log.message).then(() => { event.target.classList.add('confirmation'); setTimeout(() => event.target.classList.remove('confirmation'), 1000); }) }>
+                    <span class="label">Copy message</span>
+                    <Icon icon="copy" />
+                  </button>
+                  <button type="button" class="button" title="Pin this log" class:active={pinned.find(pin => pin.id === log.id)} onclick={(event) => { event.preventDefault(); pin(log); }}>
+                    <span class="label">Pin this log</span>
+                    <Icon icon="pin" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
       </table>
     {/if}
 
@@ -415,7 +427,7 @@ footer {
 
         {#if pinned}
           <ul>
-            {#each pinned as log}
+            {#each pinned as log (log.id)}
               <li>
                 <div class="info">
                   <time class="date" datetime={log.created_at}>

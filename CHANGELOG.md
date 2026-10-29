@@ -15,6 +15,12 @@
 
 ### Fixes
 
+* **The admin GUI showed an empty list when the instance refused the query for it.** A query answered with GraphQL errors left the Database tables and records, the Users list and details, the Background Jobs list and details and the Constants list empty, which reads exactly like "nothing here"; the Database page could also stop with an error. Each now shows an error with the instance's message. A request that never reached the instance still shows only the connection indicator.
+
+* **The admin GUI's Logs page could show the same log twice.** It asks for newer logs every 3 seconds, and when the instance took longer than that to answer, the next request asked from the same last log and both answers were added. A request now waits for the previous one.
+
+* **Two notifications created in the same millisecond broke the notification list**, which could happen once two failed loads were both reported. Each notification now has its own id.
+
 * **The admin GUI's Logs v2 and Network pages searched from January 1970.** The time limit sent the end of the range in microseconds, which is what the instance searches by, and the start in milliseconds, so every search with a date reached back to the epoch instead of three days. Both ends are in microseconds now. The chosen day was also read as UTC midnight before moving to the end of the local day, which lands on the day before anywhere west of UTC, and the date input offered the UTC day as today, which is yesterday for an hour or two after midnight in Europe; both now use the browser's own time zone. A date in the url that is not a day searches without a limit, as no date does, instead of sending an invalid one.
 
 * **The admin GUI's Constants page said nothing when the instance refused a change.** Creating, updating or deleting a constant that the instance refused read the constant's name from the refused answer, which has none, so the page stopped with an error and showed no notification; the delete failure was also reported as a success. Each now shows an error naming the constant.

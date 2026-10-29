@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { posInstance } from './helpers/posInstance.js';
+import { refuseQuery } from './helpers/refuseQuery.js';
 
 
 const url = './database';
@@ -842,4 +843,22 @@ test('ignoring a sorting or filter in the url that is not valid', async ({ page 
   await expect(page.getByText('Lorem ipsum dolor sit amet')).toBeVisible();
   await expect(page.locator('select[name="by"]')).toHaveValue('created_at');
   await expect(page.locator('select[name="order"]')).toHaveValue('DESC');
+});
+
+
+test('telling that the tables could not be loaded', async ({ page }) => {
+  await refuseQuery(page, 'admin_tables(');
+  await page.goto(url);
+
+  await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Could not load the tables: refused by the test');
+});
+
+
+test('telling that the records could not be loaded', async ({ page }) => {
+  await refuseQuery(page, 'records(');
+  await page.goto(url);
+
+  await page.locator('.tables-container a').first().click();
+
+  await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Could not load the records: refused by the test');
 });

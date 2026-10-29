@@ -5,7 +5,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { graphql } from '#lib/api/graphql';
+import { graphql, graphqlData } from '#lib/api/graphql';
 import { buildMutationIngredients } from '#lib/helpers/buildMutationIngredients';
 
 const user = {
@@ -73,7 +73,7 @@ const user = {
         }
       }`;
 
-    return graphql({ query }, options).then(data => data.users);
+    return graphqlData({ query }, options).then(data => data.users);
   },
 
   // purpose:		delete users from the database
@@ -146,7 +146,7 @@ const user = {
       }
     `;
 
-    return graphql({ query: propertiesQuery }, false).then(data => data.admin_user_schema.properties);
+    return graphqlData({ query: propertiesQuery }, false).then(data => data.admin_user_schema.properties);
   }
 };
 

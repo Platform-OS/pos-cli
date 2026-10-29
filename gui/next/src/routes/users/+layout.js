@@ -12,6 +12,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { user } from '#lib/api/user.js';
+import { loadFailed } from '#lib/api/loadFailed.js';
 
 
 export const load = async ({ url, fetch, depends }) => {
@@ -24,7 +25,7 @@ export const load = async ({ url, fetch, depends }) => {
     value: url.searchParams.get('value') ?? ''
   };
 
-  const users = await user.get(filters, { fetch }).catch(() => null);
+  const users = await user.get(filters, { fetch }).catch(loadFailed('the users'));
 
   return { filters, users };
 };

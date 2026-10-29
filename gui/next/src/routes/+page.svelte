@@ -29,7 +29,11 @@ let tablesPreloading = false;
 const preloadTables = async () => {
   if(!tablesPreloading && !databaseState.tables.length){
     tablesPreloading = true;
-    databaseState.tables = await table.get();
+    // only a head start: the Database page loads the tables itself and says when it cannot
+    databaseState.tables = await table.get().catch(() => {
+      tablesPreloading = false;
+      return databaseState.tables;
+    });
   }
 };
 

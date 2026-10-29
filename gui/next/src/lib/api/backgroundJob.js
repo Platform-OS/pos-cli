@@ -4,7 +4,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { graphql } from '#lib/api/graphql';
+import { graphql, graphqlData } from '#lib/api/graphql';
 
 
 // the job types the list can be filtered by, written into the query as an enum value (array)
@@ -77,7 +77,7 @@ const backgroundJob = {
         }
       }`;
 
-    return graphql({ query }, options).then(data => data.admin_background_jobs);
+    return graphqlData({ query }, options).then(data => data.admin_background_jobs);
 
   },
 

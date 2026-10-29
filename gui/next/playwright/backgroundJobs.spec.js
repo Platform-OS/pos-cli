@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { posInstance } from './helpers/posInstance.js';
+import { refuseQuery } from './helpers/refuseQuery.js';
 
 
 const url = './backgroundJobs';
@@ -241,4 +242,12 @@ test('telling that a background job could not be deleted', async ({ page }) => {
 
   await expect(page.getByText(`Background job ${deadJob.id} could not be deleted`)).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+
+test('telling that the background jobs could not be loaded', async ({ page }) => {
+  await refuseQuery(page, 'admin_background_jobs(');
+  await page.goto(url);
+
+  await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Could not load the background jobs: refused by the test');
 });

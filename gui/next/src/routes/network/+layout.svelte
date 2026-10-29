@@ -169,28 +169,6 @@ function togglePresetsDialog(){
     font-size: .875rem;
   }
 
-    .filters h3 button {
-      width: 15px;
-      height: 15px;
-      padding: 2px;
-
-      border-radius: .5em;
-
-      display: flex;
-      align-items: center;
-    }
-
-    .filters h3 button :global(svg) {
-      width: 100%;
-      height: 100%;
-
-      pointer-events: none;
-    }
-
-    .filters h3 button:hover {
-      color: var(--color-interaction-hover);
-    }
-
   .filters #filters {
     display: flex;
     flex-direction: column;
@@ -419,10 +397,6 @@ table {
     font-variant-numeric: tabular-nums;
   }
 
-  .highlight td {
-    background-color: var(--color-highlight);
-  }
-
   tr {
     position: relative;
   }
@@ -596,6 +570,7 @@ table {
           </thead>
           {#if data.network?.aggs?.results}
             <tbody>
+              <!-- not keyed: two requests can share a _timestamp, and a duplicate key stops the list -->
               {#each data.network.aggs.results as log}
                 <tr
                   class:active={log._timestamp && page.params.id == log._timestamp}

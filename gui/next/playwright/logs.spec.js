@@ -109,3 +109,37 @@ test('filtering logs while the list is scrolled to the bottom', async ({ page })
 
   expect(errors).toEqual([]);
 });
+
+
+test('showing each log once when the instance answers slower than the page polls', async ({ page }) => {
+  const log = (id, message) => ({ id, created_at: new Date().toISOString(), error_type: 'info', message, data: null });
+  const first = log('1790000000.000001', 'the first log');
+  const second = log('1790000000.000002', 'the log that answered slowly');
+  let askedAfterSecond = false;
+
+  // the page polls every 3 seconds; the first poll after the first log takes 4.5 seconds, so the
+  // next poll starts while it is still waiting, asks from the same log and is answered first
+  let askedAfterFirst = 0;
+  await page.route(requestUrl => requestUrl.pathname === '/api/logs', async route => {
+    const last = new URL(route.request().url()).searchParams.get('lastId');
+
+    if(last === '0'){
+      await route.fulfill({ json: { logs: [first] } });
+    } else if(last === first.id){
+      if(++askedAfterFirst === 1){
+        await new Promise(resolve => setTimeout(resolve, 4500));
+      }
+      await route.fulfill({ json: { logs: [second] } });
+    } else {
+      askedAfterSecond = true;
+      await route.fulfill({ json: { logs: [] } });
+    }
+  });
+
+  await page.goto(url);
+  await expect(page.getByText('the first log')).toBeVisible();
+
+  // by the time the page asks for logs after the second one, every earlier answer has arrived
+  await expect.poll(() => askedAfterSecond, { timeout: 15000 }).toBe(true);
+  await expect(page.locator('td.message').getByText('the log that answered slowly')).toHaveCount(1);
+});

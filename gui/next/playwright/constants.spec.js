@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { posInstance } from './helpers/posInstance.js';
+import { refuseQuery } from './helpers/refuseQuery.js';
 
 
 const url = './constants';
@@ -150,4 +151,12 @@ test('telling that a constant could not be deleted', async ({ page }) => {
 
   await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Failed to delete REFUSED_CONSTANT constant');
   await expect(page.getByLabel('REFUSED_CONSTANT')).toBeVisible();
+});
+
+
+test('telling that the constants could not be loaded', async ({ page }) => {
+  await refuseQuery(page, 'constants(');
+  await page.goto(url);
+
+  await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Could not load the constants: refused by the test');
 });

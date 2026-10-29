@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { posInstance } from './helpers/posInstance.js';
+import { refuseQuery } from './helpers/refuseQuery.js';
 
 
 const url = './users';
@@ -222,4 +223,22 @@ test('adding a user with quotes and backslashes in the password', async ({ page,
       await graph(request, 'mutation($id: ID!) { user_delete(id: $id) { id } }', { id: created.id });
     }
   }
+});
+
+
+test('telling that the users could not be loaded', async ({ page }) => {
+  await refuseQuery(page, 'users(');
+  await page.goto(url);
+
+  await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Could not load the users: refused by the test');
+});
+
+
+test('telling that both the users and the user could not be loaded', async ({ page }) => {
+  // the list and the user details load at the same time, so both errors arrive together
+  await refuseQuery(page, 'users(');
+  await page.goto(url + '/1');
+
+  await expect(page.locator('.notification.error:not(.disabled)').filter({ hasText: 'Could not load the users: refused by the test' })).toBeVisible();
+  await expect(page.locator('.notification.error:not(.disabled)').filter({ hasText: 'Could not load the user: refused by the test' })).toBeVisible();
 });
