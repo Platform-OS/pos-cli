@@ -10,6 +10,9 @@
 const timeout = 7000;
 
 const list = $state([]);
+// the id the next notification gets; a counter, since two notifications can be created in the
+// same millisecond and the list is keyed by id (int)
+let nextId = 1;
 
 
 // purpose:		creates new notification, removed by itself unless it is an error
@@ -18,7 +21,7 @@ const list = $state([]);
 //				(string or snippet)
 // ------------------------------------------------------------------------
 const create = (type, message) => {
-  const id = Date.now();
+  const id = nextId++;
 
   list.push({ id, type, message });
 

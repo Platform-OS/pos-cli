@@ -342,7 +342,7 @@ const submitForm = function(event) {
       </thead>
       {#if items}
         <tbody>
-          {#each items as user}
+          {#each items as user (user.id)}
             <tr
               class:active={page.params.id == user.id}
               class:context={contextMenu.id === user.id} 

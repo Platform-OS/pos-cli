@@ -25,21 +25,6 @@ let item = $derived(data.item);
 <!-- ================================================================== -->
 <style>
 
-aside {
-  width: 50%;
-  min-width: 400px;
-  overflow: hidden;
-
-  border-inline-start: 1px solid var(--color-frame);
-}
-
-.container {
-  width: 100%;
-  height: calc(100vh - 83px);
-  padding: 1rem;
-  overflow: auto;
-}
-
 h2 {
   margin-block-start: 2rem;
   margin-block-end: .2em;

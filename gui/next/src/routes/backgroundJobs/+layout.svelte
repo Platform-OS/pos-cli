@@ -165,11 +165,6 @@ td, th {
     gap: .7em;
   }
 
-  .unnamed {
-    font-style: italic;
-    color: var(--color-text-secondary);
-  }
-
 table a {
   color: var(--color-interaction);
 }
@@ -293,47 +288,49 @@ menu :global(button:hover) {
         </tr>
       </thead>
 
-    {#each items as item (item.id)}
+      <tbody>
+        {#each items as item (item.id)}
 
-      <tr>
-        <td class="id" onmouseleave={() => contextMenu.id = null}>
-          <div>
+          <tr>
+            <td class="id" onmouseleave={() => contextMenu.id = null}>
+              <div>
 
-            <button class="button compact more" onclick={() => contextMenu.id = item.id}>
-              <span class="label">More options</span>
-              <Icon icon="navigationMenuVertical" size="16" />
-            </button>
+                <button class="button compact more" onclick={() => contextMenu.id = item.id}>
+                  <span class="label">More options</span>
+                  <Icon icon="navigationMenuVertical" size="16" />
+                </button>
 
-            <menu class="content-context" class:active={contextMenu.id === item.id}>
-              <ul>
-                {#if item.dead_at}
-                  <li>
-                    <Retry id={item.id} onsuccess={reloadJobs} />
-                  </li>
-                {/if}
-                <li>
-                  <Delete id={item.id} onsuccess={reloadJobs} />
-                </li>
-              </ul>
-            </menu>
+                <menu class="content-context" class:active={contextMenu.id === item.id}>
+                  <ul>
+                    {#if item.dead_at}
+                      <li>
+                        <Retry id={item.id} onsuccess={reloadJobs} />
+                      </li>
+                    {/if}
+                    <li>
+                      <Delete id={item.id} onsuccess={reloadJobs} />
+                    </li>
+                  </ul>
+                </menu>
 
-            <a href="/backgroundJobs/{data.filters.type.toLowerCase()}/{item.id}?{page.url.searchParams.toString()}">
-              {item.source_name || item.id}
-            </a>
+                <a href="/backgroundJobs/{data.filters.type.toLowerCase()}/{item.id}?{page.url.searchParams.toString()}">
+                  {item.source_name || item.id}
+                </a>
 
-          </div>
-        </td>
-        <td>{item.queue}</td>
-        <td>
-          {#if data.filters.type === 'DEAD'}
-            {relativeTime(new Date(item.dead_at), now) || ''}
-          {:else}
-            {relativeTime(new Date(item.run_at), now)}
-          {/if}
-        </td>
-      </tr>
+              </div>
+            </td>
+            <td>{item.queue}</td>
+            <td>
+              {#if data.filters.type === 'DEAD'}
+                {relativeTime(new Date(item.dead_at), now) || ''}
+              {:else}
+                {relativeTime(new Date(item.run_at), now)}
+              {/if}
+            </td>
+          </tr>
 
-    {/each}
+        {/each}
+      </tbody>
 
     </table>
 

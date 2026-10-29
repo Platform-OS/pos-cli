@@ -12,6 +12,7 @@
 // ------------------------------------------------------------------------
 import { error } from '@sveltejs/kit';
 import { record } from '#lib/api/record.js';
+import { loadFailed } from '#lib/api/loadFailed.js';
 import { parseQuery } from '#lib/database/query.js';
 
 
@@ -27,7 +28,7 @@ export const load = async ({ params, url, fetch, depends }) => {
 
   // a filter value that the query cannot be built from (an array filter that is not JSON)
   // shows no records rather than an error page
-  const records = await record.get({ table: params.id, filters, sort, deleted: filters.deleted, fetch }).catch(() => null);
+  const records = await record.get({ table: params.id, filters, sort, deleted: filters.deleted, fetch }).catch(loadFailed('the records'));
 
   return { filters, sort, records };
 };

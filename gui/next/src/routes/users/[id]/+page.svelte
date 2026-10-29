@@ -95,7 +95,7 @@ time {
 
   {#if item?.properties}
     <dl class="definitions">
-      {#each Object.entries(item.properties) as [property, value]}
+      {#each Object.entries(item.properties) as [property, value] (property)}
         <dt>{property}</dt>
         <dd>
           {#if tryParseJSON(value)}

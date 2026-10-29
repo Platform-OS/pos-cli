@@ -20,8 +20,14 @@ let filter = $state('');
 let items = $state([]);
 
 
-// get constants list
-constant.get().then(response => { items = response; });
+// purpose:		loads the constants list
+// returns:		resolves when the list is shown, or the failure is (promise)
+// ------------------------------------------------------------------------
+const load = () => constant.get()
+  .then(response => { items = response; })
+  .catch(error => { notificationsState.create('error', `Could not load the constants: ${error.message}`); });
+
+load();
 
 
 // purpose:		adds a .hidden property to each log item if not matching the string
@@ -66,7 +72,7 @@ const remove = async (event) => {
 
     if(!remove.errors){
       notificationsState.create('success', `Constant ${remove.constant_unset.name} deleted`);
-      await constant.get().then(response => { items = response; });
+      await load();
     } else {
       notificationsState.create('error', `Failed to delete ${data.get('name')} constant`);
     }
@@ -84,7 +90,8 @@ const create = async (event) => {
   if(!create.errors){
     event.target.reset();
     notificationsState.create('success', `Constant ${create.constant_set.name} created`);
-    await constant.get().then(response => { items = response; highlight('constant', create.constant_set.name); })
+    await load();
+    highlight('constant', create.constant_set.name);
   } else {
     notificationsState.create('error', `Failed to create ${data.get('name')} constant`);
   }

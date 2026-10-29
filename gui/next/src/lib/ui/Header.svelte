@@ -25,6 +25,8 @@ const preloadTables = () => {
   if(!databaseState.tables.length){
     preloading ??= table.get()
       .then(tables => { databaseState.tables = tables; })
+      // only a head start: the Database page loads the tables itself and says when it cannot
+      .catch(() => {})
       .finally(() => { preloading = undefined; });
   }
 };

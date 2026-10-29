@@ -12,6 +12,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { backgroundJob } from '#lib/api/backgroundJob.js';
+import { loadFailed } from '#lib/api/loadFailed.js';
 
 
 // the job types the list can show, the first one by default (array)
@@ -27,7 +28,7 @@ export const load = async ({ url, fetch, depends }) => {
     type: types.includes(url.searchParams.get('type')) ? url.searchParams.get('type') : types[0]
   };
 
-  const jobs = await backgroundJob.get(filters, { fetch }).catch(() => null);
+  const jobs = await backgroundJob.get(filters, { fetch }).catch(loadFailed('the background jobs'));
 
   return { filters, jobs };
 };

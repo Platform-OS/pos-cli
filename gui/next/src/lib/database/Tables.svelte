@@ -13,6 +13,7 @@ import { onMount } from 'svelte';
 import { fade } from 'svelte/transition';
 import { page } from '$app/state';
 import { databaseState } from '#lib/state/database.svelte.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
 import { table } from '#lib/api/table';
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -30,7 +31,9 @@ let filterInput;
 let filterText = $state('');
 
 // get tables list
-table.get().then(response => { databaseState.tables = response; });
+table.get()
+  .then(response => { databaseState.tables = response; })
+  .catch(error => { notificationsState.create('error', `Could not load the tables: ${error.message}`); });
 
 onMount(() => {
   // focus the filter input on load
@@ -255,7 +258,7 @@ a.active {
 
   <nav>
     <ul>
-      {#each tables as table, index}
+      {#each tables as table, index (table.id)}
         <li in:fade={{ duration: 100, delay: 7 * index }}>
           <a href="/database/table/{table.id}" class:active={table.id === page.params.id}>
             {table.name}

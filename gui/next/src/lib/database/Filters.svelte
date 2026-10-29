@@ -118,7 +118,7 @@ button[type="submit"] {
 
       <select name="name" bind:value={attribute.name} onchange={ () => { attribute.attribute_type = (databaseState.table.properties.find(property => property.name === attribute.name))?.attribute_type || 'id'; } }>
         <option value="id">id</option>
-        {#each databaseState.table.properties as property}
+        {#each databaseState.table.properties as property (property.name)}
           <option value={property.name}>
             {property.name}
           </option>
@@ -130,7 +130,7 @@ button[type="submit"] {
       {#if operations[attribute.attribute_type]}
 
         <select name="operation" bind:value={attribute.operation}>
-          {#each operations[attribute.attribute_type] as operation}
+          {#each operations[attribute.attribute_type] as operation (operation)}
             <option value={operation}>{operation}</option>
           {/each}
         </select>

@@ -1,4 +1,4 @@
-import{t as e}from"./Bt-Qv5Ar.js";var t=[`SCHEDULED`,`DEAD`,`RUNNING`],n={get:async(n,r)=>{let i=parseInt(n?.page)>0?parseInt(n.page):1,a=``;n?.id&&(a=`id: { value: ${JSON.stringify(String(n.id))} }`);let o=``;t.includes(n?.type)&&(o=`type: ${n.type}`);let s=`
+import{i as e,r as t}from"./DicxRUmZ.js";var n=[`SCHEDULED`,`DEAD`,`RUNNING`],r={get:async(t,r)=>{let i=parseInt(t?.page)>0?parseInt(t.page):1,a=``;t?.id&&(a=`id: { value: ${JSON.stringify(String(t.id))} }`);let o=``;n.includes(t?.type)&&(o=`type: ${t.type}`);let s=`
       query {
         admin_background_jobs(
           per_page: 20,
@@ -39,16 +39,16 @@ import{t as e}from"./Bt-Qv5Ar.js";var t=[`SCHEDULED`,`DEAD`,`RUNNING`],n={get:as
             updated_at
           }
         }
-      }`;return e({query:s},r).then(e=>e.admin_background_jobs)},delete:async t=>{let n=Object.fromEntries(t.properties.entries()).id,r=`
+      }`;return e({query:s},r).then(e=>e.admin_background_jobs)},delete:async e=>{let n=Object.fromEntries(e.properties.entries()).id,r=`
       mutation {
         admin_background_job_delete(id: ${JSON.stringify(String(n))}) {
           id
         }
       }
-    `;return e({query:r},!1)},retry:async t=>{let n=Object.fromEntries(t.properties.entries()).id,r=`
+    `;return t({query:r},!1)},retry:async e=>{let n=Object.fromEntries(e.properties.entries()).id,r=`
       mutation {
         admin_background_job_retry(id: ${JSON.stringify(String(n))}){
           id
         }
       }
-    `;return e({query:r},!1)}};export{n as t};
+    `;return t({query:r},!1)}};export{r as t};

@@ -91,7 +91,7 @@ select:focus-visible + label {
       <option value="created_at">created at</option>
       <option value="updated_at">updated at</option>
       <option value="id">id</option>
-      {#each databaseState.table.properties as property}
+      {#each databaseState.table.properties as property (property.name)}
         <option value={property.name}>
           {property.name}
         </option>

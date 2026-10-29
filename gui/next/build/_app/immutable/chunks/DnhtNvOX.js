@@ -1,4 +1,4 @@
-import{t as e}from"./Bt-Qv5Ar.js";var t={get:t=>e({query:`
+import{i as e}from"./DicxRUmZ.js";var t={get:t=>e({query:`
       query(
         $per_page: Int
         $id: ID
