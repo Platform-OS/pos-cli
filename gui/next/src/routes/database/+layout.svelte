@@ -22,7 +22,6 @@ const keyboardShortcuts = (event) => {
   // hide the sidebar on pressing 'b' when no input is active
   if(!event.target.matches('input, textarea') && event.key === 'b'){
     tablesHidden = !tablesHidden;
-    localStorage.tablesHidden = tablesHidden;
   }
 };
 
