@@ -18,14 +18,17 @@ import Icon from '#lib/ui/Icon.svelte';
 // properties
 // ------------------------------------------------------------------------
 // which applications to show the description for (array or strings)
-let showDescriptionFor = [];
+let showDescriptionFor = $state([]);
+// if the tables are already being loaded (bool)
+let tablesPreloading = false;
 
 
 // purpose:		preload tables data into the state store for faster navigation
 // returns:		loads the tables into the databaseState.tables (array)
 // ------------------------------------------------------------------------
 const preloadTables = async () => {
-  if(!databaseState.tables.length){
+  if(!tablesPreloading && !databaseState.tables.length){
+    tablesPreloading = true;
     databaseState.tables = await table.get();
   }
 };
@@ -75,8 +78,7 @@ const handleUpdate = () => {
       notificationsState.create('info', updateCopiedMessage);
     })
     .catch(e => {
-      copying = false;
-      error = true;
+      notificationsState.create('error', 'Could not copy the update command, run npm i -g @platformos/pos-cli@latest in the terminal');
       console.error(e);
     });
 };
@@ -363,7 +365,7 @@ footer ul {
 
 
     <li class="application" class:showDescription={showDescriptionFor.includes('database')}>
-      <a href="/database" on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
+      <a href="/database" onfocus={preloadTables} onmouseover={preloadTables}>
         <div class="icon">
           <Icon icon="database" size="48" />
         </div>
@@ -378,13 +380,13 @@ footer ul {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More information" on:click={() => toggleDescription('database')}>
+          <button title="More information" onclick={() => toggleDescription('database')}>
             <Icon icon="info" size="14" />
             <span class="label">Show more information about Database tool</span>
           </button>
         </li>
         <li>
-          <button title="{preferencesState.header.includes('database') ? 'Unpin Database from' : 'Pin Database to'} header menu" on:click={() => pin('database')}>
+          <button title="{preferencesState.header.includes('database') ? 'Unpin Database from' : 'Pin Database to'} header menu" onclick={() => pin('database')}>
             <Icon icon={preferencesState.header.includes('database') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{preferencesState.header.includes('database') ? 'Unpin Database from' : 'Pin Database to'} header menu</span>
           </button>
@@ -406,13 +408,13 @@ footer ul {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More information" on:click={() => toggleDescription('users')}>
+          <button title="More information" onclick={() => toggleDescription('users')}>
             <Icon icon="info" size="14" />
             <span class="label">Show more information about Users tool</span>
           </button>
         </li>
         <li>
-          <button title="{preferencesState.header.includes('users') ? 'Unpin Users from' : 'Pin Users to'} header menu" on:click={() => pin('users')}>
+          <button title="{preferencesState.header.includes('users') ? 'Unpin Users from' : 'Pin Users to'} header menu" onclick={() => pin('users')}>
             <Icon icon={preferencesState.header.includes('users') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{preferencesState.header.includes('users') ? 'Unpin Users from' : 'Pin Users to'} header menu</span>
           </button>
@@ -436,13 +438,13 @@ footer ul {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More information" on:click={() => toggleDescription('logs')}>
+          <button title="More information" onclick={() => toggleDescription('logs')}>
             <Icon icon="info" size="14" />
             <span class="label">Show more information about Logs tool</span>
           </button>
         </li>
         <li>
-          <button title="{preferencesState.header.includes('logs') ? 'Unpin Logs from' : 'Pin Logs to'} header menu" on:click={() => pin('logs')}>
+          <button title="{preferencesState.header.includes('logs') ? 'Unpin Logs from' : 'Pin Logs to'} header menu" onclick={() => pin('logs')}>
             <Icon icon={preferencesState.header.includes('logs') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{preferencesState.header.includes('logs') ? 'Unpin Logs from' : 'Pin Logs to'} header menu</span>
           </button>
@@ -465,13 +467,13 @@ footer ul {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More information" on:click={() => toggleDescription('backgroundJobs')}>
+          <button title="More information" onclick={() => toggleDescription('backgroundJobs')}>
             <Icon icon="info" size="14" />
             <span class="label">Show more information about Background Jobs tool</span>
           </button>
         </li>
         <li>
-          <button title="{preferencesState.header.includes('backgroundJobs') ? 'Unpin Background Jobs from' : 'Pin Background Jobs to'} header menu" on:click={() => pin('backgroundJobs')}>
+          <button title="{preferencesState.header.includes('backgroundJobs') ? 'Unpin Background Jobs from' : 'Pin Background Jobs to'} header menu" onclick={() => pin('backgroundJobs')}>
             <Icon icon={preferencesState.header.includes('backgroundJobs') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{preferencesState.header.includes('backgroundJobs') ? 'Unpin Background Jobs from' : 'Pin Background Jobs to'} header menu</span>
           </button>
@@ -495,13 +497,13 @@ footer ul {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More information" on:click={() => toggleDescription('constants')}>
+          <button title="More information" onclick={() => toggleDescription('constants')}>
             <Icon icon="info" size="14" />
             <span class="label">Show more information about Constants tool</span>
           </button>
         </li>
         <li>
-          <button title="{preferencesState.header.includes('constants') ? 'Unpin Constants from' : 'Pin Constants to'} header menu" on:click={() => pin('constants')}>
+          <button title="{preferencesState.header.includes('constants') ? 'Unpin Constants from' : 'Pin Constants to'} header menu" onclick={() => pin('constants')}>
             <Icon icon={preferencesState.header.includes('constants') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{preferencesState.header.includes('constants') ? 'Unpin Constants from' : 'Pin Constants to'} header menu</span>
           </button>
@@ -529,13 +531,13 @@ footer ul {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More information" on:click={() => toggleDescription('liquid')}>
+          <button title="More information" onclick={() => toggleDescription('liquid')}>
             <Icon icon="info" size="14" />
             <span class="label">Show more information about Liquid Evaluator</span>
           </button>
         </li>
         <li>
-          <button title="{preferencesState.header.includes('liquid') ? 'Unpin Liquid Evaluator from' : 'Pin Liquid Evaluator to'} header menu" on:click={() => pin('liquid')}>
+          <button title="{preferencesState.header.includes('liquid') ? 'Unpin Liquid Evaluator from' : 'Pin Liquid Evaluator to'} header menu" onclick={() => pin('liquid')}>
             <Icon icon={preferencesState.header.includes('liquid') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{preferencesState.header.includes('liquid') ? 'Unpin Liquid Evaluator from' : 'Pin Liquid Evaluator to'} header menu</span>
           </button>
@@ -559,13 +561,13 @@ footer ul {
       </ul>
       <ul class="actions">
         <li>
-          <button title="More information" on:click={() => toggleDescription('graphiql')}>
+          <button title="More information" onclick={() => toggleDescription('graphiql')}>
             <Icon icon="info" size="14" />
             <span class="label">Show more information about GraphiQL</span>
           </button>
         </li>
         <li>
-          <button title="{preferencesState.header.includes('graphiql') ? 'Unpin GraphiQL from' : 'Pin GraphiQL to'} header menu" on:click={() => pin('graphiql')}>
+          <button title="{preferencesState.header.includes('graphiql') ? 'Unpin GraphiQL from' : 'Pin GraphiQL to'} header menu" onclick={() => pin('graphiql')}>
             <Icon icon={preferencesState.header.includes('graphiql') ? 'pinFilled' : 'pin'} size="14" />
             <span class="label">{preferencesState.header.includes('graphiql') ? 'Unpin GraphiQL from' : 'Pin GraphiQL to'} header menu</span>
           </button>
@@ -576,7 +578,7 @@ footer ul {
     <li class="early">
       <ul>
         <li>
-          <button title="{preferencesState.header.includes('logsv2') ? 'Unpin Logs v2 from' : 'Pin Logs v2 to'} header menu" on:click={() => pin('logsv2')}>
+          <button title="{preferencesState.header.includes('logsv2') ? 'Unpin Logs v2 from' : 'Pin Logs v2 to'} header menu" onclick={() => pin('logsv2')}>
             <Icon icon={preferencesState.header.includes('logsv2') ? 'pinFilled' : 'pin'} size="12" />
             <span class="label">{preferencesState.header.includes('logsv2') ? 'Unpin Logs v2 from' : 'Pin Logs v2 to'} header menu</span>
           </button>
@@ -588,7 +590,7 @@ footer ul {
           </a>
         </li>
         <li>
-          <button title="{preferencesState.header.includes('network') ? 'Unpin Network Logs from' : 'Pin Network Logs to'} header menu" on:click={() => pin('network')}>
+          <button title="{preferencesState.header.includes('network') ? 'Unpin Network Logs from' : 'Pin Network Logs to'} header menu" onclick={() => pin('network')}>
             <Icon icon={preferencesState.header.includes('network') ? 'pinFilled' : 'pin'} size="12" />
             <span class="label">{preferencesState.header.includes('network') ? 'Unpin Network Logs from' : 'Pin Network Logs to'} header menu</span>
           </button>
@@ -613,8 +615,8 @@ footer ul {
 <footer>
   <div>
     {#await getLatestPosCliVersion() then latest}
-      {#if latest.version !== connectionState.online.version}
-        <button transition:fade on:click={handleUpdate} title="Update to pos-cli version {latest.version}" class="update">
+      {#if connectionState.online?.version && latest.version !== connectionState.online.version}
+        <button transition:fade onclick={handleUpdate} title="Update to pos-cli version {latest.version}" class="update">
           <Icon icon="arrowTripleUp" />
           <span>Update available</span>
         </button>

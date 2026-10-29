@@ -98,3 +98,56 @@ test('showing a constant name with markup as text in the notification', async ({
   await page.locator(`li:has-text("${name}")`).getByRole('button', { name: 'Delete constant' }).click();
   await expect(page.getByText(`Constant ${name} deleted`)).toBeVisible();
 });
+
+
+// purpose:   makes the instance refuse the constant mutations, the way it answers a GraphQL error
+// ------------------------------------------------------------------------
+const refuseMutations = async (page) => {
+  await page.route('**/api/graph', async route => {
+    const query = route.request().postData() ?? '';
+
+    if(query.includes('constant_set(') || query.includes('constant_unset(')){
+      await route.fulfill({ json: { errors: [{ message: 'refused' }], data: null } });
+    } else if(query.includes('constants(')){
+      await route.fulfill({ json: { data: { constants: { results: [{ name: 'REFUSED_CONSTANT', value: 'REFUSED_VALUE', updated_at: new Date().toISOString() }] } } } });
+    } else {
+      await route.fallback();
+    }
+  });
+};
+
+
+test('telling that a constant could not be created', async ({ page }) => {
+  await refuseMutations(page);
+  await page.goto(url);
+
+  await page.getByLabel('Name').fill('TEST_CONSTANT_REFUSED');
+  await page.getByLabel('Value').fill('TEST_VALUE_REFUSED');
+  await page.getByRole('button', { name: 'Add' }).click();
+
+  await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Failed to create TEST_CONSTANT_REFUSED constant');
+});
+
+
+test('telling that a constant could not be updated', async ({ page }) => {
+  await refuseMutations(page);
+  await page.goto(url);
+
+  await page.getByRole('button', { name: 'Show value' }).click();
+  await page.getByLabel('REFUSED_CONSTANT').fill('CHANGED_VALUE');
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Failed to update REFUSED_CONSTANT constant');
+});
+
+
+test('telling that a constant could not be deleted', async ({ page }) => {
+  page.on('dialog', dialog => dialog.accept());
+  await refuseMutations(page);
+  await page.goto(url);
+
+  await page.getByRole('button', { name: 'Delete constant' }).click();
+
+  await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Failed to delete REFUSED_CONSTANT constant');
+  await expect(page.getByLabel('REFUSED_CONSTANT')).toBeVisible();
+});
