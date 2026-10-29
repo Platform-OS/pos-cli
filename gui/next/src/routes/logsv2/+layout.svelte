@@ -6,6 +6,7 @@
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { connectionState } from '#lib/state/connection.svelte.js';
+import { localDay } from '#lib/api/timeRange.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import Number from '#lib/ui/forms/Number.svelte';
@@ -27,7 +28,7 @@ const today = new Date();
 const dayInterval = 1000 * 60 * 60 * 24;
 const minAllowedDate = new Date(today -  dayInterval * 3);
 // the date the form shows when the url names none (string, YYYY-MM-DD)
-const defaultStartTime = today.toISOString().split('T')[0];
+const defaultStartTime = localDay(today);
 // the filters in the form, following the url until they are edited
 let startTime = $derived(data.filters.start_time || defaultStartTime);
 let message = $derived(data.filters.message);
@@ -291,8 +292,8 @@ table {
             type="date"
             name="start_time"
             id="start_time"
-            min={minAllowedDate.toISOString().split('T')[0]}
-            max={today.toISOString().split('T')[0]}
+            min={localDay(minAllowedDate)}
+            max={localDay(today)}
             bind:value={startTime}
             oninput={() => form.requestSubmit()}
           >

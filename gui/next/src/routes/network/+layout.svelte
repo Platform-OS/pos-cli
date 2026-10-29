@@ -7,6 +7,7 @@ import { tick } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { connectionState } from '#lib/state/connection.svelte.js';
+import { localDay } from '#lib/api/timeRange.js';
 import { clickOutside } from '#lib/helpers/clickOutside.js';
 
 import Icon from '#lib/ui/Icon.svelte';
@@ -537,9 +538,9 @@ table {
           type="date"
           name="start_time"
           id="start_time"
-          min={minAllowedDate.toISOString().split('T')[0]}
-          max={today.toISOString().split('T')[0]}
-          value={page.url.searchParams.get('start_time') || today.toISOString().split('T')[0]}
+          min={localDay(minAllowedDate)}
+          max={localDay(today)}
+          value={page.url.searchParams.get('start_time') || localDay(today)}
           oninput={() => form.requestSubmit()}
         >
       </fieldset>

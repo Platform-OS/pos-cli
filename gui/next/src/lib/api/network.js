@@ -5,6 +5,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { serverUrl } from '#lib/api/address.js';
+import { timeRange } from '#lib/api/timeRange.js';
 
 
 
@@ -59,18 +60,8 @@ const network = {
     // read: the status codes are numbers, the sorting one of the known columns and directions
     const aggregated = filters.aggregate === 'http_request_path';
 
-    let start_time = 0;
-    let end_time = 0;
-
-    // parse the dates from YYYY-MM-DD
-    if(filters.start_time){
-      // we need end-of-day
-      let date = new Date(filters.start_time);
-      date.setHours(23, 59, 59);
-
-      end_time = Math.floor(date.getTime() * 1000);
-      start_time = Math.floor(date.getTime() - 24 * 60 * 60 * 1000 * 3);
-    }
+    // the three days up to the end of the chosen one
+    const { start_time, end_time } = timeRange(filters.start_time);
 
     // parse status codes
     const statusCodes = (filters.lb_status_codes ?? '').split(',').filter(code => /^\d{3}$/.test(code));

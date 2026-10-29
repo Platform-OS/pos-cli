@@ -15,6 +15,8 @@
 
 ### Fixes
 
+* **The admin GUI's Logs v2 and Network pages searched from January 1970.** The time limit sent the end of the range in microseconds, which is what the instance searches by, and the start in milliseconds, so every search with a date reached back to the epoch instead of three days. Both ends are in microseconds now. The chosen day was also read as UTC midnight before moving to the end of the local day, which lands on the day before anywhere west of UTC, and the date input offered the UTC day as today, which is yesterday for an hour or two after midnight in Europe; both now use the browser's own time zone. A date in the url that is not a day searches without a limit, as no date does, instead of sending an invalid one.
+
 * **The admin GUI's Constants page said nothing when the instance refused a change.** Creating, updating or deleting a constant that the instance refused read the constant's name from the refused answer, which has none, so the page stopped with an error and showed no notification; the delete failure was also reported as a success. Each now shows an error naming the constant.
 
 * **The admin GUI's update notice could fail to appear, or fail silently.** The home page compared the newest pos-cli version on npm with the running one before the instance had answered with it, so when npm answered first the "Update available" button never showed. And when the browser refused to copy the update command, the click failed without a word; it now shows an error with the command to run.
