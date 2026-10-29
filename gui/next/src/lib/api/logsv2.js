@@ -5,6 +5,7 @@
 // imports
 // ------------------------------------------------------------------------
 import { serverUrl } from '#lib/api/address.js';
+import { timeRange } from '#lib/api/timeRange.js';
 
 
 
@@ -61,18 +62,8 @@ const logs = {
     const size = 20;
     const page = parseInt(filters.page) > 0 ? parseInt(filters.page) - 1 : 0;
 
-    let start_time = 0;
-    let end_time = 0;
-
-    // parse the dates from YYYY-MM-DD
-    if(filters.start_time){
-      // we need end-of-day
-      let date = new Date(filters.start_time);
-      date.setHours(23, 59, 59);
-
-      end_time = Math.floor(date.getTime() * 1000);
-      start_time = Math.floor(date.getTime() - 24 * 60 * 60 * 1000 * 3);
-    }
+    // the three days up to the end of the chosen one
+    const { start_time, end_time } = timeRange(filters.start_time);
 
     let sql = 'SELECT * FROM logs';
 
@@ -86,8 +77,8 @@ const logs = {
         sql: sql,
         from: page * size,
         size: size,
-        start_time: start_time || 0,
-        end_time: end_time || 0,
+        start_time: start_time,
+        end_time: end_time,
         track_total_hits: true
       }
     }, options);
