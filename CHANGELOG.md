@@ -15,6 +15,8 @@
 
 ### Fixes
 
+* **The admin GUI's Logs and Network pages could break on what an earlier visit left in the browser's storage.** The pinned logs and the Network presets were read from `localStorage` with `JSON.parse` and used as they came, so a value that did not parse stopped the page from pinning logs or opening its presets, and one that parsed to something other than a list broke pinning the same way. Both are now read the way the other saved preferences are: a value that cannot be read, or is not a list, is set aside for the defaults. The Database page also stopped saving whether its table list is hidden, which nothing ever read back.
+
 * **The admin GUI showed an empty list when the instance refused the query for it.** A query answered with GraphQL errors left the Database tables and records, the Users list and details, the Background Jobs list and details and the Constants list empty, which reads exactly like "nothing here"; the Database page could also stop with an error. Each now shows an error with the instance's message. A request that never reached the instance still shows only the connection indicator.
 
 * **The admin GUI's Logs page could show the same log twice.** It asks for newer logs every 3 seconds, and when the instance took longer than that to answer, the next request asked from the same last log and both answers were added. A request now waits for the previous one.

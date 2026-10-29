@@ -143,3 +143,45 @@ test('showing each log once when the instance answers slower than the page polls
   await expect.poll(() => askedAfterSecond, { timeout: 15000 }).toBe(true);
   await expect(page.locator('td.message').getByText('the log that answered slowly')).toHaveCount(1);
 });
+
+
+// what an earlier version, another tab or a hand edit may have left in localStorage
+const storing = (page, values) => page.addInitScript(values => {
+  for(const [key, value] of Object.entries(values)){
+    localStorage.setItem(key, value);
+  }
+}, values);
+
+const storedLog = { id: '1790000000.000003', created_at: new Date().toISOString(), error_type: 'info', message: 'a log to pin', data: null };
+
+
+test('pinning a log when the pinned logs stored earlier are not readable', async ({ page }) => {
+  await storing(page, { pinnedLogs: '[{"id": "cut off', pinnedPanel: 'true' });
+  await page.route(requestUrl => requestUrl.pathname === '/api/logs', route => route.fulfill({ json: { logs: [storedLog] } }));
+
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Pin this log' }).first().click();
+
+  await expect(page.getByRole('button', { name: 'Remove log from pinned panel' })).toHaveCount(1);
+});
+
+
+test('pinning a log when what is stored is not a list of logs', async ({ page }) => {
+  await storing(page, { pinnedLogs: '{"id": "1"}', pinnedPanel: 'true' });
+  await page.route(requestUrl => requestUrl.pathname === '/api/logs', route => route.fulfill({ json: { logs: [storedLog] } }));
+
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Pin this log' }).first().click();
+
+  await expect(page.getByRole('button', { name: 'Remove log from pinned panel' })).toHaveCount(1);
+});
+
+
+test('restoring the pinned logs and the panel after a reload', async ({ page }) => {
+  await storing(page, { pinnedLogs: JSON.stringify([storedLog]), pinnedPanel: 'true' });
+  await page.route(requestUrl => requestUrl.pathname === '/api/logs', route => route.fulfill({ json: { logs: [] } }));
+
+  await page.goto(url);
+
+  await expect(page.getByRole('button', { name: 'Remove log from pinned panel' })).toHaveCount(1);
+});

@@ -102,3 +102,17 @@ test('keeping presets after a reload', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Oldest first' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Slowest requests', exact: true })).not.toBeAttached();
 });
+
+
+test.describe('when the presets stored earlier cannot be used', () => {
+  for(const [what, value] of [['not readable', '[{"url": "cut off'], ['not a list', '{"url": "order=DESC", "name": "One preset"}']]){
+    test(`showing the default presets when what is stored is ${what}`, async ({ page }) => {
+      await page.addInitScript(value => localStorage.setItem('posNetworkLogsPresets', value), value);
+
+      await page.goto(url);
+      await page.getByRole('button', { name: 'Choose filters preset'}).click();
+
+      await expect(page.getByRole('link', { name: 'Aggregated slowest requests' })).toBeVisible();
+    });
+  }
+});

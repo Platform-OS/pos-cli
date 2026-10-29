@@ -5,6 +5,8 @@
 // ------------------------------------------------------------------------
 import { onNavigate } from '$app/navigation';
 
+import { stored } from '#lib/state/storage.js';
+
 import Icon from '#lib/ui/Icon.svelte';
 
 
@@ -18,8 +20,10 @@ let {
 let container = $state();
 // input with name for new presets to save (dom node)
 let createPresetNameInput = $state();
+// presets saved earlier, if what is stored is a list (array of objects or null)
+const savedPresets = stored('posNetworkLogsPresets', null);
 // presets list containing 'url' and 'name' for each preset (array of objects)
-let presets = $state((localStorage.posNetworkLogsPresets && JSON.parse(localStorage.posNetworkLogsPresets)) || [{
+let presets = $state(Array.isArray(savedPresets) ? savedPresets : [{
   url: "order_by=target_processing_time&order=DESC",
   name: "Slowest requests"
 },

@@ -9,6 +9,7 @@ import { browser } from '$app/environment';
 import { connectionState } from '#lib/state/connection.svelte.js';
 import { logsState } from '#lib/state/logs.svelte.js';
 import { logs } from '#lib/api/logs';
+import { stored } from '#lib/state/storage.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import Aside from '#lib/ui/Aside.svelte';
@@ -123,12 +124,14 @@ $effect(() => {
 });
 
 
-// purpose:		  saves the log in localStorage for future use
-// attributes:	log data you want to save (object)
+// purpose:		  restores the pinned logs and the panel state saved in localStorage
+//				  (a value that is not readable, or not a list of logs, is left out)
 // ------------------------------------------------------------------------
 const updatePinnedState = () => {
-  pinnedPanel = localStorage.pinnedPanel === 'true' ? true : false;
-  pinned = localStorage.pinnedLogs ? JSON.parse(localStorage.pinnedLogs) : [];
+  pinnedPanel = stored('pinnedPanel', false) === true;
+
+  const storedPinned = stored('pinnedLogs', []);
+  pinned = Array.isArray(storedPinned) ? storedPinned.filter(log => log && typeof log === 'object') : [];
 };
 
 const pin = (log) => {
