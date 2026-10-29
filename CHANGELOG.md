@@ -15,6 +15,10 @@
 
 ### Fixes
 
+* **The admin GUI's Constants page said nothing when the instance refused a change.** Creating, updating or deleting a constant that the instance refused read the constant's name from the refused answer, which has none, so the page stopped with an error and showed no notification; the delete failure was also reported as a success. Each now shows an error naming the constant.
+
+* **The admin GUI's update notice could fail to appear, or fail silently.** The home page compared the newest pos-cli version on npm with the running one before the instance had answered with it, so when npm answered first the "Update available" button never showed. And when the browser refused to copy the update command, the click failed without a word; it now shows an error with the command to run.
+
 * **The admin GUI's Users list could show the users from before a filter was applied.** The list was loaded once when the page opened and again after each filter, and whichever answer arrived last was shown. The list and the user details are now loaded by SvelteKit `load` functions from the url, which apply only the latest navigation; opening a user no longer loads the list again.
 
 * **The admin GUI's Database page could show records sorted, filtered or paged by an earlier choice than the one on screen.** Each change to the sorting, the filter, the page or the deleted switch sent its own request and whichever answer arrived last was shown, so changing the sort field and then the order quickly could leave the list in the first order — measured, about 3 times in 10. The view now lives in the url (`?sort_by=id&sort_order=ASC&page=2…`) and the records are loaded by the page's SvelteKit `load` function, which applies only the latest navigation. That also makes a filtered or sorted view something you can reload, bookmark or go back to. The values read from the url are checked before they reach the GraphQL query, since a link can carry anything; one that is not valid falls back to the default view.
