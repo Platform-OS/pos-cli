@@ -7,7 +7,7 @@ import Gateway from '../lib/proxy.js';
 import { fetchSettings } from '../lib/settings.js';
 import transform from '../lib/data/uploadFiles.js';
 import isValidJSON from '../lib/data/isValidJSON.js';
-import waitForStatus from '../lib/data/waitForStatus.js';
+import waitForStatus, { stoppedReason } from '../lib/data/waitForStatus.js';
 import { uploadFile } from '../lib/s3UploadFile.js';
 import { presignUrl } from '../lib/presignUrl.js';
 import logger from '../lib/logger.js';
@@ -64,7 +64,7 @@ const dataImport = async (filename, rawIds, isZipFile) => {
         .catch((error) => {
           logger.Debug(error);
           spinner.fail('Import failed');
-          logger.Error(`Unable to import data file. Error: ${error.error}`);
+          logger.Error(stoppedReason(error) ? `Import stopped: ${stoppedReason(error)}` : `Unable to import data file. Error: ${error.error}`);
         });
     })
     .catch({ statusCode: 404 }, () => {

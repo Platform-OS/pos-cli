@@ -5,7 +5,7 @@ import { program } from '../lib/program.js';
 import Gateway from '../lib/proxy.js';
 import { fetchSettings } from '../lib/settings.js';
 import fetchFiles from '../lib/data/fetchFiles.js';
-import waitForStatus from '../lib/data/waitForStatus.js';
+import waitForStatus, { stoppedReason } from '../lib/data/waitForStatus.js';
 import downloadFile from '../lib/downloadFile.js';
 import logger from '../lib/logger.js';
 import report from '../lib/logger/report.js';
@@ -106,6 +106,7 @@ program
           .catch((error) => {
             logger.Debug(error);
             spinner.fail('Export failed');
+            if (stoppedReason(error)) logger.Error(`Export stopped: ${stoppedReason(error)}`);
           });
       })
       .catch({ statusCode: 404 }, () => {

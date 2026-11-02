@@ -16,7 +16,7 @@ vi.mock('#lib/logger.js', () => ({
 }));
 
 import isValidJSON from '#lib/data/isValidJSON.js';
-import waitForStatus from '#lib/data/waitForStatus.js';
+import waitForStatus, { stoppedReason } from '#lib/data/waitForStatus.js';
 import logger from '#lib/logger.js';
 
 describe('isValidJSON', () => {
@@ -161,6 +161,23 @@ describe('waitForStatus', () => {
     await vi.advanceTimersByTimeAsync(1000);
 
     await expect(promise).rejects.toEqual({ status: 'failed' });
+  });
+
+  // a job stopped from the admin GUI's background jobs ends as stopped, never to move again
+  test('rejects when status is stopped', async () => {
+    const stopped = { status: 'stopped', error: 'Background job abc stopped with admin_background_job_stop' };
+    const statusCheck = vi.fn()
+      .mockResolvedValueOnce({ status: 'pending' })
+      .mockResolvedValueOnce(stopped);
+
+    const promise = waitForStatus(statusCheck, ['pending'], 'done', 1000);
+    promise.catch(() => {});
+
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(promise).rejects.toEqual(stopped);
+    expect(statusCheck).toHaveBeenCalledTimes(2);
   });
 
   test('calls callback on each status check', async () => {
@@ -344,5 +361,22 @@ describe('waitForStatus', () => {
     const result = await promise;
     expect(result).toEqual({ status: 'done' });
     expect(statusCheck).toHaveBeenCalledTimes(2);
+  });
+});
+
+
+describe('stoppedReason', () => {
+  test('reads the reason of a stopped job, whichever shape its error has', () => {
+    const reason = 'Background job abc stopped with admin_background_job_stop';
+
+    expect(stoppedReason({ status: 'stopped', error: reason })).toBe(reason);
+    expect(stoppedReason({ status: 'stopped', error: { error: reason, details: {} } })).toBe(reason);
+    expect(stoppedReason({ status: 'stopped' })).toBe('its background job was stopped');
+  });
+
+  test('is null for any job that did not stop', () => {
+    expect(stoppedReason({ status: 'failed', error: 'boom' })).toBeNull();
+    expect(stoppedReason(new Error('network'))).toBeNull();
+    expect(stoppedReason(undefined)).toBeNull();
   });
 });

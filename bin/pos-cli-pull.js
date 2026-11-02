@@ -5,7 +5,7 @@ import Gateway from '../lib/proxy.js';
 import logger from '../lib/logger.js';
 import { fetchSettings } from '../lib/settings.js';
 import downloadFile from '../lib/downloadFile.js';
-import waitForStatus from '../lib/data/waitForStatus.js';
+import waitForStatus, { stoppedReason } from '../lib/data/waitForStatus.js';
 
 import ora from '../lib/ora.js';
 
@@ -30,6 +30,7 @@ program
           .catch(error => {
             logger.Debug(error);
             spinner.fail('Export failed');
+            if (stoppedReason(error)) logger.Error(`Export stopped: ${stoppedReason(error)}`);
           });
       })
       .catch({ statusCode: 404 }, () => {

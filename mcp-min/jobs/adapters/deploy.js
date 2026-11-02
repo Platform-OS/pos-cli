@@ -12,7 +12,8 @@ const RELEASE_RUNNING = new Set(['ready_for_import', 'in_progress']);
 /** The release itself, ignoring assets: 'running' | 'failed' | 'done'. */
 export function releaseState(status) {
   if (RELEASE_RUNNING.has(status)) return 'running';
-  if (status === 'error') return 'failed';
+  // `stopped`: its job was stopped from the admin GUI's background jobs (admin_background_job_stop)
+  if (status === 'error' || status === 'stopped') return 'failed';
 
   // Anything else is a finished release, as `lib/push.js` also reads it — but an unfamiliar one is
   // worth saying once, because this is the decision the asset upload waits on.

@@ -378,6 +378,28 @@ describe('Dry Run', () => {
     expect(formDataArg['marketplace_builder[dry_run]']).toBe('true');
   });
 
+  // its job was stopped from the admin GUI's background jobs (admin_background_job_stop)
+  test('push() reports a deploy whose job was stopped as a failed deploy', async () => {
+    const fsModule = await import('fs');
+    vi.spyOn(fsModule.default, 'createReadStream').mockReturnValue({ path: './tmp/release.zip' });
+
+    const Gateway = (await import('#lib/proxy.js')).default;
+    vi.spyOn(Gateway.prototype, 'push').mockResolvedValue({ id: 12345, status: 'pending' });
+    vi.spyOn(Gateway.prototype, 'getStatus').mockResolvedValue({
+      status: 'stopped',
+      error: { error: 'Background job abc stopped with admin_background_job_stop', details: {} }
+    });
+    const { default: logger } = await import('#lib/logger.js');
+
+    const { push } = await import('#lib/push.js');
+    // never resolves: in the CLI the error exits the process
+    push({ MARKETPLACE_URL: TEST_URL, MARKETPLACE_TOKEN: TEST_TOKEN, MARKETPLACE_EMAIL: TEST_EMAIL });
+
+    await vi.waitFor(() => expect(logger.Error).toHaveBeenCalledWith(
+      'Deploy stopped: Background job abc stopped with admin_background_job_stop', { exit: true }
+    ));
+  });
+
   test('push() omits marketplace_builder[dry_run] when DRY_RUN is false', async () => {
     const fsModule = await import('fs');
     vi.spyOn(fsModule.default, 'createReadStream').mockReturnValue({ path: './tmp/release.zip' });

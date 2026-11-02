@@ -5,7 +5,7 @@ import Gateway from '../lib/proxy.js';
 import logger from '../lib/logger.js';
 import { fetchSettings } from '../lib/settings.js';
 import downloadFile from '../lib/downloadFile.js';
-import waitForStatus from '../lib/data/waitForStatus.js';
+import waitForStatus, { stoppedReason } from '../lib/data/waitForStatus.js';
 import ora from '../lib/ora.js';
 
 program
@@ -31,7 +31,7 @@ program
       })
       .catch(e => {
         spinner.fail(`Pulling ${module} failed.`);
-        logger.Error(e.message || e.error.error || e.error);
+        logger.Error(stoppedReason(e) ? `Pull stopped: ${stoppedReason(e)}` : (e.message || e.error.error || e.error));
       });
 
   });

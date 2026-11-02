@@ -12,6 +12,7 @@ import Icon from '#lib/ui/Icon.svelte';
 import Number from '#lib/ui/forms/Number.svelte';
 import Retry from '#lib/backgroundJob/Retry.svelte';
 import Delete from '#lib/backgroundJob/Delete.svelte';
+import Stop from '#lib/backgroundJob/Stop.svelte';
 
 
 // properties
@@ -295,23 +296,28 @@ menu :global(button:hover) {
             <td class="id" onmouseleave={() => contextMenu.id = null}>
               <div>
 
-                <button class="button compact more" onclick={() => contextMenu.id = item.id}>
-                  <span class="label">More options</span>
-                  <Icon icon="navigationMenuVertical" size="16" />
-                </button>
+                {#if data.filters.type === 'RUNNING'}
+                  <!-- a running job cannot be deleted, only stopped -->
+                  <Stop id={item.id} onsuccess={reloadJobs} />
+                {:else}
+                  <button class="button compact more" onclick={() => contextMenu.id = item.id}>
+                    <span class="label">More options</span>
+                    <Icon icon="navigationMenuVertical" size="16" />
+                  </button>
 
-                <menu class="content-context" class:active={contextMenu.id === item.id}>
-                  <ul>
-                    {#if item.dead_at}
+                  <menu class="content-context" class:active={contextMenu.id === item.id}>
+                    <ul>
+                      {#if item.dead_at}
+                        <li>
+                          <Retry id={item.id} onsuccess={reloadJobs} />
+                        </li>
+                      {/if}
                       <li>
-                        <Retry id={item.id} onsuccess={reloadJobs} />
+                        <Delete id={item.id} onsuccess={reloadJobs} />
                       </li>
-                    {/if}
-                    <li>
-                      <Delete id={item.id} onsuccess={reloadJobs} />
-                    </li>
-                  </ul>
-                </menu>
+                    </ul>
+                  </menu>
+                {/if}
 
                 <a href="/backgroundJobs/{data.filters.type.toLowerCase()}/{item.id}?{page.url.searchParams.toString()}">
                   {item.source_name || item.id}
