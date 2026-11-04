@@ -976,9 +976,13 @@ It asks which AI tool you use and registers the two local platformOS MCP servers
 | ----------- | --------------------- | ------------------ | ------------ |
 | Claude Code | `.mcp.json`           | `~/.claude.json`   | `mcpServers` |
 | Cursor      | `.cursor/mcp.json`    | `~/.cursor/mcp.json` | `mcpServers` |
-| VS Code     | `.vscode/mcp.json`    | — (see below)      | `servers`    |
-| opencode    | `opencode.json`       | `~/.config/opencode/opencode.json` | `mcp` |
+| VS Code     | `.vscode/mcp.json`    | the installed build's `User/mcp.json` (see below) | `servers` |
+| opencode    | `opencode.json`       | `~/.config/opencode/opencode.json` | `mcp.servers` |
+| pi          | `.pi/mcp.json`        | `~/.pi/agent/mcp.json` | `mcpServers` |
+| Codex       | `.codex/config.toml`  | `~/.codex/config.toml` | `mcp_servers` |
 | Other       | prints the JSON snippet for manual setup | — | — |
+
+Codex is the only one of these whose configuration is **TOML**. pos-cli appends one table per server rather than reparsing the file, so your comments and formatting are never rewritten. It also reads nothing from `.codex/` until the project is marked trusted in your global config, which `pos-cli ai init` offers to do.
 
 Run it from your project root. Existing configuration files are merged, never overwritten — other MCP servers and unrelated settings are preserved, and re-running the command is a no-op. `platformos-cli` is registered with `--profile dev --no-http` (see [Choosing Which Tools Are Exposed](#choosing-which-tools-are-exposed)): the tools a coding agent uses, over stdio only. An entry written by an earlier pos-cli — `"command": "pos-cli-mcp"` with no arguments, or with `--profile dev` alone — is upgraded to that; an entry you have changed in any other way is left exactly as it is, and the command tells you so. To skip the prompt (e.g. in scripts), pass the tool directly:
 
@@ -1004,7 +1008,7 @@ Because the answers are the same for every project, the prompt asks where to reg
     No
 ```
 
-"Yes, for all my projects" writes them to your user configuration instead, so they are available everywhere and stay out of a project file you commit. VS Code is the exception: its user configuration lives at a path that depends on your platform and on which build you have installed, so pos-cli prints the snippet and asks you to run VS Code's own **MCP: Open User Configuration** command rather than guessing the file.
+"Yes, for all my projects" writes them to your user configuration instead, so they are available everywhere and stay out of a project file you commit. VS Code is the exception: its user configuration lives in a per-build directory (`Code`, `Code - Insiders`, `VSCodium`), so pos-cli looks for one that exists under your platform's user-data path and writes there. If it finds none it prints the snippet and asks you to run VS Code's own **MCP: Open User Configuration** command, rather than writing a file no installed build would read.
 
 `--tool` takes the defaults without asking, and the default here is yes, into the project configuration. Use `--docs` to say otherwise:
 
@@ -1018,31 +1022,39 @@ If you script `pos-cli ai init --tool <tool>` and want it to keep writing only t
 
 ##### The platformOS Agent Playbook
 
-Choosing **Claude Code**, **opencode**, **pi** or **Codex** adds one more optional step: installing the **platformOS Agent Playbook** into that tool's own directory in your project. The Playbook is platformOS rules, knowledge files, a coding-agent definition and a diagnostics hook — the platform behaviour that fails silently and that no linter catches, written for an agent to read.
+Every tool but **VS Code** adds one more optional step: installing the **platformOS Agent Playbook** into a directory in your project. The Playbook is platformOS rules, knowledge files, a coding-agent definition and a diagnostics hook — the platform behaviour that fails silently and that no linter catches, written for an agent to read.
 
-There is one archive per tool, because the layout belongs to the tool. All four carry the same platformOS knowledge, compiled from the same source:
+There is one archive per tool, because the layout belongs to the tool. They all carry the same platformOS knowledge, compiled from the same source:
 
 | Tool | Installs into | Archive |
 |---|---|---|
 | Claude Code | `.claude/` | `platformos-agent-playbook.zip` |
+| Cursor | `.cursor/` | `platformos-agent-playbook-cursor.zip` |
 | opencode | `.opencode/` | `platformos-agent-playbook-opencode.zip` |
 | pi | `.pi/` | `platformos-agent-playbook-pi.zip` |
 | Codex | `.codex/` | `platformos-agent-playbook-codex.zip` |
+| Other | `platformos-playbook/` | `platformos-agent-playbook-portable.zip` |
 
-All four are published under `https://documentation.platformos.com/assets/`.
+They are all published under `https://documentation.platformos.com/assets/`.
 
 What differs is the wiring, because the tools provide different mechanisms:
 
 - **Claude Code** reads per-directory rules natively: a rule file carrying a `paths:` field loads only when you open a file it matches, and a `PostToolUse` hook attaches the documented platformOS claim to a validation finding.
+- **Cursor** also reads them natively: a `.cursor/rules/*.mdc` file carrying a `globs:` field is attached when a matching file is in context. It has no project-level default agent, so the coding agent's instructions ship as an always-applied rule instead, and no diagnostics hook — Cursor's hook mechanism is not documented.
 - **opencode** and **pi** have neither, so their archives ship a small plugin that reimplements both on the tool's own hooks — it watches which file each tool call touched, delivers the matching rule once per session, and explains a `validate_code` finding from the same table. Both plugins share one delivery module, so they cannot drift apart.
 - **Codex** has no lazy per-directory mechanism at all: it builds its instruction chain once at startup from the project root down to the working directory, and a nested `AGENTS.md` is read only when Codex is *started* in that directory. Its rules therefore ship as files, with an index in `AGENTS.md` telling the agent which one to read before working in a given directory.
+- **Other** gets the portable archive, which assumes no mechanism whatsoever. It unpacks to `platformos-playbook/` — a directory of its own, so nothing of yours is overwritten — and its `README.md` says how to point your tool at it. Wiring it up is manual, which is the honest position for a tool pos-cli knows nothing about.
+
+**VS Code** gets no Playbook. Copilot does have native path-scoped instructions, but VS Code runs two agent harnesses with different support for them, so there is no one layout that works.
 
 <!-- -->
 
     pos-cli ai init --tool claude   --agent-playbook     # install it without being asked
+    pos-cli ai init --tool cursor   --agent-playbook
     pos-cli ai init --tool opencode --agent-playbook
     pos-cli ai init --tool pi       --agent-playbook
     pos-cli ai init --tool codex    --agent-playbook
+    pos-cli ai init --tool other    --agent-playbook     # the portable archive
     pos-cli ai init --tool claude   --no-agent-playbook  # never install it, never ask
 
 With neither flag, the question is asked only when the run is interactive. Naming `--tool` means "do not ask me", so a scripted run installs the Playbook only if it also passes `--agent-playbook`.
@@ -1054,7 +1066,7 @@ Two things it will not do:
 
 Every entry in the archive is checked before anything is written: a path that is absolute, that carries a Windows drive, or that climbs out of the one directory the archive is allowed to write rejects the whole archive. The paths inside the archive's manifest are held to the same rule.
 
-The Playbook is installed **before** the MCP servers are registered, and that order matters: pi and Codex keep their MCP configuration *inside* the directory the Playbook unpacks to (`.pi/mcp.json`, `.codex/config.toml`). Writing the configuration first would create that directory, and the Playbook — which never touches a directory that already exists — would then decline on every fresh project while reporting success.
+The Playbook is installed **before** the MCP servers are registered, and that order matters: Cursor, pi and Codex keep their MCP configuration *inside* the directory the Playbook unpacks to (`.cursor/mcp.json`, `.pi/mcp.json`, `.codex/config.toml`). Writing the configuration first would create that directory, and the Playbook — which never touches a directory that already exists — would then decline on every fresh project while reporting success.
 
 ##### opencode configuration formats
 

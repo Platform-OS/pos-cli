@@ -314,10 +314,21 @@ describe('ai init', () => {
     const atHome = (...segments) => path.join(homeDir(), ...segments);
     const readHome = (...segments) => JSON.parse(fs.readFileSync(atHome(...segments), 'utf8'));
 
-    // configHome() reads this at call time, so a value on the developer's machine would send
-    // the opencode global write outside the temporary home this suite redirects to.
-    beforeEach(() => vi.stubEnv('XDG_CONFIG_HOME', undefined));
+    // Both are read at call time, so a value on the developer's machine would send the opencode
+    // or VS Code global write outside the temporary home this suite redirects to.
+    beforeEach(() => {
+      vi.stubEnv('XDG_CONFIG_HOME', undefined);
+      vi.stubEnv('APPDATA', undefined);
+    });
     afterEach(() => vi.unstubAllEnvs());
+
+    // Where this platform's VS Code builds live, under the temporary home.
+    const vscodeUserDir = (build) =>
+      process.platform === 'win32'
+        ? atHome('AppData', 'Roaming', build, 'User')
+        : process.platform === 'darwin'
+          ? atHome('Library', 'Application Support', build, 'User')
+          : atHome('.config', build, 'User');
 
     test('the published endpoints are the two documented ones, over https', () => {
       expect(DOCS_SERVERS).toEqual({ [LIQUID]: { url: LIQUID_URL }, [GRAPHQL]: { url: GRAPHQL_URL } });
@@ -380,9 +391,9 @@ describe('ai init', () => {
       });
     });
 
-    // VS Code keeps its user configuration under a path that varies by platform and by build
-    // (Code, Insiders, VSCodium). Guessing it would write a file nothing reads.
-    test('vscode - docs global writes nothing outside the project and prints what to paste', async () => {
+    // VS Code's user directory is per-build, so pos-cli searches for one rather than guessing.
+    // With no build installed there is nothing to write, and the servers are printed instead.
+    test('vscode - docs global with no build installed writes nothing outside the project', async () => {
       await init({ tool: 'vscode', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
 
       expect(fs.existsSync(homeDir())).toBe(false);
@@ -391,6 +402,36 @@ describe('ai init', () => {
       expect(JSON.parse(vi.mocked(logger.Log).mock.calls.at(-1)[0])).toEqual({
         servers: { [LIQUID]: { type: 'http', url: LIQUID_URL }, [GRAPHQL]: { type: 'http', url: GRAPHQL_URL } }
       });
+    });
+
+    test('vscode - docs global writes into the build directory that exists', async () => {
+      fs.mkdirSync(vscodeUserDir('Code'), { recursive: true });
+
+      await init({ tool: 'vscode', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
+
+      const global = JSON.parse(fs.readFileSync(path.join(vscodeUserDir('Code'), 'mcp.json'), 'utf8'));
+      expect(global.servers).toEqual({
+        [LIQUID]: { type: 'http', url: LIQUID_URL },
+        [GRAPHQL]: { type: 'http', url: GRAPHQL_URL }
+      });
+      expect(logger.Warn).not.toHaveBeenCalled();
+    });
+
+    // Only a directory that is already there: writing a path no installed build reads would look
+    // like a success and do nothing.
+    test('vscode - docs global never creates a build directory of its own', async () => {
+      await init({ tool: 'vscode', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
+
+      expect(fs.existsSync(vscodeUserDir('Code'))).toBe(false);
+    });
+
+    test('vscode - docs global finds an Insiders or VSCodium directory too', async () => {
+      fs.mkdirSync(vscodeUserDir('VSCodium'), { recursive: true });
+
+      await init({ tool: 'vscode', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
+
+      const global = JSON.parse(fs.readFileSync(path.join(vscodeUserDir('VSCodium'), 'mcp.json'), 'utf8'));
+      expect(Object.keys(global.servers)).toEqual([LIQUID, GRAPHQL]);
     });
 
     test('vscode - docs project still writes them into .vscode/mcp.json', async () => {
@@ -659,17 +700,69 @@ describe('ai init', () => {
       expect(installAgentPlaybook).not.toHaveBeenCalled();
     });
 
-    test.each(["cursor", "vscode"])(
-      "is never offered for %s, even interactively",
-      async (toolId) => {
-        select.mockResolvedValueOnce(toolId).mockResolvedValueOnce("none");
+    // VS Code has native path-scoped instructions of its own, but under two different agent
+    // harnesses with different support, so no archive is offered for it yet.
+    test("is never offered for vscode, even interactively", async () => {
+      select.mockResolvedValueOnce("vscode").mockResolvedValueOnce("none");
 
-        await init({ rootPath: getTmpDir() });
+      await init({ rootPath: getTmpDir() });
 
-        expect(installAgentPlaybook).not.toHaveBeenCalled();
-        expect(select).toHaveBeenCalledTimes(2);
-      }
-    );
+      expect(installAgentPlaybook).not.toHaveBeenCalled();
+      expect(select).toHaveBeenCalledTimes(2);
+    });
+
+    // Cursor attaches a `.cursor/rules/*.mdc` rule itself when a matching file is in context, so
+    // its archive needs no plugin and the Playbook is worth offering.
+    test("cursor is offered its own Playbook, and installs .cursor/", async () => {
+      select.mockResolvedValueOnce("cursor").mockResolvedValueOnce("none").mockResolvedValueOnce(true);
+
+      await init({ rootPath: getTmpDir() });
+
+      expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir(), playbook: PLAYBOOKS.cursor });
+      expect(select).toHaveBeenCalledTimes(3);
+    });
+
+    // Cursor's MCP file lives INSIDE the Playbook's directory, as pi's and Codex's do, so the
+    // Playbook has to be installed before the servers are written or it declines on every fresh
+    // project while reporting success.
+    test("cursor - the Playbook is installed before .cursor/mcp.json is written", async () => {
+      const order = [];
+      installAgentPlaybook.mockImplementation(async ({ rootPath }) => {
+        order.push(`playbook:${fs.existsSync(path.join(rootPath, '.cursor')) ? 'dir-exists' : 'fresh'}`);
+        return { status: 'installed', files: 26 };
+      });
+
+      await init({ tool: 'cursor', docs: 'none', agentPlaybook: true, rootPath: getTmpDir() });
+
+      expect(order).toEqual(['playbook:fresh']);
+      expect(readJson('.cursor', 'mcp.json').mcpServers[NAME]).toEqual(PLATFORMOS);
+    });
+
+    // The portable archive assumes no mechanism at all, which is what makes it the right one for
+    // a tool pos-cli has no wiring for.
+    test("Other is offered the portable Playbook", async () => {
+      select.mockResolvedValueOnce("other").mockResolvedValueOnce(true);
+
+      await init({ rootPath: getTmpDir() });
+
+      expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir(), playbook: PLAYBOOKS.portable });
+    });
+
+    // Nothing reads the portable directory on its own, so an install that does not say so looks
+    // exactly like one that worked. Same reason pi's trust note exists.
+    test("Other is told the portable Playbook still has to be wired up", async () => {
+      await init({ tool: "other", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
+
+      expect(logger.Info).toHaveBeenCalledWith(
+        expect.stringMatching(/Nothing reads platformos-playbook\/ until you point your tool at it/)
+      );
+    });
+
+    test("pi is still told about its trust gate", async () => {
+      await init({ tool: "pi", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
+
+      expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/^Project trust: pi ignores everything in \.pi\//));
+    });
 
     test("opencode is offered its own Playbook, and installs .opencode/", async () => {
       // tool, docs scope, opencode config form, then the Playbook question
@@ -747,12 +840,21 @@ describe('ai init', () => {
 
     // A flag the user typed is never silently ignored.
     test("--agent-playbook with another tool says why it was skipped", async () => {
-      await init({ tool: "cursor", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
+      await init({ tool: "vscode", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
 
       expect(installAgentPlaybook).not.toHaveBeenCalled();
-      expect(logger.Warn).toHaveBeenCalledWith(
-        expect.stringMatching(/Claude Code and opencode[\s\S]*Cursor reads neither/)
-      );
+      const warning = vi.mocked(logger.Warn).mock.calls.at(-1)[0];
+      expect(warning).toMatch(/VS Code reads none of them/);
+
+      // One readable list however many runners support the Playbook: commas between, "and"
+      // only before the last. Joining them all with " and " is what this pins.
+      const list = /available for (.+?), each in that tool's own/.exec(warning)[1];
+      expect(list.match(/ and /g)).toHaveLength(1);
+      expect(list).toContain(', ');
+      // "Other" is not a tool, and the archive it installs is not "that tool's own directory".
+      expect(list).not.toContain('Other');
+      // The one thing a VS Code user can actually act on.
+      expect(warning).toContain(PLAYBOOKS.portable.url);
     });
 
     test("an existing .claude\/ is left alone, and not asked about", async () => {
@@ -817,12 +919,15 @@ describe('ai init', () => {
     });
 
     // "Other" has no configuration file, so there is nowhere for a scope to apply.
-    test('choosing Other does not ask where to put them', async () => {
-      select.mockResolvedValueOnce('other');
+    test('choosing Other asks only about the portable Playbook, and writes no config', async () => {
+      select.mockResolvedValueOnce('other').mockResolvedValueOnce(false);
 
       await init({ rootPath: getTmpDir(), homePath: homeDir() });
 
-      expect(select).toHaveBeenCalledTimes(1);
+      // The tool, then the Playbook. Never where to put the documentation servers: there is no
+      // file to put them in.
+      expect(select).toHaveBeenCalledTimes(2);
+      expect(select.mock.calls[1][0].message).toMatch(/Agent Playbook/);
       expect(fs.readdirSync(getTmpDir())).toEqual([]);
     });
   });
