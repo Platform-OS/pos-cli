@@ -10,7 +10,9 @@ import { withTmpDir } from '#test/utils/withTmpDir.js';
 const downloadFile = vi.fn();
 vi.mock('#lib/downloadFile.js', () => ({ default: (...args) => downloadFile(...args) }));
 
-const { installAgentPlaybook, isInsidePlaybookDir, PLAYBOOK_DIR } = await import('#lib/agentPlaybook.js');
+const { installAgentPlaybook, isInsidePlaybookDir, readManifest, PLAYBOOKS } = await import('#lib/agentPlaybook.js');
+
+const PLAYBOOK_DIR = PLAYBOOKS.claude.dir;
 
 const getTmpDir = withTmpDir();
 
@@ -80,7 +82,7 @@ describe('isInsidePlaybookDir', () => {
     '.claude\\rules\\x.md',
     './.claude/x'
   ])('accepts %s', (entry) => {
-    expect(isInsidePlaybookDir(entry)).toBe(true);
+    expect(isInsidePlaybookDir(entry, PLAYBOOK_DIR)).toBe(true);
   });
 
   test.each([
@@ -97,7 +99,7 @@ describe('isInsidePlaybookDir', () => {
     [''],
     [null]
   ])('refuses %s', (entry) => {
-    expect(isInsidePlaybookDir(entry)).toBe(false);
+    expect(isInsidePlaybookDir(entry, PLAYBOOK_DIR)).toBe(false);
   });
 });
 
@@ -211,5 +213,145 @@ describe('installAgentPlaybook', () => {
 
     await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow(/404/);
     expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
+  });
+});
+
+describe('per-tool playbooks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('the opencode playbook unpacks into .opencode/', async () => {
+    serves({
+      '.opencode/opencode.json': '{}',
+      '.opencode/agents/platformos-coding-agent.md': 'agent',
+      '.opencode/plugins/platformos.js': 'export default {};'
+    });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode });
+
+    expect(result.status).toBe('installed');
+    expect(fs.existsSync(path.join(getTmpDir(), '.opencode', 'opencode.json'))).toBe(true);
+    expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
+  });
+
+  test('each playbook refuses the other playbook\u2019s entries', async () => {
+    serves({ '.claude/CLAUDE.md': '# platformOS' });
+    await expect(
+      installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode })
+    ).rejects.toThrow(/outside \.opencode\//);
+  });
+
+  test('an existing .opencode/ is never overwritten', async () => {
+    fs.mkdirSync(path.join(getTmpDir(), '.opencode'), { recursive: true });
+    fs.writeFileSync(path.join(getTmpDir(), '.opencode', 'mine.json'), 'keep me');
+    serves({ '.opencode/opencode.json': '{}' });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode });
+
+    expect(result.status).toBe('exists');
+    expect(fs.readFileSync(path.join(getTmpDir(), '.opencode', 'mine.json'), 'utf8')).toBe('keep me');
+    expect(downloadFile).not.toHaveBeenCalled();
+  });
+
+  test('the manifest travels back to the caller', async () => {
+    serves({
+      '.opencode/opencode.json': '{}',
+      '.opencode/playbook.json': JSON.stringify({
+        instructions: ['.opencode/platformos-attitude.md', '.opencode/rules/00-project-rules.md']
+      })
+    });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode });
+
+    expect(result.manifest).toEqual({
+      instructions: ['.opencode/platformos-attitude.md', '.opencode/rules/00-project-rules.md']
+    });
+  });
+
+  test('an archive with no manifest reports none, and still installs', async () => {
+    serves({ '.claude/CLAUDE.md': '# platformOS' });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
+
+    expect(result.status).toBe('installed');
+    expect(result.manifest).toBeNull();
+  });
+});
+
+describe('readManifest', () => {
+  /** Writes a playbook directory holding the given manifest text and reads it back. */
+  const withManifest = (contents) => {
+    const dir = path.join(getTmpDir(), '.opencode');
+    fs.mkdirSync(dir, { recursive: true });
+    if (contents !== null) fs.writeFileSync(path.join(dir, 'playbook.json'), contents);
+    return readManifest(dir, '.opencode');
+  };
+
+  test('reads the instruction list', () => {
+    expect(withManifest(JSON.stringify({ instructions: ['.opencode/a.md'] })))
+      .toEqual({ instructions: ['.opencode/a.md'] });
+  });
+
+  test.each([
+    ['an instruction escaping the playbook directory', { instructions: ['.opencode/../../.ssh/config'] }],
+    ['an absolute instruction', { instructions: ['/etc/passwd'] }],
+    ['an instruction belonging to another tool', { instructions: ['.claude/CLAUDE.md'] }],
+    ['one bad path among good ones', { instructions: ['.opencode/a.md', '../escape.md'] }],
+    ['instructions that are not a list', { instructions: '.opencode/a.md' }],
+    ['an empty list', { instructions: [] }],
+    ['no instructions at all', { other: true }]
+  ])('drops %s', (_name, manifest) => {
+    expect(withManifest(JSON.stringify(manifest))).toBeNull();
+  });
+
+  test('a malformed manifest is not an error', () => {
+    expect(withManifest('{ not json')).toBeNull();
+  });
+
+  test('a missing manifest is not an error', () => {
+    expect(withManifest(null)).toBeNull();
+  });
+
+  /** Writes a manifest plus the files it names, and reads it back. */
+  const withFiles = (manifest, files = {}) => {
+    const dir = path.join(getTmpDir(), '.codex');
+    fs.mkdirSync(dir, { recursive: true });
+    for (const [name, contents] of Object.entries(files)) fs.writeFileSync(path.join(dir, name), contents);
+    fs.writeFileSync(path.join(dir, 'playbook.json'), JSON.stringify(manifest));
+    return readManifest(dir, '.codex');
+  };
+
+  test('reads an agentsFile that the archive actually contains', () => {
+    expect(withFiles({ agentsFile: '.codex/AGENTS.md' }, { 'AGENTS.md': 'x' }))
+      .toEqual({ agentsFile: '.codex/AGENTS.md' });
+  });
+
+  // Named but not shipped: the installer would copy a file that is not there, so the whole
+  // manifest is refused rather than acted on in part.
+  test('drops an agentsFile the archive does not contain', () => {
+    expect(withFiles({ agentsFile: '.codex/AGENTS.md' })).toBeNull();
+  });
+
+  test.each([
+    ['one escaping the playbook directory', '.codex/../../../etc/passwd'],
+    ['an absolute one', '/etc/passwd'],
+    ["another tool's", '.claude/CLAUDE.md']
+  ])('drops %s agentsFile', (_name, agentsFile) => {
+    expect(withFiles({ agentsFile }, { 'AGENTS.md': 'x' })).toBeNull();
+  });
+
+  test('one bad field drops the whole manifest, not just that field', () => {
+    expect(withFiles(
+      { instructions: ['.codex/ok.md'], agentsFile: '../escape.md' },
+      { 'AGENTS.md': 'x', 'ok.md': 'y' }
+    )).toBeNull();
+  });
+
+  test('both fields travel together when both are valid', () => {
+    expect(withFiles(
+      { instructions: ['.codex/ok.md'], agentsFile: '.codex/AGENTS.md' },
+      { 'AGENTS.md': 'x', 'ok.md': 'y' }
+    )).toEqual({ instructions: ['.codex/ok.md'], agentsFile: '.codex/AGENTS.md' });
   });
 });
