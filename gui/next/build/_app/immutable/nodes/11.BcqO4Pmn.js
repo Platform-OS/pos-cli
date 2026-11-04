@@ -1,0 +1,1 @@
+import{O as e,Tt as t,lt as n,rt as r,wt as i}from"../chunks/BJPuX3ME.js";import{t as a}from"../chunks/D_z3ryyL.js";function o(o,s){t(s,!0),e(`2y9is6`,e=>{r(e=>{n.title=`Database${e??``}`},[()=>a.online?.MPKIT_URL?`: `+a.online.MPKIT_URL.replace(`https://`,``):``])}),i()}export{o as component};

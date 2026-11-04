@@ -3,21 +3,27 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { onDestroy } from 'svelte';
 import { quintOut } from 'svelte/easing';
-import { state } from '#lib/state.js';
+import { browser } from '$app/environment';
+import { preferencesState } from '#lib/state/preferences.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// close button url (string)
-export let closeUrl;
-// the panel title (string)
-export let title = '';
+let {
+  // close button url (string)
+  closeUrl,
+  // the panel title, shown as text; pass a snippet when it needs markup (string or snippet)
+  title = '',
+  // the panel content (snippet)
+  children
+} = $props();
 // width of the whole document in pixels (int)
-let windowWidth;
+let windowWidth = $state();
 // if the user is currently resizing the panel (bool)
-let resizing = false;
+let resizing = $state(false);
 
 
 // transition: 	slides from right
@@ -33,7 +39,7 @@ const appear = function(node, {
     css: (t) => {
       const eased = quintOut(t);
 
-      return `min-width: 0; width: calc(${$state.asideWidth || '30vw'} * ${eased});` }
+      return `min-width: 0; width: calc(${preferencesState.asideWidth || '30vw'} * ${eased});` }
   }
 };
 
@@ -54,22 +60,31 @@ const resizingEnd = () => {
   window.removeEventListener('mousemove', resize, false);
   window.removeEventListener('mouseup', resizingEnd, false);
   resizing = false;
-  localStorage.asideWidth = $state.asideWidth;
+  localStorage.asideWidth = preferencesState.asideWidth;
 };
 
+// purpose:   drops the resize listeners if the panel closes while it is being resized
+// ------------------------------------------------------------------------
+onDestroy(() => {
+  if(browser){
+    window.removeEventListener('mousemove', resize, false);
+    window.removeEventListener('mouseup', resizingEnd, false);
+  }
+});
+
 // purpose:   updates the width of the panel to match the mouse position
-// returns:   changes the $state.asideWidth
+// returns:   changes the preferencesState.asideWidth
 // ------------------------------------------------------------------------
 const resize = event => {
-  $state.asideWidth = windowWidth - event.clientX - 6 + 'px';
+  preferencesState.asideWidth = windowWidth - event.clientX - 6 + 'px';
 };
 
 // purpose:   resets the size to default when double clicked
-// effect:    clears localStorage and $state.asideWidth
+// effect:    clears localStorage and preferencesState.asideWidth
 // ------------------------------------------------------------------------
 const resizingReset = event => {
   if(event.detail === 2){
-    $state.asideWidth = false;
+    preferencesState.asideWidth = false;
     localStorage.removeItem('asideWidth');
   }
 }
@@ -189,9 +204,9 @@ h2 {
 <!-- ================================================================== -->
 <svelte:window bind:outerWidth={windowWidth} />
 
-<aside transition:appear style={$state.asideWidth ? `--width: ${$state.asideWidth}` : ''}>
+<aside transition:appear style={preferencesState.asideWidth ? `--width: ${preferencesState.asideWidth}` : ''}>
 
-  <button class="resizer" class:active={resizing} on:mousedown={resizingStart} on:click={resizingReset}>
+  <button class="resizer" class:active={resizing} onmousedown={resizingStart} onclick={resizingReset}>
     <span class="label">Drag to resize panel</span>
     <Icon icon="resizeHorizontal" size="7" />
   </button>
@@ -201,7 +216,13 @@ h2 {
     {#if title || closeUrl}
       <header>
         {#if title}
-          <h2>{@html title}</h2>
+          <h2>
+            {#if typeof title === 'function'}
+              {@render title()}
+            {:else}
+              {title}
+            {/if}
+          </h2>
         {/if}
 
         {#if closeUrl}
@@ -213,7 +234,7 @@ h2 {
       </header>
     {/if}
 
-    <slot></slot>
+    {@render children?.()}
 
   </div>
 

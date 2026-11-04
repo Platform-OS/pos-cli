@@ -1,9 +1,11 @@
 <!-- ================================================================== -->
+<svelte:options runes />
+
 <script>
 
 // imports
 // ------------------------------------------------------------------------
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
 
 </script>
 
@@ -11,5 +13,5 @@ import { state } from '#lib/state.js';
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Users{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Users{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>

@@ -1,42 +1,38 @@
 <!-- ================================================================== -->
 <script>
 
-import { onMount } from 'svelte';
 import { browser } from '$app/environment';
-import { state } from '#lib/state';
+import { serverUrl } from '#lib/api/address.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
 
 
 // properties
 // ------------------------------------------------------------------------
 // miliseconds between checks (int)
-let checkIntervalTime = 7000;
+const checkIntervalTime = 7000;
 
 
 
 // purpose:		check if the app is connected to the instance every x seconds
 // ------------------------------------------------------------------------
-let onlineCheckInterval;
-
-onMount(async () => {
+$effect(() => {
   checkIfOnline();
 
-  onlineCheckInterval = setInterval(checkIfOnline, checkIntervalTime);
+  const onlineCheckInterval = setInterval(checkIfOnline, checkIntervalTime);
   return () => clearInterval(onlineCheckInterval);
 });
 
 // purpose:		checks if the app is connected to the instance by fetching /info
-// effect:		updates the $state.online store (bool)
+// effect:		updates the connectionState.online store (bool)
 // ------------------------------------------------------------------------
 const checkIfOnline = async () => {
   if(browser && document.visibilityState !== 'hidden'){
-    const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333';
-
-    fetch(`${url}/info`).then(response => response.json()).then(data => {
+    fetch(serverUrl('/info')).then(response => response.json()).then(data => {
       if(data){
-        $state.online = data;
+        connectionState.online = data;
       }
-    }).catch(e => {
-      $state.online = false;
+    }).catch(() => {
+      connectionState.online = false;
     });
   }
 };
@@ -86,8 +82,8 @@ const checkIfOnline = async () => {
 
 
 <!-- ================================================================== -->
-{#if $state.online === false}
-  <div class="connectionIndicator" class:offline={$state.online === false}>
+{#if connectionState.online === false}
+  <div class="connectionIndicator" class:offline={connectionState.online === false}>
     Disconnected from the instance
   </div>
 {/if}

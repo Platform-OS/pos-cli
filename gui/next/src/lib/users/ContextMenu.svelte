@@ -1,5 +1,5 @@
 <!--
-  record context mnue in the database view
+  user context menu in the users view
 -->
 
 
@@ -9,25 +9,28 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { createEventDispatcher } from 'svelte';
 import { clickOutside } from '#lib/helpers/clickOutside.js';
 
 import Delete from '#lib/users/Delete.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// record that the context menu corresponds to (object)
-export let record;
-// event dispatcher
-const dispatch = createEventDispatcher();
+let {
+  // user that the context menu corresponds to (object)
+  record,
+  // called when the menu should close (function)
+  onclose,
+  // called when the users list should be loaded again (function)
+  onreload
+} = $props();
 
 
 // purpose:   handles closing the context menu with Esc
-// effect:    dispatches a 'close' event to parent component
+// effect:    calls onclose
 // ------------------------------------------------------------------------
 const keyboardShortcut = event => {
   if(event.key === 'Escape'){
-    dispatch('close');
+    onclose?.();
   }
 };
 
@@ -71,12 +74,12 @@ menu li:last-child :global(button) {
 
 
 <!-- ================================================================== -->
-<svelte:window on:keyup={keyboardShortcut} />
+<svelte:window onkeyup={keyboardShortcut} />
 
-<menu class="content-context" use:clickOutside={() => dispatch('close')}>
+<menu class="content-context" use:clickOutside={() => onclose?.()}>
   <ul>
     <li>
-      <Delete id={record.id} on:success={() => dispatch('reload')} on:close={() => dispatch('close')} />
+      <Delete id={record.id} onsuccess={() => onreload?.()} onclose={() => onclose?.()} />
     </li>
   </ul>
 </menu>

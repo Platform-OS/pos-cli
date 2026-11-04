@@ -3,16 +3,27 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { state } from '#lib/state.js';
-import { record } from '#lib/api/record.js';
+import { databaseState } from '#lib/state/database.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
 
 // properties
 // ------------------------------------------------------------------------
+let {
+  // filters the records are shown with, from the url (object)
+  filters,
+  // called with the filter to apply, the fields of this form (function)
+  onfilter
+} = $props();
 // main filters form (dom node)
 let form;
+// the filter being edited, back to the applied one whenever the url changes (object)
+let attribute = $state({});
+
+$effect.pre(() => {
+  attribute = { ...filters.attributes[0] };
+});
 
 
 // lists allowed operations for given type
@@ -31,12 +42,13 @@ const operations = {
 };
 
 
-// purpose:		parses the <form>, saves new filters to the store and triggers records reload
+// purpose:		parses the <form> and applies it as the filter
+// arguments:	submit event (object)
 // ------------------------------------------------------------------------
-const filter = () => {
-  $state.filters = { page: 1, attributes: [ Object.fromEntries((new FormData(form)).entries()) ], deleted: $state.filters.deleted };
+const filter = (event) => {
+  event.preventDefault();
 
-  record.get({ table: $state.table.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted });
+  onfilter(Object.fromEntries((new FormData(form)).entries()));
 }
 
 </script>
@@ -96,67 +108,65 @@ button[type="submit"] {
 
 
 <!-- ================================================================== -->
-<form bind:this={form} on:submit|preventDefault={filter}>
+<form bind:this={form} onsubmit={filter}>
 
-  {#if $state.table?.properties}
+  {#if databaseState.table?.properties}
 
-    {#each $state.filters.attributes as attribute}
-      <fieldset>
+    <fieldset>
 
-        <label for="">Filter by:</label>
+      <label for="">Filter by:</label>
 
-        <select name="name" bind:value={attribute.name} on:change={ () => { attribute.attribute_type = ($state.table.properties.find(property => property.name === attribute.name))?.attribute_type || 'id'; } }>
-          <option value="id">id</option>
-          {#each $state.table.properties as property}
-            <option value={property.name}>
-              {property.name}
-            </option>
+      <select name="name" bind:value={attribute.name} onchange={ () => { attribute.attribute_type = (databaseState.table.properties.find(property => property.name === attribute.name))?.attribute_type || 'id'; } }>
+        <option value="id">id</option>
+        {#each databaseState.table.properties as property (property.name)}
+          <option value={property.name}>
+            {property.name}
+          </option>
+        {/each}
+      </select>
+
+      <input type="hidden" name="attribute_type" bind:value={attribute.attribute_type}>
+
+      {#if operations[attribute.attribute_type]}
+
+        <select name="operation" bind:value={attribute.operation}>
+          {#each operations[attribute.attribute_type] as operation (operation)}
+            <option value={operation}>{operation}</option>
           {/each}
         </select>
 
-        <input type="hidden" name="attribute_type" bind:value={attribute.attribute_type}>
-
-        {#if operations[attribute.attribute_type]}
-
-          <select name="operation" bind:value={attribute.operation}>
-            {#each operations[attribute.attribute_type] as operation}
-              <option value={operation}>{operation}</option>
-            {/each}
+        {#if attribute.operation === 'exists'}
+          <select name="value" value={attribute.value}>
+            <option value="true">true</option>
+            <option value="false">false</option>
           </select>
-
-          {#if attribute.operation === 'exists'}
-            <select name="value">
-              <option value="true">true</option>
-              <option value="false">false</option>
-            </select>
-          {:else if attribute.operation === 'range'}
-            <select name="maxFilter">
-              <option value="gt">&gt;</option>
-              <option value="gte">≥</option>
-            </select>
-            <input type="number" name="maxFilterValue" value={attribute.maxFilterValue}>
-            <select name="minFilter">
-              <option value="lt">&lt;</option>
-              <option value="lte">≤</option>
-            </select>
-            <input type="number" name="minFilterValue" value={attribute.minFilterValue}>
-          {:else}
-            <input type="text" name="value" bind:value={attribute.value} placeholder="filter value">
-          {/if}
-
-          <button type="submit" class="button">
-            <span class="label">Apply filters</span>
-            <Icon icon="arrowRight" />
-          </button>
-
+        {:else if attribute.operation === 'range'}
+          <select name="maxFilter" value={attribute.maxFilter}>
+            <option value="gt">&gt;</option>
+            <option value="gte">≥</option>
+          </select>
+          <input type="number" name="maxFilterValue" value={attribute.maxFilterValue}>
+          <select name="minFilter" value={attribute.minFilter}>
+            <option value="lt">&lt;</option>
+            <option value="lte">≤</option>
+          </select>
+          <input type="number" name="minFilterValue" value={attribute.minFilterValue}>
         {:else}
-
-          Unknow property type: <code>{attribute.attribute_type}</code>
-
+          <input type="text" name="value" bind:value={attribute.value} placeholder="filter value">
         {/if}
 
-      </fieldset>
-    {/each}
+        <button type="submit" class="button">
+          <span class="label">Apply filters</span>
+          <Icon icon="arrowRight" />
+        </button>
+
+      {:else}
+
+        Unknow property type: <code>{attribute.attribute_type}</code>
+
+      {/if}
+
+    </fieldset>
 
   {/if}
 

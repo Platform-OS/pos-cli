@@ -8,41 +8,54 @@ import Icon from '#lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// what will be copied to clipboard (any type, converted to string)
-export let text;
+let {
+  // what will be copied to clipboard (any type, converted to string)
+  text
+} = $props();
 // if the text was already copied a second ago (bool)
-let copied = false;
+let copied = $state(false);
 // if the copying is in progess, used for animation (bool)
-let copying = false;
+let copying = $state(false);
 // if an error occured when trying to copy (bool)
-let error = false;
+let error = $state(false);
+
+
+// purpose:   waits before the next step of the animation
+// arguments: miliseconds to wait (int)
+// returns:   promise resolved after that time
+// ------------------------------------------------------------------------
+const wait = (time) => new Promise(resolve => setTimeout(resolve, time));
 
 
 // purpose:   copy text to clipboard
 // returns:   sets the state in variables
 // ------------------------------------------------------------------------
-const copy = () => {
+const copy = async () => {
   copying = true;
 
-  navigator.clipboard.writeText(text.toString())
-    .then(() => {
-      // success animation
-      setTimeout(() => { copied = true; }, 150);
-      setTimeout(() => { copying = false; }, 300);
+  try {
+    await navigator.clipboard.writeText(String(text));
+  } catch(e) {
+    copying = false;
+    error = true;
+    console.error(e);
+    return;
+  }
 
-      // get back to default
-      setTimeout(() => { copying = true; }, 2300);
-      setTimeout(() => { copied = false; }, 2450);
+  // success animation
+  await wait(150);
+  copied = true;
+  await wait(150);
+  copying = false;
 
-      // reset state
-      setTimeout(() => { copying = false; }, 2600);
-    })
-    .catch(e => {
-      copying = false;
-      error = true;
-      console.error(e);
-    });
-}
+  // get back to default
+  await wait(2000);
+  copying = true;
+  await wait(150);
+  copied = false;
+  await wait(150);
+  copying = false;
+};
 
 </script>
 
@@ -90,7 +103,7 @@ button :global(svg) {
   class="button compact"
   class:progressing={copying}
   aria-disabled={copying || copied || error}
-  on:click={copy}
+  onclick={copy}
 >
 
   <Icon icon={copied ? 'check' : error ? 'x' : 'copy'} size="16" />

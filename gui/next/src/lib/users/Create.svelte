@@ -3,9 +3,10 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onMount, createEventDispatcher } from 'svelte';
+import { tick } from 'svelte';
 import { quintOut } from 'svelte/easing';
-import { state } from '#lib/state.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
+import { usersState } from '#lib/state/users.svelte.js';
 import { user } from '#lib/api/user.js';
 import { parseValue } from '#lib/parseValue.js';
 import { tryParseJSON } from '#lib/tryParseJSON.js';
@@ -16,22 +17,24 @@ import Toggle from '#lib/ui/forms/Toggle.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+let {
+  // list of user properties or null
+  userProperties,
+  // user to edit or null
+  userToEdit,
+  // called once the user is created or edited (function)
+  onsuccess
+} = $props();
 // main container for the component (dom node)
-let container;
+let container = $state();
 // edit form (dom node)
-let form;
+let form = $state();
 // list of errors for the current form taken from back-end (array of objects)
-let errors = [];
+let errors = $state([]);
 // list of inline validation errors for the current form (object)
-let validation = {};
-// list of user properties or null
-export let userProperties;
-// user to edit or null
-export let userToEdit;
+let validation = $state({});
 // if we should original values instead of parsed JSON for string types (bool)
-let dontParseStringedJson = false;
-
-const dispatch = createEventDispatcher();
+const dontParseStringedJson = false;
 
 
 // transition: 	fades and resizes from 0
@@ -54,22 +57,32 @@ const appear = function(node, {
 
 // purpose: 	use JS to open the modal on mount to get all of the <modal> benefits
 // ------------------------------------------------------------------------
-onMount(() => {
-  setTimeout(() => {
+$effect(() => {
+  const opening = setTimeout(() => {
     container.showModal();
   }, 10);
+
+  return () => clearTimeout(opening);
 });
 
 
-// purpose: 	handles keyboard shortcuts
+// purpose: 	closes the form on Escape
+//				(handled on the dialog itself, so the listener goes with the form: a document
+//				listener added with { once: true } was used up by the first key typed into the
+//				form, and one never pressed outlived the form; the browser's own Escape handling
+//				of a modal dialog does not fire reliably, so it is not relied on)
+// arguments:	keyboard event (object)
 // ------------------------------------------------------------------------
-document.addEventListener('keydown', event => {
+const close = () => {
+  usersState.user = undefined;
+};
+
+const keyboardShortcuts = event => {
   if(event.key === 'Escape'){
     event.preventDefault();
-
-    $state.user = undefined;
+    close();
   }
-}, { once: true });
+};
 
 
 
@@ -98,7 +111,7 @@ const save = async (event) => {
 
     // if there is an inline validation error, scroll to it
     await tick();
-    document.querySelector('[role="alert"]:not(:empty)').scrollIntoView({behavior: 'smooth', block: 'center'})
+    form.querySelector('[role="alert"]:not(:empty)')?.scrollIntoView({behavior: 'smooth', block: 'center'})
 
   } else {
     if (userToEdit === null) {
@@ -108,9 +121,9 @@ const save = async (event) => {
       properties.delete('password');
       const create = await user.create(email, password, properties);
       if(!create.errors){
-        $state.user = undefined;
-        state.notification.create('success', `User ${create.user.id} created`);
-        dispatch('success');
+        usersState.user = undefined;
+        notificationsState.create('success', `User ${create.user.id} created`);
+        onsuccess?.();
       }
       else {
         errors = create.errors;
@@ -121,9 +134,9 @@ const save = async (event) => {
       properties.delete('email');
       const edit = await user.edit(userToEdit.id, email, properties);
       if(!edit.errors){
-        $state.user = undefined;
-        state.notification.create('success', `User ${edit.user_update.id} edited`);
-        dispatch('success');
+        usersState.user = undefined;
+        notificationsState.create('success', `User ${edit.user_update.id} edited`);
+        onsuccess?.();
       }
       else {
         errors = edit.errors;
@@ -249,11 +262,11 @@ textarea {
 
 
 <!-- ================================================================== -->
-<dialog bind:this={container} transition:appear>
+<dialog bind:this={container} transition:appear onkeydown={keyboardShortcuts} onclose={close}>
 
   <div class="content content-context">
 
-    <form bind:this={form} on:submit|preventDefault={save}>
+    <form bind:this={form} onsubmit={save}>
       <fieldset>
         <dir>
           <label for="email">
@@ -291,7 +304,7 @@ textarea {
         </div>
       </fieldset>
       {/if}
-      {#each userProperties as property}
+      {#each userProperties as property (property.name)}
       {@const value = userToEdit !== null ? parseValue(userToEdit.properties[property.name], property.attribute_type) : {type: property.attribute_type, value: ''}}
         <fieldset>
           <dir>
@@ -341,7 +354,7 @@ textarea {
           {/each}
         </ul>
         <fieldset class="actions">
-          <button type="button" class="button" on:click={() => $state.user = undefined}>Cancel</button>
+          <button type="button" class="button" onclick={() => usersState.user = undefined}>Cancel</button>
           <button type="submit" class="button">
             {#if userToEdit === null}Create user{:else}Edit user{/if}
             <Icon icon="arrowRight" />

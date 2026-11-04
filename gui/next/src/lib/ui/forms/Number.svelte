@@ -3,54 +3,67 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { tick, createEventDispatcher } from 'svelte';
+import { tick } from 'svelte';
 
 import Icon from '#lib/ui/Icon.svelte';
 
 
 // properties
 // ------------------------------------------------------------------------
-// form name that the input belongs to (string)
-export let form;
-// name of the input (string)
-export let name;
-// minimal value (int)
-export let min = 1;
-// maximal value (int)
-export let max;
-// step amount (int)
-export let step = 1;
-// current input value (int)
-export let value = '';
-// if you want an alternative looks (undefined or 'navigation')
-export let style;
-// label for the decreasing button (string)
-export let decreaseLabel = `Decrease ${name} value`;
-// label for the increase button (string)
-export let increaseLabel = `Increase ${name} value`;
+let {
+  // form name that the input belongs to (string)
+  form,
+  // name of the input (string)
+  name,
+  // minimal value (int)
+  min = 1,
+  // maximal value (int)
+  max,
+  // step amount (int)
+  step = 1,
+  // current input value (int)
+  value = $bindable(''),
+  // if you want an alternative looks (undefined or 'navigation')
+  style,
+  // label for the decreasing button (string)
+  decreaseLabel = `Decrease ${name} value`,
+  // label for the increase button (string)
+  increaseLabel = `Increase ${name} value`,
+  // called once the user stops changing the number, with the button to submit the form with (function)
+  oninput
+} = $props();
 // if the field is currently focused (boold)
-let focused = false;
+let focused = $state(false);
 // main submit button for the number component (will be passed as 'submitter' to form)
-let submit;
+let submit = $state();
 
 
-// forward a change event when pressing the buttons
-const dispatch = createEventDispatcher();
-
-
-// purpose:		slows down triggering an input event to wait for the user to finish setting the number
-// effect:    triggers 'input' event on the component
+// purpose:		slows down calling oninput to wait for the user to finish setting the number
+// effect:    calls oninput with { submitter }
 // ------------------------------------------------------------------------
 let inputTimeout;
-function debouncedInput(event) {
+function debouncedInput() {
   clearTimeout(inputTimeout);
 
   inputTimeout = setTimeout(() => {
-    event.submitter = submit;
-
-    dispatch('input', event);
+    oninput?.({ submitter: submit });
   }, 150);
 }
+
+// do not submit a form that is no longer on the page
+$effect(() => () => clearTimeout(inputTimeout));
+
+
+// purpose:		changes the value by one step in either direction
+// arguments: the click event (object), direction: 1 or -1 (int)
+// effect:    updates the value and calls oninput, debounced
+// ------------------------------------------------------------------------
+const change = async (event, direction) => {
+  event.preventDefault();
+  value = parseInt(value) + direction;
+  await tick();
+  debouncedInput();
+};
 
 </script>
 
@@ -126,7 +139,7 @@ function debouncedInput(event) {
   <button
     form={form}
     class="button"
-    on:click|preventDefault={async event => { value = parseInt(value)-1; await tick(); debouncedInput(event); }}
+    onclick={event => change(event, -1)}
     disabled={value <= min}
     aria-hidden={value <= min}
     data-action="numberDecrease"
@@ -144,9 +157,9 @@ function debouncedInput(event) {
     max={max}
     step={step}
     bind:value={value}
-    on:input|preventDefault={event => debouncedInput(event)}
-    on:focusin={() => focused = true}
-    on:focusout={() => focused = false}
+    oninput={event => { event.preventDefault(); debouncedInput(); }}
+    onfocusin={() => focused = true}
+    onfocusout={() => focused = false}
     autofocus={focused}
     style="--max: {max?.toString().length || 1}ch"
   >
@@ -155,13 +168,13 @@ function debouncedInput(event) {
     form={form}
     bind:this={submit}
     class="button"
-    on:click|preventDefault={async event => { value = parseInt(value)+1; await tick(); debouncedInput(event); }}
+    onclick={event => change(event, 1)}
     disabled={value >= max}
     aria-hidden={value >= max}
     data-action="numberIncrease"
   >
     <span class="label">{increaseLabel}</span>
-    <Icon icon={style === 'navigation' ? 'arrowRight' : 'minus' } />
+    <Icon icon={style === 'navigation' ? 'arrowRight' : 'plus' } />
   </button>
 
 </div>

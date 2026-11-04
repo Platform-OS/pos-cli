@@ -5,7 +5,9 @@
 // ------------------------------------------------------------------------
 import { fade } from 'svelte/transition';
 import { constant } from '#lib/api/constant.js';
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { highlight, highlightState } from '#lib/state/highlight.svelte.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -13,13 +15,19 @@ import Icon from '#lib/ui/Icon.svelte';
 // properties
 // ------------------------------------------------------------------------
 // string used for filtering (string)
-let filter = '';
+let filter = $state('');
 // list of constants (array)
-let items = [];
+let items = $state([]);
 
 
-// get constants list
-(async () => await constant.get())().then(response => { items = response; });
+// purpose:		loads the constants list
+// returns:		resolves when the list is shown, or the failure is (promise)
+// ------------------------------------------------------------------------
+const load = () => constant.get()
+  .then(response => { items = response; })
+  .catch(error => { notificationsState.create('error', `Could not load the constants: ${error.message}`); });
+
+load();
 
 
 // purpose:		adds a .hidden property to each log item if not matching the string
@@ -41,14 +49,15 @@ const isFiltered = (constant) => {
 const update = async (event, itemIndex) => {
   event.preventDefault();
 
-  const edit = await constant.edit(new FormData(event.target));
+  const data = new FormData(event.target);
+  const edit = await constant.edit(data);
 
   if(!edit.errors){
     items[itemIndex].changed = false;
-    state.highlight('constant', edit.constant_set.name);
-    state.notification.create('success', `Constant ${edit.constant_set.name} updated`);
+    highlight('constant', edit.constant_set.name);
+    notificationsState.create('success', `Constant ${edit.constant_set.name} updated`);
   } else {
-    state.notification.create('error', `Failed to update ${edit.constant_set.name} constant`);
+    notificationsState.create('error', `Failed to update ${data.get('name')} constant`);
   }
 };
 
@@ -58,13 +67,14 @@ const remove = async (event) => {
 
   if(confirm('Are you sure you want to delete this constant?')){
 
-    const remove = await constant.delete(new FormData(event.target));
+    const data = new FormData(event.target);
+    const remove = await constant.delete(data);
 
     if(!remove.errors){
-      state.notification.create('success', `Constant ${remove.constant_unset.name} deleted`);
-      await constant.get().then(response => { items = response; });
+      notificationsState.create('success', `Constant ${remove.constant_unset.name} deleted`);
+      await load();
     } else {
-      state.notification.create('success', `Failed to delete ${remove.constant_unset.name} constant`);
+      notificationsState.create('error', `Failed to delete ${data.get('name')} constant`);
     }
 
   }
@@ -74,14 +84,16 @@ const remove = async (event) => {
 const create = async (event) => {
   event.preventDefault();
 
-  const create = await constant.edit(new FormData(event.target));
+  const data = new FormData(event.target);
+  const create = await constant.edit(data);
 
   if(!create.errors){
     event.target.reset();
-    state.notification.create('success', `Constant ${create.constant_set.name} created`);
-    await constant.get().then(response => { items = response; state.highlight('constant', create.constant_set.name); })
+    notificationsState.create('success', `Constant ${create.constant_set.name} created`);
+    await load();
+    highlight('constant', create.constant_set.name);
   } else {
-    state.notification.create('error', `Failed to create ${create.constant_set.name} constant`);
+    notificationsState.create('error', `Failed to create ${data.get('name')} constant`);
   }
 }
 
@@ -312,7 +324,7 @@ li {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Constants{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Constants{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 <div class="container">
@@ -322,7 +334,7 @@ li {
       <label for="filter">Find:</label>
       <input type="text" id="filter" bind:value={filter} autofocus>
       {#if filter}
-        <button class="clearFilter" on:click={() => filter = ''}>
+        <button class="clearFilter" onclick={() => filter = ''}>
           <span class="label">Clear filter</span>
           <Icon icon="x" size=12 />
         </button>
@@ -331,7 +343,7 @@ li {
   </nav>
 
   <section class="create">
-    <form on:submit|preventDefault={create}>
+    <form onsubmit={create}>
       <fieldset>
         <label for="newName">Name</label>
         <input type="text" name="name" id="newName" placeholder="MY_NEW_CONSTANT">
@@ -349,25 +361,25 @@ li {
 
   <ul>
 
-    {#each items as item, index}
-      <li class:hidden={filter && isFiltered(item)} class:highlighted={$state.highlighted.constant === item.name} in:fade={{ duration: 100, delay: 10 * index }}>
-        <form class="delete" on:submit|preventDefault={event => remove(event)}>
+    {#each items as item, index (item.name)}
+      <li class:hidden={filter && isFiltered(item)} class:highlighted={highlightState.constant === item.name} in:fade={{ duration: 100, delay: 10 * index }}>
+        <form class="delete" onsubmit={remove}>
           <input type="hidden" name="name" value={item.name}>
           <button type="submit" title="Delete constant">
             <span class="label">Delete constant</span>
             <Icon icon="x" size="14" />
           </button>
         </form>
-        <form class="edit"on:submit|preventDefault={event => update(event, index)}>
+        <form class="edit" onsubmit={event => update(event, index)}>
           <label for={item.name}>{item.name}</label>
           <input type="hidden" name="name" value={item.name}>
           <fieldset>
-            <input class:exposed={item.exposed} disabled={!item.exposed} name="value" value={item.value} id={item.name} on:input={() => item.changed = true}>
+            <input class:exposed={item.exposed} disabled={!item.exposed} name="value" value={item.value} id={item.name} oninput={() => item.changed = true}>
             <button
               type="button"
               class="toggleExposition"
               title={item.exposed ? 'Hide value' : 'Show value'}
-              on:click={() => item.exposed = item.exposed ? false : true}
+              onclick={() => item.exposed = item.exposed ? false : true}
             >
               <span class="label">
                 {item.exposed ? 'Hide value' : 'Show value'}

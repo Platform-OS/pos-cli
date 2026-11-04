@@ -3,11 +3,10 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { tick } from 'svelte';
 import { goto } from '$app/navigation';
-import { page } from '#lib/page.js';
-import { logs } from '#lib/api/logsv2.js';
-import { state } from '#lib/state.js';
+import { page } from '$app/state';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { localDay } from '#lib/api/timeRange.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import Number from '#lib/ui/forms/Number.svelte';
@@ -15,6 +14,12 @@ import Number from '#lib/ui/forms/Number.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+let {
+  // the logs and the filters they were loaded with, from +layout.js (object)
+  data,
+  // the log details, shown when a log is opened (snippet)
+  children
+} = $props();
 // filters form (dom node)
 let form;
 // todays date (Date object)
@@ -22,19 +27,29 @@ const today = new Date();
 // how far to the past the logs can be requested (Date object)
 const dayInterval = 1000 * 60 * 60 * 24;
 const minAllowedDate = new Date(today -  dayInterval * 3);
-// currently active filters (object)
-let filters = {
-  page: 1,
-  start_time: today.toISOString().split('T')[0],
+// the date the form shows when the url names none (string, YYYY-MM-DD)
+const defaultStartTime = localDay(today);
+// the filters in the form, following the url until they are edited
+let startTime = $derived(data.filters.start_time || defaultStartTime);
+let message = $derived(data.filters.message);
+let pageNumber = $derived(data.filters.page);
+// number of pages of logs (int)
+let totalPages = $derived(Math.ceil(data.logs?.total / data.logs?.size) || 1);
 
-  ...Object.fromEntries($page.url.searchParams)
-};
 
-
-
-// purpose:   load new logs each time query params change
+// purpose:   shows the logs for the filters in the form, through the url
+//            (the layout's load function runs again for the new query)
+// arguments: submit event (object)
 // ------------------------------------------------------------------------
-$: logs.get(Object.fromEntries($page.url.searchParams)).then(data => $state.logsv2 = data);
+const submitForm = function(event) {
+  event.preventDefault();
+  const params = new URLSearchParams(new FormData(form));
+  // a new search starts from the first page, a page change keeps the search
+  if (data.filters.message !== params.get('message') || (data.filters.start_time || defaultStartTime) !== params.get('start_time')) {
+    params.set('page', 1);
+  }
+  goto(page.url.pathname + '?' + params.toString(), { keepFocus: true, noScroll: true });
+}
 
 </script>
 
@@ -257,7 +272,7 @@ table {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Logs{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Logs{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 
@@ -270,20 +285,17 @@ table {
           action=""
           bind:this={form}
           id="filters"
-          on:submit={
-            // reset page number when changing filters except when directly changing a page
-            async event => { if(event.submitter?.dataset.action !== 'numberIncrease'){ event.preventDefault(); filters.page = 1; await tick(); goto(document.location.pathname + '?' + (new URLSearchParams(new FormData(event.target)).toString())); } }
-          }
+          onsubmit={submitForm}
         >
           <label for="start_time" class="label">Time limit</label>
           <input
             type="date"
             name="start_time"
             id="start_time"
-            min={minAllowedDate.toISOString().split('T')[0]}
-            max={today.toISOString().split('T')[0]}
-            bind:value={filters.start_time}
-            on:input={() => form.requestSubmit()}
+            min={localDay(minAllowedDate)}
+            max={localDay(today)}
+            bind:value={startTime}
+            oninput={() => form.requestSubmit()}
           >
           <fieldset class="search">
             <label for="filter_message">
@@ -294,7 +306,7 @@ table {
               name="message"
               id="filter_message"
               placeholder="Find logs"
-              bind:value={filters.message}
+              bind:value={message}
             >
             <button type="submit" class="button">
               <span class="label">Filter logs</span>
@@ -313,26 +325,26 @@ table {
               <th class="message">Message</th>
             </tr>
           </thead>
-          {#if $state.logsv2.hits}
+          {#if data.logs?.hits}
             <tbody>
-              {#each $state.logsv2.hits as log}
+              {#each data.logs.hits as log (log._timestamp)}
                 <tr
                   class:error={log.type.match(/error/i)}
-                  class:highlight={filters.key == log._timestamp}
-                  class:active={$page.params.id == log._timestamp}
+                  class:highlight={page.url.searchParams.get('key') == log._timestamp}
+                  class:active={page.params.id == log._timestamp}
                 >
                   <td class="time">
-                    <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
+                    <a href="/logsv2/{log._timestamp}?{page.url.searchParams.toString()}">
                       {new Date(log.options_at / 1000).toLocaleString()}
                     </a>
                   </td>
                   <td class="type">
-                    <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
+                    <a href="/logsv2/{log._timestamp}?{page.url.searchParams.toString()}">
                       {log.type}
                     </a>
                   </td>
                   <td class="message">
-                    <a href="/logsv2/{log._timestamp}?{$page.url.searchParams.toString()}">
+                    <a href="/logsv2/{log._timestamp}?{page.url.searchParams.toString()}">
                       <div>
                         {log.message}
                       </div>
@@ -352,22 +364,22 @@ table {
         <Number
           form="filters"
           name="page"
-          bind:value={filters.page}
+          bind:value={pageNumber}
           min={1}
-          max={Math.ceil($state.logsv2.total / $state.logsv2.size) || 20}
+          max={totalPages}
           step={1}
           decreaseLabel="Previous page"
           increaseLabel="Next page"
           style="navigation"
-          on:input={event => { form.requestSubmit(event.detail.submitter); }}
+          oninput={({ submitter }) => form.requestSubmit(submitter)}
         />
-        of <span class="info" title="{$state.logsv2.total} logs total">{Math.ceil($state.logsv2.total / $state.logsv2.size) || 1}</span>
+        of <span class="info" title="{data.logs?.total ?? 0} logs total">{totalPages}</span>
       </nav>
 
   </section>
 
-  {#if $page.params.id}
-    <slot></slot>
+  {#if page.params.id}
+    {@render children?.()}
   {/if}
 
 </div>

@@ -5,7 +5,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { graphql } from '#lib/api/graphql';
+import { graphql, graphqlData } from '#lib/api/graphql';
 
 
 
@@ -39,7 +39,7 @@ const table = {
 
     const variables = { per_page: 100, id: id };
 
-    return graphql({ query, variables }).then(data => data.admin_tables.results);
+    return graphqlData({ query, variables }).then(data => data.admin_tables.results);
   }
 };
 

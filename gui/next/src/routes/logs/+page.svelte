@@ -3,11 +3,13 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { tick, afterUpdate, onMount, beforeUpdate } from 'svelte';
+import { onMount } from 'svelte';
 import { fade } from 'svelte/transition';
 import { browser } from '$app/environment';
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { logsState } from '#lib/state/logs.svelte.js';
 import { logs } from '#lib/api/logs';
+import { stored } from '#lib/state/storage.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import Aside from '#lib/ui/Aside.svelte';
@@ -16,16 +18,20 @@ import Diagnostic from '#lib/ui/Diagnostic.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// main content container (dom node)
-let container;
+// the scrolling list of logs (dom node)
+let list;
+// the end of the list, scrolled to as new logs arrive (dom node), absent while filtering
+let footer = $state();
 // string used for filtering (string)
-let filter = '';
+let filter = $state('');
 // pinned logs (array of objects)
-let pinned = [];
+let pinned = $state([]);
 // if the pinned pannel should be visible (bool)
-let pinnedPanel;
+let pinnedPanel = $state(false);
 // interval for checking for new logs (interval)
 let newLogsInterval;
+// if a request for logs has not answered yet (bool)
+let loading = false;
 
 
 onMount(() => {
@@ -38,28 +44,36 @@ onMount(() => {
 
 
 const load = async () => {
-  const last = $state.logs.logs?.at(-1)?.id ?? null;
-  const newLogs = await logs.get({ last: last });
+  // a poll that started while the previous one was still waiting would ask from the same last
+  // log, and both would add the same logs to the list
+  if(loading){
+    return;
+  }
+
+  loading = true;
+
+  const last = logsState.logs.logs?.at(-1)?.id ?? null;
+  const newLogs = await logs.get({ last: last }).finally(() => { loading = false; });
 
   // if already showing logs, just append the new ones
   if(last){
     if(newLogs.logs?.length){
-      $state.logs.logs = [...$state.logs.logs, ...newLogs.logs];
+      logsState.logs.logs = [...logsState.logs.logs, ...newLogs.logs];
 
       // store the times when logs were downloaded to mark new ones
-      $state.logs.downloaded_at.push(Date.now());
-      if($state.logs.downloaded_at.length > 2){
-        $state.logs.downloaded_at.splice(0, 1);
+      logsState.logs.downloaded_at.push(Date.now());
+      if(logsState.logs.downloaded_at.length > 2){
+        logsState.logs.downloaded_at.splice(0, 1);
       }
     }
   }
   // if fresh start, create the logs object
   else {
-    if(!$state.logs.logs){
-      $state.logs = newLogs;
+    if(!logsState.logs.logs){
+      logsState.logs = newLogs;
 
-      if(!$state.logs.downloaded_at){
-        $state.logs.downloaded_at = [Date.now()];
+      if(!logsState.logs.downloaded_at){
+        logsState.logs.downloaded_at = [Date.now()];
       }
     }
   }
@@ -83,35 +97,41 @@ const isFiltered = (log) => {
 
 // purpose:		scroll to bottom on load and when new logs appear and the scrollbar position is on bottom
 // ------------------------------------------------------------------------
+// whether the list was scrolled to the bottom since the logs last changed (bool)
 let scrolled = false;
 
-beforeUpdate(() => {
-  if(browser){
-    const container = document.querySelector('.logs');
+// before the list changes: if it is at the bottom now, keep it there afterwards
+$effect.pre(() => {
+  logsState.logs.logs?.length;
+  filter;
 
-    if(container && Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 10){
-      scrolled = false;
-    }
+  if(list && Math.abs(list.scrollHeight - list.scrollTop - list.clientHeight) < 10){
+    scrolled = false;
   }
 });
 
-afterUpdate(async () => {
-  if(!scrolled){
-    await tick();
-    document.querySelector('footer').scrollIntoView();
-    if($state.logs.logs?.length){
+// after the list changes
+$effect(() => {
+  const length = logsState.logs.logs?.length;
+  filter;
+
+  if(!scrolled && footer){
+    footer.scrollIntoView();
+    if(length){
       scrolled = true;
     }
   }
 });
 
 
-// purpose:		  saves the log in localStorage for future use
-// attributes:	log data you want to save (object)
+// purpose:		  restores the pinned logs and the panel state saved in localStorage
+//				  (a value that is not readable, or not a list of logs, is left out)
 // ------------------------------------------------------------------------
 const updatePinnedState = () => {
-  pinnedPanel = localStorage.pinnedPanel === 'true' ? true : false;
-  pinned = localStorage.pinnedLogs ? JSON.parse(localStorage.pinnedLogs) : [];
+  pinnedPanel = stored('pinnedPanel', false) === true;
+
+  const storedPinned = stored('pinnedLogs', []);
+  pinned = Array.isArray(storedPinned) ? storedPinned.filter(log => log && typeof log === 'object') : [];
 };
 
 const pin = (log) => {
@@ -323,71 +343,73 @@ footer {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Logs{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Logs{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 
-<div class="container" bind:this={container}>
+<div class="container">
 
-  <section class="logs">
+  <section class="logs" bind:this={list}>
 
     <nav>
       <form>
         <label for="filter">Filter:</label>
         <input type="text" id="filter" bind:value={filter}>
         {#if filter}
-          <button class="clearFilter" on:click={() => filter = ''}>
+          <button class="clearFilter" onclick={() => filter = ''}>
             <span class="label">Clear filter</span>
             <Icon icon="x" size=12 />
           </button>
         {/if}
       </form>
       <div>
-        <button type="button" class="button" on:click={() => $state.logs.logs.forEach((log, index) => $state.logs.logs[index].hidden = true) }>Clear screen</button>
-        <button type="button" title="Toggle pinned logs panel" class="button" on:click={togglePinnedPanel}>
+        <button type="button" class="button" onclick={() => logsState.logs.logs.forEach((log, index) => logsState.logs.logs[index].hidden = true) }>Clear screen</button>
+        <button type="button" title="Toggle pinned logs panel" class="button" onclick={togglePinnedPanel}>
           <span class="label">Toggle pinned logs panel</span>
           <Icon icon="pin" />
         </button>
       </div>
     </nav>
 
-    {#if $state.logs.logs}
+    {#if logsState.logs.logs}
       <table>
-        {#each $state.logs.logs as log}
-          <tr
-            class:hidden={filter && isFiltered(log) || log.hidden}
-            class:error={log.error_type.match(/error/i)}
-            class:fresh={log.downloaded_at > $state.logs.downloaded_at[0]}
-            in:fade|local={{ duration: 200 }}
-          >
-            <td class="date">
-              <time datetime={log.created_at}>
-                {(new Date(log.created_at)).toLocaleDateString(undefined, {})}
-                {(new Date(log.created_at)).toLocaleTimeString(undefined, {})}
-              </time>
-            </td>
-            <td class="message">
-              <Diagnostic {log} />
-            </td>
-            <td class="actions">
-              <div>
-                <button type="button" class="button" title="Copy message" on:click={(event) => navigator.clipboard.writeText(log.message).then(() => { event.target.classList.add('confirmation'); setTimeout(() => event.target.classList.remove('confirmation'), 1000); }) }>
-                  <span class="label">Copy message</span>
-                  <Icon icon="copy" />
-                </button>
-                <button type="button" class="button" title="Pin this log" class:active={pinned.find(pin => pin.id === log.id)} on:click|preventDefault={() => pin(log)}>
-                  <span class="label">Pin this log</span>
-                  <Icon icon="pin" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        {/each}
+        <tbody>
+          {#each logsState.logs.logs as log (log.id)}
+            <tr
+              class:hidden={filter && isFiltered(log) || log.hidden}
+              class:error={log.error_type.match(/error/i)}
+              class:fresh={log.downloaded_at > logsState.logs.downloaded_at[0]}
+              in:fade={{ duration: 200 }}
+            >
+              <td class="date">
+                <time datetime={log.created_at}>
+                  {(new Date(log.created_at)).toLocaleDateString(undefined, {})}
+                  {(new Date(log.created_at)).toLocaleTimeString(undefined, {})}
+                </time>
+              </td>
+              <td class="message">
+                <Diagnostic {log} />
+              </td>
+              <td class="actions">
+                <div>
+                  <button type="button" class="button" title="Copy message" onclick={(event) => navigator.clipboard.writeText(log.message).then(() => { event.target.classList.add('confirmation'); setTimeout(() => event.target.classList.remove('confirmation'), 1000); }) }>
+                    <span class="label">Copy message</span>
+                    <Icon icon="copy" />
+                  </button>
+                  <button type="button" class="button" title="Pin this log" class:active={pinned.find(pin => pin.id === log.id)} onclick={(event) => { event.preventDefault(); pin(log); }}>
+                    <span class="label">Pin this log</span>
+                    <Icon icon="pin" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
       </table>
     {/if}
 
     {#if !filter}
-      <footer>
+      <footer bind:this={footer}>
         No newer logs to show<br>Checking every 3 seconds
       </footer>
     {/if}
@@ -401,21 +423,21 @@ footer {
       <div class="pins">
 
         <nav class="asideNav">
-          <button type="button" class="button" on:click={() => { localStorage.pinnedLogs = []; pinned = []; }}>
+          <button type="button" class="button" onclick={() => { localStorage.pinnedLogs = []; pinned = []; }}>
             Clear pinned logs
           </button>
         </nav>
 
         {#if pinned}
           <ul>
-            {#each pinned as log}
+            {#each pinned as log (log.id)}
               <li>
                 <div class="info">
                   <time class="date" datetime={log.created_at}>
                     {(new Date(log.created_at)).toLocaleDateString(undefined, {})}
                     {(new Date(log.created_at)).toLocaleTimeString(undefined, {})}
                   </time>
-                  <button type="button" title="Remove log from pinned panel" on:click={() => pin(log)}>
+                  <button type="button" title="Remove log from pinned panel" onclick={() => pin(log)}>
                     <span class="label">Remove log from pinned panel</span>
                     <Icon icon="trash" size="18" />
                   </button>

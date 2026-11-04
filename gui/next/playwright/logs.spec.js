@@ -92,3 +92,96 @@ test('clearing logs from the screen', async ({ page }) => {
 
   await expect(page.getByText('Log for clearing logs from the screen tests').filter({ visible: true })).toHaveCount(0);
 });
+
+
+test('filtering logs while the list is scrolled to the bottom', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+
+  await page.goto(url);
+  await expect(page.getByText('No newer logs to show')).toBeVisible();
+
+  // typing a filter hides the footer the page scrolls to, and re-renders the list
+  await page.getByLabel('Filter:').fill('a filter that matches no log');
+  await expect(page.getByText('No newer logs to show')).toBeHidden();
+  await page.getByLabel('Filter:').fill('a filter that matches no log at all');
+  await page.waitForTimeout(500);
+
+  expect(errors).toEqual([]);
+});
+
+
+test('showing each log once when the instance answers slower than the page polls', async ({ page }) => {
+  const log = (id, message) => ({ id, created_at: new Date().toISOString(), error_type: 'info', message, data: null });
+  const first = log('1790000000.000001', 'the first log');
+  const second = log('1790000000.000002', 'the log that answered slowly');
+  let askedAfterSecond = false;
+
+  // the page polls every 3 seconds; the first poll after the first log takes 4.5 seconds, so the
+  // next poll starts while it is still waiting, asks from the same log and is answered first
+  let askedAfterFirst = 0;
+  await page.route(requestUrl => requestUrl.pathname === '/api/logs', async route => {
+    const last = new URL(route.request().url()).searchParams.get('lastId');
+
+    if(last === '0'){
+      await route.fulfill({ json: { logs: [first] } });
+    } else if(last === first.id){
+      if(++askedAfterFirst === 1){
+        await new Promise(resolve => setTimeout(resolve, 4500));
+      }
+      await route.fulfill({ json: { logs: [second] } });
+    } else {
+      askedAfterSecond = true;
+      await route.fulfill({ json: { logs: [] } });
+    }
+  });
+
+  await page.goto(url);
+  await expect(page.getByText('the first log')).toBeVisible();
+
+  // by the time the page asks for logs after the second one, every earlier answer has arrived
+  await expect.poll(() => askedAfterSecond, { timeout: 15000 }).toBe(true);
+  await expect(page.locator('td.message').getByText('the log that answered slowly')).toHaveCount(1);
+});
+
+
+// what an earlier version, another tab or a hand edit may have left in localStorage
+const storing = (page, values) => page.addInitScript(values => {
+  for(const [key, value] of Object.entries(values)){
+    localStorage.setItem(key, value);
+  }
+}, values);
+
+const storedLog = { id: '1790000000.000003', created_at: new Date().toISOString(), error_type: 'info', message: 'a log to pin', data: null };
+
+
+test('pinning a log when the pinned logs stored earlier are not readable', async ({ page }) => {
+  await storing(page, { pinnedLogs: '[{"id": "cut off', pinnedPanel: 'true' });
+  await page.route(requestUrl => requestUrl.pathname === '/api/logs', route => route.fulfill({ json: { logs: [storedLog] } }));
+
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Pin this log' }).first().click();
+
+  await expect(page.getByRole('button', { name: 'Remove log from pinned panel' })).toHaveCount(1);
+});
+
+
+test('pinning a log when what is stored is not a list of logs', async ({ page }) => {
+  await storing(page, { pinnedLogs: '{"id": "1"}', pinnedPanel: 'true' });
+  await page.route(requestUrl => requestUrl.pathname === '/api/logs', route => route.fulfill({ json: { logs: [storedLog] } }));
+
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Pin this log' }).first().click();
+
+  await expect(page.getByRole('button', { name: 'Remove log from pinned panel' })).toHaveCount(1);
+});
+
+
+test('restoring the pinned logs and the panel after a reload', async ({ page }) => {
+  await storing(page, { pinnedLogs: JSON.stringify([storedLog]), pinnedPanel: 'true' });
+  await page.route(requestUrl => requestUrl.pathname === '/api/logs', route => route.fulfill({ json: { logs: [] } }));
+
+  await page.goto(url);
+
+  await expect(page.getByRole('button', { name: 'Remove log from pinned panel' })).toHaveCount(1);
+});

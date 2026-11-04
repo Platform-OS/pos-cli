@@ -3,9 +3,8 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '#lib/page.js';
-import { user } from '#lib/api/user.js';
-import { state } from '#lib/state.js';
+import { page } from '$app/state';
+import { connectionState } from '#lib/state/connection.svelte.js';
 import { tryParseJSON } from '#lib/tryParseJSON.js';
 
 import Aside from '#lib/ui/Aside.svelte';
@@ -14,27 +13,10 @@ import JSONTree from '#lib/ui/JSONTree.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// currently viewed user data (object)
-let item;
-
-
-// purpose:		  gets the user data
-// attributes:	id of the user (int)
-// returns:		  a single user data object from the database (object)
-// ------------------------------------------------------------------------
-const load = async () => {
-  
-  const filters = {
-    attribute: 'id',
-    value: $page.params.id
-  };
-
-  await user.get(filters).then(response => {
-    item = response.results[0];
-  });
-}
-
-$: $page.params.id && load();
+// the user, from +page.js (object)
+let { data } = $props();
+// currently viewed user data (object or null)
+let item = $derived(data.item);
 
 </script>
 
@@ -82,10 +64,10 @@ time {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>{item?.email ?? 'Users'}{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>{item?.email ?? 'Users'}{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
-<Aside title={item?.email ?? item?.id ?? 'Loading…'} closeUrl="/users?{$page.url.searchParams.toString()}">
+<Aside title={item?.email ?? item?.id ?? 'Loading…'} closeUrl="/users?{page.url.searchParams.toString()}">
 
   <div>
     <div class="info">
@@ -113,7 +95,7 @@ time {
 
   {#if item?.properties}
     <dl class="definitions">
-      {#each Object.entries(item.properties) as [property, value]}
+      {#each Object.entries(item.properties) as [property, value] (property)}
         <dt>{property}</dt>
         <dd>
           {#if tryParseJSON(value)}

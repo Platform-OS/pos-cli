@@ -248,19 +248,6 @@ describe('Log Error Handling - Unit Tests', () => {
     nock.cleanAll();
   });
 
-  test('handles network timeout', async () => {
-    nock(TEST_URL)
-      .get('/api/app_builder/logs')
-      .query(true)
-      .delayConnection(5000)
-      .reply(200, []);
-
-    await import('#lib/proxy.js');
-
-    // With default timeout, this should work (but we're testing the structure)
-    // In real scenario, AbortController would be used for timeout
-  });
-
   test('handles server errors gracefully', async () => {
     nock(TEST_URL)
       .get('/api/app_builder/logs')

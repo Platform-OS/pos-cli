@@ -1,24 +1,35 @@
 <!-- ================================================================== -->
+<svelte:options runes />
+
 <script>
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '#lib/page.js';
+import { page } from '$app/state';
 import { table } from '#lib/api/table';
-import { state } from '#lib/state';
+import { serverUrl } from '#lib/api/address.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { databaseState } from '#lib/state/database.svelte.js';
+import { preferencesState } from '#lib/state/preferences.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
 
+// the tables being preloaded, so hovering again while they load does not ask twice (promise)
+let preloading;
 
 // purpose:		preload tables data into the state store for faster navigation
-// returns:		loads the tables into the $state.tables (array)
+// returns:		loads the tables into the databaseState.tables (array)
 // ------------------------------------------------------------------------
-const preloadTables = async () => {
-  if(!$state.tables.length){
-    $state.tables = await table.get();
+const preloadTables = () => {
+  if(!databaseState.tables.length){
+    preloading ??= table.get()
+      .then(tables => { databaseState.tables = tables; })
+      // only a head start: the Database page loads the tables itself and says when it cannot
+      .catch(() => {})
+      .finally(() => { preloading = undefined; });
   }
-}
+};
 
 </script>
 
@@ -216,24 +227,25 @@ nav a:hover .label {
           <svg class="logotype" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" style="enable-background:new 0 0 135 22.2" viewBox="0 0 135 22.2" fill="currentColor"><path d="m96.2 4.3-1.4 1.3-1.4-1.3h-3.1l-1.7 2-2-2v13.4h3.9V8.4h1.8l.6 1v8.3h3.9l-.4-.5.4.5V9.4l.6-1h1.2l.5 1v8.3h4V7.3l-3.1-3h-3.8zM9.5 12.2l-1.4 1.4H4V8.4h4.1L9.5 10v2.2zM6.8 4.4H4L2 6.3 0 4.4v17.8h4v-4.6l-.1-.1.1.1h5.7l3.5-3.1V8L9.6 4.4H6.8zm34.7 8.2V9.1h4.2v-4h-4.2l-2-2.2-2-2v13.7l3.9 3h5v-4h-3.3l-1.6-1zm-10.4 1.1h-4.2l-1.5-1.5V9.9l1.5-1.3h4.2v5.1zm0-9h-5.7l-3.5 3V14l3.5 3.6h5.7l2-1.9 2 1.9v-9l-2-1.9-2-2zm46.8-.1-2 2.1-2-2.1v13h4v-9h4.2l2.5 2.6V6.7L82 4.6h-4.1zM48.4 3.1v14.5h4v-4.8h4.2V8.9h-4.2V5.4L54.1 4h3.3V0h-5l-4 3.1zm-31.1-.8-2-2.2v17.6h4V4.5l-2-2.2zm50.8 9.8-1.5 1.6h-2.7l-1.5-1.6V9.9l1.5-1.3h2.7l1.5 1.3v2.2zm-5.8-7.5-3.6 3V14l3.6 3.6h6l3.6-3.6V7.6l-3.6-3h-6zm52.9 4.1V12l-1.4 2h-3l-1.4-2V5.5l1.4-2h3l1.4 2v3.2zM109.3 0l-3.7 3.5V14l3.7 3.5h6L119 14V3.5L115.3 0h-6zm22.5 7.1-.2-.1v.1h-.1V7h-5.2l-1.1-1V4.7l1.1-1.2h3.3l2.1 1.8 3.2-1.8-3.6-3.5h-6l-3.7 3.5v4.3l3.4 2.6h4.8l1.4 1v1.4l-1.4 1.2h-3l-2.1-1.8-3.2 1.8 3.7 3.5h6L135 14V9.7l-3.2-2.6z"/></svg>
           <span class="label">platformOS development tools</span>
         </a>
-        <span class="instance" class:offline={!$state.online}>
-        {#if $state.online === undefined}
+        <span class="instance" class:offline={!connectionState.online}>
+        {#if connectionState.online === undefined}
           connecting…
-        {:else if $state.online === false}
+        {:else if connectionState.online === false}
           disconnected
         {:else}
-          <a href={$state.online?.MPKIT_URL}>
-            {$state.online?.MPKIT_URL.replace('https://', '')}
+          <a href={connectionState.online?.MPKIT_URL}>
+            {connectionState.online?.MPKIT_URL.replace('https://', '')}
           </a>
         {/if}
+        </span>
       </h1>
     </div>
 
     <nav>
       <ul>
-        {#if $state.header.includes('database')}
+        {#if preferencesState.header.includes('database')}
         <li>
-          <a href="/database" class:active={$page.url.pathname.startsWith('/database')} on:focus|once={preloadTables} on:mouseover|once={preloadTables}>
+          <a href="/database" class:active={page.url.pathname.startsWith('/database')} onfocus={preloadTables} onmouseover={preloadTables}>
             <Icon icon="database" />
             <span class="label">
               Database
@@ -242,9 +254,9 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('users')}
+        {#if preferencesState.header.includes('users')}
         <li>
-          <a href="/users" class:active={$page.url.pathname.startsWith('/users')}>
+          <a href="/users" class:active={page.url.pathname.startsWith('/users')}>
             <Icon icon="users" />
             <span class="label">
               Users
@@ -253,9 +265,9 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('logs')}
+        {#if preferencesState.header.includes('logs')}
         <li>
-          <a href="/logs" class:active={$page.url.pathname === '/logs'}>
+          <a href="/logs" class:active={page.url.pathname === '/logs'}>
             <Icon icon="log" />
             <span class="label">
               Logs
@@ -264,9 +276,9 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('logsv2')}
+        {#if preferencesState.header.includes('logsv2')}
         <li>
-          <a href="/logsv2" class:active={$page.url.pathname.startsWith('/logsv2')}>
+          <a href="/logsv2" class:active={page.url.pathname.startsWith('/logsv2')}>
             <Icon icon="logFresh" />
             <span class="label">
               Logs v2
@@ -275,9 +287,9 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('network')}
+        {#if preferencesState.header.includes('network')}
         <li>
-          <a href="/network" class:active={$page.url.pathname.startsWith('/network')}>
+          <a href="/network" class:active={page.url.pathname.startsWith('/network')}>
             <Icon icon="globeMessage" />
             <span class="label">
               Network Logs
@@ -286,9 +298,9 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('backgroundJobs')}
+        {#if preferencesState.header.includes('backgroundJobs')}
         <li>
-          <a href="/backgroundJobs" class:active={$page.url.pathname.startsWith('/backgroundJobs')}>
+          <a href="/backgroundJobs" class:active={page.url.pathname.startsWith('/backgroundJobs')}>
             <Icon icon="backgroundJob" />
             <span class="label">
               Background Jobs
@@ -297,9 +309,9 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('constants')}
+        {#if preferencesState.header.includes('constants')}
         <li>
-          <a href="/constants" class:active={$page.url.pathname.startsWith('/constants')}>
+          <a href="/constants" class:active={page.url.pathname.startsWith('/constants')}>
             <Icon icon="constant" />
             <span class="label">
               Constants
@@ -308,10 +320,9 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('liquid')}
-        {@const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}
+        {#if preferencesState.header.includes('liquid')}
         <li>
-          <a href="{url}/gui/liquid">
+          <a href={serverUrl('/gui/liquid')}>
             <Icon icon="liquid" />
             <span class="label">
               Liquid Evaluator
@@ -320,10 +331,9 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if $state.header.includes('graphiql')}
-        {@const url = (typeof window !== 'undefined' && window.location.port !== '4173' && window.location.port !== '5173') ? `http://localhost:${parseInt(window.location.port)}` : 'http://localhost:3333'}
+        {#if preferencesState.header.includes('graphiql')}
         <li>
-          <a href="{url}/gui/graphql">
+          <a href={serverUrl('/gui/graphql')}>
             <Icon icon="graphql" />
             <span class="label">
               GraphiQL

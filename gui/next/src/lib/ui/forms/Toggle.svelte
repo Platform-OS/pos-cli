@@ -10,14 +10,18 @@ import Icon from '#lib/ui/Icon.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// name attribute for the form elements (string)
-export let name;
-// available options to choose from (array of objects) containing input value and label for it
-// [{ value: 'choice_a', label: 'This is choice A'}, { value: 'choice_b', label: 'This is choice B'}]
-export let options = [];
-// which of the options is checked (string)
-// for more than one option, the first one is checked by default
-export let checked = options.length > 1 ? options[0].value.toString() : '';
+let {
+  // name attribute for the form elements (string)
+  name,
+  // available options to choose from (array of objects) containing input value and label for it
+  // [{ value: 'choice_a', label: 'This is choice A'}, { value: 'choice_b', label: 'This is choice B'}]
+  options = [],
+  // which of the options is checked (string)
+  // for more than one option, the first one is checked by default
+  checked = options.length > 1 ? options[0].value.toString() : '',
+  // called when the single choice checkbox changes, with the change event (function)
+  onchange
+} = $props();
 
 </script>
 
@@ -70,10 +74,6 @@ export let checked = options.length > 1 ? options[0].value.toString() : '';
 
   transition: translate .2s cubic-bezier(0.075, 0.82, 0.165, 1);
 }
-
-  .toggle input[type="radio"]:checked .switcher:before {
-    left: 1px;
-  }
 
   .toggle input[type="radio"]:not(:checked) + label {
     opacity: .5;
@@ -168,7 +168,7 @@ export let checked = options.length > 1 ? options[0].value.toString() : '';
       value={options[0].value}
       checked={checked === options[0].value}
       id="toggle-{name}-{options[0].value}"
-      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); checked = checked === options[0].value ? options[1].value : options[0].value } } }
+      onkeydown={event => { if(event.code === 'Space'){ event.preventDefault(); checked = checked === options[0].value ? options[1].value : options[0].value } } }
     >
     <label for="toggle-{name}-{options[0].value}">{options[0].label}</label>
 
@@ -180,7 +180,7 @@ export let checked = options.length > 1 ? options[0].value.toString() : '';
       value={options[1].value}
       checked={checked === options[1].value}
       id="toggle-{name}-{options[1].value}"
-      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); checked = checked === options[0].value ? options[1].value : options[0].value } } }
+      onkeydown={event => { if(event.code === 'Space'){ event.preventDefault(); checked = checked === options[0].value ? options[1].value : options[0].value } } }
     >
     <label for="toggle-{name}-{options[1].value}">{options[1].label}</label>
 
@@ -201,9 +201,8 @@ export let checked = options.length > 1 ? options[0].value.toString() : '';
       value={options[0].value}
       id="toggle-{name}-{options[0].value}"
       checked={checked === options[0].value}
-      on:keydown={event => { if(event.code === 'Space'){ event.preventDefault(); checked = checked === options[0].value ? '' : options[0].value } } }
-      on:change={event => checked = event.target.checked ? options[0].value : '' }
-      on:change
+      onkeydown={event => { if(event.code === 'Space'){ event.preventDefault(); checked = checked === options[0].value ? '' : options[0].value } } }
+      onchange={event => { checked = event.target.checked ? options[0].value : ''; onchange?.(event); }}
     >
 
   {/if}

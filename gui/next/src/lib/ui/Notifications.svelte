@@ -4,23 +4,14 @@
 // imports
 // ------------------------------------------------------------------------
 import { fade } from 'svelte/transition';
-import { afterUpdate } from 'svelte';
-import { state } from '#lib/state';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import ConnectionIndicator from '#lib/ui/ConnectionIndicator.svelte';
 
-let height = 0;
-
-afterUpdate(() => {
-  $state.notifications.forEach(notification => {
-    if(!notification.timeout){
-      if(notification.type === 'success' || notification.type === 'info'){
-        notification.timeout = setTimeout(() => state.notification.remove(notification.id), 7000);
-      }
-    }
-  });
-});
+// height of the notifications stack, to slide it above the bottom edge (int)
+let height = $state(0);
 
 </script>
 
@@ -108,7 +99,7 @@ button:hover {
 <!-- ================================================================== -->
 <div class="container" bind:clientHeight={height} aria-live="assertive" style="--height: -{height}px">
 
-  {#each $state.notifications as notification (notification.id)}
+  {#each notificationsState.list as notification (notification.id)}
     <div
       class="notification"
       class:success={notification.type === 'success'}
@@ -116,9 +107,13 @@ button:hover {
       class:info={notification.type === 'info'}
       transition:fade={{ duration: 100 }}
     >
-      {@html notification.message}
+      {#if typeof notification.message === 'function'}
+        {@render notification.message()}
+      {:else}
+        {notification.message}
+      {/if}
 
-      <button on:click={() => state.notification.remove(notification.id)}>
+      <button onclick={() => notificationsState.remove(notification.id)}>
         <Icon icon="x" size="10" />
       </button>
     </div>
@@ -126,7 +121,7 @@ button:hover {
 
   <div
     class="notification error"
-    class:disabled={$state.online !== false}
+    class:disabled={connectionState.online !== false}
     transition:fade={{ duration: 100 }}
   >
     <ConnectionIndicator />

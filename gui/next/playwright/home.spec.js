@@ -50,3 +50,44 @@ test('showing documentation and partner portal links', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Documentation' })).toBeVisible();
   await expect(page.getByRole('link' , { name: 'Partner Portal' })).toBeVisible();
 });
+
+
+
+// purpose:   makes npm report a version other than the running one, so the update button shows
+// arguments: page (object), how long npm takes to answer in ms (number)
+// ------------------------------------------------------------------------
+const routeNewerVersion = async (page, delay = 0) => {
+  await page.route('https://registry.npmjs.org/@platformos/pos-cli/latest', async route => {
+    await new Promise(resolve => setTimeout(resolve, delay));
+    await route.fulfill({ json: { version: '999.0.0' } });
+  });
+};
+
+
+test('showing the update button when npm answers before the instance', async ({ page }) => {
+  await routeNewerVersion(page);
+  // the instance's /info answers only after npm has
+  await page.route('**/info', async route => {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    await route.fallback();
+  });
+
+  await page.goto('./');
+
+  await expect(page.getByRole('button', { name: 'Update available' })).toBeVisible();
+});
+
+
+test('telling that the update command could not be copied', async ({ page }) => {
+  // npm answers after the instance, so this test does not depend on the one above
+  await routeNewerVersion(page, 1500);
+  // the clipboard refuses, as it does without permission or focus
+  await page.addInitScript(() => {
+    navigator.clipboard.writeText = () => Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError'));
+  });
+
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Update available' }).click();
+
+  await expect(page.locator('.notification.error:not(.disabled)')).toContainText('Could not copy the update command');
+});

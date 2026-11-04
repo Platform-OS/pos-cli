@@ -4,25 +4,33 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { graphql } from '#lib/api/graphql';
+import { graphql, graphqlData } from '#lib/api/graphql';
 
+
+// the job types the list can be filtered by, written into the query as an enum value (array)
+const types = ['SCHEDULED', 'DEAD', 'RUNNING'];
 
 
 const backgroundJob = {
 
   // purpose:		downloads background jobs list from API
   // arguments: filters to apply to query (object)
+  //				options (object), with fetch to use, such as the one a load function receives
   // returns:		background jobs in json format (array of objects)
   // ------------------------------------------------------------------------
-  get: async (filters) => {
+  get: async (filters, options) => {
+
+    // these are written into the query text and can come from a url, so the type is one
+    // of the known names, the page a number and the id a quoted, escaped string
+    const page = parseInt(filters?.page) > 0 ? parseInt(filters.page) : 1;
 
     let idFilter = '';
     if(filters?.id){
-      idFilter = `id: { value: "${filters.id}" }`;
+      idFilter = `id: { value: ${JSON.stringify(String(filters.id))} }`;
     }
 
     let typeFilter = '';
-    if(filters?.type){
+    if(types.includes(filters?.type)){
       typeFilter = `type: ${filters.type}`;
     }
 
@@ -30,7 +38,7 @@ const backgroundJob = {
       query {
         admin_background_jobs(
           per_page: 20,
-          page: ${filters?.page || 1}
+          page: ${page}
           filter: {
             ${idFilter}
             ${typeFilter}
@@ -69,7 +77,7 @@ const backgroundJob = {
         }
       }`;
 
-    return graphql({ query }, false).then(data => data.admin_background_jobs);
+    return graphqlData({ query }, options).then(data => data.admin_background_jobs);
 
   },
 
@@ -84,7 +92,7 @@ const backgroundJob = {
 
     const query = `
       mutation {
-        admin_background_job_delete(id: "${id}") {
+        admin_background_job_delete(id: ${JSON.stringify(String(id))}) {
           id
         }
       }
@@ -105,7 +113,7 @@ const backgroundJob = {
 
     const query = `
       mutation {
-        admin_background_job_retry(id: "${id}"){
+        admin_background_job_retry(id: ${JSON.stringify(String(id))}){
           id
         }
       }

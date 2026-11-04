@@ -3,12 +3,10 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { onDestroy } from 'svelte';
-import { goto } from '$app/navigation';
-import { page } from '#lib/page.js';
-import { backgroundJob } from '#lib/api/backgroundJob.js';
+import { goto, invalidate } from '$app/navigation';
+import { page } from '$app/state';
 import { relativeTime } from '#lib/relativeTime.js';
-import { state } from '#lib/state.js';
+import { connectionState } from '#lib/state/connection.svelte.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import Number from '#lib/ui/forms/Number.svelte';
@@ -18,61 +16,53 @@ import Delete from '#lib/backgroundJob/Delete.svelte';
 
 // properties
 // ------------------------------------------------------------------------
-// query results (object)
-let items = {
-  results: []
-};
+let {
+  // the jobs list and the filters it was loaded with, from +layout.js (object)
+  data,
+  // the job details, shown when a job is opened (snippet)
+  children
+} = $props();
+// list of jobs (array)
+let items = $derived(data.jobs?.results ?? []);
+// the type and page in the form, following the url until they are edited
+let type = $derived(data.filters.type);
+let pageNumber = $derived(data.filters.page);
+// the current time, so the relative run times move on while the list is open (int)
+let now = $state(Date.now());
 // the extended menu for the background job
-let contextMenu = {
+let contextMenu = $state({
   // job id for which the context menu is opened for
   id: null
-};
-// stores currently applied filters (object)
-let filters = {
-  page: 1,
-  type: 'SCHEDULED',
-  ...Object.fromEntries($page.url.searchParams)
-}
+});
 // main form with the filters (dom node)
 let form;
 
-// purpose:   get the fresh list of background jobs from database and start counter on when they run
-// arguments: filters to use for the query (FormData)
+
+// purpose:   update the relative run times every second
 // ------------------------------------------------------------------------
-let runsAtUpdateInterval;
-const getItems = async () => {
+$effect(() => {
+  const interval = setInterval(() => now = Date.now(), 1000);
 
-  clearInterval(runsAtUpdateInterval);
-
-  items = await backgroundJob.get(filters);
-
-  runsAtUpdateInterval = setInterval(() => {
-    items.results.forEach(item => {
-      if(filters.type === 'DEAD'){
-        item.dead_at_parsed = relativeTime(new Date(item.dead_at));
-      } else {
-        item.run_at_parsed = relativeTime(new Date(item.run_at));
-      }
-    });
-  }, 1000);
-
-};
-
-$: filters && getItems();
-
-onDestroy(() => {
-  clearInterval(runsAtUpdateInterval);
+  return () => clearInterval(interval);
 });
 
 
-// purpose:		parses the <form> and triggers background jobs reload
+// purpose:   load the jobs again after a retry or a delete
 // ------------------------------------------------------------------------
-const filter = () => {
-  const formData = new FormData(form);
-  const asString = new URLSearchParams(formData).toString();
-  goto('?' + asString);
+const reloadJobs = () => invalidate('app:backgroundJobs');
 
-  getItems();
+
+// purpose:   shows the list for the type and page in the form, through the url
+//            (the layout's load function runs again for the new query)
+// arguments: submit event (object)
+// ------------------------------------------------------------------------
+const submitForm = function(event) {
+  event.preventDefault();
+  const params = new URLSearchParams(new FormData(form));
+  if (data.filters.type !== params.get('type')) {
+    params.set('page', 1);
+  }
+  goto(page.url.pathname + '?' + params.toString(), { keepFocus: true, noScroll: true });
 }
 
 </script>
@@ -175,11 +165,6 @@ td, th {
     gap: .7em;
   }
 
-  .unnamed {
-    font-style: italic;
-    color: var(--color-text-secondary);
-  }
-
 table a {
   color: var(--color-interaction);
 }
@@ -256,7 +241,7 @@ menu :global(button:hover) {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>Jobs{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>Jobs{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
 
@@ -265,10 +250,10 @@ menu :global(button:hover) {
   <div>
 
     <nav class="filters">
-      <form id="filters" bind:this={form}>
+      <form id="filters" bind:this={form} onsubmit={submitForm}>
         <fieldset>
           <label for="filter-type">Type:</label>
-          <select name="type" id="filter-type" bind:value={filters.type} on:change={form.requestSubmit()}>
+          <select name="type" id="filter-type" bind:value={type} onchange={() => form.requestSubmit()}>
             <option value="SCHEDULED">Scheduled</option>
             <option value="DEAD">Failed</option>
             <option value="RUNNING">Running</option>
@@ -294,7 +279,7 @@ menu :global(button:hover) {
           <th class="id">Name / id</th>
           <th>Priority</th>
           <th>
-            {#if filters.type === 'DEAD'}
+            {#if data.filters.type === 'DEAD'}
               Failed
             {:else}
               Runs
@@ -303,47 +288,49 @@ menu :global(button:hover) {
         </tr>
       </thead>
 
-    {#each items.results as item}
+      <tbody>
+        {#each items as item (item.id)}
 
-      <tr>
-        <td class="id" on:mouseleave={() => contextMenu.id = null}>
-          <div>
+          <tr>
+            <td class="id" onmouseleave={() => contextMenu.id = null}>
+              <div>
 
-            <button class="button compact more" on:click={() => contextMenu.id = item.id}>
-              <span class="label">More options</span>
-              <Icon icon="navigationMenuVertical" size="16" />
-            </button>
+                <button class="button compact more" onclick={() => contextMenu.id = item.id}>
+                  <span class="label">More options</span>
+                  <Icon icon="navigationMenuVertical" size="16" />
+                </button>
 
-            <menu class="content-context" class:active={contextMenu.id === item.id}>
-              <ul>
-                {#if item.dead_at}
-                  <li>
-                    <Retry id={item.id} on:itemsChanged={getItems} />
-                  </li>
-                {/if}
-                <li>
-                  <Delete id={item.id} on:itemsChanged={getItems} />
-                </li>
-              </ul>
-            </menu>
+                <menu class="content-context" class:active={contextMenu.id === item.id}>
+                  <ul>
+                    {#if item.dead_at}
+                      <li>
+                        <Retry id={item.id} onsuccess={reloadJobs} />
+                      </li>
+                    {/if}
+                    <li>
+                      <Delete id={item.id} onsuccess={reloadJobs} />
+                    </li>
+                  </ul>
+                </menu>
 
-            <a href="/backgroundJobs/{filters.type.toLowerCase()}/{item.id}?{$page.url.searchParams.toString()}">
-              {item.source_name || item.id}
-            </a>
+                <a href="/backgroundJobs/{data.filters.type.toLowerCase()}/{item.id}?{page.url.searchParams.toString()}">
+                  {item.source_name || item.id}
+                </a>
 
-          </div>
-        </td>
-        <td>{item.queue}</td>
-        <td>
-          {#if filters.type === 'DEAD'}
-            { item.dead_at_parsed || relativeTime(new Date(item.dead_at)) || '' }
-          {:else}
-            { item.run_at_parsed || relativeTime(new Date(item.run_at)) }
-          {/if}
-        </td>
-      </tr>
+              </div>
+            </td>
+            <td>{item.queue}</td>
+            <td>
+              {#if data.filters.type === 'DEAD'}
+                {relativeTime(new Date(item.dead_at), now) || ''}
+              {:else}
+                {relativeTime(new Date(item.run_at), now)}
+              {/if}
+            </td>
+          </tr>
 
-    {/each}
+        {/each}
+      </tbody>
 
     </table>
 
@@ -354,20 +341,20 @@ menu :global(button:hover) {
       <Number
         form="filters"
         name="page"
-        bind:value={filters.page}
+        bind:value={pageNumber}
         min={1}
-        max={items.total_pages}
+        max={data.jobs?.total_pages || 1}
         step={1}
         decreaseLabel="Previous page"
         increaseLabel="Next page"
         style="navigation"
-        on:input={form.requestSubmit()}
+        oninput={({ submitter }) => form.requestSubmit(submitter)}
       />
-      of {items.total_pages || 1}
+      of {data.jobs?.total_pages || 1}
     </nav>
 
   </div>
 
-  <slot />
+  {@render children?.()}
 
 </div>

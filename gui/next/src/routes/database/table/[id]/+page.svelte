@@ -3,9 +3,12 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { page } from '#lib/page.js';
-import { state } from '#lib/state';
-import { record } from '#lib/api/record';
+import { goto, invalidate } from '$app/navigation';
+import { page } from '$app/state';
+import { connectionState } from '#lib/state/connection.svelte.js';
+import { databaseState } from '#lib/state/database.svelte.js';
+import { preferencesState, setView } from '#lib/state/preferences.svelte.js';
+import { queryHref } from '#lib/database/query.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import Filters from '#lib/database/Filters.svelte';
@@ -17,26 +20,33 @@ import Number from '#lib/ui/forms/Number.svelte';
 
 // properties
 // ------------------------------------------------------------------------
+// records, and the filters and sort they were loaded with, from +page.js (object)
+let { data } = $props();
 // if the current view is being refreshed currently (bool)
-let refreshing = false;
+let refreshing = $state(false);
+// page number in the pagination field, following the url until it is edited (int)
+let pageNumber = $derived(data.filters.page);
 
 
-
-// purpose:		set current table in the state after entering the page
+// purpose:		set current table in the state
+//				(databaseState.table is derived from the id, so it also follows the tables loading later)
 // ------------------------------------------------------------------------
-$: $state.table = $state.tables.filter(table => table.id === $page.params.id)[0];
+$effect.pre(() => {
+  databaseState.tableId = page.params.id;
+});
 
-// purpose:		reload the records each time the table id changes
+
+// purpose:		shows the records with part of the view changed, through the url
+// arguments:	what to change, see queryHref in #lib/database/query.js (object)
 // ------------------------------------------------------------------------
-$: $page.params.id && record.get({ table: $page.params.id }) && state.clearFilters();
+const show = (changes) => goto(queryHref(page.url, changes), { reset: false });
 
 
 // purpose:		refresh current data without reloading the whole page
-// returns:		updates the store with freshly downloaded records for current view
 // ------------------------------------------------------------------------
 const refresh = () => {
   refreshing = true;
-  record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted }).then(() => refreshing = false);
+  invalidate('app:records').then(() => refreshing = false);
 };
 
 
@@ -122,28 +132,28 @@ nav {
 
 <!-- ================================================================== -->
 <svelte:head>
-  <title>{$state.table?.name || 'Loading…'}{$state.online?.MPKIT_URL ? ': ' + $state.online.MPKIT_URL.replace('https://', '') : ''}</title>
+  <title>{databaseState.table?.name || 'Loading…'}{connectionState.online?.MPKIT_URL ? ': ' + connectionState.online.MPKIT_URL.replace('https://', '') : ''}</title>
 </svelte:head>
 
-<svelte:window on:keypress={keyboardShortcuts} />
+<svelte:window onkeypress={keyboardShortcuts} />
 
 <section>
 
   <nav>
 
-    <Filters />
+    <Filters filters={data.filters} onfilter={filter => show({ filter, page: 1 })} />
 
-    <Sort />
+    <Sort sort={data.sort} onsort={sort => show({ sort, page: 1 })} />
 
-    <button class="button" title="Refresh current view (R)" class:refreshing on:click={refresh}>
+    <button class="button" title="Refresh current view (R)" class:refreshing onclick={refresh}>
       <span class="label">Refresh current view</span>
       <Icon icon="refresh" />
     </button>
 
   </nav>
 
-  {#if $state.view.database !== 'tiles'}
-    <Table />
+  {#if preferencesState.view.database !== 'tiles'}
+    <Table records={data.records} deleted={data.filters.deleted === 'true'} />
   {:else}
     Work in progress :)
   {/if}
@@ -155,32 +165,32 @@ nav {
       </label>
       <Number
         name="page"
-        bind:value={$state.filters.page}
+        bind:value={pageNumber}
         min={1}
-        max={$state.records?.total_pages}
+        max={data.records?.total_pages}
         step={1}
         decreaseLabel="Previous page"
         increaseLabel="Next page"
         style="navigation"
-        on:input={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted }); } }
+        oninput={() => show({ page: pageNumber })}
       />
-      of {$state.records?.total_pages || 1}
+      of {data.records?.total_pages || 1}
     </div>
 
     <div id="viewOptions">
 
-      <button class="button" title="Create new record" on:click|preventDefault={ () => $state.record = {} }>
+      <button class="button" title="Create new record" onclick={event => { event.preventDefault(); databaseState.record = {}; }}>
         <Icon icon="plus" />
         <span class="label">Create new record</span>
       </button>
 
-      {#if $state.view.database !== 'tiles'}
+      {#if preferencesState.view.database !== 'tiles'}
         <button
           class="button"
-          title={$state.view.tableStyle === 'expanded' ? 'Collapse values' : 'Expand values'}
-          on:click|preventDefault={$state.view.tableStyle === 'collapsed' ? state.setView({ tableStyle: 'expanded' }) : state.setView({ tableStyle: 'collapsed' })}
+          title={preferencesState.view.tableStyle === 'expanded' ? 'Collapse values' : 'Expand values'}
+          onclick={event => { event.preventDefault(); setView({ tableStyle: preferencesState.view.tableStyle === 'collapsed' ? 'expanded' : 'collapsed' }); }}
         >
-          {#if $state.view.tableStyle === 'collapsed'}
+          {#if preferencesState.view.tableStyle === 'collapsed'}
             <span class="label">Expand values</span>
             <Icon icon="expand" />
           {:else}
@@ -197,40 +207,40 @@ nav {
           type="radio"
           name="deleted"
           id="deletedTrue"
-          bind:group={$state.filters.deleted}
+          checked={data.filters.deleted === 'false'}
           value="false"
-          disabled={$state.filters.deleted === 'false'}
-          on:change={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted }); } }
+          disabled={data.filters.deleted === 'false'}
+          onchange={event => show({ deleted: event.target.value })}
         >
         <label
           for="deletedTrue"
           class="button"
-          class:active={$state.filters.deleted === 'false'}
-          class:disabled={$state.filters.deleted === 'false'}
-          title="Show{$state.filters.deleted === 'false' ? 'ing' : ''} current database state"
+          class:active={data.filters.deleted === 'false'}
+          class:disabled={data.filters.deleted === 'false'}
+          title="Show{data.filters.deleted === 'false' ? 'ing' : ''} current database state"
         >
           <Icon icon="leaf" />
-          <span class="label">Show{$state.filters.deleted === 'false' ? 'ing' : ''} current database state</span>
+          <span class="label">Show{data.filters.deleted === 'false' ? 'ing' : ''} current database state</span>
         </label>
 
         <label
           for="deletedFalse"
           class="button"
-          class:active={$state.filters.deleted === 'true'}
-          class:disabled={$state.filters.deleted === 'true'}
-          title="Show{$state.filters.deleted === 'true' ? 'ing' : ''} deleted records"
+          class:active={data.filters.deleted === 'true'}
+          class:disabled={data.filters.deleted === 'true'}
+          title="Show{data.filters.deleted === 'true' ? 'ing' : ''} deleted records"
         >
           <Icon icon="recycle" />
-          <span class="label">Show{$state.filters.deleted === 'true' ? 'ing' : ''} deleted records</span>
+          <span class="label">Show{data.filters.deleted === 'true' ? 'ing' : ''} deleted records</span>
         </label>
         <input
           type="radio"
           name="deleted"
           id="deletedFalse"
-          bind:group={$state.filters.deleted}
+          checked={data.filters.deleted === 'true'}
           value="true"
-          disabled={$state.filters.deleted === 'true'}
-          on:change={() => { record.get({ table: $page.params.id, filters: $state.filters, sort: $state.sort, deleted: $state.filters.deleted }); } }
+          disabled={data.filters.deleted === 'true'}
+          onchange={event => show({ deleted: event.target.value })}
         >
 
       </div>
@@ -240,6 +250,6 @@ nav {
 
 </section>
 
-{#if $state.record !== null}
-  <RecordCreate properties={$state.table.properties} editing={$state.record} />
+{#if databaseState.record !== null}
+  <RecordCreate properties={databaseState.table.properties} editing={databaseState.record} />
 {/if}

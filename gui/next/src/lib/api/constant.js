@@ -5,7 +5,7 @@
 
 // imports
 // ------------------------------------------------------------------------
-import { graphql } from '#lib/api/graphql';
+import { graphql, graphqlData } from '#lib/api/graphql';
 
 
 
@@ -28,7 +28,7 @@ const constant = {
         }
       }`;
 
-    return graphql({ query }, false).then(data => data.constants.results);
+    return graphqlData({ query }, false).then(data => data.constants.results);
   },
 
   edit: (data) => {
