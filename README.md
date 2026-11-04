@@ -1016,25 +1016,76 @@ If you script `pos-cli ai init --tool <tool>` and want it to keep writing only t
 
 **The server used to be called `platformos`** and is now `platformos-cli`, after the command it runs — the old name said nothing about what it was, and the supervisor is platformOS too. `pos-cli ai init` renames an entry it wrote, in place, and removes the old one so the server is not registered twice. An entry you have customised is left under the old name, with a message saying what the new one would be: rename it yourself, or keep it — nothing breaks either way, since the name is only how your AI tool refers to the server.
 
-##### The platformOS Agent Playbook (Claude Code only)
+##### The platformOS Agent Playbook
 
-Choosing **Claude Code** adds one more optional step: installing the **platformOS Agent Playbook** into `.claude/` in your project. The Playbook is platformOS rules, knowledge files, a coding-agent definition and a diagnostics hook — the platform behaviour that fails silently and that no linter catches, written for an agent to read. It is downloaded from the documentation site:
+Choosing **Claude Code**, **opencode**, **pi** or **Codex** adds one more optional step: installing the **platformOS Agent Playbook** into that tool's own directory in your project. The Playbook is platformOS rules, knowledge files, a coding-agent definition and a diagnostics hook — the platform behaviour that fails silently and that no linter catches, written for an agent to read.
 
-    https://documentation.platformos.com/assets/platformos-agent-playbook.zip
+There is one archive per tool, because the layout belongs to the tool. All four carry the same platformOS knowledge, compiled from the same source:
 
-It is offered for Claude Code and no other tool, because the archive *is* a `.claude/` directory — that layout belongs to Claude Code and nothing else reads it.
+| Tool | Installs into | Archive |
+|---|---|---|
+| Claude Code | `.claude/` | `platformos-agent-playbook.zip` |
+| opencode | `.opencode/` | `platformos-agent-playbook-opencode.zip` |
+| pi | `.pi/` | `platformos-agent-playbook-pi.zip` |
+| Codex | `.codex/` | `platformos-agent-playbook-codex.zip` |
 
-    pos-cli ai init --tool claude --agent-playbook     # install it without being asked
-    pos-cli ai init --tool claude --no-agent-playbook  # never install it, never ask
+All four are published under `https://documentation.platformos.com/assets/`.
+
+What differs is the wiring, because the tools provide different mechanisms:
+
+- **Claude Code** reads per-directory rules natively: a rule file carrying a `paths:` field loads only when you open a file it matches, and a `PostToolUse` hook attaches the documented platformOS claim to a validation finding.
+- **opencode** and **pi** have neither, so their archives ship a small plugin that reimplements both on the tool's own hooks — it watches which file each tool call touched, delivers the matching rule once per session, and explains a `validate_code` finding from the same table. Both plugins share one delivery module, so they cannot drift apart.
+- **Codex** has no lazy per-directory mechanism at all: it builds its instruction chain once at startup from the project root down to the working directory, and a nested `AGENTS.md` is read only when Codex is *started* in that directory. Its rules therefore ship as files, with an index in `AGENTS.md` telling the agent which one to read before working in a given directory.
+
+<!-- -->
+
+    pos-cli ai init --tool claude   --agent-playbook     # install it without being asked
+    pos-cli ai init --tool opencode --agent-playbook
+    pos-cli ai init --tool pi       --agent-playbook
+    pos-cli ai init --tool codex    --agent-playbook
+    pos-cli ai init --tool claude   --no-agent-playbook  # never install it, never ask
 
 With neither flag, the question is asked only when the run is interactive. Naming `--tool` means "do not ask me", so a scripted run installs the Playbook only if it also passes `--agent-playbook`.
 
 Two things it will not do:
 
-- **It never overwrites an existing `.claude/`.** That directory holds your own rules and settings, and merging a Playbook into it would replace them. If you already have one, pos-cli says so and prints the URL so you can unpack and merge it yourself.
-- **It never fails `ai init`.** The MCP servers are registered before the Playbook is offered, so a download failure is a warning with the URL in it, not a failed command.
+- **It never overwrites an existing Playbook directory, or an existing `AGENTS.md`.** Those hold your own rules and settings, and merging into them would replace them. pos-cli says so and prints the download link so you can unpack and merge by hand.
+- **It never fails `ai init`.** Every error in this step is caught and reported, and the MCP servers are registered regardless.
 
-Every entry in the archive is checked before anything is written: a path that is absolute, that carries a Windows drive, or that climbs out of `.claude/` rejects the whole archive.
+Every entry in the archive is checked before anything is written: a path that is absolute, that carries a Windows drive, or that climbs out of the one directory the archive is allowed to write rejects the whole archive. The paths inside the archive's manifest are held to the same rule.
+
+The Playbook is installed **before** the MCP servers are registered, and that order matters: pi and Codex keep their MCP configuration *inside* the directory the Playbook unpacks to (`.pi/mcp.json`, `.codex/config.toml`). Writing the configuration first would create that directory, and the Playbook — which never touches a directory that already exists — would then decline on every fresh project while reporting success.
+
+##### opencode configuration formats
+
+opencode's two major versions keep MCP servers in different places, and its published schema still accepts both: opencode 1 puts each server directly under `mcp`, opencode 2 puts them under `mcp.servers` and marks the older shape deprecated.
+
+pos-cli follows the format your file already uses. When the file says nothing, an interactive run asks and a scripted run writes the current format. Either way you can say so outright:
+
+    pos-cli ai init --tool opencode --opencode-config v2   # servers under mcp.servers
+    pos-cli ai init --tool opencode --opencode-config v1   # servers directly under mcp
+
+When pos-cli writes the newer format and finds servers it had previously written under the old key, it **moves** them rather than adding a second copy — two entries for one server start it twice, and the agent then sees every tool twice. An entry you have customised is left where it is and reported, so you can merge it yourself.
+
+##### Codex: TOML, and the project trust flag
+
+Codex is the one tool here whose configuration is **TOML**, not JSON. pos-cli appends `[mcp_servers.<name>]` tables rather than reparsing your file: TOML tables are order-independent, so this is sound, and it means your comments and formatting are never rewritten. The cost is that an entry already present is left alone **without comparing it** — nothing can tell an entry pos-cli wrote from one you wrote without the parser this avoids — and that is reported rather than silently skipped.
+
+More importantly: **Codex ignores a project `.codex/config.toml` entirely until the project is listed as trusted in your global configuration.** Measured against codex-cli 0.166.0 — with the project untrusted, `codex mcp list` reports no servers at all.
+
+    [projects."/absolute/path/to/project"]
+    trust_level = "trusted"
+
+That line lives in `~/.codex/config.toml` (or `$CODEX_HOME/config.toml`). pos-cli will add it for you, but only after asking, because the same flag also allows that project's **hooks** to run — which is not a decision a setup command should make on your behalf. Decline and it prints the exact block to paste.
+
+    pos-cli ai init --tool codex --codex-trust     # add the trust block without being asked
+    pos-cli ai init --tool codex --no-codex-trust  # never add it, never ask
+
+Codex also reads instructions only from `AGENTS.md` in the project root, so the Playbook's `AGENTS.md` is copied there when you do not already have one. If you do, it is left untouched and the Playbook's copy is named so you can merge from it.
+
+##### pi: project trust
+
+pi ignores everything in `.pi/` — the MCP servers, the Playbook, the extension — until the project is trusted. pos-cli reports this after installing, because an untrusted project reads none of it and nothing about the install looks wrong. Start pi in the project and accept its prompt, or set `"defaultProjectTrust": "always"` in your pi settings.
 
 #### Starting the MCP Server
 
