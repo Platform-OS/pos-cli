@@ -16,7 +16,7 @@ vi.mock('#lib/logger.js', () => ({
 }));
 
 import isValidJSON from '#lib/data/isValidJSON.js';
-import waitForStatus from '#lib/data/waitForStatus.js';
+import waitForStatus, { STOPPED, stoppedReason, failureReason } from '#lib/data/waitForStatus.js';
 import logger from '#lib/logger.js';
 
 describe('isValidJSON', () => {
@@ -161,6 +161,23 @@ describe('waitForStatus', () => {
     await vi.advanceTimersByTimeAsync(1000);
 
     await expect(promise).rejects.toEqual({ status: 'failed' });
+  });
+
+  // a job stopped from the admin GUI's background jobs ends as stopped, never to move again
+  test('rejects on stopped when the caller names it', async () => {
+    const stopped = { status: 'stopped', error: 'Background job abc stopped with admin_background_job_stop' };
+    const statusCheck = vi.fn()
+      .mockResolvedValueOnce({ status: 'pending' })
+      .mockResolvedValueOnce(stopped);
+
+    const promise = waitForStatus(statusCheck, ['pending'], 'done', 1000, null, { failureStatus: STOPPED });
+    promise.catch(() => {});
+
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(promise).rejects.toEqual(stopped);
+    expect(statusCheck).toHaveBeenCalledTimes(2);
   });
 
   test('calls callback on each status check', async () => {
@@ -344,5 +361,42 @@ describe('waitForStatus', () => {
     const result = await promise;
     expect(result).toEqual({ status: 'done' });
     expect(statusCheck).toHaveBeenCalledTimes(2);
+  });
+});
+
+
+describe('stoppedReason', () => {
+  test('reads the reason of a stopped job, whichever shape its error has', () => {
+    const reason = 'Background job abc stopped with admin_background_job_stop';
+
+    expect(stoppedReason({ status: 'stopped', error: reason })).toBe(reason);
+    expect(stoppedReason({ status: 'stopped', error: { error: reason, details: {} } })).toBe(reason);
+    expect(stoppedReason({ status: 'stopped' })).toBe('its background job was stopped');
+    expect(stoppedReason({ status: 'stopped', error: '' })).toBe('its background job was stopped');
+    expect(stoppedReason({ status: 'stopped', error: { details: {} } })).toBe('its background job was stopped');
+  });
+
+  // data jobs and instance clones report their status as { name }
+  test('reads a status reported as { name }', () => {
+    expect(stoppedReason({ status: { name: 'stopped' }, error: 'why' })).toBe('why');
+  });
+
+  test('is null for any job that did not stop', () => {
+    expect(stoppedReason({ status: 'failed', error: 'boom' })).toBeNull();
+    expect(stoppedReason(new Error('network'))).toBeNull();
+    expect(stoppedReason(undefined)).toBeNull();
+  });
+});
+
+
+describe('failureReason', () => {
+  test('says what ended a job, whatever the poll rejected with', () => {
+    expect(failureReason({ status: { name: 'stopped' }, error: 'why' })).toBe('its job was stopped: why');
+    expect(failureReason({ status: 'stopped' })).toBe('its job was stopped');
+    expect(failureReason({ status: 'failed', error: 'boom' })).toBe('boom');
+    expect(failureReason({ status: 'error', error: { error: 'bad file', details: {} } })).toBe('bad file');
+    expect(failureReason({ status: 'failed' })).toBe('ended as failed');
+    expect(failureReason(new Error('No response in 270s'))).toBe('No response in 270s');
+    expect(failureReason(undefined)).toBe('unknown error');
   });
 });

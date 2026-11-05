@@ -3,7 +3,7 @@
 import { program } from '../lib/program.js';
 import prompts from 'prompts';
 import Gateway from '../lib/proxy.js';
-import waitForStatus from '../lib/data/waitForStatus.js';
+import waitForStatus, { STOPPED, failureReason } from '../lib/data/waitForStatus.js';
 import { fetchSettings } from '../lib/settings.js';
 import logger from '../lib/logger.js';
 import ServerError from '../lib/ServerError.js';
@@ -52,7 +52,7 @@ program
         const checkDataCleanJobStatus = () => {
           return gateway.dataCleanStatus(response.id); 
         };
-        await waitForStatus(checkDataCleanJobStatus, 'pending', 'done');
+        await waitForStatus(checkDataCleanJobStatus, 'pending', 'done', undefined, null, { failureStatus: STOPPED });
 
         spinner.stopAndPersist().succeed('DONE. Instance cleaned');
       } else logger.Error('Wrong confirmation. Closed without cleaning instance data.');
@@ -66,7 +66,7 @@ program
       else if (ServerError.isNetworkError(e))
         await ServerError.handler(e);
       else
-        await logger.Error(e);
+        await logger.Error(failureReason(e));
     }
   });
 

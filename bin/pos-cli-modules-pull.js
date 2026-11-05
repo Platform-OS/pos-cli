@@ -5,7 +5,7 @@ import Gateway from '../lib/proxy.js';
 import logger from '../lib/logger.js';
 import { fetchSettings } from '../lib/settings.js';
 import downloadFile from '../lib/downloadFile.js';
-import waitForStatus from '../lib/data/waitForStatus.js';
+import waitForStatus, { STOPPED, failureReason } from '../lib/data/waitForStatus.js';
 import ora from '../lib/ora.js';
 
 program
@@ -22,7 +22,7 @@ program
     const gateway = new Gateway(authData);
     gateway
       .appExportStart({ module_name: module })
-      .then(exportTask => waitForStatus(() => gateway.appExportStatus(exportTask.id), 'ready_for_export', 'success'))
+      .then(exportTask => waitForStatus(() => gateway.appExportStatus(exportTask.id), 'ready_for_export', 'success', undefined, null, { failureStatus: ['error', STOPPED] }))
       .then(exportTask => downloadFile(exportTask.zip_file.url, filename))
       .then(() => spinner.succeed('Downloading files'))
       .catch({ statusCode: 404 }, () => {
@@ -31,7 +31,7 @@ program
       })
       .catch(e => {
         spinner.fail(`Pulling ${module} failed.`);
-        logger.Error(e.message || e.error.error || e.error);
+        logger.Error(failureReason(e));
       });
 
   });

@@ -88,20 +88,22 @@ code {
           <dt>Created at:</dt>
           <dd>{(new Date(item.created_at)).toLocaleString()}</dd>
         </div>
-        <div>
-          <dt>Run at:</dt>
-          <dd>{(new Date(item.run_at)).toLocaleString()}</dd>
-        </div>
+        {#if item.run_at}
+          <div>
+            <dt>Run at:</dt>
+            <dd>{(new Date(item.run_at)).toLocaleString()}</dd>
+          </div>
+        {/if}
         {#if item.dead_at}
           <div>
             <dt>Dead at:</dt>
             <dd class="error">{(new Date(item.dead_at)).toLocaleString()}</dd>
           </div>
         {/if}
-        {#if item.arguments.url}
+        {#if item.arguments?.url}
           <div>
             <dt>URL:</dt>
-            <dd>{item.arguments.context.location.href || '/'}</dd>
+            <dd>{item.arguments.context?.location?.href || item.arguments.url}</dd>
           </div>
         {/if}
       {/if}

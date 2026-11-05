@@ -9,7 +9,9 @@ const STATES = Object.freeze({
   processing: 'running',
   scheduled: 'running',
   done: 'completed',
-  failed: 'failed'
+  failed: 'failed',
+  // its job was stopped from the admin GUI's background jobs (admin_background_job_stop)
+  stopped: 'failed'
 });
 
 /** Whichever shape the instance used. */

@@ -28,6 +28,7 @@ import dir from '../../lib/directories.js';
 import { authProperties } from '../schemas/auth.js';
 import { releaseState, filesNotMatched, warningsExceptDiscarded, toCount } from '../jobs/adapters/deploy.js';
 import { makeWorkDir, removeWorkDir } from './work-dir.js';
+import { stoppedReason } from '../../lib/data/waitForStatus.js';
 import { partialProperty, partialOf } from './partial.js';
 
 const POLL_MS = 1000;
@@ -264,6 +265,9 @@ const dryRunDeployTool = {
     // Files the converter matched no rule for: a deploy drops them and still reports success.
     let discarded = [];
     let warnings;
+    // Someone stopped the release's job from the admin GUI: it settled without the instance judging
+    // the project, so the verdict stays `not_known` rather than a refusal of files that are fine.
+    let stopped = null;
 
     const clock = timing(ctx);
 
@@ -278,8 +282,9 @@ const dryRunDeployTool = {
       // they can still be acted on — 'module X is not configured for file deletion' says a delete
       // list is shorter than it looks.
       warnings = warningsExceptDiscarded(release);
+      stopped = stoppedReason(release);
       if (state === 'done') verdict = 'would_succeed';
-      if (state === 'failed') {
+      if (state === 'failed' && !stopped) {
         verdict = 'would_fail';
         error = validationError(release);
       }
@@ -296,7 +301,7 @@ const dryRunDeployTool = {
 
     // A release the instance has already rejected has nothing for a manifest to be validated
     // against, and waiting on one would spend a minute to learn that.
-    if (assetFiles.length > 0 && verdict !== 'would_fail' && releaseId) {
+    if (assetFiles.length > 0 && verdict !== 'would_fail' && !stopped && releaseId) {
       ctx.sendProgress?.({ progress: 1, total: 2, message: 'Validating assets' });
       const manifest = await manifestGenerate();
       await gateway.sendManifest(manifest, releaseId);
@@ -323,6 +328,7 @@ const dryRunDeployTool = {
       // and `error` says which files the instance refused.
       verdict,
       ...(error && { error }),
+      ...(stopped && { stopped }),
       // What the refusal costs, beside the instance's own words rather than instead of them. The
       // message it sends ends with the `records_delete_all` that would clear the blocker, as
       // ordinary prose — nothing in it says that command destroys data or that a person should

@@ -57,7 +57,7 @@ const submitForm = function(event) {
   if(lb_status_codes.length){
     params.set('lb_status_codes', lb_status_codes.join(','));
   }
-  goto(page.url.pathname + '?' + params.toString(), { keepFocus: true, noScroll: true });
+  goto(page.url.pathname + '?' + params.toString(), { reset: false });
 }
 
 

@@ -5,7 +5,7 @@ import Gateway from '../lib/proxy.js';
 import logger from '../lib/logger.js';
 import { fetchSettings } from '../lib/settings.js';
 import downloadFile from '../lib/downloadFile.js';
-import waitForStatus from '../lib/data/waitForStatus.js';
+import waitForStatus, { STOPPED, failureReason } from '../lib/data/waitForStatus.js';
 
 import ora from '../lib/ora.js';
 
@@ -24,12 +24,14 @@ program
     gateway
       .appExportStart()
       .then(exportTask => {
-        waitForStatus(() => gateway.appExportStatus(exportTask.id), 'ready_for_export', 'success')
+        // A release that failed ends as `error`, as `lib/push.js` reads the same resource.
+        waitForStatus(() => gateway.appExportStatus(exportTask.id), 'ready_for_export', 'success', undefined, null, { failureStatus: ['error', STOPPED] })
           .then(exportTask => downloadFile(exportTask.zip_file.url, filename))
           .then(() => spinner.succeed('Downloading files'))
           .catch(error => {
             logger.Debug(error);
             spinner.fail('Export failed');
+            logger.Error(`Export failed: ${failureReason(error)}`);
           });
       })
       .catch({ statusCode: 404 }, () => {

@@ -121,6 +121,27 @@ const backgroundJob = {
 
     return graphql({ query }, false);
 
+  },
+
+
+  // purpose:		asks a running background job to stop
+  // arguments: id of the running job (string)
+  // ------------------------------------------------------------------------
+  stop: async (args) => {
+
+    let properties = Object.fromEntries(args.properties.entries());
+    const id = properties.id;
+
+    const query = `
+      mutation {
+        admin_background_job_stop(id: ${JSON.stringify(String(id))}){
+          id
+        }
+      }
+    `;
+
+    return graphql({ query }, false);
+
   }
 
 

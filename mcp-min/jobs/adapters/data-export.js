@@ -1,5 +1,6 @@
 import { statusRequest } from '../errors.js';
 import { stateOf, statusOf } from './data.js';
+import { failureReason } from '../../../lib/data/waitForStatus.js';
 
 /** What the export produced: a link when it was a ZIP, the records themselves otherwise. */
 function exported(response, zip) {
@@ -23,6 +24,13 @@ export default {
     const response = await statusRequest(() => gateway.dataExportStatus(id, zip), { kind: 'data-export', id });
     const status = statusOf(response);
     const state = stateOf(status, 'data-export');
-    return { state, status, result: { zip, ...(state === 'completed' ? exported(response, zip) : {}) } };
+    // A failed or stopped export says why in `error`; without it a person stopping the job and a
+    // crash read the same.
+    return {
+      state,
+      status,
+      ...(state === 'failed' && { error: failureReason(response) }),
+      result: { zip, ...(state === 'completed' ? exported(response, zip) : {}) }
+    };
   }
 };

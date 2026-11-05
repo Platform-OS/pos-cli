@@ -6,13 +6,17 @@
 import log from '../../log.js';
 import { statusRequest } from '../errors.js';
 import { uploadPhase } from '../local-phases.js';
+import { STOPPED, stoppedReason } from '../../../lib/data/waitForStatus.js';
 
 const RELEASE_RUNNING = new Set(['ready_for_import', 'in_progress']);
 
 /** The release itself, ignoring assets: 'running' | 'failed' | 'done'. */
 export function releaseState(status) {
   if (RELEASE_RUNNING.has(status)) return 'running';
-  if (status === 'error') return 'failed';
+  // `stopped`: its job was stopped from the admin GUI's background jobs (admin_background_job_stop).
+  // The release did not go in, so the deploy failed — but nothing about the project was judged,
+  // which is why `deploy-dry-run` reads `stoppedReason` before calling it a refusal.
+  if (status === 'error' || status === STOPPED) return 'failed';
 
   // Anything else is a finished release, as `lib/push.js` also reads it — but an unfamiliar one is
   // worth saying once, because this is the decision the asset upload waits on.
@@ -27,6 +31,9 @@ const warned = new Set();
 
 /** Naming the file the instance blamed, when it named one. */
 function releaseError(response) {
+  const stopped = stoppedReason(response);
+  if (stopped) return `the deploy was stopped: ${stopped}`;
+
   const body = response?.error ?? {};
   const message = body.error || 'the deploy failed';
   return body.details?.file_path ? `${message}\n${body.details.file_path}` : message;
@@ -140,6 +147,7 @@ function assetPhase(response, { origin, id }) {
   if (asset_error) return { phase: 'failed', error: `asset deploy failed: ${asset_error.error ?? asset_error}` };
   if (asset_report) return { phase: 'done', report: reportCounts(asset_report) };
   if (asset_status === 'in_progress') return { phase: 'processing' };
+  if (asset_status === STOPPED) return { phase: 'failed', error: 'asset deploy stopped: its background job was stopped' };
   return local.phase === 'done' ? { phase: 'done' } : { phase: 'unknown' };
 }
 
