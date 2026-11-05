@@ -701,6 +701,23 @@ describe('what the dry run reports', () => {
     expect(data.deleted).toBeUndefined();
   });
 
+  // Someone stopped the release's job from the admin GUI: the project was never judged, and
+  // `would_fail` would tell the agent to rewrite a deploy that is fine.
+  test('a release whose job was stopped is not_known, not a refusal', async () => {
+    const reason = 'Background job abc stopped with admin_background_job_stop';
+    const { Fake, calls } = gatewayFake({ releaseStatus: 'stopped', error: { error: reason, details: {} } });
+    fs.mkdirSync(path.join(workDir, 'app', 'assets'), { recursive: true });
+    fs.writeFileSync(path.join(workDir, 'app', 'assets', 'a.css'), 'a{}');
+
+    const { data } = await runTool(dryRunTool, { ...AUTH }, { Gateway: Fake, ...FAST });
+
+    expect(data.verdict).toBe('not_known');
+    expect(data.stopped).toBe(reason);
+    expect(data.error).toBeUndefined();
+    expect(data.blockers).toBeUndefined();
+    expect(calls.sendManifest).toEqual([]);
+  });
+
   test('a cancelled call stops polling the release', async () => {
     const controller = new AbortController();
     const { Fake, calls } = gatewayFake({ releaseStatus: 'in_progress' });

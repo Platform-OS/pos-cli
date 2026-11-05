@@ -3,6 +3,7 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { onDestroy } from 'svelte';
 import { notificationsState } from '#lib/state/notifications.svelte.js';
 import { backgroundJob } from '#lib/api/backgroundJob';
 
@@ -14,33 +15,80 @@ import Icon from '#lib/ui/Icon.svelte';
 let {
   // id of the running background job (string)
   id,
-  // called once the job was asked to stop (function)
-  onsuccess
+  // called when the list of jobs should be read again (function)
+  onsuccess,
+  // the stop was asked for and the job is still on the list, for the row to show it (bool)
+  requested = $bindable(false)
 } = $props();
 // the form with the job id (dom node)
 let form = $state();
-// the stop was asked for: the job stops within about a second, and leaves
-// the list of running jobs within a few seconds more (bool)
-let requested = $state(false);
+// a stopped job stays on the list of running jobs until the workers next report what they run,
+// which can take ten seconds or so, so the list is read again this often (ms) until the job has
+// left it - which removes this button along with its row
+const reloadEvery = 3000;
+// a job still listed after this long (ms) did not stop, and can be asked to stop again
+const reloadFor = 30000;
+// the pending reloads (interval id)
+let reloadTimer;
 
+onDestroy(() => clearInterval(reloadTimer));
+
+
+// purpose:		reads the list again and lets the job be stopped again if it is still there
+// ------------------------------------------------------------------------
+const reload = () => {
+  clearInterval(reloadTimer);
+  requested = false;
+  onsuccess?.();
+};
+
+
+// purpose:		reads the list again every reloadEvery ms until the job has left it,
+//				or until reloadFor ms have passed
+// ------------------------------------------------------------------------
+const reloadUntilGone = () => {
+  const until = Date.now() + reloadFor;
+  clearInterval(reloadTimer);
+  reloadTimer = setInterval(() => {
+    if(Date.now() >= until){
+      reload();
+    } else {
+      onsuccess?.();
+    }
+  }, reloadEvery);
+};
+
+
+// purpose:		asks the job to stop
+// ------------------------------------------------------------------------
 const stop = async (event) => {
 
   event.preventDefault();
 
-  if(confirm('Are you sure you want to stop this background job?')){
+  if(!confirm('Are you sure you want to stop this background job?')){
+    return;
+  }
 
-    const stop = await backgroundJob.stop({ properties: new FormData(form) });
+  requested = true;
 
-    if(!stop.errors){
-      requested = true;
-      notificationsState.create('success', `Background job ${stop.admin_background_job_stop.id} is stopping`);
-      // the list of running jobs is refreshed by the workers every few seconds
-      setTimeout(() => onsuccess?.(), 5000);
-    } else {
-      notificationsState.create('error', `Background job ${id} could not be stopped: ${stop.errors[0]?.message ?? ''}`);
-      onsuccess?.();
-    }
+  let response;
+  try {
+    response = await backgroundJob.stop({ properties: new FormData(form) });
+  } catch(error) {
+    notificationsState.create('error', `Background job ${id} could not be stopped: ${error.message}`);
+    reload();
+    return;
+  }
 
+  const stopped = response?.admin_background_job_stop;
+
+  if(!response?.errors && stopped){
+    notificationsState.create('success', `Background job ${stopped.id} is stopping`);
+    reloadUntilGone();
+  } else {
+    // most often the job has finished in the meantime, which the reloaded list shows
+    notificationsState.create('error', `Background job ${id} could not be stopped${response?.errors?.[0]?.message ? `: ${response.errors[0].message}` : ''}`);
+    reload();
   }
 
 };
@@ -51,7 +99,7 @@ const stop = async (event) => {
 <!-- ================================================================== -->
 <style>
 
-button {
+i {
   color: var(--color-danger);
 }
 
@@ -62,8 +110,10 @@ button {
 <!-- ================================================================== -->
 <form bind:this={form} onsubmit={stop}>
   <input type="hidden" name="id" value={id}>
-  <button class="button compact" title={requested ? 'Stopping…' : 'Stop background job'} disabled={requested}>
-    <span class="label">{requested ? 'Stopping…' : 'Stop background job'}</span>
-    <Icon icon="disable" size="16" />
+  <button class="danger" disabled={requested}>
+    <i>
+      <Icon icon="disable" size="22" />
+    </i>
+    {requested ? 'Stopping…' : 'Stop background job'}
   </button>
 </form>

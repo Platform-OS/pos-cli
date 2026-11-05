@@ -5,7 +5,7 @@ import { program } from '../lib/program.js';
 import Gateway from '../lib/proxy.js';
 import { fetchSettings } from '../lib/settings.js';
 import fetchFiles from '../lib/data/fetchFiles.js';
-import waitForStatus, { stoppedReason } from '../lib/data/waitForStatus.js';
+import waitForStatus, { STOPPED, failureReason } from '../lib/data/waitForStatus.js';
 import downloadFile from '../lib/downloadFile.js';
 import logger from '../lib/logger.js';
 import report from '../lib/logger/report.js';
@@ -94,7 +94,7 @@ program
     gateway
       .dataExportStart(exportInternalIds, isZipFile)
       .then((exportTask) => {
-        waitForStatus(() => gateway.dataExportStatus(exportTask.id, isZipFile), 'pending', 'done')
+        waitForStatus(() => gateway.dataExportStatus(exportTask.id, isZipFile), 'pending', 'done', undefined, null, { failureStatus: STOPPED })
           .then((exportTask) => {
             if (isZipFile) {
               handleZipFileExport(exportTask, filename);
@@ -106,7 +106,8 @@ program
           .catch((error) => {
             logger.Debug(error);
             spinner.fail('Export failed');
-            if (stoppedReason(error)) logger.Error(`Export stopped: ${stoppedReason(error)}`);
+            logger.Error(`Export failed: ${failureReason(error)}`);
+            report('[ERR] Data: Export - Failed');
           });
       })
       .catch({ statusCode: 404 }, () => {

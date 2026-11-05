@@ -37,6 +37,10 @@ let contextMenu = $state({
 });
 // main form with the filters (dom node)
 let form;
+// ids of the running jobs asked to stop that are still on the list (object)
+let stopping = $state({});
+// the last page of the list, 1 for an empty one (int)
+let lastPage = $derived(Math.max(data.jobs?.total_pages || 1, 1));
 
 
 // purpose:   update the relative run times every second
@@ -53,17 +57,39 @@ $effect(() => {
 const reloadJobs = () => invalidate('app:backgroundJobs');
 
 
+// purpose:   keeps the list of running jobs current: jobs start and end all the time
+// ------------------------------------------------------------------------
+$effect(() => {
+  if(data.filters.type !== 'RUNNING'){
+    return;
+  }
+
+  const interval = setInterval(reloadJobs, 5000);
+
+  return () => clearInterval(interval);
+});
+
+
 // purpose:   shows the list for the type and page in the form, through the url
 //            (the layout's load function runs again for the new query)
+//            The form is not validated by the browser: a page number out of range would
+//            block every submit, switching the type included, so it is brought in range here.
 // arguments: submit event (object)
 // ------------------------------------------------------------------------
 const submitForm = function(event) {
   event.preventDefault();
   const params = new URLSearchParams(new FormData(form));
-  if (data.filters.type !== params.get('type')) {
-    params.set('page', 1);
-  }
-  goto(page.url.pathname + '?' + params.toString(), { keepFocus: true, noScroll: true });
+  const typeChanged = data.filters.type !== params.get('type');
+  const requested = parseInt(params.get('page'));
+  const target = typeChanged || !(requested >= 1) ? 1 : Math.min(requested, lastPage);
+
+  params.set('page', target);
+  // shows the page actually loaded even when it is the one already on screen
+  pageNumber = target;
+  // a job open in the details belongs to the previous type, so the details are closed
+  const path = typeChanged ? '/backgroundJobs' : page.url.pathname;
+
+  goto(path + '?' + params.toString(), { reset: false });
 }
 
 </script>
@@ -170,6 +196,10 @@ table a {
   color: var(--color-interaction);
 }
 
+.stopping {
+  color: var(--color-text-secondary);
+}
+
 .more {
   padding-inline: .1rem;
   background-color: transparent;
@@ -251,7 +281,7 @@ menu :global(button:hover) {
   <div>
 
     <nav class="filters">
-      <form id="filters" bind:this={form} onsubmit={submitForm}>
+      <form id="filters" bind:this={form} onsubmit={submitForm} novalidate>
         <fieldset>
           <label for="filter-type">Type:</label>
           <select name="type" id="filter-type" bind:value={type} onchange={() => form.requestSubmit()}>
@@ -296,17 +326,19 @@ menu :global(button:hover) {
             <td class="id" onmouseleave={() => contextMenu.id = null}>
               <div>
 
-                {#if data.filters.type === 'RUNNING'}
-                  <!-- a running job cannot be deleted, only stopped -->
-                  <Stop id={item.id} onsuccess={reloadJobs} />
-                {:else}
-                  <button class="button compact more" onclick={() => contextMenu.id = item.id}>
-                    <span class="label">More options</span>
-                    <Icon icon="navigationMenuVertical" size="16" />
-                  </button>
+                <button class="button compact more" onclick={() => contextMenu.id = item.id}>
+                  <span class="label">More options</span>
+                  <Icon icon="navigationMenuVertical" size="16" />
+                </button>
 
-                  <menu class="content-context" class:active={contextMenu.id === item.id}>
-                    <ul>
+                <menu class="content-context" class:active={contextMenu.id === item.id}>
+                  <ul>
+                    {#if data.filters.type === 'RUNNING'}
+                      <!-- a running job cannot be deleted, only stopped -->
+                      <li>
+                        <Stop id={item.id} onsuccess={reloadJobs} bind:requested={() => stopping[item.id] ?? false, (requested) => stopping[item.id] = requested} />
+                      </li>
+                    {:else}
                       {#if item.dead_at}
                         <li>
                           <Retry id={item.id} onsuccess={reloadJobs} />
@@ -315,13 +347,17 @@ menu :global(button:hover) {
                       <li>
                         <Delete id={item.id} onsuccess={reloadJobs} />
                       </li>
-                    </ul>
-                  </menu>
-                {/if}
+                    {/if}
+                  </ul>
+                </menu>
 
                 <a href="/backgroundJobs/{data.filters.type.toLowerCase()}/{item.id}?{page.url.searchParams.toString()}">
                   {item.source_name || item.id}
                 </a>
+
+                {#if stopping[item.id]}
+                  <span class="stopping">stopping…</span>
+                {/if}
 
               </div>
             </td>
@@ -349,14 +385,14 @@ menu :global(button:hover) {
         name="page"
         bind:value={pageNumber}
         min={1}
-        max={data.jobs?.total_pages || 1}
+        max={lastPage}
         step={1}
         decreaseLabel="Previous page"
         increaseLabel="Next page"
         style="navigation"
         oninput={({ submitter }) => form.requestSubmit(submitter)}
       />
-      of {data.jobs?.total_pages || 1}
+      of {lastPage}
     </nav>
 
   </div>

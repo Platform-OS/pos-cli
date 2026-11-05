@@ -3,7 +3,7 @@
 import { program } from '../lib/program.js';
 import Gateway from '../lib/proxy.js';
 import { fetchSettings } from '../lib/settings.js';
-import waitForStatus from '../lib/data/waitForStatus.js';
+import waitForStatus, { STOPPED, failureReason } from '../lib/data/waitForStatus.js';
 import logger from '../lib/logger.js';
 import ora from '../lib/ora.js';
 
@@ -34,12 +34,12 @@ program
       const formatResponse = r => `${r.status.name} \n${r.statuses.map((item) => [item.created_at, item.name].join(' ')).join('\n')}`;
       await waitForStatus(checkInstanceCloneStatus, [], 'done', 2000, (msg) => {
         spinner.text = formatResponse(msg);
-      });
+      }, { failureStatus: STOPPED });
 
       spinner.stopAndPersist().succeed(`${sourceEnv} instance clone to ${targetEnv} succeeded.`);
     } catch(e) {
       spinner.stop();
-      logger.Error(e);
+      logger.Error(failureReason(e));
     }
   });
 

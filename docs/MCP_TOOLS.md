@@ -1247,7 +1247,8 @@ reports the same list in `warnings` once the deploy has run.
 `verdict` is `would_succeed`, `would_fail` or `not_known`. The instance evaluates the dry run and
 can refuse the deploy outright — a table that still holds records cannot be dropped, for one — and
 `error.files` names what it objected to. `not_known` means the release had not settled within the
-timeout. In both cases there is no file report yet, so `planComputed` is false and the change lists
+timeout, or that its job was stopped from the admin GUI's background jobs before the instance judged
+the project — `stopped` then carries the reason. In both cases there is no file report yet, so `planComputed` is false and the change lists
 are absent. The file report is read from the release once it settles, not from the upload response,
 which carries none.
 
