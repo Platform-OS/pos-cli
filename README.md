@@ -1035,7 +1035,9 @@ There is one archive per tool, because the layout belongs to the tool. They all 
 | Codex | `.codex/` | `platformos-agent-playbook-codex.zip` |
 | Other | `platformos-playbook/` | `platformos-agent-playbook-portable.zip` |
 
-They are all published under `https://documentation.platformos.com/assets/`.
+They are all published under `https://documentation.platformos.com/assets/`, together with `platformos-agent-playbook-checksums.json`, the SHA-256 of each archive.
+
+Those fixed URLs can be answered from the CDN's cache long after a new Playbook is deployed, so pos-cli first reads `https://documentation.platformos.com/agent-playbook.json`. That page is not cached, and it links each archive and the checksum file with the deploy's cache-busting parameter. pos-cli downloads the archive from that link and refuses it if its SHA-256 does not match the checksum file. When the page cannot be read, pos-cli downloads the fixed URL without a checksum, as earlier versions did; set `DEBUG=1` to see why.
 
 What differs is the wiring, because the tools provide different mechanisms:
 
