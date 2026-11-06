@@ -1,4 +1,5 @@
 import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import yazl from 'yazl';
@@ -10,7 +11,8 @@ import { withTmpDir } from '#test/utils/withTmpDir.js';
 const downloadFile = vi.fn();
 vi.mock('#lib/downloadFile.js', () => ({ default: (...args) => downloadFile(...args) }));
 
-const { installAgentPlaybook, isInsidePlaybookDir, readManifest, PLAYBOOKS } = await import('#lib/agentPlaybook.js');
+const { installAgentPlaybook, isInsidePlaybookDir, readManifest, PLAYBOOKS, PLAYBOOK_INDEX_URL } =
+  await import('#lib/agentPlaybook.js');
 
 const PLAYBOOK_DIR = PLAYBOOKS.claude.dir;
 
@@ -53,9 +55,15 @@ const makeHostileZip = async (filePath, hostilePath, otherEntries = {}) => {
   fs.writeFileSync(filePath, bytes);
 };
 
-/** Makes `downloadFile` deliver whatever `build` writes as the archive it was asked to fetch. */
+const notFound = (url) => Object.assign(new Error(`Download failed with HTTP 404: ${url}`), { statusCode: 404 });
+
+/**
+ * Makes `downloadFile` deliver whatever `build` writes as the archive it was asked to fetch. The
+ * index answers 404, as it did before it was published, so these installs take the fixed URL.
+ */
 const servesArchive = (build) => {
-  downloadFile.mockImplementation(async (_url, fileName) => {
+  downloadFile.mockImplementation(async (url, fileName) => {
+    if (url === PLAYBOOK_INDEX_URL) throw notFound(url);
     await build(fileName);
   });
 };
@@ -111,7 +119,7 @@ describe('installAgentPlaybook', () => {
   test('unpacks the archive into .claude/', async () => {
     serves(KIT);
 
-    const result = await installAgentPlaybook({ rootPath: getTmpDir(), url: 'https://example.test/kit.zip' });
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
 
     expect(result.status).toBe('installed');
     expect(result.files).toBe(3);
@@ -213,6 +221,94 @@ describe('installAgentPlaybook', () => {
 
     await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow(/404/);
     expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
+  });
+});
+
+describe('where the archive is downloaded from', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const CHECKSUMS_NAME = 'platformos-agent-playbook-checksums.json';
+  const CHECKSUMS_URL = `https://files.example.test/assets/${CHECKSUMS_NAME}?updated=7`;
+  const archiveUrl = (name) => `https://files.example.test/assets/${name}?updated=7`;
+  const nameOf = (playbook) => path.posix.basename(new URL(playbook.url).pathname);
+  const urlsFetched = () => downloadFile.mock.calls.map(([url]) => url);
+
+  /**
+   * Publishes `entries` as `playbook`'s archive the way the documentation site does: at its fixed
+   * URL, and through an index linking it and a checksum file. `index` and `checksums` replace those
+   * two documents' text to break one thing at a time; `null` makes one answer 404.
+   */
+  const publish = async ({ playbook = PLAYBOOKS.claude, entries = KIT, index, checksums } = {}) => {
+    const name = nameOf(playbook);
+    const publishedDir = path.join(getTmpDir(), 'published');
+    fs.mkdirSync(publishedDir, { recursive: true });
+    const zip = await makeZip(path.join(publishedDir, name), entries);
+    const sha256 = createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
+    const documents = {
+      [PLAYBOOK_INDEX_URL]: index !== undefined ? index
+        : JSON.stringify({ files: { [CHECKSUMS_NAME]: CHECKSUMS_URL, [name]: archiveUrl(name) } }),
+      [CHECKSUMS_URL]: checksums !== undefined ? checksums : JSON.stringify({ [name]: sha256 })
+    };
+    downloadFile.mockImplementation(async (url, fileName) => {
+      if (url === archiveUrl(name) || url === playbook.url) return fs.copyFileSync(zip, fileName);
+      if (typeof documents[url] === 'string') return fs.writeFileSync(fileName, documents[url]);
+      throw notFound(url);
+    });
+    return { name };
+  };
+
+  test('downloads the archive the index links, and installs it when its SHA-256 matches', async () => {
+    const { name } = await publish();
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
+
+    expect(result.status).toBe('installed');
+    expect(urlsFetched()).toEqual([PLAYBOOK_INDEX_URL, CHECKSUMS_URL, archiveUrl(name)]);
+    expect(fs.readFileSync(path.join(getTmpDir(), '.claude', 'CLAUDE.md'), 'utf8')).toBe('# platformOS');
+  });
+
+  test('each tool downloads its own archive from the index', async () => {
+    const { name } = await publish({ playbook: PLAYBOOKS.opencode, entries: { '.opencode/opencode.json': '{}' } });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode });
+
+    expect(result.status).toBe('installed');
+    expect(name).toBe('platformos-agent-playbook-opencode.zip');
+    expect(urlsFetched().at(-1)).toBe(archiveUrl(name));
+  });
+
+  test('refuses an archive whose SHA-256 differs from the published one, and writes nothing', async () => {
+    await publish({ checksums: JSON.stringify({ [nameOf(PLAYBOOKS.claude)]: 'a'.repeat(64) }) });
+
+    await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow(/does not match its published SHA-256/);
+    expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
+    expect(fs.existsSync(path.join(getTmpDir(), 'tmp'))).toBe(false);
+  });
+
+  test.each([
+    ['the index is not published', { index: null }],
+    ['the index is not JSON', { index: '<!doctype html><p>Not found</p>' }],
+    ['the index does not link this archive', { index: JSON.stringify({ files: { [CHECKSUMS_NAME]: CHECKSUMS_URL } }) }],
+    [
+      'the index links it over plain http',
+      {
+        index: JSON.stringify({
+          files: { [CHECKSUMS_NAME]: CHECKSUMS_URL, 'platformos-agent-playbook.zip': 'http://files.example.test/a.zip' }
+        })
+      }
+    ],
+    ['the checksum file is not published', { checksums: null }],
+    ['the checksum file has no entry for this archive', { checksums: JSON.stringify({ 'other.zip': 'a'.repeat(64) }) }],
+    ['the checksum is not a SHA-256', { checksums: JSON.stringify({ 'platformos-agent-playbook.zip': 'md5:abc' }) }]
+  ])('falls back to the fixed URL, unverified, when %s', async (_label, published) => {
+    await publish(published);
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
+
+    expect(result.status).toBe('installed');
+    expect(urlsFetched().at(-1)).toBe(PLAYBOOKS.claude.url);
   });
 });
 
