@@ -1,4 +1,5 @@
 import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import yazl from 'yazl';
@@ -10,7 +11,10 @@ import { withTmpDir } from '#test/utils/withTmpDir.js';
 const downloadFile = vi.fn();
 vi.mock('#lib/downloadFile.js', () => ({ default: (...args) => downloadFile(...args) }));
 
-const { installAgentPlaybook, isInsidePlaybookDir, PLAYBOOK_DIR } = await import('#lib/agentPlaybook.js');
+const { installAgentPlaybook, isInsidePlaybookDir, readManifest, PLAYBOOKS, PLAYBOOK_INDEX_URL } =
+  await import('#lib/agentPlaybook.js');
+
+const PLAYBOOK_DIR = PLAYBOOKS.claude.dir;
 
 const getTmpDir = withTmpDir();
 
@@ -51,9 +55,15 @@ const makeHostileZip = async (filePath, hostilePath, otherEntries = {}) => {
   fs.writeFileSync(filePath, bytes);
 };
 
-/** Makes `downloadFile` deliver whatever `build` writes as the archive it was asked to fetch. */
+const notFound = (url) => Object.assign(new Error(`Download failed with HTTP 404: ${url}`), { statusCode: 404 });
+
+/**
+ * Makes `downloadFile` deliver whatever `build` writes as the archive it was asked to fetch. The
+ * index answers 404, as it did before it was published, so these installs take the fixed URL.
+ */
 const servesArchive = (build) => {
-  downloadFile.mockImplementation(async (_url, fileName) => {
+  downloadFile.mockImplementation(async (url, fileName) => {
+    if (url === PLAYBOOK_INDEX_URL) throw notFound(url);
     await build(fileName);
   });
 };
@@ -80,7 +90,7 @@ describe('isInsidePlaybookDir', () => {
     '.claude\\rules\\x.md',
     './.claude/x'
   ])('accepts %s', (entry) => {
-    expect(isInsidePlaybookDir(entry)).toBe(true);
+    expect(isInsidePlaybookDir(entry, PLAYBOOK_DIR)).toBe(true);
   });
 
   test.each([
@@ -97,7 +107,7 @@ describe('isInsidePlaybookDir', () => {
     [''],
     [null]
   ])('refuses %s', (entry) => {
-    expect(isInsidePlaybookDir(entry)).toBe(false);
+    expect(isInsidePlaybookDir(entry, PLAYBOOK_DIR)).toBe(false);
   });
 });
 
@@ -109,7 +119,7 @@ describe('installAgentPlaybook', () => {
   test('unpacks the archive into .claude/', async () => {
     serves(KIT);
 
-    const result = await installAgentPlaybook({ rootPath: getTmpDir(), url: 'https://example.test/kit.zip' });
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
 
     expect(result.status).toBe('installed');
     expect(result.files).toBe(3);
@@ -211,5 +221,233 @@ describe('installAgentPlaybook', () => {
 
     await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow(/404/);
     expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
+  });
+});
+
+describe('where the archive is downloaded from', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const CHECKSUMS_NAME = 'platformos-agent-playbook-checksums.json';
+  const CHECKSUMS_URL = `https://files.example.test/assets/${CHECKSUMS_NAME}?updated=7`;
+  const archiveUrl = (name) => `https://files.example.test/assets/${name}?updated=7`;
+  const nameOf = (playbook) => path.posix.basename(new URL(playbook.url).pathname);
+  const urlsFetched = () => downloadFile.mock.calls.map(([url]) => url);
+
+  /**
+   * Publishes `entries` as `playbook`'s archive the way the documentation site does: at its fixed
+   * URL, and through an index linking it and a checksum file. `index` and `checksums` replace those
+   * two documents' text to break one thing at a time; `null` makes one answer 404.
+   */
+  const publish = async ({ playbook = PLAYBOOKS.claude, entries = KIT, index, checksums } = {}) => {
+    const name = nameOf(playbook);
+    const publishedDir = path.join(getTmpDir(), 'published');
+    fs.mkdirSync(publishedDir, { recursive: true });
+    const zip = await makeZip(path.join(publishedDir, name), entries);
+    const sha256 = createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
+    const documents = {
+      [PLAYBOOK_INDEX_URL]: index !== undefined ? index
+        : JSON.stringify({ files: { [CHECKSUMS_NAME]: CHECKSUMS_URL, [name]: archiveUrl(name) } }),
+      [CHECKSUMS_URL]: checksums !== undefined ? checksums : JSON.stringify({ [name]: sha256 })
+    };
+    downloadFile.mockImplementation(async (url, fileName) => {
+      if (url === archiveUrl(name) || url === playbook.url) return fs.copyFileSync(zip, fileName);
+      if (typeof documents[url] === 'string') return fs.writeFileSync(fileName, documents[url]);
+      throw notFound(url);
+    });
+    return { name };
+  };
+
+  test('downloads the archive the index links, and installs it when its SHA-256 matches', async () => {
+    const { name } = await publish();
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
+
+    expect(result.status).toBe('installed');
+    expect(urlsFetched()).toEqual([PLAYBOOK_INDEX_URL, CHECKSUMS_URL, archiveUrl(name)]);
+    expect(fs.readFileSync(path.join(getTmpDir(), '.claude', 'CLAUDE.md'), 'utf8')).toBe('# platformOS');
+  });
+
+  test('each tool downloads its own archive from the index', async () => {
+    const { name } = await publish({ playbook: PLAYBOOKS.opencode, entries: { '.opencode/opencode.json': '{}' } });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode });
+
+    expect(result.status).toBe('installed');
+    expect(name).toBe('platformos-agent-playbook-opencode.zip');
+    expect(urlsFetched().at(-1)).toBe(archiveUrl(name));
+  });
+
+  test('refuses an archive whose SHA-256 differs from the published one, and writes nothing', async () => {
+    await publish({ checksums: JSON.stringify({ [nameOf(PLAYBOOKS.claude)]: 'a'.repeat(64) }) });
+
+    await expect(installAgentPlaybook({ rootPath: getTmpDir() })).rejects.toThrow(/does not match its published SHA-256/);
+    expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
+    expect(fs.existsSync(path.join(getTmpDir(), 'tmp'))).toBe(false);
+  });
+
+  test.each([
+    ['the index is not published', { index: null }],
+    ['the index is not JSON', { index: '<!doctype html><p>Not found</p>' }],
+    ['the index does not link this archive', { index: JSON.stringify({ files: { [CHECKSUMS_NAME]: CHECKSUMS_URL } }) }],
+    [
+      'the index links it over plain http',
+      {
+        index: JSON.stringify({
+          files: { [CHECKSUMS_NAME]: CHECKSUMS_URL, 'platformos-agent-playbook.zip': 'http://files.example.test/a.zip' }
+        })
+      }
+    ],
+    ['the checksum file is not published', { checksums: null }],
+    ['the checksum file has no entry for this archive', { checksums: JSON.stringify({ 'other.zip': 'a'.repeat(64) }) }],
+    ['the checksum is not a SHA-256', { checksums: JSON.stringify({ 'platformos-agent-playbook.zip': 'md5:abc' }) }]
+  ])('falls back to the fixed URL, unverified, when %s', async (_label, published) => {
+    await publish(published);
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
+
+    expect(result.status).toBe('installed');
+    expect(urlsFetched().at(-1)).toBe(PLAYBOOKS.claude.url);
+  });
+});
+
+describe('per-tool playbooks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('the opencode playbook unpacks into .opencode/', async () => {
+    serves({
+      '.opencode/opencode.json': '{}',
+      '.opencode/agents/platformos-coding-agent.md': 'agent',
+      '.opencode/plugins/platformos.js': 'export default {};'
+    });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode });
+
+    expect(result.status).toBe('installed');
+    expect(fs.existsSync(path.join(getTmpDir(), '.opencode', 'opencode.json'))).toBe(true);
+    expect(fs.existsSync(path.join(getTmpDir(), '.claude'))).toBe(false);
+  });
+
+  test('each playbook refuses the other playbook\u2019s entries', async () => {
+    serves({ '.claude/CLAUDE.md': '# platformOS' });
+    await expect(
+      installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode })
+    ).rejects.toThrow(/outside \.opencode\//);
+  });
+
+  test('an existing .opencode/ is never overwritten', async () => {
+    fs.mkdirSync(path.join(getTmpDir(), '.opencode'), { recursive: true });
+    fs.writeFileSync(path.join(getTmpDir(), '.opencode', 'mine.json'), 'keep me');
+    serves({ '.opencode/opencode.json': '{}' });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode });
+
+    expect(result.status).toBe('exists');
+    expect(fs.readFileSync(path.join(getTmpDir(), '.opencode', 'mine.json'), 'utf8')).toBe('keep me');
+    expect(downloadFile).not.toHaveBeenCalled();
+  });
+
+  test('the manifest travels back to the caller', async () => {
+    serves({
+      '.opencode/opencode.json': '{}',
+      '.opencode/playbook.json': JSON.stringify({
+        instructions: ['.opencode/platformos-attitude.md', '.opencode/rules/00-project-rules.md']
+      })
+    });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.opencode });
+
+    expect(result.manifest).toEqual({
+      instructions: ['.opencode/platformos-attitude.md', '.opencode/rules/00-project-rules.md']
+    });
+  });
+
+  test('an archive with no manifest reports none, and still installs', async () => {
+    serves({ '.claude/CLAUDE.md': '# platformOS' });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
+
+    expect(result.status).toBe('installed');
+    expect(result.manifest).toBeNull();
+  });
+});
+
+describe('readManifest', () => {
+  /** Writes a playbook directory holding the given manifest text and reads it back. */
+  const withManifest = (contents) => {
+    const dir = path.join(getTmpDir(), '.opencode');
+    fs.mkdirSync(dir, { recursive: true });
+    if (contents !== null) fs.writeFileSync(path.join(dir, 'playbook.json'), contents);
+    return readManifest(dir, '.opencode');
+  };
+
+  test('reads the instruction list', () => {
+    expect(withManifest(JSON.stringify({ instructions: ['.opencode/a.md'] })))
+      .toEqual({ instructions: ['.opencode/a.md'] });
+  });
+
+  test.each([
+    ['an instruction escaping the playbook directory', { instructions: ['.opencode/../../.ssh/config'] }],
+    ['an absolute instruction', { instructions: ['/etc/passwd'] }],
+    ['an instruction belonging to another tool', { instructions: ['.claude/CLAUDE.md'] }],
+    ['one bad path among good ones', { instructions: ['.opencode/a.md', '../escape.md'] }],
+    ['instructions that are not a list', { instructions: '.opencode/a.md' }],
+    ['an empty list', { instructions: [] }],
+    ['no instructions at all', { other: true }]
+  ])('drops %s', (_name, manifest) => {
+    expect(withManifest(JSON.stringify(manifest))).toBeNull();
+  });
+
+  test('a malformed manifest is not an error', () => {
+    expect(withManifest('{ not json')).toBeNull();
+  });
+
+  test('a missing manifest is not an error', () => {
+    expect(withManifest(null)).toBeNull();
+  });
+
+  /** Writes a manifest plus the files it names, and reads it back. */
+  const withFiles = (manifest, files = {}) => {
+    const dir = path.join(getTmpDir(), '.codex');
+    fs.mkdirSync(dir, { recursive: true });
+    for (const [name, contents] of Object.entries(files)) fs.writeFileSync(path.join(dir, name), contents);
+    fs.writeFileSync(path.join(dir, 'playbook.json'), JSON.stringify(manifest));
+    return readManifest(dir, '.codex');
+  };
+
+  test('reads an agentsFile that the archive actually contains', () => {
+    expect(withFiles({ agentsFile: '.codex/AGENTS.md' }, { 'AGENTS.md': 'x' }))
+      .toEqual({ agentsFile: '.codex/AGENTS.md' });
+  });
+
+  // Named but not shipped: the installer would copy a file that is not there, so the whole
+  // manifest is refused rather than acted on in part.
+  test('drops an agentsFile the archive does not contain', () => {
+    expect(withFiles({ agentsFile: '.codex/AGENTS.md' })).toBeNull();
+  });
+
+  test.each([
+    ['one escaping the playbook directory', '.codex/../../../etc/passwd'],
+    ['an absolute one', '/etc/passwd'],
+    ["another tool's", '.claude/CLAUDE.md']
+  ])('drops %s agentsFile', (_name, agentsFile) => {
+    expect(withFiles({ agentsFile }, { 'AGENTS.md': 'x' })).toBeNull();
+  });
+
+  test('one bad field drops the whole manifest, not just that field', () => {
+    expect(withFiles(
+      { instructions: ['.codex/ok.md'], agentsFile: '../escape.md' },
+      { 'AGENTS.md': 'x', 'ok.md': 'y' }
+    )).toBeNull();
+  });
+
+  test('both fields travel together when both are valid', () => {
+    expect(withFiles(
+      { instructions: ['.codex/ok.md'], agentsFile: '.codex/AGENTS.md' },
+      { 'AGENTS.md': 'x', 'ok.md': 'y' }
+    )).toEqual({ instructions: ['.codex/ok.md'], agentsFile: '.codex/AGENTS.md' });
   });
 });
