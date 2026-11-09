@@ -51,4 +51,10 @@ import{i as e,r as t}from"./DicxRUmZ.js";var n=[`SCHEDULED`,`DEAD`,`RUNNING`],r=
           id
         }
       }
+    `;return t({query:r},!1)},stop:async e=>{let n=Object.fromEntries(e.properties.entries()).id,r=`
+      mutation {
+        admin_background_job_stop(id: ${JSON.stringify(String(n))}){
+          id
+        }
+      }
     `;return t({query:r},!1)}};export{r as t};

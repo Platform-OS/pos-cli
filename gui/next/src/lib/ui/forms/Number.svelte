@@ -39,15 +39,16 @@ let submit = $state();
 
 
 // purpose:		slows down calling oninput to wait for the user to finish setting the number
+// arguments: how long to wait (ms): longer for typing, so typing 12 does not go to 1 first
 // effect:    calls oninput with { submitter }
 // ------------------------------------------------------------------------
 let inputTimeout;
-function debouncedInput() {
+function debouncedInput(delay = 150) {
   clearTimeout(inputTimeout);
 
   inputTimeout = setTimeout(() => {
     oninput?.({ submitter: submit });
-  }, 150);
+  }, delay);
 }
 
 // do not submit a form that is no longer on the page
@@ -157,7 +158,7 @@ const change = async (event, direction) => {
     max={max}
     step={step}
     bind:value={value}
-    oninput={event => { event.preventDefault(); debouncedInput(); }}
+    oninput={event => { event.preventDefault(); debouncedInput(500); }}
     onfocusin={() => focused = true}
     onfocusout={() => focused = false}
     autofocus={focused}

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New Features
+
+* **The admin GUI can stop a running background job.** On Background Jobs, with Type set to Running, a job created with the `background` tag has **Stop background job** in its menu (`admin_background_job_stop`; needs an instance that has the mutation). The list of running jobs is read again every 5 seconds, and a stopped job shows `stopping…` until it leaves the list. Other running jobs, such as a deploy or an export, can't be stopped and have no menu.
+
 ### Security
 
 * **A link to the admin GUI's Users page could rewrite the query it ran.** The list reads its filter from the url (`?attribute=email&value=…`), and the value was written into the GraphQL query inside quotes as it was, so a value containing a quote could end the filter and add to the query — a link could make the list show users other than the ones it named. The value is now written as an escaped string, the attribute can only be `email` or `id` and the page only a number.
