@@ -48,7 +48,7 @@ const submitForm = function(event) {
   if (data.filters.message !== params.get('message') || (data.filters.start_time || defaultStartTime) !== params.get('start_time')) {
     params.set('page', 1);
   }
-  goto(page.url.pathname + '?' + params.toString(), { keepFocus: true, noScroll: true });
+  goto(page.url.pathname + '?' + params.toString(), { reset: false });
 }
 
 </script>

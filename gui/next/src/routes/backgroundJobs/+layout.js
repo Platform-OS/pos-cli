@@ -11,6 +11,7 @@
 
 // imports
 // ------------------------------------------------------------------------
+import { redirect } from '@sveltejs/kit';
 import { backgroundJob } from '#lib/api/backgroundJob.js';
 import { loadFailed } from '#lib/api/loadFailed.js';
 
@@ -29,6 +30,16 @@ export const load = async ({ url, fetch, depends }) => {
   };
 
   const jobs = await backgroundJob.get(filters, { fetch }).catch(loadFailed('the background jobs'));
+
+  // a page past the last one - from an old link, or after the jobs on the last page were
+  // deleted or ran - shows the last page instead of an empty list
+  const lastPage = Math.max(jobs?.total_pages || 1, 1);
+  if(jobs && filters.page > lastPage){
+    const params = new URLSearchParams(url.searchParams);
+    params.set('type', filters.type);
+    params.set('page', lastPage);
+    redirect(307, url.pathname + '?' + params.toString());
+  }
 
   return { filters, jobs };
 };
