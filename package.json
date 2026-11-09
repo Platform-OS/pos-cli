@@ -51,7 +51,7 @@
     "async": "^3.2.6",
     "body-parser": "^2.4.0",
     "chalk": "^6.0.1",
-    "chokidar": "^5.0.0",
+    "chokidar": "^6.0.0",
     "commander": "^15.0.0",
     "degit": "^3.10.0",
     "email-validator": "^2.0.4",
