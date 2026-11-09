@@ -70,13 +70,16 @@ test('deleting scheduled background job', async ({ page }) => {
 //            which has no job that stays running long enough to be stopped by a test
 // arguments: page (object), what the stop mutation answers (object),
 //            how many reads of the list still show a stopped job (number) - the instance lists
-//            running jobs as the workers last reported them, up to ten seconds or so late
+//            running jobs as the workers last reported them, up to ten seconds or so late,
+//            fields that replace the job's own (object)
 // returns:   whether the stop was asked for (function)
 // ------------------------------------------------------------------------
-const fakeRunningJob = async (page, stopAnswer, listedAfterStop = 0) => {
+const fakeRunningJob = async (page, stopAnswer, listedAfterStop = 0, fields = {}) => {
   const job = {
     id: 'running-job-1', source_name: 'running background job', queue: 'default',
-    run_at: new Date().toISOString(), created_at: new Date().toISOString()
+    liquid_body: "{% log 'running' %}", partial_name: null,
+    run_at: new Date().toISOString(), created_at: new Date().toISOString(),
+    ...fields
   };
   let stopped = false;
 
@@ -164,6 +167,18 @@ test('a stop the instance did not carry out can be asked for again', async ({ pa
   await expect(page.getByText('Background job running-job-1 could not be stopped')).toBeVisible();
   await expect(job.getByRole('button', { name: 'Stop background job' })).toBeEnabled();
   await expect(job.getByText('stopping…', { exact: true })).toBeHidden();
+});
+
+
+test('a running job the background tag did not schedule can be stopped too', async ({ page }) => {
+  // a deploy, an export: no code of its own, stopped like any other job
+  await fakeRunningJob(page, { data: { admin_background_job_stop: { id: 'running-job-1' } } }, 0, { liquid_body: '', partial_name: null, source_name: null });
+
+  await page.goto(url + '?type=RUNNING');
+  const job = page.locator('tr:has-text("running-job-1")');
+  await expect(job).toBeVisible({ timeout: 15000 });
+  await job.getByRole('button', { name: 'More options' }).click();
+  await expect(job.getByRole('button', { name: 'Stop background job' })).toBeVisible();
 });
 
 

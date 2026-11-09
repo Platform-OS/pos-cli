@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### New Features
+
+* **The admin GUI can stop a running background job.** On Background Jobs, with Type set to Running, a job created with the `background` tag has **Stop background job** in its menu (`admin_background_job_stop`; needs an instance that has the mutation). The list of running jobs is read again every 5 seconds, and a stopped job shows `stopping…` until it leaves the list. On an instance that can stop any job, every running job has the action.
+
+* **A stopped deploy, export or import is reported as a failure.** An instance that can stop them ends them with the status `stopped`: `pos-cli deploy` reports `Deploy stopped` and exits with an error, and the data commands and the MCP server's job tools report the stop as a failure, with its reason.
+
 ### Security
 
 * **A link to the admin GUI's Users page could rewrite the query it ran.** The list reads its filter from the url (`?attribute=email&value=…`), and the value was written into the GraphQL query inside quotes as it was, so a value containing a quote could end the filter and add to the query — a link could make the list show users other than the ones it named. The value is now written as an escaped string, the attribute can only be `email` or `id` and the page only a number.
