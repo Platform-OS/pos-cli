@@ -139,6 +139,23 @@ describe('installAgentPlaybook', () => {
     );
   });
 
+  // One shared deadline would already be spent when an index that hung for it fell back to the
+  // fixed URL, so the fallback would abort before it started.
+  test('the archive download does not inherit the index request\u2019s deadline', async () => {
+    const signals = {};
+    downloadFile.mockImplementation(async (url, fileName, { signal }) => {
+      signals[url === PLAYBOOK_INDEX_URL ? 'index' : 'archive'] = signal;
+      if (url === PLAYBOOK_INDEX_URL) throw notFound(url);
+      await makeZip(fileName, KIT);
+    });
+
+    await installAgentPlaybook({ rootPath: getTmpDir() });
+
+    expect(signals.archive).toBeInstanceOf(AbortSignal);
+    expect(signals.archive).not.toBe(signals.index);
+    expect(signals.archive.aborted).toBe(false);
+  });
+
   test('refuses an archive that climbs out of .claude/, and writes nothing', async () => {
     servesHostile('.claude/../../escaped.md', { '.claude/CLAUDE.md': 'ok' });
 
@@ -348,6 +365,34 @@ describe('per-tool playbooks', () => {
     expect(result.status).toBe('exists');
     expect(fs.readFileSync(path.join(getTmpDir(), '.opencode', 'mine.json'), 'utf8')).toBe('keep me');
     expect(downloadFile).not.toHaveBeenCalled();
+  });
+
+  // pi keeps `.pi/mcp.json` inside the Playbook's directory, so a run that registered the servers
+  // without the Playbook leaves a `.pi/` that is pos-cli's, not the user's.
+  test('a directory holding only the kept file is installed around, and the file survives', async () => {
+    fs.mkdirSync(path.join(getTmpDir(), '.pi'), { recursive: true });
+    fs.writeFileSync(path.join(getTmpDir(), '.pi', 'mcp.json'), '{"mine":true}');
+    serves({ '.pi/AGENTS.md': 'agent', '.pi/mcp.json': '{"archive":true}' });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] });
+
+    expect(result.status).toBe('installed');
+    expect(fs.readFileSync(path.join(getTmpDir(), '.pi', 'AGENTS.md'), 'utf8')).toBe('agent');
+    expect(fs.readFileSync(path.join(getTmpDir(), '.pi', 'mcp.json'), 'utf8')).toBe('{"mine":true}');
+    expect(fs.existsSync(path.join(getTmpDir(), 'tmp'))).toBe(false);
+  });
+
+  test('anything beside the kept file makes the directory the user\u2019s', async () => {
+    fs.mkdirSync(path.join(getTmpDir(), '.pi'), { recursive: true });
+    fs.writeFileSync(path.join(getTmpDir(), '.pi', 'mcp.json'), '{}');
+    fs.writeFileSync(path.join(getTmpDir(), '.pi', 'settings.json'), 'mine');
+    serves({ '.pi/AGENTS.md': 'agent' });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] });
+
+    expect(result.status).toBe('exists');
+    expect(downloadFile).not.toHaveBeenCalled();
+    expect(fs.existsSync(path.join(getTmpDir(), '.pi', 'AGENTS.md'))).toBe(false);
   });
 
   test('the manifest travels back to the caller', async () => {

@@ -4,6 +4,7 @@ import path from 'path';
 import { withTmpDir } from '#test/utils/withTmpDir.js';
 import logger from '#lib/logger.js';
 import { init, SERVERS, DOCS_SERVERS, RENAMED_FROM } from '#lib/ai.js';
+import { supportsPosixPermissions, permissionsOf } from '#lib/filePermissions.js';
 
 const select = vi.fn();
 vi.mock('@inquirer/prompts', () => ({ select: (...args) => select(...args) }));
@@ -521,6 +522,59 @@ describe('ai init', () => {
       });
     });
 
+    // The legacy entries of a group this run does not merge are not taken out: nothing would
+    // write them back, and "moved" would be a report of a deletion.
+    test('opencode - --docs none moves the local servers and leaves the documentation ones', async () => {
+      writeJson(
+        {
+          mcp: {
+            [NAME]: { type: 'local', command: ['pos-cli-mcp', '--profile', 'dev', '--no-http'], enabled: true },
+            'platformos-supervisor': { type: 'local', command: ['pos-cli-supervisor'], enabled: true },
+            [LIQUID]: { type: 'remote', url: LIQUID_URL, enabled: true },
+            [GRAPHQL]: { type: 'remote', url: GRAPHQL_URL, enabled: true }
+          }
+        },
+        'opencode.json'
+      );
+
+      await init({ tool: 'opencode', docs: 'none', opencodeConfig: 'v2', rootPath: getTmpDir(), homePath: homeDir() });
+
+      const config = readJson('opencode.json');
+      expect(Object.keys(config.mcp.servers)).toEqual([NAME, 'platformos-supervisor']);
+      expect(config.mcp[LIQUID]).toEqual({ type: 'remote', url: LIQUID_URL, enabled: true });
+      expect(config.mcp[GRAPHQL]).toEqual({ type: 'remote', url: GRAPHQL_URL, enabled: true });
+      expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/Moved to mcp\.servers.*: platformos-cli, platformos-supervisor$/));
+    });
+
+    test('opencode - an entry an older pos-cli wrote under the legacy key is moved, under any name it had', async () => {
+      writeJson(
+        { mcp: { [OLD_NAME]: { type: 'local', command: ['pos-cli-mcp'], enabled: true } } },
+        'opencode.json'
+      );
+
+      await init({ tool: 'opencode', docs: 'none', opencodeConfig: 'v2', rootPath: getTmpDir(), homePath: homeDir() });
+
+      const config = readJson('opencode.json');
+      expect(Object.keys(config.mcp)).toEqual(['servers']);
+      expect(config.mcp.servers[NAME]).toEqual({ type: 'local', command: ['pos-cli-mcp', '--profile', 'dev', '--no-http'] });
+      expect(logger.Warn).not.toHaveBeenCalled();
+    });
+
+    test('opencode - a legacy global file keeps the legacy shape when no form was named', async () => {
+      fs.mkdirSync(atHome('.config', 'opencode'), { recursive: true });
+      fs.writeFileSync(
+        atHome('.config', 'opencode', 'opencode.json'),
+        JSON.stringify({ mcp: { other: { type: 'local', command: ['x'], enabled: true } } })
+      );
+
+      await init({ tool: 'opencode', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
+
+      expect(readJson('opencode.json').mcp.servers).toBeDefined();
+      const global = readHome('.config', 'opencode', 'opencode.json');
+      expect(global.mcp.servers).toBeUndefined();
+      expect(global.mcp[LIQUID]).toEqual({ type: 'remote', url: LIQUID_URL, enabled: true });
+    });
+
     test('opencode - a customised legacy entry is kept and reported', async () => {
       writeJson(
         { mcp: { [NAME]: { type: 'local', command: ['my-own-wrapper'] }, servers: {} } },
@@ -718,7 +772,11 @@ describe('ai init', () => {
 
       await init({ rootPath: getTmpDir() });
 
-      expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir(), playbook: PLAYBOOKS.cursor });
+      expect(installAgentPlaybook).toHaveBeenCalledWith({
+        rootPath: getTmpDir(),
+        playbook: PLAYBOOKS.cursor,
+        keep: ['mcp.json']
+      });
       expect(select).toHaveBeenCalledTimes(3);
     });
 
@@ -801,6 +859,48 @@ describe('ai init', () => {
       ]);
     });
 
+    test("a fresh opencode.json written alongside the Playbook still gets its $schema", async () => {
+      installAgentPlaybook.mockResolvedValue({
+        status: "installed",
+        files: 30,
+        manifest: { instructions: [".opencode/platformos-attitude.md"] }
+      });
+
+      await init({ tool: "opencode", docs: "none", agentPlaybook: true, opencodeConfig: "v2", rootPath: getTmpDir() });
+
+      const config = readJson("opencode.json");
+      expect(config.$schema).toBe("https://opencode.ai/config.json");
+      expect(config.instructions).toEqual([".opencode/platformos-attitude.md"]);
+      expect(config.mcp.servers[NAME]).toBeDefined();
+    });
+
+    // The Playbook is installed by then, so a config it could not be wired into is its own
+    // warning, not "could not install".
+    test("a config that cannot be wired is not reported as a failed install", async () => {
+      installAgentPlaybook.mockResolvedValue({
+        status: "installed",
+        files: 30,
+        manifest: { instructions: [".opencode/platformos-attitude.md"] }
+      });
+      const real = fs.renameSync;
+      let calls = 0;
+      const renameSync = vi.spyOn(fs, "renameSync").mockImplementation((...args) => {
+        // The first write is the servers; the second is the instructions.
+        if (++calls === 2) throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+        return real(...args);
+      });
+
+      try {
+        await init({ tool: "opencode", docs: "none", agentPlaybook: true, opencodeConfig: "v2", rootPath: getTmpDir() });
+      } finally {
+        renameSync.mockRestore();
+      }
+
+      const warnings = vi.mocked(logger.Warn).mock.calls.map(([message]) => message);
+      expect(warnings).toEqual([expect.stringMatching(/Could not register the Playbook's instruction files.*EACCES/s)]);
+      expect(vi.mocked(logger.Info).mock.calls.at(-3)[0]).toMatch(/Agent Playbook\s+\.opencode\/ \(30 files\)/);
+    });
+
     test("instruction files the user already listed are not duplicated", async () => {
       writeJson({ instructions: [".opencode/platformos-attitude.md", "CONTRIBUTING.md"] }, "opencode.json");
       installAgentPlaybook.mockResolvedValue({
@@ -877,7 +977,7 @@ describe('ai init', () => {
 
       await init({ tool: "claude", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
 
-      expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/Could not install.*503/s));
+      expect(vi.mocked(logger.Warn).mock.calls).toEqual([[expect.stringMatching(/Could not install.*503/s)]]);
       expect(Object.keys(readJson(".mcp.json").mcpServers)).toEqual([NAME, "platformos-supervisor"]);
     });
   });
@@ -977,12 +1077,32 @@ describe('pi', () => {
     expect(fs.existsSync(path.join(getTmpDir(), 'pidir', 'mcp.json'))).toBe(true);
   });
 
+  // `.pi/mcp.json` is as inert as the Playbook in an untrusted project.
+  test('the trust gate is reported without the Playbook too', async () => {
+    await init({ tool: 'pi', docs: 'none', agentPlaybook: false, rootPath: getTmpDir() });
+
+    expect(installAgentPlaybook).not.toHaveBeenCalled();
+    expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/^Project trust: pi ignores everything in \.pi\//));
+  });
+
+  // A first run without the Playbook leaves `.pi/` holding only pos-cli's own file. That is not
+  // the user's directory, so a second run with the Playbook installs it.
+  test('a .pi/ holding only mcp.json does not stop a later Playbook install', async () => {
+    installAgentPlaybook.mockResolvedValue({ status: 'installed', files: 26, manifest: null });
+    await init({ tool: 'pi', docs: 'none', agentPlaybook: false, rootPath: getTmpDir() });
+
+    await init({ tool: 'pi', docs: 'none', agentPlaybook: true, rootPath: getTmpDir() });
+
+    expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] });
+    expect(logger.Info).not.toHaveBeenCalledWith(expect.stringMatching(/already has a \.pi\/ directory/));
+  });
+
   test('the trust gate is reported after installing the Playbook', async () => {
     installAgentPlaybook.mockResolvedValue({ status: 'installed', files: 26, manifest: null });
 
     await init({ tool: 'pi', docs: 'none', agentPlaybook: true, rootPath: getTmpDir() });
 
-    expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi });
+    expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] });
     expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/ignores everything in \.pi\/ until the project is trusted/));
   });
 
@@ -994,7 +1114,7 @@ describe('pi', () => {
 
     await init({ tool: 'pi', docs: 'none', agentPlaybook: true, rootPath: getTmpDir() });
 
-    expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi });
+    expect(installAgentPlaybook).toHaveBeenCalledWith({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] });
     expect(logger.Info).not.toHaveBeenCalledWith(expect.stringMatching(/already has a \.pi\/ directory/));
     expect(readJson('.pi', 'mcp.json').mcpServers[NAME]).toBeDefined();
   });
@@ -1059,7 +1179,123 @@ describe('Codex', () => {
     await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
 
     expect(fs.existsSync(path.join(getTmpDir(), 'codexhome', 'config.toml'))).toBe(false);
-    expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/trust_level = "trusted"/));
+    // Raw, so nothing frames or rewrites it: the key is the absolute path, exactly.
+    expect(logger.Log).toHaveBeenCalledWith(
+      `[projects.${JSON.stringify(getTmpDir())}]\ntrust_level = "trusted"`
+    );
+  });
+
+  test('a project Codex was told not to trust is switched to trusted, in place', async () => {
+    const home = path.join(getTmpDir(), 'codexhome');
+    fs.mkdirSync(home, { recursive: true });
+    fs.writeFileSync(
+      path.join(home, 'config.toml'),
+      `# mine\n[projects.${JSON.stringify(getTmpDir())}]\ntrust_level = "untrusted"\n`
+    );
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+
+    expect(readToml('codexhome', 'config.toml')).toBe(
+      `# mine\n[projects.${JSON.stringify(getTmpDir())}]\ntrust_level = "trusted"\n`
+    );
+  });
+
+  test('a trust table with no trust_level gains the line, and no second table', async () => {
+    const home = path.join(getTmpDir(), 'codexhome');
+    fs.mkdirSync(home, { recursive: true });
+    fs.writeFileSync(path.join(home, 'config.toml'), `[projects.${JSON.stringify(getTmpDir())}]\n`);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+
+    const global = readToml('codexhome', 'config.toml');
+    expect(global.match(/\[projects\./g)).toHaveLength(1);
+    expect(global).toContain('trust_level = "trusted"');
+  });
+
+  test('an inline trust entry is not edited, and the block is shown instead', async () => {
+    const home = path.join(getTmpDir(), 'codexhome');
+    fs.mkdirSync(home, { recursive: true });
+    const mine = `[projects]\n${JSON.stringify(getTmpDir())} = { trust_level = "untrusted" }\n`;
+    fs.writeFileSync(path.join(home, 'config.toml'), mine);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+
+    expect(readToml('codexhome', 'config.toml')).toBe(mine);
+    expect(logger.Log).toHaveBeenCalledWith(expect.stringMatching(/trust_level = "trusted"/));
+  });
+
+  // Every spelling below already defines the server; appending `[mcp_servers.platformos-cli]`
+  // after any of them is a duplicate key, and Codex refuses the whole file.
+  test.each([
+    ['a quoted key', '[mcp_servers."platformos-cli"]\ncommand = "mine"\n'],
+    ['dotted keys', '[mcp_servers]\nplatformos-cli.command = "mine"\n'],
+    ['an inline table', '[mcp_servers]\nplatformos-cli = { command = "mine" }\n']
+  ])('an entry written as %s is recognised and left alone', async (_label, mine) => {
+    const dir = path.join(getTmpDir(), '.codex');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'config.toml'), mine);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
+
+    const toml = readToml('.codex', 'config.toml');
+    expect(toml).not.toContain('[mcp_servers.platformos-cli]');
+    expect(toml).toContain('[mcp_servers.platformos-supervisor]');
+  });
+
+  test('an inline mcp_servers table is never appended to', async () => {
+    const dir = path.join(getTmpDir(), '.codex');
+    fs.mkdirSync(dir, { recursive: true });
+    const mine = 'mcp_servers = { other = { command = "x" } }\n';
+    fs.writeFileSync(path.join(dir, 'config.toml'), mine);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
+
+    expect(readToml('.codex', 'config.toml')).toBe(mine);
+    expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/inline table/));
+  });
+
+  // The manifest arrives over the network; `instructions` means something to opencode only.
+  test('a manifest with instructions writes nothing into the TOML config', async () => {
+    installAgentPlaybook.mockResolvedValue({
+      status: 'installed',
+      files: 24,
+      manifest: { instructions: ['.codex/rules.md'] }
+    });
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: false, agentPlaybook: true, rootPath: getTmpDir() });
+
+    const toml = readToml('.codex', 'config.toml');
+    expect(toml).not.toContain('instructions');
+    expect(toml.startsWith('[mcp_servers.platformos-cli]')).toBe(true);
+  });
+
+  describe.skipIf(!supportsPosixPermissions)('the global file keeps what it was', () => {
+    test('an owner-only global config stays owner-only', async () => {
+      const home = path.join(getTmpDir(), 'codexhome');
+      fs.mkdirSync(home, { recursive: true });
+      const global = path.join(home, 'config.toml');
+      fs.writeFileSync(global, '[mcp_servers.x]\nenv = { KEY = "secret" }\n', { mode: 0o600 });
+      fs.chmodSync(global, 0o600);
+
+      await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+
+      expect(readToml('codexhome', 'config.toml')).toContain('trust_level = "trusted"');
+      expect(permissionsOf(global)).toBe(0o600);
+    });
+
+    test('a symlinked global config is written through, and stays a link', async () => {
+      const dotfiles = path.join(getTmpDir(), 'dotfiles');
+      fs.mkdirSync(dotfiles, { recursive: true });
+      fs.writeFileSync(path.join(dotfiles, 'codex.toml'), '# mine\n');
+      const home = path.join(getTmpDir(), 'codexhome');
+      fs.mkdirSync(home, { recursive: true });
+      fs.symlinkSync(path.join(dotfiles, 'codex.toml'), path.join(home, 'config.toml'));
+
+      await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+
+      expect(fs.lstatSync(path.join(home, 'config.toml')).isSymbolicLink()).toBe(true);
+      expect(fs.readFileSync(path.join(dotfiles, 'codex.toml'), 'utf8')).toContain('trust_level = "trusted"');
+    });
   });
 
   /** Marks the project trusted in the global config, as a previous run would have. */
