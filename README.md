@@ -1070,6 +1070,8 @@ Every entry in the archive is checked before anything is written: a path that is
 
 The Playbook is installed **before** the MCP servers are registered, and that order matters: Cursor, pi and Codex keep their MCP configuration *inside* the directory the Playbook unpacks to (`.cursor/mcp.json`, `.pi/mcp.json`, `.codex/config.toml`). Writing the configuration first would create that directory, and the Playbook — which never touches a directory that already exists — would then decline on every fresh project while reporting success.
 
+A Playbook that is already in place is still *wired* on every run (unless you pass `--no-agent-playbook`): its instruction files are registered in `opencode.json`, and Codex's `AGENTS.md` is copied to the project root if there is none. So a run that stopped after unpacking — at a config file that would not parse, or at a Ctrl-C — is finished by running `pos-cli ai init` again.
+
 ##### opencode configuration formats
 
 opencode's two major versions keep MCP servers in different places, and its published schema still accepts both: opencode 1 puts each server directly under `mcp`, opencode 2 puts them under `mcp.servers` and marks the older shape deprecated.

@@ -11,7 +11,7 @@ import { withTmpDir } from '#test/utils/withTmpDir.js';
 const downloadFile = vi.fn();
 vi.mock('#lib/downloadFile.js', () => ({ default: (...args) => downloadFile(...args) }));
 
-const { installAgentPlaybook, isInsidePlaybookDir, readManifest, PLAYBOOKS, PLAYBOOK_INDEX_URL } =
+const { installAgentPlaybook, isInsidePlaybookDir, playbookDirState, readManifest, PLAYBOOKS, PLAYBOOK_INDEX_URL } =
   await import('#lib/agentPlaybook.js');
 
 const PLAYBOOK_DIR = PLAYBOOKS.claude.dir;
@@ -304,6 +304,31 @@ describe('where the archive is downloaded from', () => {
     expect(fs.existsSync(path.join(getTmpDir(), 'tmp'))).toBe(false);
   });
 
+  // The index is a published page, and a root-relative link is ordinary there. Reading it as
+  // "no link" would quietly download the stale, unverified archive on every install.
+  test('a root-relative link and an upper-case checksum are honoured', async () => {
+    const name = nameOf(PLAYBOOKS.claude);
+    const zip = await makeZip(path.join(getTmpDir(), name), KIT);
+    const sha256 = createHash('sha256').update(fs.readFileSync(zip)).digest('hex').toUpperCase();
+    const origin = new URL(PLAYBOOK_INDEX_URL).origin;
+    const documents = {
+      [PLAYBOOK_INDEX_URL]: JSON.stringify({
+        files: { [name]: `/assets/${name}?updated=8`, [CHECKSUMS_NAME]: `/assets/${CHECKSUMS_NAME}?updated=8` }
+      }),
+      [`${origin}/assets/${CHECKSUMS_NAME}?updated=8`]: JSON.stringify({ [name]: sha256 })
+    };
+    downloadFile.mockImplementation(async (url, fileName) => {
+      if (url === `${origin}/assets/${name}?updated=8`) return fs.copyFileSync(zip, fileName);
+      if (documents[url]) return fs.writeFileSync(fileName, documents[url]);
+      throw notFound(url);
+    });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir() });
+
+    expect(result.status).toBe('installed');
+    expect(urlsFetched().at(-1)).toBe(`${origin}/assets/${name}?updated=8`);
+  });
+
   test.each([
     ['the index is not published', { index: null }],
     ['the index is not JSON', { index: '<!doctype html><p>Not found</p>' }],
@@ -393,6 +418,52 @@ describe('per-tool playbooks', () => {
     expect(result.status).toBe('exists');
     expect(downloadFile).not.toHaveBeenCalled();
     expect(fs.existsSync(path.join(getTmpDir(), '.pi', 'AGENTS.md'))).toBe(false);
+  });
+
+  // An empty directory says nothing about who made it, so it is left alone as it always was.
+  test('an empty directory is not adopted', () => {
+    fs.mkdirSync(path.join(getTmpDir(), '.pi'), { recursive: true });
+
+    expect(playbookDirState(path.join(getTmpDir(), '.pi'), ['mcp.json'])).toBe('occupied');
+  });
+
+  // Installing renames the target away and puts a real directory there, which would silently
+  // unlink a dotfiles setup — even one whose directory holds only the kept file.
+  test.skipIf(process.platform === 'win32')('a symlinked directory is never adopted', () => {
+    const dotfiles = path.join(getTmpDir(), 'dotfiles-pi');
+    fs.mkdirSync(dotfiles, { recursive: true });
+    fs.writeFileSync(path.join(dotfiles, 'mcp.json'), '{}');
+    fs.symlinkSync(dotfiles, path.join(getTmpDir(), '.pi'));
+
+    expect(playbookDirState(path.join(getTmpDir(), '.pi'), ['mcp.json'])).toBe('occupied');
+  });
+
+  // The user's directory is inside staging at that moment; the cleanup after every install would
+  // otherwise delete the only copy of it.
+  test('an original that cannot be put back is kept, and the error says where', async () => {
+    const pi = path.join(getTmpDir(), '.pi');
+    fs.mkdirSync(pi, { recursive: true });
+    fs.writeFileSync(path.join(pi, 'mcp.json'), '{"mine":true}');
+    serves({ '.pi/AGENTS.md': 'agent' });
+
+    const realRename = fs.promises.rename;
+    const rename = vi.spyOn(fs.promises, 'rename').mockImplementation(async (from, to) => {
+      // Moving the original aside works; publishing the staged copy and restoring both fail.
+      if (to === pi) throw Object.assign(new Error('EBUSY: resource busy'), { code: 'EBUSY' });
+      return realRename(from, to);
+    });
+
+    let error;
+    try {
+      await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] }).catch((e) => {
+        error = e;
+      });
+    } finally {
+      rename.mockRestore();
+    }
+
+    expect(error.message).toMatch(/could not be put back and is at/);
+    expect(fs.readFileSync(path.join(error.preserved, 'mcp.json'), 'utf8')).toBe('{"mine":true}');
   });
 
   test('the manifest travels back to the caller', async () => {

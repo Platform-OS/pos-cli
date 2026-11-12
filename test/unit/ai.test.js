@@ -25,7 +25,8 @@ vi.mock('#lib/logger.js', () => ({
     Warn: vi.fn(),
     Log: vi.fn(),
     Debug: vi.fn()
-  }
+  },
+  isServerMode: () => false
 }));
 
 const getTmpDir = withTmpDir();
@@ -501,6 +502,27 @@ describe('ai init', () => {
       });
     });
 
+    // A default run writes v2; an opencode 1 user who then names v1 must not end up with the servers
+    // twice, and with an `mcp.servers` that opencode 1 reads as a server named "servers".
+    test('opencode - --opencode-config v1 moves entries pos-cli wrote under mcp.servers back', async () => {
+      await init({ tool: 'opencode', docs: 'none', rootPath: getTmpDir(), homePath: homeDir() });
+      await init({ tool: 'opencode', docs: 'none', opencodeConfig: 'v1', rootPath: getTmpDir(), homePath: homeDir() });
+
+      expect(readJson('opencode.json').mcp).toEqual({
+        [NAME]: { type: 'local', command: ['pos-cli-mcp', '--profile', 'dev', '--no-http'], enabled: true },
+        'platformos-supervisor': { type: 'local', command: ['pos-cli-supervisor'], enabled: true }
+      });
+    });
+
+    test('opencode - an mcp.servers still holding the user\'s own servers is kept, and named', async () => {
+      writeJson({ mcp: { servers: { mine: { type: 'local', command: ['x'] } } } }, 'opencode.json');
+
+      await init({ tool: 'opencode', docs: 'none', opencodeConfig: 'v1', rootPath: getTmpDir(), homePath: homeDir() });
+
+      expect(readJson('opencode.json').mcp.servers).toEqual({ mine: { type: 'local', command: ['x'] } });
+      expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/opencode 1 reads it\s+as a server named "servers"/));
+    });
+
     test('opencode - an entry pos-cli wrote under the legacy key is moved, not duplicated', async () => {
       writeJson(
         {
@@ -970,6 +992,56 @@ describe('ai init', () => {
       expect(fs.readFileSync(path.join(kitPath(), "CLAUDE.md"), "utf8")).toBe("mine");
     });
 
+    // A run that stopped after unpacking — at a config that would not parse, at a Ctrl-C — left a
+    // Playbook nothing had wired. The directory is there now, so only wiring it here can finish it.
+    test("a Playbook already in place is wired on a later run", async () => {
+      const dir = path.join(getTmpDir(), ".opencode");
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, "rules.md"), "rules");
+      fs.writeFileSync(path.join(dir, "playbook.json"), JSON.stringify({ instructions: [".opencode/rules.md"] }));
+
+      await init({ tool: "opencode", docs: "none", opencodeConfig: "v2", rootPath: getTmpDir() });
+
+      expect(installAgentPlaybook).not.toHaveBeenCalled();
+      expect(readJson("opencode.json").instructions).toEqual([".opencode/rules.md"]);
+    });
+
+    test("--no-agent-playbook does not wire one that is already there", async () => {
+      const dir = path.join(getTmpDir(), ".opencode");
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, "rules.md"), "rules");
+      fs.writeFileSync(path.join(dir, "playbook.json"), JSON.stringify({ instructions: [".opencode/rules.md"] }));
+
+      await init({ tool: "opencode", docs: "none", agentPlaybook: false, opencodeConfig: "v2", rootPath: getTmpDir() });
+
+      expect(readJson("opencode.json").instructions).toBeUndefined();
+    });
+
+    // Only Codex reads the project-root AGENTS.md alone; for anything else it is clutter.
+    test("a manifest's agentsFile is not copied for a tool that does not read it", async () => {
+      installAgentPlaybook.mockImplementation(async ({ rootPath }) => {
+        fs.mkdirSync(path.join(rootPath, ".claude"), { recursive: true });
+        fs.writeFileSync(path.join(rootPath, ".claude", "AGENTS.md"), "PLAYBOOK");
+        return { status: "installed", files: 34, manifest: { agentsFile: ".claude/AGENTS.md" } };
+      });
+
+      await init({ tool: "claude", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
+
+      expect(fs.existsSync(path.join(getTmpDir(), "AGENTS.md"))).toBe(false);
+    });
+
+    // Filled by a concurrent checkout during the download: the same state as a directory that was
+    // there from the start, reported once, and never as a success.
+    test("a directory that appears during the download is reported once, not as a success", async () => {
+      installAgentPlaybook.mockResolvedValue({ status: "exists" });
+
+      await init({ tool: "claude", docs: "none", agentPlaybook: true, rootPath: getTmpDir() });
+
+      const said = (fn) => vi.mocked(fn).mock.calls.map(([message]) => message).filter((m) => /\.claude\//.test(m));
+      expect(said(logger.Success)).toEqual([]);
+      expect(said(logger.Info).filter((m) => /already has a \.claude\/ directory/.test(m))).toHaveLength(1);
+    });
+
     // The servers are registered by the time the kit is offered, so a failure here is a
     // warning. Failing the command would make a convenience step able to break the real one.
     test("a failed install warns but leaves the servers registered", async () => {
@@ -1212,6 +1284,49 @@ describe('Codex', () => {
     expect(global).toContain('trust_level = "trusted"');
   });
 
+  test('a CRLF config is switched to trusted, and keeps its line endings', async () => {
+    const home = path.join(getTmpDir(), 'codexhome');
+    fs.mkdirSync(home, { recursive: true });
+    const key = `[projects.${JSON.stringify(getTmpDir())}]`;
+    fs.writeFileSync(path.join(home, 'config.toml'), `# mine\r\n${key}\r\ntrust_level = "untrusted"\r\n`);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+
+    expect(readToml('codexhome', 'config.toml')).toBe(`# mine\r\n${key}\r\ntrust_level = "trusted"\r\n`);
+  });
+
+  test('a CRLF trust table with no trust_level gains a CRLF line', async () => {
+    const home = path.join(getTmpDir(), 'codexhome');
+    fs.mkdirSync(home, { recursive: true });
+    const key = `[projects.${JSON.stringify(getTmpDir())}]`;
+    fs.writeFileSync(path.join(home, 'config.toml'), `${key}\r\n`);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+
+    expect(readToml('codexhome', 'config.toml')).toBe(`${key}\r\ntrust_level = "trusted"\r\n`);
+  });
+
+  // Codex wrote the key; on Windows a path differing only in case is the same project, and a second
+  // table for it would be a duplicate key.
+  test('on Windows an entry spelled in another case is the one edited', async () => {
+    const home = path.join(getTmpDir(), 'codexhome');
+    fs.mkdirSync(home, { recursive: true });
+    const theirs = `[projects.${JSON.stringify(getTmpDir().toUpperCase())}]\ntrust_level = "untrusted"\n`;
+    fs.writeFileSync(path.join(home, 'config.toml'), theirs);
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+
+    try {
+      await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+    } finally {
+      Object.defineProperty(process, 'platform', platform);
+    }
+
+    const global = readToml('codexhome', 'config.toml');
+    expect(global.match(/\[projects\./g)).toHaveLength(1);
+    expect(global).toContain('trust_level = "trusted"');
+  });
+
   test('an inline trust entry is not edited, and the block is shown instead', async () => {
     const home = path.join(getTmpDir(), 'codexhome');
     fs.mkdirSync(home, { recursive: true });
@@ -1229,6 +1344,7 @@ describe('Codex', () => {
   test.each([
     ['a quoted key', '[mcp_servers."platformos-cli"]\ncommand = "mine"\n'],
     ['dotted keys', '[mcp_servers]\nplatformos-cli.command = "mine"\n'],
+    ['an inline table under a header whose comment holds a ]', '[mcp_servers] # see [docs]\nplatformos-cli = { command = "mine" }\n'],
     ['an inline table', '[mcp_servers]\nplatformos-cli = { command = "mine" }\n']
   ])('an entry written as %s is recognised and left alone', async (_label, mine) => {
     const dir = path.join(getTmpDir(), '.codex');
@@ -1338,6 +1454,44 @@ describe('Codex', () => {
     await init({ tool: 'codex', docs: 'none', codexTrust: false, agentPlaybook: true, rootPath: getTmpDir() });
 
     expect(fs.readFileSync(path.join(getTmpDir(), 'AGENTS.md'), 'utf8')).toBe('PLAYBOOK INSTRUCTIONS');
+  });
+
+  test('a Playbook from an earlier run gets its AGENTS.md, and a second run says nothing about it', async () => {
+    const dir = path.join(getTmpDir(), '.codex');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'AGENTS.md'), 'PLAYBOOK INSTRUCTIONS');
+    fs.writeFileSync(path.join(dir, 'playbook.json'), JSON.stringify({ agentsFile: '.codex/AGENTS.md' }));
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
+    expect(fs.readFileSync(path.join(getTmpDir(), 'AGENTS.md'), 'utf8')).toBe('PLAYBOOK INSTRUCTIONS');
+
+    vi.clearAllMocks();
+    await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
+    expect(logger.Info).not.toHaveBeenCalledWith(expect.stringMatching(/AGENTS\.md/));
+  });
+
+  // The trust question is the one asked after files are written; a Ctrl-C there must not leave
+  // the Playbook half wired.
+  test('the Playbook is wired before the trust question is asked', async () => {
+    installAgentPlaybook.mockImplementation(async ({ rootPath }) => {
+      fs.mkdirSync(path.join(rootPath, '.codex'), { recursive: true });
+      fs.writeFileSync(path.join(rootPath, '.codex', 'AGENTS.md'), 'PLAYBOOK INSTRUCTIONS');
+      return { status: 'installed', files: 24, manifest: { agentsFile: '.codex/AGENTS.md' } };
+    });
+    let wiredWhenAsked;
+    select
+      .mockResolvedValueOnce('codex')
+      .mockResolvedValueOnce('none')
+      .mockResolvedValueOnce(true)
+      .mockImplementationOnce(async () => {
+        wiredWhenAsked = fs.existsSync(path.join(getTmpDir(), 'AGENTS.md'));
+        return false;
+      });
+
+    await init({ rootPath: getTmpDir(), homePath: homeDir() });
+
+    expect(select).toHaveBeenCalledTimes(4);
+    expect(wiredWhenAsked).toBe(true);
   });
 
   test('an existing AGENTS.md is never overwritten', async () => {
