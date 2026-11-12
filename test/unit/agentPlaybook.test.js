@@ -437,6 +437,52 @@ describe('per-tool playbooks', () => {
     expect(fs.realpathSync(kept)).toBe(fs.realpathSync(path.join(dotfiles, 'pi-mcp.json')));
   });
 
+  // `cp` cannot write a link over a file, so a dotfiles user whose archive ships its own copy of
+  // the config failed with EEXIST — the case the link-keeping exists for.
+  test.skipIf(process.platform === 'win32')('a symlinked kept file the archive also ships stays a link', async () => {
+    const dotfiles = path.join(getTmpDir(), 'dotfiles');
+    fs.mkdirSync(dotfiles, { recursive: true });
+    fs.writeFileSync(path.join(dotfiles, 'pi-mcp.json'), '{"linked":true}');
+    fs.mkdirSync(path.join(getTmpDir(), '.pi'), { recursive: true });
+    fs.symlinkSync(path.join(dotfiles, 'pi-mcp.json'), path.join(getTmpDir(), '.pi', 'mcp.json'));
+    serves({ '.pi/AGENTS.md': 'agent', '.pi/mcp.json': '{"archive":true}' });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] });
+
+    expect(result.status).toBe('installed');
+    expect(result.overridden).toEqual(['mcp.json']);
+    const kept = path.join(getTmpDir(), '.pi', 'mcp.json');
+    expect(fs.lstatSync(kept).isSymbolicLink()).toBe(true);
+    expect(fs.readFileSync(kept, 'utf8')).toBe('{"linked":true}');
+  });
+
+  // A running tool can write into the directory between the check and the move. Moving it aside
+  // would take that file with it into staging, which is deleted.
+  test('a file written into the directory just before it is moved is not lost', async () => {
+    const pi = path.join(getTmpDir(), '.pi');
+    fs.mkdirSync(pi, { recursive: true });
+    fs.writeFileSync(path.join(pi, 'mcp.json'), '{"mine":true}');
+    serves({ '.pi/AGENTS.md': 'agent' });
+
+    const realRename = fs.promises.rename;
+    const rename = vi.spyOn(fs.promises, 'rename').mockImplementation(async (from, to) => {
+      if (from === pi) fs.writeFileSync(path.join(pi, 'session.json'), 'new');
+      return realRename(from, to);
+    });
+
+    let result;
+    try {
+      result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] });
+    } finally {
+      rename.mockRestore();
+    }
+
+    expect(result.status).toBe('exists');
+    expect(fs.readFileSync(path.join(pi, 'session.json'), 'utf8')).toBe('new');
+    expect(fs.readFileSync(path.join(pi, 'mcp.json'), 'utf8')).toBe('{"mine":true}');
+    expect(fs.existsSync(path.join(pi, 'AGENTS.md'))).toBe(false);
+  });
+
   test('anything beside the kept file makes the directory the user\u2019s', async () => {
     fs.mkdirSync(path.join(getTmpDir(), '.pi'), { recursive: true });
     fs.writeFileSync(path.join(getTmpDir(), '.pi', 'mcp.json'), '{}');

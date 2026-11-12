@@ -20,7 +20,11 @@ const { PLAYBOOKS } = await import('#lib/agentPlaybook.js');
 
 vi.mock('#lib/logger.js', () => ({
   default: {
-    Error: vi.fn(),
+    // Like the real one, it ends the run unless told not to: a mock that only records the call is
+    // how a refusal that exited the process looked, under test, like one that carried on.
+    Error: vi.fn((message, { exit = true } = {}) => {
+      if (exit) throw new Error(`logger.Error exited: ${message}`);
+    }),
     Success: vi.fn(),
     Info: vi.fn(),
     Warn: vi.fn(),
@@ -35,6 +39,16 @@ const getTmpDir = withTmpDir();
 // A refused config sets it, and vitest would read a leftover as the whole run failing.
 afterEach(() => {
   process.exitCode = undefined;
+  vi.unstubAllEnvs();
+});
+
+// A run with no `homePath` reads the default one — opencode's global config is a hint for the
+// project's form — so the default must not be the home of whoever runs the suite.
+beforeEach(() => {
+  const home = path.join(getTmpDir(), 'default-home');
+  vi.stubEnv('HOME', home);
+  vi.stubEnv('USERPROFILE', home);
+  vi.stubEnv('XDG_CONFIG_HOME', path.join(home, '.config'));
 });
 
 const NAME = 'platformos-cli';
@@ -302,7 +316,7 @@ describe('ai init', () => {
 
     await init({ tool: 'claude', docs: 'none', rootPath: getTmpDir() });
 
-    expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid JSON/));
+    expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid JSON/), { exit: false, notify: false });
     expect(fs.readFileSync(configPath('.mcp.json'), 'utf8')).toEqual('{ not valid json');
   });
 
@@ -319,7 +333,7 @@ describe('ai init', () => {
     await init({ tool: 'claude', docs: 'none', rootPath: getTmpDir() });
 
     expect(fs.readFileSync(configPath('.mcp.json'), 'utf8')).toBe(mine);
-    expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/could not be updated/));
+    expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/could not be updated/), { exit: false, notify: false });
     expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/\.mcp\.json \(not written/));
     expect(process.exitCode).toBe(1);
   });
@@ -458,6 +472,27 @@ describe('ai init', () => {
         [GRAPHQL]: { type: 'http', url: GRAPHQL_URL }
       });
       expect(logger.Warn).not.toHaveBeenCalled();
+    });
+
+    // VS Code reads these files as JSON with comments. Strict parsing refused them, and rewriting
+    // them would drop the comments.
+    test('vscode - a global file with comments and trailing commas is edited, comments kept', async () => {
+      fs.mkdirSync(vscodeUserDir('Code'), { recursive: true });
+      const file = path.join(vscodeUserDir('Code'), 'mcp.json');
+      fs.writeFileSync(file, '{\n  // my servers\n  "servers": {\n    "mine": { "url": "https://example.com" },\n  },\n}\n');
+
+      await init({ tool: 'vscode', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
+
+      const text = fs.readFileSync(file, 'utf8');
+      expect(text).toContain('// my servers');
+      const { parse } = await import('jsonc-parser');
+      expect(parse(text, [], { allowTrailingComma: true }).servers).toEqual({
+        mine: { url: 'https://example.com' },
+        [LIQUID]: { type: 'http', url: LIQUID_URL },
+        [GRAPHQL]: { type: 'http', url: GRAPHQL_URL }
+      });
+      expect(logger.Error).not.toHaveBeenCalled();
+      expect(process.exitCode).toBeUndefined();
     });
 
     // Only a directory that is already there: writing a path no installed build reads would look
@@ -629,6 +664,7 @@ describe('ai init', () => {
         atHome('.config', 'opencode', 'opencode.json'),
         JSON.stringify({ mcp: { other: { type: 'local', command: ['x'], enabled: true } } })
       );
+      writeJson({ mcp: { servers: {} } }, 'opencode.json');
 
       await init({ tool: 'opencode', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
 
@@ -636,6 +672,46 @@ describe('ai init', () => {
       const global = readHome('.config', 'opencode', 'opencode.json');
       expect(global.mcp.servers).toBeUndefined();
       expect(global.mcp[LIQUID]).toEqual({ type: 'remote', url: LIQUID_URL, enabled: true });
+    });
+
+    // The project has no file yet; the global one was written by the opencode the user runs.
+    test('opencode - a project with no file takes the form of the global config', async () => {
+      fs.mkdirSync(atHome('.config', 'opencode'), { recursive: true });
+      fs.writeFileSync(
+        atHome('.config', 'opencode', 'opencode.json'),
+        JSON.stringify({ mcp: { other: { type: 'local', command: ['x'], enabled: true } } })
+      );
+
+      await init({ tool: 'opencode', docs: 'none', rootPath: getTmpDir(), homePath: homeDir() });
+
+      const config = readJson('opencode.json');
+      expect(config.mcp.servers).toBeUndefined();
+      expect(config.mcp[NAME]).toEqual({ type: 'local', command: ['pos-cli-mcp', '--profile', 'dev', '--no-http'], enabled: true });
+    });
+
+    test('opencode - a byte-order mark does not hide the form a file uses', async () => {
+      writeJson('\uFEFF' + JSON.stringify({ mcp: { other: { type: 'local', command: ['x'], enabled: true } } }), 'opencode.json');
+
+      await init({ tool: 'opencode', docs: 'none', rootPath: getTmpDir(), homePath: homeDir() });
+
+      const config = JSON.parse(fs.readFileSync(configPath('opencode.json'), 'utf8').replace(/^\uFEFF/, ''));
+      expect(config.mcp.servers).toBeUndefined();
+      expect(config.mcp[NAME]).toBeDefined();
+    });
+
+    // The old name customised and the new one ours: the server stays where it is, both entries
+    // with it. Moving ours left it in a layout the merge then skipped, so it was simply deleted.
+    test('opencode - an entry of ours beside a customised old-name entry is not deleted', async () => {
+      const ours = { type: 'local', command: ['pos-cli-mcp', '--profile', 'dev', '--no-http'], enabled: true };
+      writeJson({ mcp: { [OLD_NAME]: { type: 'local', command: ['my-wrapper'] }, [NAME]: ours } }, 'opencode.json');
+
+      await init({ tool: 'opencode', docs: 'none', opencodeConfig: 'v2', rootPath: getTmpDir(), homePath: homeDir() });
+
+      const config = readJson('opencode.json');
+      expect(config.mcp[NAME]).toEqual(ours);
+      expect(config.mcp[OLD_NAME]).toEqual({ type: 'local', command: ['my-wrapper'] });
+      expect(config.mcp.servers[NAME]).toBeUndefined();
+      expect(logger.Info).not.toHaveBeenCalledWith(expect.stringMatching(/Moved to .*platformos-cli/));
     });
 
     test('opencode - a customised legacy entry is kept and reported', async () => {
@@ -760,7 +836,7 @@ describe('ai init', () => {
       await init({ tool: 'claude', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
 
       expect(fs.readFileSync(atHome('.claude.json'), 'utf8')).toEqual('{ not valid json');
-      expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid JSON/));
+      expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid JSON/), { exit: false, notify: false });
       expect(process.exitCode).toBe(1);
       process.exitCode = undefined;
       // The project file is written first and is a separate decision, so it still has the locals.
@@ -782,7 +858,7 @@ describe('ai init', () => {
         expect(renameSync).toHaveBeenCalled();
         expect(fs.readdirSync(getTmpDir())).toEqual([]);
         // Reported, and a scripted run is told it failed, rather than a stack trace.
-        expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/EXDEV/));
+        expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/EXDEV/), { exit: false, notify: false });
         expect(process.exitCode).toBe(1);
       } finally {
         renameSync.mockRestore();
@@ -1158,6 +1234,33 @@ describe('ai init', () => {
     });
   });
 
+  describe('a run that keeps going', () => {
+    // Before the fix, the refusal exited the process: no Playbook, no summary, and the summary row
+    // written for exactly this case was never printed.
+    test('a global file that cannot be updated does not stop the Playbook or the summary', async () => {
+      const home = path.join(getTmpDir(), 'home');
+      fs.mkdirSync(home, { recursive: true });
+      fs.writeFileSync(path.join(home, '.claude.json'), '{ not valid json');
+
+      await init({ tool: 'claude', docs: 'global', agentPlaybook: true, rootPath: getTmpDir(), homePath: home });
+
+      expect(installAgentPlaybook).toHaveBeenCalled();
+      expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/Setup summary:[\s\S]*\(not written/));
+      expect(process.exitCode).toBe(1);
+    });
+
+    // `other` registers nothing; its servers are printed for pasting.
+    test('a failed portable install does not claim the servers were registered', async () => {
+      installAgentPlaybook.mockRejectedValue(new Error('Download failed with HTTP 503'));
+
+      await init({ tool: 'other', agentPlaybook: true, rootPath: getTmpDir() });
+
+      const [[warning]] = vi.mocked(logger.Warn).mock.calls;
+      expect(warning).toMatch(/Could not install/);
+      expect(warning).not.toMatch(/registered regardless/);
+    });
+  });
+
   describe('the interactive prompts', () => {
     const homeDir = () => path.join(getTmpDir(), 'home');
 
@@ -1341,6 +1444,23 @@ describe('Codex', () => {
     await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
 
     expect(readToml('.codex', 'config.toml')).toContain('[mcp_servers.platformos-cli]');
+  });
+
+  // One entry the file already defines with its own header, sharing no key with ours: appending a
+  // second header for it is invalid TOML. That entry is kept; the rest are still added.
+  test('an entry with its own table and none of our keys is kept, and the others are added', async () => {
+    const dir = path.join(getTmpDir(), '.codex');
+    fs.mkdirSync(dir, { recursive: true });
+    const mine = '[mcp_servers.platformos-supervisor]\nstartup_timeout_sec = 30\n';
+    fs.writeFileSync(path.join(dir, 'config.toml'), mine);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
+
+    const parsed = parseToml(readToml('.codex', 'config.toml'));
+    expect(parsed.mcp_servers['platformos-supervisor']).toEqual({ startup_timeout_sec: 30 });
+    expect(parsed.mcp_servers['platformos-cli']).toEqual({ command: 'pos-cli-mcp', args: ['--profile', 'dev', '--no-http'] });
+    expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/Kept your own "platformos-supervisor"/));
+    expect(logger.Warn).not.toHaveBeenCalledWith(expect.stringMatching(/inline table/));
   });
 
   test('--codex-trust writes the trust block into the global config', async () => {
@@ -1638,7 +1758,7 @@ describe('Codex', () => {
     await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
 
     expect(readToml('.codex', 'config.toml')).toBe('this is = = not toml\n');
-    expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid TOML/));
+    expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid TOML/), { exit: false, notify: false });
     expect(process.exitCode).toBe(1);
   });
 

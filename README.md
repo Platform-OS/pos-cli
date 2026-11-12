@@ -1068,15 +1068,15 @@ Two things it will not do:
 
 Every entry in the archive is checked before anything is written: a path that is absolute, that carries a Windows drive, or that climbs out of the one directory the archive is allowed to write rejects the whole archive. The paths inside the archive's manifest are held to the same rule.
 
-The Playbook is installed **before** the MCP servers are registered, and that order matters: Cursor, pi and Codex keep their MCP configuration *inside* the directory the Playbook unpacks to (`.cursor/mcp.json`, `.pi/mcp.json`, `.codex/config.toml`). Writing the configuration first would create that directory, and the Playbook — which never touches a directory that already exists — would then decline on every fresh project while reporting success.
+The MCP servers are registered **first**, so a slow download or a Ctrl-C in the optional Playbook step cannot cost them. Cursor, pi and Codex keep their MCP configuration *inside* the directory the Playbook unpacks to (`.cursor/mcp.json`, `.pi/mcp.json`, `.codex/config.toml`), so a directory holding nothing but that file is recognised as pos-cli's own: the Playbook is installed around it, and the configuration is kept as it is. A directory holding anything else is yours, and is left alone.
 
-A Playbook that is already in place is still *wired* on every run (unless you pass `--no-agent-playbook`): its instruction files are registered in `opencode.json`, and Codex's `AGENTS.md` is copied to the project root if there is none. So a run that stopped after unpacking — at a config file that would not parse, or at a Ctrl-C — is finished by running `pos-cli ai init` again.
+A Playbook that is already in place is still *wired* on every run (unless you pass `--no-agent-playbook`): its instruction files are registered in `opencode.json`, and Codex's `AGENTS.md` is copied to the project root if there is none. So a run that stopped after unpacking — at an `opencode.json` that would not parse, or at a Ctrl-C — is finished by running `pos-cli ai init` again.
 
 ##### opencode configuration formats
 
 opencode's two major versions keep MCP servers in different places, and its published schema still accepts both: opencode 1 puts each server directly under `mcp`, opencode 2 puts them under `mcp.servers` and marks the older shape deprecated.
 
-pos-cli follows the format your file already uses. When the file says nothing, an interactive run asks and a scripted run writes the current format. Either way you can say so outright:
+pos-cli follows the format your file already uses. A project with no `opencode.json` yet takes the format of your global opencode configuration, since the opencode you run wrote that one. When neither says anything, an interactive run asks and a scripted run writes the current format. Either way you can say so outright:
 
     pos-cli ai init --tool opencode --opencode-config v2   # servers under mcp.servers
     pos-cli ai init --tool opencode --opencode-config v1   # servers directly under mcp
@@ -1085,7 +1085,7 @@ When pos-cli writes the newer format and finds servers it had previously written
 
 ##### Codex: TOML, and the project trust flag
 
-Codex is the one tool here whose configuration is **TOML**, not JSON. pos-cli appends `[mcp_servers.<name>]` tables rather than reparsing your file: TOML tables are order-independent, so this is sound, and it means your comments and formatting are never rewritten. The cost is that an entry already present is left alone **without comparing it** — nothing can tell an entry pos-cli wrote from one you wrote without the parser this avoids — and that is reported rather than silently skipped.
+Codex is the one tool here whose configuration is **TOML**, not JSON. pos-cli reads your file with a TOML parser but never re-emits it: it appends `[mcp_servers.<name>]` tables, which is sound because TOML tables are order-independent, so your comments and formatting are never rewritten. Every append is checked by parsing the result, and nothing is written unless it means exactly what was intended. An entry already equal to pos-cli's is left in silence; any other entry of that name is yours, is left alone, and is reported with the table pos-cli would have written — the other servers are still added.
 
 More importantly: **Codex ignores a project `.codex/config.toml` entirely until the project is listed as trusted in your global configuration.** Measured against codex-cli 0.166.0 — with the project untrusted, `codex mcp list` reports no servers at all.
 
