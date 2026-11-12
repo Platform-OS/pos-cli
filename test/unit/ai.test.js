@@ -5,6 +5,7 @@ import { withTmpDir } from '#test/utils/withTmpDir.js';
 import logger from '#lib/logger.js';
 import { init, SERVERS, DOCS_SERVERS, RENAMED_FROM } from '#lib/ai.js';
 import { supportsPosixPermissions, permissionsOf } from '#lib/filePermissions.js';
+import { parseToml } from '#lib/tomlEdit.js';
 
 const select = vi.fn();
 vi.mock('@inquirer/prompts', () => ({ select: (...args) => select(...args) }));
@@ -30,6 +31,11 @@ vi.mock('#lib/logger.js', () => ({
 }));
 
 const getTmpDir = withTmpDir();
+
+// A refused config sets it, and vitest would read a leftover as the whole run failing.
+afterEach(() => {
+  process.exitCode = undefined;
+});
 
 const NAME = 'platformos-cli';
 const OLD_NAME = 'platformos';
@@ -298,6 +304,41 @@ describe('ai init', () => {
 
     expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid JSON/));
     expect(fs.readFileSync(configPath('.mcp.json'), 'utf8')).toEqual('{ not valid json');
+  });
+
+  // Each of these parses, and each would take the servers somewhere JSON.stringify drops them, or
+  // throw half way through — while the run reported success.
+  test.each([
+    ['a list at the top level', '[]'],
+    ['null at the top level', 'null'],
+    ['mcpServers as a string', '{"mcpServers": "x"}'],
+    ['mcpServers as a list', '{"mcpServers": []}']
+  ])('claude - a config with %s is refused and left as it was', async (_label, mine) => {
+    fs.writeFileSync(configPath('.mcp.json'), mine);
+
+    await init({ tool: 'claude', docs: 'none', rootPath: getTmpDir() });
+
+    expect(fs.readFileSync(configPath('.mcp.json'), 'utf8')).toBe(mine);
+    expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/could not be updated/));
+    expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/\.mcp\.json \(not written/));
+    expect(process.exitCode).toBe(1);
+  });
+
+  test('claude - a byte-order mark is read past and kept', async () => {
+    fs.writeFileSync(configPath('.mcp.json'), '\uFEFF{"mcpServers": {}}');
+
+    await init({ tool: 'claude', docs: 'none', rootPath: getTmpDir() });
+
+    const text = fs.readFileSync(configPath('.mcp.json'), 'utf8');
+    expect(text.startsWith('\uFEFF')).toBe(true);
+    expect(JSON.parse(text.slice(1)).mcpServers[NAME]).toEqual(PLATFORMOS);
+  });
+
+  test('a flag for another tool is reported as ignored, not dropped in silence', async () => {
+    await init({ tool: 'claude', docs: 'none', opencodeConfig: 'v1', codexTrust: false, rootPath: getTmpDir() });
+
+    expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/--opencode-config applies to opencode only/));
+    expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/--no-codex-trust applies to Codex only/));
   });
 
   // The hosted documentation servers: public Liquid and GraphQL reference, no credentials.
@@ -607,7 +648,33 @@ describe('ai init', () => {
 
       const config = readJson('opencode.json');
       expect(config.mcp[NAME]).toEqual({ type: 'local', command: ['my-own-wrapper'] });
+      // Not added beside it: two entries start the server twice.
+      expect(config.mcp.servers[NAME]).toBeUndefined();
+      expect(config.mcp.servers['platformos-supervisor']).toBeDefined();
       expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/start that server twice/));
+    });
+
+    test('opencode - a customised mcp.servers entry is not duplicated under mcp going back to v1', async () => {
+      writeJson({ mcp: { servers: { [NAME]: { type: 'local', command: ['mine'] } } } }, 'opencode.json');
+
+      await init({ tool: 'opencode', docs: 'none', opencodeConfig: 'v1', rootPath: getTmpDir(), homePath: homeDir() });
+
+      const config = readJson('opencode.json');
+      expect(config.mcp.servers[NAME]).toEqual({ type: 'local', command: ['mine'] });
+      expect(config.mcp[NAME]).toBeUndefined();
+    });
+
+    test('opencode - an "instructions" that is not a list is never replaced', async () => {
+      writeJson({ instructions: 'MINE.md' }, 'opencode.json');
+      const dir = path.join(getTmpDir(), '.opencode');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'rules.md'), 'rules');
+      fs.writeFileSync(path.join(dir, 'playbook.json'), JSON.stringify({ instructions: ['.opencode/rules.md'] }));
+
+      await init({ tool: 'opencode', docs: 'none', opencodeConfig: 'v2', rootPath: getTmpDir(), homePath: homeDir() });
+
+      expect(readJson('opencode.json').instructions).toBe('MINE.md');
+      expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/"instructions" is not a list/));
     });
 
     test('opencode - the global file is ~/.config/opencode/opencode.json', async () => {
@@ -694,6 +761,8 @@ describe('ai init', () => {
 
       expect(fs.readFileSync(atHome('.claude.json'), 'utf8')).toEqual('{ not valid json');
       expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid JSON/));
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
       // The project file is written first and is a separate decision, so it still has the locals.
       expect(Object.keys(readJson('.mcp.json').mcpServers)).toEqual([NAME, 'platformos-supervisor']);
     });
@@ -708,15 +777,49 @@ describe('ai init', () => {
       });
 
       try {
-        await expect(
-          init({ tool: 'claude', docs: 'none', rootPath: getTmpDir(), homePath: homeDir() })
-        ).rejects.toThrow(/EXDEV/);
+        await init({ tool: 'claude', docs: 'none', rootPath: getTmpDir(), homePath: homeDir() });
 
         expect(renameSync).toHaveBeenCalled();
         expect(fs.readdirSync(getTmpDir())).toEqual([]);
+        // Reported, and a scripted run is told it failed, rather than a stack trace.
+        expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/EXDEV/));
+        expect(process.exitCode).toBe(1);
       } finally {
         renameSync.mockRestore();
+        process.exitCode = undefined;
       }
+    });
+
+    // Claude Code rewrites ~/.claude.json while it runs, and `ai init` is often run inside it.
+    test('a global file changed during the write is merged again, not overwritten', async () => {
+      fs.mkdirSync(homeDir(), { recursive: true });
+      fs.writeFileSync(atHome('.claude.json'), JSON.stringify({ numStartups: 1 }));
+      const realWrite = fs.writeFileSync;
+      let raced = false;
+      const spy = vi.spyOn(fs, 'writeFileSync').mockImplementation((file, ...rest) => {
+        if (!raced && String(file).includes('.claude.json.pos-cli-')) {
+          raced = true;
+          realWrite(atHome('.claude.json'), JSON.stringify({ numStartups: 2 }));
+        }
+        return realWrite(file, ...rest);
+      });
+
+      try {
+        await init({ tool: 'claude', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
+      } finally {
+        spy.mockRestore();
+      }
+
+      const config = JSON.parse(fs.readFileSync(atHome('.claude.json'), 'utf8'));
+      expect(raced).toBe(true);
+      expect(config.numStartups).toBe(2);
+      expect(Object.keys(config.mcpServers)).toEqual(Object.keys(DOCS_SERVERS));
+    });
+
+    test('vscode - the summary does not claim documentation servers it only printed', async () => {
+      await init({ tool: 'vscode', docs: 'global', rootPath: getTmpDir(), homePath: homeDir() });
+
+      expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/Documentation servers\s+not registered/));
     });
 
     test('no temporary file is left beside a config pos-cli wrote', async () => {
@@ -802,19 +905,20 @@ describe('ai init', () => {
       expect(select).toHaveBeenCalledTimes(3);
     });
 
-    // Cursor's MCP file lives INSIDE the Playbook's directory, as pi's and Codex's do, so the
-    // Playbook has to be installed before the servers are written or it declines on every fresh
-    // project while reporting success.
-    test("cursor - the Playbook is installed before .cursor/mcp.json is written", async () => {
+    // Cursor's MCP file lives INSIDE the Playbook's directory, as pi's and Codex's do. The servers
+    // are the command's job, so they are written first — a slow download or a Ctrl-C must not cost
+    // them — and the Playbook is installed around the file they were written to.
+    test("cursor - .cursor/mcp.json is written before the Playbook download, which keeps it", async () => {
       const order = [];
-      installAgentPlaybook.mockImplementation(async ({ rootPath }) => {
-        order.push(`playbook:${fs.existsSync(path.join(rootPath, '.cursor')) ? 'dir-exists' : 'fresh'}`);
+      installAgentPlaybook.mockImplementation(async ({ rootPath, keep }) => {
+        order.push(`playbook:${fs.existsSync(path.join(rootPath, '.cursor', 'mcp.json')) ? 'config-written' : 'fresh'}`);
+        order.push(`keep:${keep}`);
         return { status: 'installed', files: 26 };
       });
 
       await init({ tool: 'cursor', docs: 'none', agentPlaybook: true, rootPath: getTmpDir() });
 
-      expect(order).toEqual(['playbook:fresh']);
+      expect(order).toEqual(['playbook:config-written', 'keep:mcp.json']);
       expect(readJson('.cursor', 'mcp.json').mcpServers[NAME]).toEqual(PLATFORMOS);
     });
 
@@ -1506,5 +1610,84 @@ describe('Codex', () => {
 
     expect(fs.readFileSync(path.join(getTmpDir(), 'AGENTS.md'), 'utf8')).toBe('MINE');
     expect(logger.Info).toHaveBeenCalledWith(expect.stringMatching(/Kept your existing AGENTS\.md/));
+  });
+
+  // A line inside a multi-line value can look like a header. A hand-written reader took it for one,
+  // missed the real entry after it, and appended a duplicate that made Codex refuse the file.
+  test.each([
+    ['a multi-line array', '[mcp_servers]\nmatrix = [\n  ["a"]\n]\nplatformos-cli = { command = "mine" }\n'],
+    ['a multi-line string', 'note = """\n[x]\n"""\n[mcp_servers]\nplatformos-cli = { command = "mine" }\n']
+  ])('an entry after %s is still recognised, and the file stays valid', async (_label, mine) => {
+    const dir = path.join(getTmpDir(), '.codex');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'config.toml'), mine);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
+
+    const toml = readToml('.codex', 'config.toml');
+    expect(toml.startsWith(mine)).toBe(true);
+    expect(toml).not.toContain('[mcp_servers.platformos-cli]');
+    expect(parseToml(toml).mcp_servers['platformos-cli']).toEqual({ command: 'mine' });
+  });
+
+  test('a config that is not valid TOML is refused and left as it was', async () => {
+    const dir = path.join(getTmpDir(), '.codex');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'config.toml'), 'this is = = not toml\n');
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
+
+    expect(readToml('.codex', 'config.toml')).toBe('this is = = not toml\n');
+    expect(logger.Error).toHaveBeenCalledWith(expect.stringMatching(/not valid TOML/));
+    expect(process.exitCode).toBe(1);
+  });
+
+  test('servers appended to a CRLF config are written with CRLF', async () => {
+    const dir = path.join(getTmpDir(), '.codex');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'config.toml'), 'model = "x"\r\n');
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: false, rootPath: getTmpDir(), homePath: homeDir() });
+
+    const toml = readToml('.codex', 'config.toml');
+    expect(toml).toContain('[mcp_servers.platformos-cli]\r\n');
+    expect(toml.replace(/\r\n/g, '')).not.toContain('\n');
+  });
+
+  // `#` is legal inside a quoted key. Missing this entry appended a second definition of the same
+  // project, which made the user's GLOBAL Codex config unloadable.
+  test('a project already listed under a quoted dotted key holding # is not defined twice', async () => {
+    const root = path.join(getTmpDir(), 'C#', 'proj');
+    fs.mkdirSync(root, { recursive: true });
+    const home = path.join(getTmpDir(), 'codexhome');
+    fs.mkdirSync(home, { recursive: true });
+    const mine = `[projects]\n${JSON.stringify(root)}.trust_level = "untrusted"\n`;
+    fs.writeFileSync(path.join(home, 'config.toml'), mine);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: root, homePath: homeDir() });
+
+    expect(readToml('codexhome', 'config.toml')).toBe(mine);
+    expect(logger.Log).toHaveBeenCalledWith(expect.stringMatching(/trust_level = "trusted"/));
+  });
+
+  test('a global config that cannot be read is reported, not a crash', async () => {
+    fs.mkdirSync(path.join(getTmpDir(), 'codexhome', 'config.toml'), { recursive: true });
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+
+    expect(logger.Warn).toHaveBeenCalledWith(expect.stringMatching(/could not read it/));
+    expect(logger.Log).toHaveBeenCalledWith(expect.stringMatching(/trust_level = "trusted"/));
+    expect(readToml('.codex', 'config.toml')).toContain('[mcp_servers.platformos-cli]');
+  });
+
+  test('a project defined only through a sub-table gains its own table', async () => {
+    const home = path.join(getTmpDir(), 'codexhome');
+    fs.mkdirSync(home, { recursive: true });
+    fs.writeFileSync(path.join(home, 'config.toml'), `[projects.${JSON.stringify(getTmpDir())}.extra]\nx = 1\n`);
+
+    await init({ tool: 'codex', docs: 'none', codexTrust: true, rootPath: getTmpDir(), homePath: homeDir() });
+
+    const parsed = parseToml(readToml('codexhome', 'config.toml'));
+    expect(parsed.projects[getTmpDir()]).toEqual({ extra: { x: 1 }, trust_level: 'trusted' });
   });
 });

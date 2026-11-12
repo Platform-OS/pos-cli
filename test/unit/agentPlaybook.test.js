@@ -405,6 +405,36 @@ describe('per-tool playbooks', () => {
     expect(fs.readFileSync(path.join(getTmpDir(), '.pi', 'AGENTS.md'), 'utf8')).toBe('agent');
     expect(fs.readFileSync(path.join(getTmpDir(), '.pi', 'mcp.json'), 'utf8')).toBe('{"mine":true}');
     expect(fs.existsSync(path.join(getTmpDir(), 'tmp'))).toBe(false);
+    // The archive's own copy lost, and that is said rather than swallowed.
+    expect(result.overridden).toEqual(['mcp.json']);
+  });
+
+  test('a kept file the archive does not ship overrides nothing', async () => {
+    fs.mkdirSync(path.join(getTmpDir(), '.pi'), { recursive: true });
+    fs.writeFileSync(path.join(getTmpDir(), '.pi', 'mcp.json'), '{"mine":true}');
+    serves({ '.pi/AGENTS.md': 'agent' });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] });
+
+    expect(result.overridden).toEqual([]);
+  });
+
+  // A dotfiles setup links the config in; copying it would leave a plain file, and the link would
+  // go with the old directory.
+  test.skipIf(process.platform === 'win32')('a symlinked kept file stays a link', async () => {
+    const dotfiles = path.join(getTmpDir(), 'dotfiles');
+    fs.mkdirSync(dotfiles, { recursive: true });
+    fs.writeFileSync(path.join(dotfiles, 'pi-mcp.json'), '{"linked":true}');
+    fs.mkdirSync(path.join(getTmpDir(), '.pi'), { recursive: true });
+    fs.symlinkSync(path.join(dotfiles, 'pi-mcp.json'), path.join(getTmpDir(), '.pi', 'mcp.json'));
+    serves({ '.pi/AGENTS.md': 'agent' });
+
+    const result = await installAgentPlaybook({ rootPath: getTmpDir(), playbook: PLAYBOOKS.pi, keep: ['mcp.json'] });
+
+    expect(result.status).toBe('installed');
+    const kept = path.join(getTmpDir(), '.pi', 'mcp.json');
+    expect(fs.lstatSync(kept).isSymbolicLink()).toBe(true);
+    expect(fs.realpathSync(kept)).toBe(fs.realpathSync(path.join(dotfiles, 'pi-mcp.json')));
   });
 
   test('anything beside the kept file makes the directory the user\u2019s', async () => {
