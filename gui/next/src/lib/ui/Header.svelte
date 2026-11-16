@@ -11,6 +11,7 @@ import { serverUrl } from '#lib/api/address.js';
 import { connectionState } from '#lib/state/connection.svelte.js';
 import { databaseState } from '#lib/state/database.svelte.js';
 import { preferencesState } from '#lib/state/preferences.svelte.js';
+import { can, limited } from '#lib/scopes.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -128,6 +129,17 @@ header {
   color: var(--color-interaction-hover);
 }
 
+.logo .limited {
+  margin-inline-start: .5em;
+  padding: .1em .5em;
+
+  border-radius: .2rem;
+  background-color: var(--color-middleground);
+
+  font-weight: 500;
+  color: var(--color-text);
+}
+
 /* navigation */
 ul {
   display: flex;
@@ -236,6 +248,9 @@ nav a:hover .label {
           <a href={connectionState.online?.MPKIT_URL}>
             {connectionState.online?.MPKIT_URL.replace('https://', '')}
           </a>
+          {#if limited(connectionState.online)}
+            <span class="limited" title="This token is limited to: {connectionState.online.scopes.join(', ')}">Limited token</span>
+          {/if}
         {/if}
         </span>
       </h1>
@@ -243,7 +258,8 @@ nav a:hover .label {
 
     <nav>
       <ul>
-        {#if preferencesState.header.includes('database')}
+        <!-- the table list is admin_tables (code:read); the records themselves need records:read -->
+        {#if preferencesState.header.includes('database') && can(connectionState.online, 'records:read') && can(connectionState.online, 'code:read')}
         <li>
           <a href="/database" class:active={page.url.pathname.startsWith('/database')} onfocus={preloadTables} onmouseover={preloadTables}>
             <Icon icon="database" />
@@ -254,7 +270,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if preferencesState.header.includes('users')}
+        {#if preferencesState.header.includes('users') && can(connectionState.online, 'users:read')}
         <li>
           <a href="/users" class:active={page.url.pathname.startsWith('/users')}>
             <Icon icon="users" />
@@ -265,7 +281,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if preferencesState.header.includes('logs')}
+        {#if preferencesState.header.includes('logs') && can(connectionState.online, 'logs:read')}
         <li>
           <a href="/logs" class:active={page.url.pathname === '/logs'}>
             <Icon icon="log" />
@@ -298,7 +314,8 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if preferencesState.header.includes('backgroundJobs')}
+        <!-- admin_background_jobs returns each job's Liquid, so it needs code:read as well -->
+        {#if preferencesState.header.includes('backgroundJobs') && can(connectionState.online, 'background_jobs:read') && can(connectionState.online, 'code:read')}
         <li>
           <a href="/backgroundJobs" class:active={page.url.pathname.startsWith('/backgroundJobs')}>
             <Icon icon="backgroundJob" />
@@ -309,7 +326,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if preferencesState.header.includes('constants')}
+        {#if preferencesState.header.includes('constants') && can(connectionState.online, 'constants:read')}
         <li>
           <a href="/constants" class:active={page.url.pathname.startsWith('/constants')}>
             <Icon icon="constant" />
@@ -320,7 +337,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if preferencesState.header.includes('liquid')}
+        {#if preferencesState.header.includes('liquid') && can(connectionState.online, 'liquid:exec')}
         <li>
           <a href={serverUrl('/gui/liquid')}>
             <Icon icon="liquid" />

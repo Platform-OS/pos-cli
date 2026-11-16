@@ -5,6 +5,7 @@
 // ------------------------------------------------------------------------
 import { goto, invalidate } from '$app/navigation';
 import { connectionState } from '#lib/state/connection.svelte.js';
+import { can } from '#lib/scopes.js';
 import { notificationsState } from '#lib/state/notifications.svelte.js';
 import { usersState } from '#lib/state/users.svelte.js';
 import { quintOut } from 'svelte/easing';
@@ -351,18 +352,23 @@ const submitForm = function(event) {
               <span>
                 <div class="menu">
                   <div class="inner-menu">
+                    {#if can(connectionState.online, 'users:write')}
                     <div class="combo">
                       <button class="button compact more" class:active={contextMenu.id === user.id} onclick={() => contextMenu.id = user.id}>
                         <span class="label">More options</span>
                         <Icon icon="navigationMenuVertical" size="16" />
                       </button>
+                      <!-- the form reads the user schema (admin_user_schema), which needs code:read -->
+                      {#if can(connectionState.online, 'code:read')}
                       <button class="button compact edit" title="Edit user" onclick={() => { showCreateUserPopup(user) }}>
                         <span class="label">Edit user</span>
                         <Icon icon="pencil" size="16" />
                       </button>
+                      {/if}
                     </div>
                     {#if contextMenu.id === user.id}
                       <ContextMenu record={user} onreload={() => reloadUsers()} onclose={() => contextMenu.id = null} />
+                    {/if}
                     {/if}
                   </div>
                 </div>
@@ -404,10 +410,12 @@ const submitForm = function(event) {
       />
       of {data.users?.total_pages || 1}
     </div>
+    {#if can(connectionState.online, 'users:write') && can(connectionState.online, 'code:read')}
     <button class="button" title="Create user" onclick={event => { event.preventDefault(); showCreateUserPopup(); }}>
       <Icon icon="plus" />
       <span class="label">Create a new user</span>
     </button>
+    {/if}
   </nav>
 
 </section>

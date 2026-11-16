@@ -89,6 +89,10 @@
   "bin": {
     "pos-cli": "bin/pos-cli.js",
     "pos-cli-ai": "bin/pos-cli-ai.js",
+    "pos-cli-portal": "bin/pos-cli-portal.js",
+    "pos-cli-portal-add": "bin/pos-cli-portal-add.js",
+    "pos-cli-portal-list": "bin/pos-cli-portal-list.js",
+    "pos-cli-portal-remove": "bin/pos-cli-portal-remove.js",
     "pos-cli-ai-init": "bin/pos-cli-ai-init.js",
     "pos-cli-audit": "bin/pos-cli-audit.js",
     "pos-cli-check": "bin/pos-cli-check.js",

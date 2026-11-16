@@ -7,6 +7,7 @@ import { goto, invalidate } from '$app/navigation';
 import { page } from '$app/state';
 import { relativeTime } from '#lib/relativeTime.js';
 import { connectionState } from '#lib/state/connection.svelte.js';
+import { can } from '#lib/scopes.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 import Number from '#lib/ui/forms/Number.svelte';
@@ -336,7 +337,7 @@ menu :global(button:hover) {
 
                 <!-- a running job cannot be deleted, only stopped, and only one the background tag scheduled:
                      any other (a deploy, an export) has nothing in the menu -->
-                {#if data.filters.type !== 'RUNNING' || stoppable(item)}
+                {#if can(connectionState.online, 'background_jobs:write') && (data.filters.type !== 'RUNNING' || stoppable(item))}
                   <button class="button compact more" onclick={() => contextMenu.id = item.id}>
                     <span class="label">More options</span>
                     <Icon icon="navigationMenuVertical" size="16" />
