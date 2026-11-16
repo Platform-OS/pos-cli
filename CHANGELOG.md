@@ -4,6 +4,8 @@
 
 ### New Features
 
+* **`pos-cli sync` prints the warnings the instance returns for a synced file.** The file is still saved; the warning tells you what the instance found. For example, the synced page answers the same route as another page, so only one of them is served (`views/pages/marketplace.liquid` and `views/pages/marketplace/index.liquid` both answer `/marketplace`). The instance sent these before, but sync never showed them.
+
 * **The admin GUI can stop a running background job.** On Background Jobs, with Type set to Running, a job created with the `background` tag has **Stop background job** in its menu (`admin_background_job_stop`; needs an instance that has the mutation). The list of running jobs is read again every 5 seconds, and a stopped job shows `stopping…` until it leaves the list. Other running jobs, such as a deploy or an export, can't be stopped and have no menu.
 
 ### Security

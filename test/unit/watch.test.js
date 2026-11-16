@@ -126,6 +126,28 @@ describe('pushFile', () => {
     expect(logger.Success).toHaveBeenCalledWith('[Sync] Synced: views/pages/index.liquid');
   });
 
+  test('prints the warnings the server returns for a synced file', async () => {
+    const warnings = [
+      'Pages share the route GET /marketplace (html) with equal precedence, so which of them is served is not defined: ' +
+        'views/pages/marketplace.liquid, views/pages/marketplace/index.liquid. ' +
+        'Keep one, and remove the others or give them a different slug.'
+    ];
+    gateway.sync.mockResolvedValue({ refresh_index: false, warnings });
+
+    await pushFile(gateway, 'app/views/pages/marketplace.liquid');
+
+    expect(logger.Success).toHaveBeenCalledWith('[Sync] Synced: views/pages/marketplace.liquid');
+    expect(logger.Warn).toHaveBeenCalledWith(`[Sync] views/pages/marketplace.liquid:\n${warnings[0]}`);
+  });
+
+  test('prints nothing extra when the server returns no warnings', async () => {
+    gateway.sync.mockResolvedValue({ refresh_index: false, warnings: [] });
+
+    await pushFile(gateway, 'app/views/pages/index.liquid');
+
+    expect(logger.Warn).not.toHaveBeenCalled();
+  });
+
   test('strips app/ prefix from the logged path', async () => {
     gateway.sync.mockResolvedValue({});
 
