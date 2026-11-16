@@ -23,7 +23,8 @@ describe('reportCommandError', () => {
   test.each([
     ['two_factor_not_enabled', 'two-factor authentication is not enabled on its account'],
     ['instance_not_covered', 'does not reach this instance, or its owner cannot change it'],
-    ['insufficient_scope', 'Partner Portal Tokens page']
+    // no required_scopes: closed to scoped tokens, so no scope to go and add
+    ['insufficient_scope', 'No scope covers it: use a token that is not limited to scopes']
   ])('explains %s', async (code, expected) => {
     await reportCommandError(refusal(code), { prefix: 'Deploy failed' });
 
@@ -31,6 +32,16 @@ describe('reportCommandError', () => {
     expect(message).toContain(expected);
     expect(message).not.toContain('Request failed with status 403');
     expect(options).toEqual(expect.objectContaining({ hideTimestamp: true, exit: true }));
+  });
+
+  test('names the missing scope and where to get it', async () => {
+    const error = refusal('insufficient_scope');
+    error.response.body.required_scopes = ['code:write'];
+    await reportCommandError(error, { prefix: 'Deploy failed' });
+
+    const [message] = logger.Error.mock.calls[0];
+    expect(message).toContain('This token does not have the code:write scope needed for this on partners.platformos.com.');
+    expect(message).toContain('Create a token with it on the Partner Portal Tokens page.');
   });
 
   test('leaves any other 403 to the generic report', async () => {

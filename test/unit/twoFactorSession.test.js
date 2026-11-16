@@ -213,7 +213,9 @@ describe('the session store', () => {
 
     await startSession({ portalUrl: PORTAL, instanceUrl: unregistered, token: 'long-lived', otpCode: '123456' });
 
-    expect(readSession(unregistered, PORTAL).token).toBe('session-token');
+    expect(readSession(unregistered, PORTAL, 'long-lived').token).toBe('session-token');
+    // A session is the token it was stepped up from: another token for the same URL has none.
+    expect(readSession(unregistered, PORTAL, 'another-token')).toBeNull();
     expect(readConfig().staging.two_factor_session).toBeUndefined();
   });
 });

@@ -358,10 +358,13 @@ const submitForm = function(event) {
                         <span class="label">More options</span>
                         <Icon icon="navigationMenuVertical" size="16" />
                       </button>
+                      <!-- the form reads the user schema (admin_user_schema), which needs code:read -->
+                      {#if can(connectionState.online, 'code:read')}
                       <button class="button compact edit" title="Edit user" onclick={() => { showCreateUserPopup(user) }}>
                         <span class="label">Edit user</span>
                         <Icon icon="pencil" size="16" />
                       </button>
+                      {/if}
                     </div>
                     {#if contextMenu.id === user.id}
                       <ContextMenu record={user} onreload={() => reloadUsers()} onclose={() => contextMenu.id = null} />
@@ -407,7 +410,7 @@ const submitForm = function(event) {
       />
       of {data.users?.total_pages || 1}
     </div>
-    {#if can(connectionState.online, 'users:write')}
+    {#if can(connectionState.online, 'users:write') && can(connectionState.online, 'code:read')}
     <button class="button" title="Create user" onclick={event => { event.preventDefault(); showCreateUserPopup(); }}>
       <Icon icon="plus" />
       <span class="label">Create a new user</span>

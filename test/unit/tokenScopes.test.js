@@ -5,8 +5,9 @@ import {
   tokenRefusalMessage
 } from '#lib/utils/tokenScopes.js';
 
-// The same rule the Partner Portal and the Instance apply; a difference here would only
-// make the GUI hide or offer the wrong things, but it should not be one.
+// The same rule the Partner Portal (AccessTokens::Scopes.permits?) and the Instance
+// (TokenScopes.permits?) apply; a difference here would only make the GUI hide or offer the
+// wrong things, but it should not be one.
 describe('permits', () => {
   test('`*` covers everything, including scopes added later', () => {
     expect(permits(['*'], 'code:write')).toBe(true);
@@ -20,10 +21,25 @@ describe('permits', () => {
     expect(permits(['*:read'], 'data:clean')).toBe(false);
   });
 
-  test('anything else matches exactly', () => {
+  test('`*:read` does not cover the reads that hand over a secret', () => {
+    expect(permits(['*:read'], 'constants:read')).toBe(false);
+    expect(permits(['*:read'], 'data_import:read')).toBe(false);
+    expect(permits(['*:read', 'constants:read'], 'constants:read')).toBe(true);
+  });
+
+  test('a write means read + write: it covers the read of the same subject, secret reads included', () => {
     expect(permits(['records:write'], 'records:write')).toBe(true);
-    expect(permits(['records:write'], 'records:read')).toBe(false);
-    expect(permits(['records:*'], 'records:read')).toBe(false);
+    expect(permits(['users:write'], 'users:read')).toBe(true);
+    expect(permits(['instance:manage'], 'instance:read')).toBe(true);
+    expect(permits(['notifications:send'], 'notifications:read')).toBe(true);
+    expect(permits(['constants:write'], 'constants:read')).toBe(true);
+    expect(permits(['data_import:write'], 'data_import:read')).toBe(true);
+  });
+
+  test('a scope covers nothing about another subject, and a read never covers a write', () => {
+    expect(permits(['users:write'], 'records:read')).toBe(false);
+    expect(permits(['users:read'], 'users:write')).toBe(false);
+    expect(permits(['records:*'], 'records:write')).toBe(false);
   });
 
   test('no scopes at all is full access, an empty list is none', () => {
@@ -41,6 +57,27 @@ describe('an insufficient-scope refusal', () => {
     expect(isInsufficientScopeRefusal(refusal({ error: 'insufficient_scope' }, 401))).toBe(false);
     expect(isInsufficientScopeRefusal(refusal({ error: 'forbidden' }))).toBe(false);
     expect(isInsufficientScopeRefusal(refusal('<html>'))).toBe(false);
+  });
+
+  test('names the instance the caller knows, not the host the request went to', () => {
+    const error = { ...refusal({ error: 'insufficient_scope', required_scopes: ['code:write'] }),
+      options: { uri: 'https://deploy.example.com/presign-url' } };
+
+    expect(tokenRefusalMessage(error, { instance: 'https://shop.example.com' }))
+      .toContain('This token does not have the code:write scope needed for this on shop.example.com.');
+    expect(tokenRefusalMessage(error)).toContain('needed for this on deploy.example.com.');
+  });
+
+  test('does not send the operator after a scope when none would help', () => {
+    const error = { ...refusal({ error: 'insufficient_scope', required_scopes: [], errors: [{ message: 'Closed to scoped tokens' }] }),
+      options: { uri: 'https://shop.example.com/api/private/api_keys' } };
+
+    expect(tokenRefusalMessage(error)).toBe(
+      "This token's scopes do not allow this on shop.example.com.\n" +
+      'Closed to scoped tokens\n' +
+      'No scope covers it: use a token that is not limited to scopes (an Administrator token, or one from `pos-cli env add`).\n' +
+      'This is not something `pos-cli env refresh-token` can fix — the token is valid, it is just limited.'
+    );
   });
 
   test('reads the scopes it names', () => {

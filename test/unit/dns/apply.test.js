@@ -33,7 +33,10 @@ const plan = (name, overrides = {}) => ({
   ...overrides
 });
 
-const fastOpts = { pollIntervalMs: 1, timeoutMs: 50, interPostDelayMs: 0 };
+// Polling stops as soon as a domain settles, so a generous timeout costs nothing -- and 50ms
+// was too little for a POST and two polls when the whole suite runs in parallel. The test
+// about timing out sets its own.
+const fastOpts = { pollIntervalMs: 1, timeoutMs: 2000, interPostDelayMs: 0 };
 
 describe('applyPlans', () => {
   let client;
