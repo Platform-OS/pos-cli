@@ -92,34 +92,36 @@ or, without a `.pos` entry, through `MPKIT_URL`, `MPKIT_EMAIL` and `MPKIT_TOKEN`
 
 **Always use the Instance's system URL** — the one under the stack's own domain, as above — never a custom domain added to the Instance. A custom domain resolves wherever its owner points it, so a global token sent there can be captured, and it then works on every other Instance the token reaches, not just that one.
 
-You need two-factor authentication on your account to create a global token.
+You do not need two-factor authentication on your account to create a global token, but it decides how the token treats a second factor — see **Two-factor enforcement** below.
 
 When you create one you choose:
 
 * **Instances** — *All* covers every Instance your account can reach, including ones you are given access to or create later. Otherwise the token covers only the Instances you pick, plus any Instance created with the token itself. Either way it never reaches further than your own access: where you can only read an Instance, the token can only read it too.
-* **Scopes** — what the token may do on those Instances. Two presets cover the common cases: *Administrator* (`*`, every scope, including ones added later) and *Read-only administrator* (`*:read`, every read scope, including ones added later). Or pick scopes one by one:
+* **Scopes** — what the token may do on those Instances. Two presets cover the common cases: *Administrator* (`*`, every scope, including ones added later) and *Read-only administrator* (`*:read`, every read scope, including ones added later, **except** `constants:read` and `data_import:read`: constant values and a data export hand over secrets, so a read-only token cannot run `pos-cli constants list` or `data export` unless it names those scopes too). Or pick scopes one by one. A write scope means read + write: `users:write` also reads users, `constants:write` also reads constants, `data_import:write` also exports.
 
   | Scope | Lets pos-cli |
   |---|---|
   | `instance:read` | read the Instance, its settings, installed modules and migrations |
   | `instance:manage` | create backups, clone the Instance |
   | `logs:read` | `pos-cli logs`, the GUI's Logs |
-  | `code:read` / `code:write` | `pos-cli pull` / `deploy`, `sync`, migrations, `modules remove`, uploads |
-  | `records:read` / `records:write` | read / change records (GUI Database, GraphQL) |
-  | `users:read` / `users:write` | read / change users (GUI Users, GraphQL) |
+  | `code:read` / `code:write` | `pos-cli pull`, the GUI's Database and Background Jobs (they list tables and job code) / `deploy`, `sync`, asset uploads, migrations, `modules remove` |
+  | `records:read` / `records:write` | read / change records (GUI Database, GraphQL), `pos-cli uploads push` |
+  | `users:read` / `users:write` | read / change users (GUI Users, GraphQL). A user's credentials — `jwt_token`, `temporary_token`, `otp`, `authenticate`, `encrypted_password`, `authentications` — need `users:write`: reading a user is not becoming them |
   | `constants:read` / `constants:write` | `pos-cli constants list` / `set`, `unset` |
   | `documents:read` / `documents:write` | read / change search documents and embeddings |
   | `background_jobs:read` / `background_jobs:write` | the GUI's Background Jobs / retrying and deleting jobs |
-  | `data_import:read` | `pos-cli data export` |
+  | `data_import:read` | `pos-cli data export`, together with `records:read` and `users:read` (the export is every record and user) |
   | `data_import:write` | `pos-cli data import`, `data update` |
-  | `data:clean` | `pos-cli data clean` |
-  | `notifications:read` / `notifications:send` | read sent notifications / send email, SMS, API calls |
+  | `data:clean` | `pos-cli data clean`; with `--include-schema` also `code:write` and `constants:write`, since it deletes the code and constants too |
+  | `notifications:read` / `notifications:send` | read sent notifications / send email, SMS, API calls from a template (an inline email, SMS or API call is Liquid you write, so it also needs `liquid:exec`) |
   | `activities:read` / `activities:write` | read / change activities and feeds |
   | `liquid:exec` | `pos-cli exec liquid` and the Liquid evaluator — Liquid can run any mutation, so this is as good as administrator access |
 
-  A GraphQL query or mutation needs the scope of every root field it selects. The Instance refuses anything else, and pos-cli reports it as `This token does not have the records:write scope needed for this on <instance>` rather than as a bad token. `pos-cli env refresh-token` cannot help with that refusal: the token is valid, it just does not have that scope. With a limited token `gui serve` shows a **Limited token** badge listing its scopes and hides what would be refused, and `gui serve --sync` refuses to start without `code:write`.
+  `code:write`, `liquid:exec`, `instance:manage` and `data:clean` each amount to full access in practice: deployed code and Liquid can run any mutation, a backup or clone carries every secret, and a clean destroys everything.
+
+  A GraphQL query or mutation needs the scopes of everything it selects, at any depth, worked out before it runs: every root field, every type it reaches (a user needs `users:read` even under a record's `related_user`, a record `records:read`), and some fields and arguments of their own (a user's credentials need `users:write`, `remote_records` / `remote_users` need `liquid:exec`). The Instance refuses anything else, and pos-cli reports it as `This token does not have the records:write scope needed for this on <instance>` rather than as a bad token. `pos-cli env refresh-token` cannot help with that refusal: the token is valid, it just does not have that scope. With a limited token `gui serve` shows a **Limited token** badge listing its scopes and hides what would be refused, and `gui serve --sync` refuses to start without `code:write`.
 * **Expiry** — one hour, one day, one week or never.
-* **Two-factor enforcement** — an enforced token behaves like any other for an account with 2FA: each Instance asks for a [session](#instance-sessions), started with a code the first time a command needs one. Scripted runs pass `POS_PORTAL_OTP_CODE` exactly as above. An unenforced token never asks for a code — meant for server-side integrations with nobody to type one — and the portal asks for your code when you create it instead. Treat it as the password-equivalent it is: revoke it in the portal the moment it may have leaked.
+* **Two-factor enforcement** — on an account without 2FA there is no choice: the token follows the account, needing no session until you enable 2FA or your Partner starts requiring it, and a session from then on. On an account with 2FA the token is enforced unless you exempt it. An enforced token behaves like any other for an account with 2FA, and stays enforced if 2FA is later turned off — it then stops working rather than becoming unprotected, and pos-cli says so instead of asking for a code: each Instance asks for a [session](#instance-sessions), started with a code the first time a command needs one. Scripted runs pass `POS_PORTAL_OTP_CODE` exactly as above. An unenforced token never asks for a code — meant for server-side integrations with nobody to type one — and the portal asks for your code when you create it instead. Treat it as the password-equivalent it is: revoke it in the portal the moment it may have leaked.
 
 The configuration for your environments is stored in the `.pos` file.
 

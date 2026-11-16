@@ -258,7 +258,8 @@ nav a:hover .label {
 
     <nav>
       <ul>
-        {#if preferencesState.header.includes('database') && can(connectionState.online, 'records:read')}
+        <!-- the table list is admin_tables (code:read); the records themselves need records:read -->
+        {#if preferencesState.header.includes('database') && can(connectionState.online, 'records:read') && can(connectionState.online, 'code:read')}
         <li>
           <a href="/database" class:active={page.url.pathname.startsWith('/database')} onfocus={preloadTables} onmouseover={preloadTables}>
             <Icon icon="database" />
@@ -313,7 +314,8 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if preferencesState.header.includes('backgroundJobs') && can(connectionState.online, 'background_jobs:read')}
+        <!-- admin_background_jobs returns each job's Liquid, so it needs code:read as well -->
+        {#if preferencesState.header.includes('backgroundJobs') && can(connectionState.online, 'background_jobs:read') && can(connectionState.online, 'code:read')}
         <li>
           <a href="/backgroundJobs" class:active={page.url.pathname.startsWith('/backgroundJobs')}>
             <Icon icon="backgroundJob" />
