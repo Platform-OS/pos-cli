@@ -272,6 +272,29 @@ describe('ensureSession', () => {
     expect(readSession(INSTANCE, PORTAL)).toBeFalsy();
   });
 
+  // A bound token (MPKIT_TOKEN) whose account started needing a second factor after it was
+  // bound: the Portal refuses it before any code, and says how to get past it.
+  test.each([
+    ['bound_token', 'bound to one instance'],
+    ['two_factor_session_presented', 'a two-factor session already'],
+    ['two_factor_not_required', 'does not need a two-factor session']
+  ])('explains a %s refusal of the step-up without prompting', async (code, explanation) => {
+    Portal.tokenInfo.mockResolvedValue({ two_factor_required: true, two_factor_session: false });
+    Portal.twoFactorSession.mockRejectedValue(Object.assign(new Error('Request failed with status 422'), {
+      name: 'StatusCodeError',
+      statusCode: 422,
+      response: { statusCode: 422, body: { error: code, errors: ['...'] } }
+    }));
+    answers.push('123456');
+
+    const error = await ensureSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'posg_bound' }).catch(e => e);
+
+    expect(error.name).toBe('TwoFactorError');
+    expect(error.message).toContain(explanation);
+    expect(Portal.twoFactorSession).toHaveBeenCalledTimes(1);
+    expect(answers).toEqual(['123456']);
+  });
+
   test('does nothing when the portal does not require a second factor', async () => {
     Portal.tokenInfo.mockResolvedValue({ two_factor_required: false, two_factor_session: false });
 
