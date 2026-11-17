@@ -5,9 +5,8 @@ import {
   tokenRefusalMessage
 } from '#lib/utils/tokenScopes.js';
 
-// The same rule the Partner Portal (AccessTokens::Scopes.permits?) and the Instance
-// (TokenScopes.permits?) apply; a difference here would only make the GUI hide or offer the
-// wrong things, but it should not be one.
+// The same rule the Partner Portal and the Instance apply; a difference here would only make
+// the GUI hide or offer the wrong things, but it should not be one.
 describe('permits', () => {
   test('`*` covers everything, including scopes added later', () => {
     expect(permits(['*'], 'code:write')).toBe(true);

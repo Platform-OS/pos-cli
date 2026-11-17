@@ -56,10 +56,14 @@ const graphql = (body, options) => {
   })
     .then((res) => res.json())
     .then((res) => {
-      // refused by the instance because the token lacks a scope; the body still carries
-      // `errors`, so callers take their usual failure path after the notification
+      // refused by the instance because the token lacks a scope; the body is
+      // { error, required_scopes } and may carry no `errors` at all, so one is added: without
+      // it this resolved `res.data`, undefined, and a refusal read as an empty success
       if(res?.error === 'insufficient_scope') {
         notifyInsufficientScope(res);
+        if(!graphQLErrors(res)) {
+          res = { ...res, errors: [{ message: 'This token\'s scopes do not allow that, so the instance refused it.' }] };
+        }
       }
 
       const errors = graphQLErrors(res);

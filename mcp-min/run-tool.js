@@ -10,7 +10,7 @@
  * It also owns `meta`, which twenty-seven tools used to build for themselves.
  */
 import { maskToken, refreshTokenRemedy } from './auth.js';
-import { ToolError, classify } from './tool-error.js';
+import { REFRESH_CANNOT_HELP, ToolError, classify } from './tool-error.js';
 
 /**
  * Whether a handler returned the envelope this function builds. Narrow on purpose: `data.status`
@@ -28,7 +28,8 @@ const isEnvelope = (data) =>
  */
 const errorBody = (error, auth) => {
   const body = error.toResult();
-  if (error.kind !== 'auth') return body;
+  // A refusal a refresh cannot change, or one that already names its own fix.
+  if (error.kind !== 'auth' || REFRESH_CANNOT_HELP.has(error.code) || body.details?.remedy) return body;
 
   const remedy = refreshTokenRemedy(auth);
   return remedy ? { ...body, details: { ...body.details, remedy } } : body;

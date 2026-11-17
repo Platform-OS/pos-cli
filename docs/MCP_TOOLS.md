@@ -2443,6 +2443,12 @@ and anything else is `internal`.
 | `ENOTFOUND` / `EAI_AGAIN` | the instance hostname does not resolve; `details.host` names it |
 | `ECONNREFUSED` / `ETIMEDOUT` / `ECONNRESET` | the host is there and did not answer; `details.host` names it |
 | `ENV_NOT_FOUND` | the `env` is not in `.pos`; `details.environments` lists the ones that are |
+| `INSUFFICIENT_SCOPE` | a 403: the token is valid but its scopes do not cover the call; `details.requiredScopes` names the ones it needs, when the instance said. A token with that scope is the fix — refreshing gives back the same scopes |
+| `INSTANCE_NOT_COVERED` | the global token does not reach that instance — use its system URL, or a token whose rules cover it |
+| `TWO_FACTOR_NOT_ENABLED` | the token needs a two-factor session and its account has no second factor |
+| `TWO_FACTOR_REQUIRED` | the instance wants a two-factor code, which this process cannot type; the message names the command a person runs |
+| `GLOBAL_TOKEN_REFUSED` | the Partner Portal refused the global token (expired or revoked) when asked for one bound to the instance |
+| `PORTAL_MISSING` | the `.pos` environment names a portal (`env add --portal`) that is not on this machine |
 
 A 500, 502 or 504 says in its message that platformOS has already been notified, so it is not
 something to report or to work around.
@@ -2450,9 +2456,11 @@ something to report or to work around.
 **`details.remedy`** appears where a failure has a command that fixes it: `{ command, runBy }`.
 `runBy` is part of the advice, not a label — a remedy that says a person runs it needs a password,
 a second factor or a browser, and an agent that runs it itself stops on a prompt nobody can answer.
-Today three failures carry one: a rejected `.pos` token (`pos-cli env refresh-token`), an `env` that
-is not in `.pos` when none are configured (`pos-cli env add`), and a missing tests module
-(`TESTS_MODULE_MISSING`).
+Among them: a rejected `.pos` token (`pos-cli env refresh-token`, or `pos-cli portal add <name>
+--force` for an environment that uses a portal's token), an `env` that is not in `.pos` when none are
+configured (`pos-cli env add`), a portal that is not on this machine (`PORTAL_MISSING`), and a missing
+tests module (`TESTS_MODULE_MISSING`). The refusals above that a refresh cannot fix carry no
+refresh-token remedy.
 
 **A failure of the work is not a failure of the call.** A test run whose assertions failed answers
 `ok: true` — the run did what was asked, and the failures are in `data`. So does a `job-status` call

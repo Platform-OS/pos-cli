@@ -123,6 +123,26 @@ When you create one you choose:
 * **Expiry** — one hour, one day, one week or never.
 * **Two-factor enforcement** — on an account without 2FA there is no choice: the token follows the account, needing no session until you enable 2FA or your Partner starts requiring it, and a session from then on. On an account with 2FA the token is enforced unless you exempt it. An enforced token behaves like any other for an account with 2FA, and stays enforced if 2FA is later turned off — it then stops working rather than becoming unprotected, and pos-cli says so instead of asking for a code: each Instance asks for a [session](#instance-sessions), started with a code the first time a command needs one. Scripted runs pass `POS_PORTAL_OTP_CODE` exactly as above. An unenforced token never asks for a code — meant for server-side integrations with nobody to type one — and the portal asks for your code when you create it instead. Treat it as the password-equivalent it is: revoke it in the portal the moment it may have leaked.
 
+A global token is **never sent to an Instance itself**: an Instance runs tenant-authored code, and a token that reaches many Instances must not be handed to any one of them. Before a command talks to an Instance, pos-cli trades the global token at the Partner Portal for a token bound to that Instance alone, and uses that one — for the command and every process it starts. The bound token is cached until shortly before it expires (in the environment's `.pos` entry, on the portal for `--portal` environments, in memory for `MPKIT_*`), and a new one is bound when it ends, when it is refused, or when the two-factor session it was bound from is renewed. The Instance refuses the global token itself.
+
+#### Portals
+
+Rather than pasting a global token into each environment, sign in to the Partner Portal once and let every environment use that token:
+
+    pos-cli portal add shared --url https://partners.platformos.com
+    pos-cli env add staging --url https://my-app-staging.staging.oregon.platform-os.com --portal shared
+    pos-cli env add production --url https://my-app.prod01.oregon.platform-os.com --portal shared
+
+`portal add <name>` opens the Partner Portal in a browser (sign in there, with your two-factor code if your account has one), where you choose the token's Instances, scopes and expiry and approve it; check that the page shows the code pos-cli printed. The token is stored under `<name>` in `~/.config/pos-cli/portals.json` (or `$XDG_CONFIG_HOME/pos-cli/portals.json`, or wherever `POS_PORTALS_FILE` says), owner-only, and never printed. `--url` defaults to `https://partners.platformos.com`. `--force` replaces the token of a portal that already exists and revokes the one it replaced.
+
+An environment added with `--portal` stores no token in `.pos`, only the portal's name — `.pos` can be shared without sharing a credential, and each person adds the portal under the same name on their own machine. `env add --portal` checks that the token reaches the Instance before writing anything, and cannot be combined with `--token` or `--email`. Its two-factor session is kept on the portal, so one code serves every environment that uses it for as long as the session lasts.
+
+    pos-cli portal list               # name, URL, account, scopes and expiry of each portal
+    pos-cli portal remove shared      # revoke the token on the Partner Portal and forget it here
+    pos-cli portal remove shared --keep-token   # forget it here only
+
+When the portal's token expires or is revoked, renew it with `pos-cli portal add <name> --force`; `pos-cli env refresh-token` does not apply to a `--portal` environment and says so. If `portal remove` cannot reach the Partner Portal, it forgets the token here and says it is still live — revoke it on your **Tokens** page.
+
 The configuration for your environments is stored in the `.pos` file.
 
 ### Syncing Changes

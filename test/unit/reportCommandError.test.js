@@ -44,6 +44,24 @@ describe('reportCommandError', () => {
     expect(message).toContain('Create a token with it on the Partner Portal Tokens page.');
   });
 
+  // The Gateway knows the instance; the request may have gone elsewhere (a presign sent to
+  // DEPLOY_SERVICE_URL). What it recorded is what a later report names.
+  test('names the instance the Gateway recorded, not the host the request went to', async () => {
+    const error = refusal('insufficient_scope');
+    error.response.body.required_scopes = ['code:write'];
+    error.instance = 'https://my-app.example.com';
+    await reportCommandError(error);
+
+    const [message] = logger.Error.mock.calls[0];
+    expect(message).toContain('needed for this on my-app.example.com.');
+
+    vi.clearAllMocks();
+    const notCovered = refusal('instance_not_covered');
+    notCovered.instance = 'https://my-app.example.com';
+    await reportCommandError(notCovered);
+    expect(logger.Error.mock.calls[0][0]).toContain('does not reach https://my-app.example.com');
+  });
+
   test('leaves any other 403 to the generic report', async () => {
     await reportCommandError(refusal('forbidden'), { prefix: 'Deploy failed' });
 

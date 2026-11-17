@@ -358,3 +358,43 @@ describe('an insufficient-scope refusal', () => {
     expect(error.message).toContain('records:write');
   });
 });
+
+// A global token in a Gateway is always one bound to the instance (fetchSettings binds it):
+// it carries its own second factor and cannot be stepped up.
+describe('a Gateway holding a bound global token', () => {
+  test('sends the bound token, never an injected global session', async () => {
+    process.env.POS_PORTAL_SESSION_TOKEN = 'posg_a-global-session';
+    apiRequest.mockResolvedValue('served');
+
+    await new Gateway(settings({ token: 'posg_bound' })).ping();
+
+    const sent = apiRequest.mock.calls[0][0].headers.Authorization;
+    expect(sent).toBe('Token posg_bound');
+  });
+
+  test('ends the run saying to run it again, instead of stepping up with the bound token', async () => {
+    apiRequest.mockRejectedValue(sessionRequired());
+
+    const error = await new Gateway(settings({ token: 'posg_bound', restartCommand: 'pos-cli sync staging' })).ping().catch(e => e);
+
+    expect(error.message).toContain('has ended');
+    expect(error.message).toContain('pos-cli sync staging');
+    expect(error.message).not.toContain('refresh-token');
+    expect(apiRequest).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The tests module's pages are page routes, rendered by tenant Liquid with every header in
+// context.headers; they check the instance's environment, not a credential.
+test('sends no credential to the tests module pages', async () => {
+  apiRequest.mockResolvedValue('{}');
+  const gateway = new Gateway(settings());
+
+  await gateway.test('example');
+  await gateway.testRunAsync();
+
+  for (const [options] of apiRequest.mock.calls) {
+    expect(options.headers.Authorization).toBeUndefined();
+    expect(options.headers.token).toBeUndefined();
+  }
+});

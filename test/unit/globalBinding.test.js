@@ -15,7 +15,7 @@ vi.mock('#lib/twoFactorSession.js', () => ({ ensureSession: vi.fn() }));
 
 import Portal from '#lib/portal.js';
 import { ensureSession } from '#lib/twoFactorSession.js';
-import { bindToInstance } from '#lib/globalBinding.js';
+import { bindToInstance, dropBoundToken } from '#lib/globalBinding.js';
 import { getPortal, storePortal } from '#lib/portals.js';
 
 const ROOT = 'posg_root-token';
@@ -67,6 +67,38 @@ describe('bindToInstance', () => {
     expect(Portal.bindGlobalToken).toHaveBeenCalledTimes(1);
   });
 
+  // A token bound without a session cannot be stepped up, so once the account needs one -- or
+  // the session it was bound from is renewed -- a new one is bound rather than the cached reused.
+  test('binds anew when the session behind the token changes', async () => {
+    storePortal('shared', { url: 'http://localhost:4000', token: ROOT });
+    const settings = { url: 'https://a.example.com/', portal: 'shared', token: ROOT };
+
+    await bindToInstance(settings, 'staging');
+    ensureSession.mockResolvedValue({ token: 'posg_session', expires_at: inAnHour() });
+    await bindToInstance(settings, 'staging');
+    await bindToInstance(settings, 'staging');
+
+    expect(Portal.bindGlobalToken).toHaveBeenCalledTimes(2);
+    expect(Portal.bindGlobalToken).toHaveBeenLastCalledWith(expect.objectContaining({ token: 'posg_session' }));
+  });
+
+  test('forgets a bound token an instance refused, so the next command binds a new one', async () => {
+    storePortal('shared', { url: 'http://localhost:4000', token: ROOT });
+    await bindToInstance({ url: 'https://a.example.com/', portal: 'shared', token: ROOT }, 'staging');
+
+    dropBoundToken('posg_bound');
+
+    expect(getPortal('shared').bound_tokens).toEqual({});
+  });
+
+  test('passes the command\'s --otp-code on to the step-up', async () => {
+    storePortal('shared', { url: 'http://localhost:4000', token: ROOT });
+
+    await bindToInstance({ url: 'https://a.example.com/', portal: 'shared', token: ROOT }, 'staging', { otpCode: '123456' });
+
+    expect(ensureSession).toHaveBeenCalledWith(expect.objectContaining({ otpCode: '123456' }));
+  });
+
   test('binds from a two-factor session when the token needs one', async () => {
     storePortal('shared', { url: 'http://localhost:4000', token: ROOT });
     ensureSession.mockResolvedValue({ token: 'posg_session', expires_at: inAnHour() });
@@ -96,5 +128,57 @@ describe('bindToInstance', () => {
     );
 
     await expect(bindToInstance({ url: 'https://d.example.com', token: ROOT }, null)).rejects.toThrow('system URL');
+  });
+
+  // A lifetime cannot be made up: the token serves this command and is not kept.
+  test('uses a bound token the Portal gave no lifetime without keeping it', async () => {
+    storePortal('shared', { url: 'http://localhost:4000', token: ROOT });
+    Portal.bindGlobalToken.mockResolvedValue({ access_token: 'posg_forever' });
+    const settings = { url: 'https://a.example.com/', portal: 'shared', token: ROOT };
+
+    expect((await bindToInstance(settings, 'staging')).token).toBe('posg_forever');
+    expect(getPortal('shared').bound_tokens).toBeUndefined();
+  });
+
+  // fetchSettings prints only the message, so the message names the Portal and the fix.
+  test('says how to renew a refused portal token', async () => {
+    storePortal('shared', { url: 'http://localhost:4000', token: ROOT });
+    Portal.bindGlobalToken.mockRejectedValue(Object.assign(new Error('Request failed with status 401'), {
+      statusCode: 401, response: { body: { error: 'invalid_token' } }
+    }));
+
+    const failure = bindToInstance({ url: 'https://a.example.com', portal: 'shared', token: ROOT }, 'staging');
+    await expect(failure).rejects.toMatchObject({ name: 'GlobalBindingError', reason: 'refused', portal: 'shared' });
+    await expect(failure).rejects.toThrow('pos-cli portal add shared --force');
+  });
+
+  // Each kept where it came from, so each is renewed there.
+  test('says how to replace a refused token from .pos or MPKIT_TOKEN', async () => {
+    const refused = Object.assign(new Error('Request failed with status 401'), { statusCode: 401, response: { body: {} } });
+    Portal.bindGlobalToken.mockRejectedValue(refused);
+    fs.writeFileSync(process.env.CONFIG_FILE_PATH, JSON.stringify({ staging: { url: 'https://a.example.com', token: ROOT } }));
+
+    await expect(bindToInstance({ url: 'https://a.example.com', token: ROOT }, 'staging'))
+      .rejects.toThrow('pos-cli env add staging --url https://a.example.com --token <token>');
+    await expect(bindToInstance({ url: 'https://a.example.com', token: ROOT, fromEnv: true }, null))
+      .rejects.toThrow('in MPKIT_TOKEN');
+  });
+
+  test('explains a refusal of the token\'s account as the CLI does elsewhere', async () => {
+    Portal.bindGlobalToken.mockRejectedValue(Object.assign(new Error('Request failed with status 401'), {
+      statusCode: 401, response: { body: { error: 'two_factor_not_enabled' } }
+    }));
+
+    await expect(bindToInstance({ url: 'https://a.example.com', token: ROOT }, null)).rejects.toThrow('two-factor authentication is not enabled');
+  });
+
+  test('names the Portal when it is down or unreachable, and does not blame the token', async () => {
+    Portal.bindGlobalToken.mockRejectedValueOnce(Object.assign(new Error('Request failed with status 503'), { statusCode: 503, response: { body: '' } }));
+    await expect(bindToInstance({ url: 'https://a.example.com', token: ROOT }, null))
+      .rejects.toMatchObject({ reason: 'portal_error', message: expect.stringContaining('https://partners.platformos.com answered 503') });
+
+    Portal.bindGlobalToken.mockRejectedValueOnce(Object.assign(new Error('fetch failed'), { name: 'RequestError', cause: { code: 'ECONNREFUSED' } }));
+    await expect(bindToInstance({ url: 'https://a.example.com', token: ROOT }, null))
+      .rejects.toMatchObject({ reason: 'unreachable', message: expect.stringContaining('Could not reach https://partners.platformos.com (ECONNREFUSED)') });
   });
 });

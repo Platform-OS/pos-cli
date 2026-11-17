@@ -10,6 +10,7 @@ import { notificationsState } from '#lib/state/notifications.svelte.js';
 import { preferencesState } from '#lib/state/preferences.svelte.js';
 import { table } from '#lib/api/table';
 import { serverUrl } from '#lib/api/address.js';
+import { can } from '#lib/scopes.js';
 
 import Icon from '#lib/ui/Icon.svelte';
 
@@ -368,6 +369,8 @@ footer ul {
   <ul class="applications">
 
 
+    <!-- hidden where the token's scopes would refuse it, as in the header -->
+    {#if can(connectionState.online, 'records:read') && can(connectionState.online, 'code:read')}
     <li class="application" class:showDescription={showDescriptionFor.includes('database')}>
       <a href="/database" onfocus={preloadTables} onmouseover={preloadTables}>
         <div class="icon">
@@ -397,7 +400,9 @@ footer ul {
         </li>
       </ul>
     </li>
+    {/if}
 
+    {#if can(connectionState.online, 'users:read')}
     <li class="application" class:showDescription={showDescriptionFor.includes('users')}>
       <a href="/users">
         <div class="icon">
@@ -425,7 +430,9 @@ footer ul {
         </li>
       </ul>
     </li>
+    {/if}
 
+    {#if can(connectionState.online, 'logs:read')}
     <li class="application" class:showDescription={showDescriptionFor.includes('logs')}>
       <a href="/logs">
         <div class="icon">
@@ -455,7 +462,9 @@ footer ul {
         </li>
       </ul>
     </li>
+    {/if}
 
+    {#if can(connectionState.online, 'background_jobs:read') && can(connectionState.online, 'code:read')}
     <li class="application" class:showDescription={showDescriptionFor.includes('backgroundJobs')}>
       <a href="/backgroundJobs">
         <div class="icon">
@@ -484,7 +493,9 @@ footer ul {
         </li>
       </ul>
     </li>
+    {/if}
 
+    {#if can(connectionState.online, 'constants:read')}
     <li class="application" class:showDescription={showDescriptionFor.includes('constants')}>
       <a href="/constants">
         <div class="icon">
@@ -514,11 +525,13 @@ footer ul {
         </li>
       </ul>
     </li>
+    {/if}
 
   </ul>
 
   <ul class="applications">
 
+    {#if can(connectionState.online, 'liquid:exec')}
     <li class="application" class:showDescription={showDescriptionFor.includes('liquid')}>
       <a href={serverUrl('/gui/liquid')}>
         <div class="icon" style="color: #aeb0b3;">
@@ -548,6 +561,7 @@ footer ul {
         </li>
       </ul>
     </li>
+    {/if}
 
     <li class="application" class:showDescription={showDescriptionFor.includes('graphiql')}>
       <a href={serverUrl('/gui/graphql')}>

@@ -5,7 +5,9 @@
  * forged one must not be able to point credentials anywhere.
  */
 import files from '../../lib/files.js';
-import { resolveAuth } from '../auth.js';
+import { fromDotPos, resolveAuth } from '../auth.js';
+import { settingsFromDotPos } from '../../lib/settings.js';
+import { bindToInstance } from '../../lib/globalBinding.js';
 import { originOf } from './handle.js';
 
 /** Whether the caller named the instance, in which case a mismatch is their mistake to see. */
@@ -36,7 +38,12 @@ export async function authForJob(job, params, ctx = {}) {
   // the job's instance; two of them is not a guess worth making either.
   const matching = environmentsFor(job.origin, (ctx.files || files).getConfig());
   if (matching.length === 1) {
-    const [name, settings] = matching[0];
+    const [name, entry] = matching[0];
+    // Bound as resolveAuth binds: a global token is never sent to an instance. A portal
+    // environment holds no token of its own, and resolves as resolveAuth resolves one.
+    const filesModule = ctx.files || files;
+    const settingsModule = ctx.settings || { settingsFromDotPos };
+    const settings = await bindToInstance(entry?.portal ? fromDotPos(settingsModule, filesModule, name) : entry, name);
     return { auth: { ...settings, source: `.pos(${name})` } };
   }
   return {

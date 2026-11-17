@@ -133,6 +133,11 @@ describe('portals', () => {
       ]);
     });
 
+    // A Portal that sends no rules gives no count either.
+    test('says "chosen instances" once when there is no count', () => {
+      expect(describeRules({ all_instances: false, scopes: ['*'] })).toEqual(['every endpoint, chosen instances: *']);
+    });
+
     test('does not replace an existing portal without --force', async () => {
       storePortal('shared', { url: 'https://partners.platformos.com', token: 'old' });
 
@@ -141,6 +146,19 @@ describe('portals', () => {
 
       await addPortal('shared', { url: 'http://localhost:4000', force: true });
       expect(getPortal('shared').token).toBe(GLOBAL_TOKEN);
+      // The replaced token is revoked, not left live and forgotten.
+      expect(Portal.revokeGlobalToken).toHaveBeenCalledWith({ portalUrl: 'https://partners.platformos.com', token: 'old' });
+    });
+
+    // The new token is stored either way; the old one is still live, so the operator is told.
+    test('says so when the token --force replaced could not be revoked', async () => {
+      storePortal('shared', { url: 'https://partners.platformos.com', token: 'old' });
+      Portal.revokeGlobalToken.mockRejectedValueOnce(new Error('fetch failed'));
+
+      await addPortal('shared', { url: 'http://localhost:4000', force: true });
+
+      expect(getPortal('shared').token).toBe(GLOBAL_TOKEN);
+      expect(logger.Warn).toHaveBeenCalledWith(expect.stringContaining('Could not revoke the token this replaced on https://partners.platformos.com'));
     });
 
     test('says so when the request is denied on the Portal', async () => {
@@ -159,6 +177,20 @@ describe('portals', () => {
 
     expect(Portal.revokeGlobalToken).toHaveBeenCalledWith({ portalUrl: 'http://localhost:4000', token: GLOBAL_TOKEN });
     expect(getPortal('shared')).toBeUndefined();
+    expect(logger.Success).toHaveBeenCalledWith('Portal shared removed and its token revoked.');
+  });
+
+  // The line the operator remembers must not claim a revocation that did not happen.
+  test('pos-cli portal remove says the token is still live when it could not be revoked', async () => {
+    storePortal('shared', { url: 'http://localhost:4000', token: GLOBAL_TOKEN });
+    Portal.revokeGlobalToken.mockRejectedValueOnce(new Error('fetch failed'));
+
+    await removePortalCommand('shared');
+
+    expect(getPortal('shared')).toBeUndefined();
+    const said = logger.Success.mock.calls.flat().join('\n');
+    expect(said).toContain('still live on http://localhost:4000');
+    expect(said).not.toContain('revoked.');
   });
 
   describe('pos-cli env add --portal', () => {

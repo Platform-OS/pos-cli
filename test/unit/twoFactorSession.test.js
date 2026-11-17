@@ -193,6 +193,20 @@ describe('the session store', () => {
     expect(sessions.map(s => s.token)).toEqual(['session-token', 'session-token', 'session-token']);
   });
 
+  // Sessions are kept per instance and token, so a step-up is shared on the same terms: a
+  // per-instance token and a global one for the same instance each get their own session.
+  test('does not hand one token the step-up another token started for the same instance', async () => {
+    Portal.twoFactorSession.mockImplementation(({ token }) => Promise.resolve({ token: `session-for-${token}`, expires_at: inOneHour() }));
+
+    const [first, second] = await Promise.all([
+      startSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'long-lived', otpCode: '123456' }),
+      startSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'posg_other', otpCode: '123456' })
+    ]);
+
+    expect(Portal.twoFactorSession).toHaveBeenCalledTimes(2);
+    expect([first.token, second.token]).toEqual(['session-for-long-lived', 'session-for-posg_other']);
+  });
+
   // ...and the sharing must not outlive the request, or the next command would be handed
   // a stale promise instead of prompting.
   test('starts a fresh step-up once the previous one has settled', async () => {
