@@ -37,6 +37,38 @@ const startCommand = (args, env = process.env) => {
   };
 };
 
+// Resolves once `done` holds for the output so far. Rejects, with the output, when `failed` holds,
+// when the deadline passes, or when the process exits without `done` ever holding.
+const waitForOutput = (proc, { label, deadlineMs, done, failed = () => false }) =>
+  new Promise((resolve, reject) => {
+    const output = () => ({ stdout: proc.getStdout(), stderr: proc.getStderr() });
+    const dump = () => `\nstdout:\n${proc.getStdout()}\nstderr:\n${proc.getStderr()}`;
+    let settled = false;
+    const finish = (err) => {
+      if (settled) return;
+      settled = true;
+      clearInterval(interval);
+      clearTimeout(deadline);
+      proc.process.off('close', onClose);
+      err ? reject(err) : resolve();
+    };
+    const check = () => {
+      if (done(output())) finish();
+      else if (failed(output())) finish(new Error(`${label} failed${dump()}`));
+    };
+    const onClose = (code) => {
+      check();
+      finish(new Error(`${label} exited (code ${code}) without the expected output${dump()}`));
+    };
+
+    const interval = setInterval(check, 100);
+    const deadline = setTimeout(
+      () => finish(new Error(`${label} did not finish within ${deadlineMs}ms${dump()}`)),
+      deadlineMs
+    );
+    proc.process.on('close', onClose);
+  });
+
 describe('pos-cli test-run command', () => {
   describe('Unit tests', () => {
     describe('formatDuration', () => {
@@ -668,30 +700,24 @@ describe('pos-cli test-run command', () => {
     });
   });
 
-  test('test run with no tests module should fail gracefully', async () => {
+  // Both steps talk to the live instance, so each gets its own deadline and the test's timeout is
+  // their sum plus slack: a slow instance then fails with a message naming the step and carrying
+  // its output, rather than as a bare vitest timeout. They used to share one 30s budget with the
+  // test itself, so a data clean that took 30s on a slow run killed the test before its own
+  // deadline could fire, and the second wait had no deadline at all.
+  const CLEAN_DEADLINE_MS = 90000; // waitForStatus polls every 5s; Windows runners are slow
+  const RUN_DEADLINE_MS = 30000;
+
+  test('test run with no tests module should fail gracefully', { timeout: CLEAN_DEADLINE_MS + RUN_DEADLINE_MS + 15000 }, async () => {
     requireRealCredentials();
 
     const cleanProc = startCommand(['data', 'clean', 'staging', '--include-schema', '--auto-confirm']);
     try {
-      await new Promise((resolve, reject) => {
-        const startTime = Date.now();
-        const maxWait = 30000; // waitForStatus polls every 5s, need more cycles for Node 24 Windows
-
-        const checkInterval = setInterval(() => {
-          const stdout = cleanProc.getStdout();
-          const stderr = cleanProc.getStderr();
-
-          if (stdout.includes('DONE. Instance cleaned')) {
-            clearInterval(checkInterval);
-            resolve();
-          } else if (stderr.includes('Error') || stderr.includes('Failed')) {
-            clearInterval(checkInterval);
-            reject(new Error(`Data clean failed: ${stderr}`));
-          } else if (Date.now() - startTime > maxWait) {
-            clearInterval(checkInterval);
-            reject(new Error(`Data clean timed out after ${maxWait}ms`));
-          }
-        }, 100);
+      await waitForOutput(cleanProc, {
+        label: 'data clean',
+        deadlineMs: CLEAN_DEADLINE_MS,
+        done: ({ stdout }) => stdout.includes('DONE. Instance cleaned'),
+        failed: ({ stderr }) => stderr.includes('Error') || stderr.includes('Failed')
       });
     } finally {
       cleanProc.kill();
@@ -700,14 +726,10 @@ describe('pos-cli test-run command', () => {
     const proc = startCommand(['test', 'run', 'staging']);
 
     try {
-      await new Promise(resolve => {
-        const checkInterval = setInterval(() => {
-          const stderr = proc.getStderr();
-          if (stderr.includes('Tests module not found') || stderr.includes('Error')) {
-            clearInterval(checkInterval);
-            resolve();
-          }
-        }, 100);
+      await waitForOutput(proc, {
+        label: 'test run',
+        deadlineMs: RUN_DEADLINE_MS,
+        done: ({ stderr }) => stderr.includes('Tests module not found') || stderr.includes('Error')
       });
 
       const hasModuleNotFoundError = proc.getStderr().includes('Tests module not found');

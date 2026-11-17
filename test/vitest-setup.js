@@ -17,6 +17,9 @@ if (!process.env.MCP_MIN_LOG_FILE) {
 }
 
 // Silence logger output; tests that assert on logger calls use vi.mocked(logger).Warn etc.
+// `isServerMode` is the real rule, not a stub: it decides where output goes, and a suite that
+// sets POS_CLI_SERVER_MODE must see it honoured.
 vi.mock('#lib/logger.js', () => ({
-  default: { Debug: vi.fn(), Error: vi.fn(), Info: vi.fn(), Warn: vi.fn(), Success: vi.fn() }
+  default: { Debug: vi.fn(), Error: vi.fn(), Info: vi.fn(), Warn: vi.fn(), Success: vi.fn() },
+  isServerMode: () => process.env.POS_CLI_SERVER_MODE === '1'
 }));

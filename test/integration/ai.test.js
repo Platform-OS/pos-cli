@@ -16,7 +16,8 @@ afterEach(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-const run = (options = '') => cli(`ai init ${options}`, { cwd: tmpDir });
+const run = (options = '', env = {}) =>
+  cli(`ai init ${options}`, { cwd: tmpDir, env: { ...process.env, ...env } });
 
 describe('pos-cli ai init', () => {
   const LOCAL_SERVERS = {
@@ -48,16 +49,70 @@ describe('pos-cli ai init', () => {
     expect(readConfig('.mcp.json').mcpServers).toEqual(LOCAL_SERVERS);
   });
 
-  test('--tool opencode writes opencode.json with servers under the mcp key', async () => {
+  // opencode 2 keeps servers under `mcp.servers`; the older `mcp.<name>` shape is deprecated in
+  // its published schema. Both are still written on request — see the --opencode-config test.
+  test('--tool opencode writes opencode.json with servers under mcp.servers', async () => {
     const { code } = await run('--tool opencode --no-docs');
 
     expect(code).toEqual(0);
     const config = readConfig('opencode.json');
     expect(config.mcpServers).toBeUndefined();
     expect(config.mcp).toEqual({
+      servers: {
+        'platformos-cli': { type: 'local', command: ['pos-cli-mcp', '--profile', 'dev', '--no-http'] },
+        'platformos-supervisor': { type: 'local', command: ['pos-cli-supervisor'] }
+      }
+    });
+  });
+
+  test('--tool opencode --opencode-config v1 writes the legacy shape', async () => {
+    const { code } = await run('--tool opencode --no-docs --opencode-config v1');
+
+    expect(code).toEqual(0);
+    const config = readConfig('opencode.json');
+    expect(config.mcp.servers).toBeUndefined();
+    expect(config.mcp).toEqual({
       'platformos-cli': { type: 'local', command: ['pos-cli-mcp', '--profile', 'dev', '--no-http'], enabled: true },
       'platformos-supervisor': { type: 'local', command: ['pos-cli-supervisor'], enabled: true }
     });
+  });
+
+  test('--tool pi writes .pi/mcp.json', async () => {
+    const { code } = await run('--tool pi --no-docs', { PI_CODING_AGENT_DIR: path.join(tmpDir, 'piagent') });
+
+    expect(code).toEqual(0);
+    expect(readConfig('.pi', 'mcp.json').mcpServers).toEqual({
+      'platformos-cli': { command: 'pos-cli-mcp', args: ['--profile', 'dev', '--no-http'] },
+      'platformos-supervisor': { command: 'pos-cli-supervisor', args: [] }
+    });
+  });
+
+  // Codex is the one tool whose configuration is TOML, so this asserts the text rather than JSON.
+  // CODEX_HOME is redirected into the temp dir: --no-codex-trust means nothing global is written,
+  // and the redirect makes that true by construction rather than by trusting the flag.
+  test('--tool codex writes .codex/config.toml as TOML', async () => {
+    const codexHome = path.join(tmpDir, 'codexhome');
+    const { code } = await run('--tool codex --no-docs --no-codex-trust', { CODEX_HOME: codexHome });
+
+    expect(code).toEqual(0);
+    const toml = fs.readFileSync(path.join(tmpDir, '.codex', 'config.toml'), 'utf8');
+    expect(toml).toContain('[mcp_servers.platformos-cli]');
+    expect(toml).toContain('command = "pos-cli-mcp"');
+    expect(toml).toContain('args = ["--profile", "dev", "--no-http"]');
+    expect(toml).toContain('[mcp_servers.platformos-supervisor]');
+    // Measured against codex-cli 0.166.0: the transport is chosen by command/url, there is no type key.
+    expect(toml).not.toContain('type =');
+    expect(fs.existsSync(path.join(codexHome, 'config.toml'))).toBe(false);
+  });
+
+  test('--tool codex --codex-trust marks the project trusted in the global config', async () => {
+    const codexHome = path.join(tmpDir, 'codexhome');
+    const { code } = await run('--tool codex --no-docs --codex-trust', { CODEX_HOME: codexHome });
+
+    expect(code).toEqual(0);
+    const global = fs.readFileSync(path.join(codexHome, 'config.toml'), 'utf8');
+    expect(global).toContain(`[projects.${JSON.stringify(fs.realpathSync(tmpDir))}]`);
+    expect(global).toContain('trust_level = "trusted"');
   });
 
   test('--tool other prints the snippet and writes nothing', async () => {
