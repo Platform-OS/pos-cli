@@ -1,1 +1,0 @@
-import"./DU6yHA9G.js";import"./DdrHPeWa.js";var e=(e,t,n=!0)=>{try{let r=localStorage.getItem(e);return r===null?t:n?JSON.parse(r):r}catch{return t}};export{e as t};

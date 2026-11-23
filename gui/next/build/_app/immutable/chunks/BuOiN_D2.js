@@ -1,0 +1,1 @@
+import{n as e,t}from"./CwzdSdKo.js";var n=n=>r=>(r instanceof e&&t.create(`error`,`Could not load ${n}: ${r.message}`),null);export{n as t};
