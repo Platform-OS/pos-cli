@@ -23,14 +23,15 @@ describe('permits', () => {
   test('`*:read` does not cover the reads that hand over a secret', () => {
     expect(permits(['*:read'], 'constants:read')).toBe(false);
     expect(permits(['*:read'], 'data_import:read')).toBe(false);
+    expect(permits(['*:read'], 'notifications:read')).toBe(false);
     expect(permits(['*:read', 'constants:read'], 'constants:read')).toBe(true);
   });
 
-  test('a write means read + write: it covers the read of the same subject, secret reads included', () => {
+  test('a write means read + write: it covers the read of the same subject, a secret read only with its write', () => {
     expect(permits(['records:write'], 'records:write')).toBe(true);
     expect(permits(['users:write'], 'users:read')).toBe(true);
     expect(permits(['instance:manage'], 'instance:read')).toBe(true);
-    expect(permits(['notifications:send'], 'notifications:read')).toBe(true);
+    expect(permits(['notifications:send'], 'notifications:read')).toBe(false);
     expect(permits(['constants:write'], 'constants:read')).toBe(true);
     expect(permits(['data_import:write'], 'data_import:read')).toBe(true);
   });
@@ -42,8 +43,8 @@ describe('permits', () => {
   });
 
   test('no scopes at all is full access, an empty list is none', () => {
-    expect(permits(null, 'liquid:exec')).toBe(true);
-    expect(permits(undefined, 'liquid:exec')).toBe(true);
+    expect(permits(null, 'code:write')).toBe(true);
+    expect(permits(undefined, 'code:write')).toBe(true);
     expect(permits([], 'logs:read')).toBe(false);
   });
 });

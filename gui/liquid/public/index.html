@@ -75,16 +75,16 @@
     });
 
     // Liquid can do anything -- a graphql tag runs mutations, background schedules jobs --
-    // so the instance only evaluates it for a token with the liquid:exec scope.
-    var noLiquidMessage = 'This token does not have the liquid:exec scope, so the Liquid evaluator is not available with it. ' +
-      'Use the GraphiQL IDE to run queries, or a token that has liquid:exec.';
+    // so the instance only evaluates it for a token with the code:write scope.
+    var noLiquidMessage = 'This token does not have the code:write scope, so the Liquid evaluator is not available with it. ' +
+      'Use the GraphiQL IDE to run queries, or a token that has code:write.';
 
     // Same rule as lib/utils/tokenScopes.js: null scopes is full access.
-    var canExecLiquid = scopes => !Array.isArray(scopes) || scopes.includes('*') || scopes.includes('liquid:exec');
+    var canExecLiquid = scopes => !Array.isArray(scopes) || scopes.includes('*') || scopes.includes('code:write');
 
     let printConnectionInfo = env => {
       document.querySelector("#status-bar")
-              .textContent = `Connected to ${env.MPKIT_URL}` + (canExecLiquid(env.scopes) ? '' : ' (no liquid:exec scope)');
+              .textContent = `Connected to ${env.MPKIT_URL}` + (canExecLiquid(env.scopes) ? '' : ' (no code:write scope)');
 
       if (!canExecLiquid(env.scopes)) {
         t.disabled = true;

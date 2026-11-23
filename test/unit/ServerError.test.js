@@ -113,12 +113,12 @@ describe('ServerError', () => {
     });
 
     test.each([
-      ['GraphQL-shaped errors', [{ message: 'Liquid needs liquid:exec' }]],
-      ['plain string errors', ['Liquid needs liquid:exec']]
+      ['GraphQL-shaped errors', [{ message: 'Liquid needs code:write' }]],
+      ['plain string errors', ['Liquid needs code:write']]
     ])('falls back to the reason in %s when no scope is named', async (_name, errors) => {
       await ServerError.handler(refusal('https://shop.example.com/api/app_builder/liquid_exec', { errors }));
 
-      expect(logger.Error.mock.calls[0][0]).toContain("This token's scopes do not allow this on shop.example.com.\nLiquid needs liquid:exec");
+      expect(logger.Error.mock.calls[0][0]).toContain("This token's scopes do not allow this on shop.example.com.\nLiquid needs code:write");
     });
 
     test('leaves any other 403 to the default report', async () => {

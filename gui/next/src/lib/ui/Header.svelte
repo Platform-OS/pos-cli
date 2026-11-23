@@ -337,7 +337,7 @@ nav a:hover .label {
         </li>
         {/if}
 
-        {#if preferencesState.header.includes('liquid') && can(connectionState.online, 'liquid:exec')}
+        {#if preferencesState.header.includes('liquid') && can(connectionState.online, 'code:write')}
         <li>
           <a href={serverUrl('/gui/liquid')}>
             <Icon icon="liquid" />

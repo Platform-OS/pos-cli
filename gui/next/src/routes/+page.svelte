@@ -531,7 +531,7 @@ footer ul {
 
   <ul class="applications">
 
-    {#if can(connectionState.online, 'liquid:exec')}
+    {#if can(connectionState.online, 'code:write')}
     <li class="application" class:showDescription={showDescriptionFor.includes('liquid')}>
       <a href={serverUrl('/gui/liquid')}>
         <div class="icon" style="color: #aeb0b3;">
