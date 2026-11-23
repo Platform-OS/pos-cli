@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 6.8.0 (2026-11-23)
+
 ### New Features
 
 * **`pos-cli sync` prints the warnings the instance returns for a synced file.** The file is still saved; the warning tells you what the instance found. For example, the synced page answers the same route as another page, so only one of them is served (`views/pages/marketplace.liquid` and `views/pages/marketplace/index.liquid` both answer `/marketplace`). The instance sent these before, but sync never showed them.
@@ -18,6 +20,22 @@
 
 ### Security
 
+* **Dependencies with security advisories are upgraded.** `minimatch` 11 and `glob` 14 are forced through `overrides`, since no patched 10.x / 13.x exists; `hono` and `@hono/node-server`, which the MCP SDK brings in, are on patched releases; and the admin GUI is rebuilt on a patched `@sveltejs/kit`, whose runtime is bundled into it.
+
+### Dependencies
+
+* `chokidar` 6, `ora` 10, the platformOS tools of 2026-11-23 (`platformos-check-node` 1.2.1, `platformos-common` 0.2.1, `platformos-language-server-node` 0.1.3, `platformos-mcp-supervisor` 0.2.2), and minor and patch upgrades of the rest. None changes the supported Node.js range.
+
+### Fixes
+
+* **`pos-cli ai init` could install an outdated Agent Playbook.** The archives are published at fixed URLs under `documentation.platformos.com/assets/`, which the CDN caches for up to a year, and deploying a new archive does not clear that copy — an install could receive a Playbook several releases old. pos-cli now reads `documentation.platformos.com/agent-playbook.json` first: it is not cached, and links each archive with the deploy's cache-busting parameter. The archive is downloaded from that link and checked against the SHA-256 published with it; one that does not match is refused rather than installed. When the page cannot be read, pos-cli downloads the fixed URL as before.
+
+* **`pos-cli ai init --docs global` now writes VS Code's user configuration instead of asking you to.** It said the path could not be known; in fact VS Code keeps it in a per-build directory, so pos-cli looks for the one that is installed — `Code`, `Code - Insiders` or `VSCodium`, under this platform's user-data path — and writes `User/mcp.json` there with the same merge rules every other tool gets, so an entry you have edited is still left alone. The file is read the way VS Code reads it — comments and trailing commas allowed — and edited in place, so those comments survive. Finding none, it prints the snippet as before, which is now a report of a search that came up empty rather than a claim that the file is unknowable. VS Code's own `code --add-mcp` was the obvious alternative and is deliberately not used: measured against VS Code 1.109.5, it replaces an entry of the same name without a word.
+
+## 6.7.0 (2026-11-02)
+
+### Security
+
 * **A link to the admin GUI's Users page could rewrite the query it ran.** The list reads its filter from the url (`?attribute=email&value=…`), and the value was written into the GraphQL query inside quotes as it was, so a value containing a quote could end the filter and add to the query — a link could make the list show users other than the ones it named. The value is now written as an escaped string, the attribute can only be `email` or `id` and the page only a number.
 
 * **The admin GUI's user form wrote what was typed into its GraphQL query as it was.** Creating a user put the email and password inside quotes unescaped, and editing one did the same with the email, so a password with a quote in it failed or added to the mutation, and one with `
@@ -28,10 +46,6 @@
 * **The admin GUI rendered text from the instance as HTML.** Notifications and the title of the details panel were written with `{@html}`, so a constant name, a user's email, a background job's source name or — on the Network page — the method and path of any request someone sent to the instance became markup in a page that holds the instance's credentials. All of them are text now. The two places that wanted formatting, the update notification and the method badge on a network request, pass a Svelte snippet instead, so markup comes only from the GUI's own templates.
 
 ### Fixes
-
-* **`pos-cli ai init` could install an outdated Agent Playbook.** The archives are published at fixed URLs under `documentation.platformos.com/assets/`, which the CDN caches for up to a year, and deploying a new archive does not clear that copy — an install could receive a Playbook several releases old. pos-cli now reads `documentation.platformos.com/agent-playbook.json` first: it is not cached, and links each archive with the deploy's cache-busting parameter. The archive is downloaded from that link and checked against the SHA-256 published with it; one that does not match is refused rather than installed. When the page cannot be read, pos-cli downloads the fixed URL as before.
-
-* **`pos-cli ai init --docs global` now writes VS Code's user configuration instead of asking you to.** It said the path could not be known; in fact VS Code keeps it in a per-build directory, so pos-cli looks for the one that is installed — `Code`, `Code - Insiders` or `VSCodium`, under this platform's user-data path — and writes `User/mcp.json` there with the same merge rules every other tool gets, so an entry you have edited is still left alone. The file is read the way VS Code reads it — comments and trailing commas allowed — and edited in place, so those comments survive. Finding none, it prints the snippet as before, which is now a report of a search that came up empty rather than a claim that the file is unknowable. VS Code's own `code --add-mcp` was the obvious alternative and is deliberately not used: measured against VS Code 1.109.5, it replaces an entry of the same name without a word.
 
 * **The admin GUI's Logs and Network pages could break on what an earlier visit left in the browser's storage.** The pinned logs and the Network presets were read from `localStorage` with `JSON.parse` and used as they came, so a value that did not parse stopped the page from pinning logs or opening its presets, and one that parsed to something other than a list broke pinning the same way. Both are now read the way the other saved preferences are: a value that cannot be read, or is not a list, is set aside for the defaults. The Database page also stopped saving whether its table list is hidden, which nothing ever read back.
 
