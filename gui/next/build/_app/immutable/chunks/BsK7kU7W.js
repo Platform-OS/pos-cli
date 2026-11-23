@@ -1,0 +1,1 @@
+import{it as e}from"./D7Sz8DDT.js";import{t}from"./VeVM9c-u.js";var n=t(`view`,null),r=e({header:t(`header`,[`database`,`users`,`logs`]),view:{database:n?.database?n.database:`table`,tableStyle:n?.tableStyle?n.tableStyle:`collapsed`},asideWidth:t(`asideWidth`,!1,!1)}),i=e=>{r.view={...r.view,...e};try{localStorage.view=JSON.stringify(r.view)}catch{}};export{i as n,r as t};

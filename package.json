@@ -51,7 +51,7 @@
     "async": "^3.2.6",
     "body-parser": "^2.4.0",
     "chalk": "^6.0.1",
-    "chokidar": "^5.0.0",
+    "chokidar": "^6.0.0",
     "commander": "^15.0.0",
     "degit": "^3.10.0",
     "email-validator": "^2.0.4",
@@ -133,12 +133,12 @@
   },
   "homepage": "https://github.com/Platform-OS/pos-cli/issues#readme",
   "devDependencies": {
-    "@vitest/coverage-v8": "^5.0.5",
+    "@vitest/coverage-v8": "^5.1.1",
     "dotenv": "^18.0.8",
     "globals": "^17.13.0",
     "nock": "^15.0.2",
     "supertest": "^7.3.1",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.1"
   },
   "bundleDependencies": [
     "commander",
@@ -146,5 +146,9 @@
   ],
   "optionalDependencies": {
     "fsevents": "^2.3.3"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1",
+    "glob": "^14.0.2"
   }
 }
