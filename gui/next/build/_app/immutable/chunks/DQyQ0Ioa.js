@@ -1,4 +1,4 @@
-import{i as e}from"./CwzdSdKo.js";var t={get:t=>e({query:`
+import{r as e}from"./9O3AIQt7.js";var t={get:t=>e({query:`
       query(
         $per_page: Int
         $id: ID
