@@ -85,6 +85,8 @@ pos-cli stops after three rejected codes. The Partner Portal locks an account fo
 
 A global token is created in the Partner Portal (your account's **Tokens** page) rather than by `env add`, and one token can work against many Instances. Add it once per environment with `--token`:
 
+> **Requirements.** Global tokens need **pos-cli 6.9.0 or later**: earlier versions send the global token itself to the Instance, which every Instance refuses (they answer 401 and suggest `env refresh-token`, which cannot help). The Instance must also run a platformOS release that accepts global tokens; one that does not yet refuses them, and pos-cli says so. Until it is upgraded, use a token for that Instance alone there (`pos-cli env add <environment> --url <url>`, without `--token` or `--portal`).
+
     pos-cli env add staging --url https://my-app-staging.staging.oregon.platform-os.com --token [global token]
     pos-cli env add production --url https://my-app.prod01.oregon.platform-os.com --token [global token]
 
@@ -123,7 +125,7 @@ When you create one you choose:
 * **Expiry** — one hour, one day, one week or never.
 * **Two-factor enforcement** — on an account without 2FA there is no choice: the token follows the account, needing no session until you enable 2FA or your Partner starts requiring it, and a session from then on. On an account with 2FA the token is enforced unless you exempt it. An enforced token behaves like any other for an account with 2FA, and stays enforced if 2FA is later turned off — it then stops working rather than becoming unprotected, and pos-cli says so instead of asking for a code: each Instance asks for a [session](#instance-sessions), started with a code the first time a command needs one. Scripted runs pass `POS_PORTAL_OTP_CODE` exactly as above. An unenforced token never asks for a code — meant for server-side integrations with nobody to type one — and the portal asks for your code when you create it instead. Treat it as the password-equivalent it is: revoke it in the portal the moment it may have leaked.
 
-A global token is **never sent to an Instance itself**: an Instance runs tenant-authored code, and a token that reaches many Instances must not be handed to any one of them. Before a command talks to an Instance, pos-cli trades the global token at the Partner Portal for a token bound to that Instance alone, and uses that one — for the command and every process it starts. The bound token is cached until shortly before it expires (in the environment's `.pos` entry, on the portal for `--portal` environments, in memory for `MPKIT_*`), and a new one is bound when it ends, when it is refused, or when the two-factor session it was bound from is renewed. The Instance refuses the global token itself.
+A global token is **never sent to an Instance itself**: an Instance runs tenant-authored code, and a token that reaches many Instances must not be handed to any one of them. Before a command talks to an Instance, pos-cli trades the global token at the Partner Portal for a token bound to that Instance alone, and uses that one — for the command and every process it starts. The bound token is cached until shortly before it expires (in the environment's `.pos` entry, on the portal for `--portal` environments, in memory for `MPKIT_*`), and a new one is bound when it ends or when it is refused. A cached bound token is used without asking the Portal anything; it never outlives the two-factor session it was bound from. The Instance refuses the global token itself.
 
 #### Portals
 

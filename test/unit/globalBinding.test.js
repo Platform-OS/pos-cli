@@ -13,8 +13,12 @@ vi.mock('#lib/portal.js', () => ({
 
 vi.mock('#lib/twoFactorSession.js', () => ({ ensureSession: vi.fn() }));
 
+vi.mock('#lib/utils/sleep.js', () => ({ default: vi.fn().mockResolvedValue(undefined) }));
+
 import Portal from '#lib/portal.js';
 import { ensureSession } from '#lib/twoFactorSession.js';
+import sleep from '#lib/utils/sleep.js';
+import logger from '#lib/logger.js';
 import { bindToInstance, dropBoundToken } from '#lib/globalBinding.js';
 import { getPortal, storePortal } from '#lib/portals.js';
 
@@ -69,13 +73,27 @@ describe('bindToInstance', () => {
 
   // A token bound without a session cannot be stepped up, so once the account needs one -- or
   // the session it was bound from is renewed -- a new one is bound rather than the cached reused.
-  test('binds anew when the session behind the token changes', async () => {
+  // A live bound token is all a command needs: asking the Portal for token info first cost
+  // every command a round trip, and failed it whenever the Portal was down.
+  test('uses a live bound token without asking the Portal anything', async () => {
     storePortal('shared', { url: 'http://localhost:4000', token: ROOT });
     const settings = { url: 'https://a.example.com/', portal: 'shared', token: ROOT };
 
     await bindToInstance(settings, 'staging');
-    ensureSession.mockResolvedValue({ token: 'posg_session', expires_at: inAnHour() });
+    const again = await bindToInstance(settings, 'staging');
+
+    expect(again.token).toBe('posg_bound');
+    expect(ensureSession).toHaveBeenCalledTimes(1);
+    expect(Portal.bindGlobalToken).toHaveBeenCalledTimes(1);
+  });
+
+  test('binds from the current session once the bound token has expired', async () => {
+    storePortal('shared', { url: 'http://localhost:4000', token: ROOT });
+    const settings = { url: 'https://a.example.com/', portal: 'shared', token: ROOT };
+    Portal.bindGlobalToken.mockResolvedValueOnce({ access_token: 'posg_short', expires_in: 60, resource_uuid: 'uuid-a' });
+
     await bindToInstance(settings, 'staging');
+    ensureSession.mockResolvedValue({ token: 'posg_session', expires_at: inAnHour() });
     await bindToInstance(settings, 'staging');
 
     expect(Portal.bindGlobalToken).toHaveBeenCalledTimes(2);
@@ -172,13 +190,40 @@ describe('bindToInstance', () => {
     await expect(bindToInstance({ url: 'https://a.example.com', token: ROOT }, null)).rejects.toThrow('two-factor authentication is not enabled');
   });
 
-  test('names the Portal when it is down or unreachable, and does not blame the token', async () => {
-    Portal.bindGlobalToken.mockRejectedValueOnce(Object.assign(new Error('Request failed with status 503'), { statusCode: 503, response: { body: '' } }));
-    await expect(bindToInstance({ url: 'https://a.example.com', token: ROOT }, null))
-      .rejects.toMatchObject({ reason: 'portal_error', message: expect.stringContaining('https://partners.platformos.com answered 503') });
+  test('waits out a Portal that does not answer, then binds', async () => {
+    Portal.bindGlobalToken
+      .mockRejectedValueOnce(Object.assign(new Error('Request failed with status 503'), { statusCode: 503, response: { body: '', headers: { 'retry-after': '3' } } }))
+      .mockRejectedValueOnce(Object.assign(new Error('fetch failed'), { name: 'RequestError', cause: { code: 'ECONNRESET' } }));
 
-    Portal.bindGlobalToken.mockRejectedValueOnce(Object.assign(new Error('fetch failed'), { name: 'RequestError', cause: { code: 'ECONNREFUSED' } }));
-    await expect(bindToInstance({ url: 'https://a.example.com', token: ROOT }, null))
+    const bound = await bindToInstance({ url: 'https://a.example.com', token: ROOT }, null);
+
+    expect(bound.token).toBe('posg_bound');
+    expect(Portal.bindGlobalToken).toHaveBeenCalledTimes(3);
+    expect(sleep.mock.calls).toEqual([[3000], [10000]]);
+    expect(logger.Warn).toHaveBeenCalledTimes(1);
+    expect(logger.Warn).toHaveBeenCalledWith(
+      'https://partners.platformos.com did not answer when asked for a token for a.example.com (HTTP 503). Nothing is wrong with the token.'
+    );
+  });
+
+  test('names the Portal when it stays down or unreachable, and does not blame the token', async () => {
+    Portal.bindGlobalToken.mockRejectedValue(Object.assign(new Error('Request failed with status 503'), { statusCode: 503, response: { body: '' } }));
+    await expect(bindToInstance({ url: 'https://stays-down.example.com', token: ROOT }, null))
+      .rejects.toMatchObject({ reason: 'portal_error', message: expect.stringContaining('https://partners.platformos.com answered 503') });
+    expect(Portal.bindGlobalToken).toHaveBeenCalledTimes(5);
+
+    Portal.bindGlobalToken.mockReset();
+    Portal.bindGlobalToken.mockRejectedValue(Object.assign(new Error('fetch failed'), { name: 'RequestError', cause: { code: 'ECONNREFUSED' } }));
+    await expect(bindToInstance({ url: 'https://stays-down.example.com', token: ROOT }, null))
       .rejects.toMatchObject({ reason: 'unreachable', message: expect.stringContaining('Could not reach https://partners.platformos.com (ECONNREFUSED)') });
+  });
+
+  // The Portal deciding is not an outage: no wait.
+  test('does not retry a refusal', async () => {
+    Portal.bindGlobalToken.mockRejectedValue(Object.assign(new Error('Request failed with status 401'), { statusCode: 401, response: { body: {} } }));
+
+    await expect(bindToInstance({ url: 'https://refused.example.com', token: ROOT }, null)).rejects.toMatchObject({ reason: 'refused' });
+    expect(Portal.bindGlobalToken).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
   });
 });

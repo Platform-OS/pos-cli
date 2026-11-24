@@ -38,6 +38,7 @@ import logger from '#lib/logger.js';
 import sleep from '#lib/utils/sleep.js';
 import Portal from '#lib/portal.js';
 import Gateway from '#lib/proxy.js';
+import { rememberBoundThisRun } from '#lib/globalBinding.js';
 
 const PORTAL = 'http://portal.test';
 const INSTANCE = 'http://shop.example.com';
@@ -381,6 +382,31 @@ describe('a Gateway holding a bound global token', () => {
     expect(error.message).toContain('pos-cli sync staging');
     expect(error.message).not.toContain('refresh-token');
     expect(apiRequest).toHaveBeenCalledTimes(1);
+  });
+
+  // The Portal issued it for this instance moments ago: an instance refusing it outright is one
+  // that does not accept global tokens yet, and running again would fail the same way.
+  test('says the instance does not accept global tokens when it refuses one bound this run', async () => {
+    rememberBoundThisRun('posg_fresh');
+    apiRequest.mockRejectedValue(Object.assign(new Error('401'), { statusCode: 401, response: { body: {} } }));
+
+    const error = await new Gateway(settings({ token: 'posg_fresh' })).ping().catch(e => e);
+
+    expect(error.message).toBe(
+      'http://shop.example.com refused a token the Partner Portal issued for it moments ago, so this instance does not accept ' +
+      'Partner Portal global tokens yet: it runs a platformOS release from before them. Until it is upgraded, use a ' +
+      'token for this instance alone: pos-cli env add <environment> --url http://shop.example.com (without --portal), which ' +
+      'signs you in through the browser.'
+    );
+  });
+
+  test('still says the token ended when an instance asks a token bound this run for a second factor', async () => {
+    rememberBoundThisRun('posg_fresh-2fa');
+    apiRequest.mockRejectedValue(sessionRequired());
+
+    const error = await new Gateway(settings({ token: 'posg_fresh-2fa' })).ping().catch(e => e);
+
+    expect(error.message).toContain('has ended');
   });
 });
 
