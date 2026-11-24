@@ -47,6 +47,37 @@ describe('everywhere', () => {
     expect(() => writeFileOwnerOnly(unwritable, 'x')).toThrow(/ENOENT/);
   });
 
+  // Several pos-cli processes rewrite .pos and portals.json at once; a reader must see the old
+  // file or the new one, never half of one, so the contents arrive by rename.
+  test('replaces the file by rename, leaving nothing else in its directory', () => {
+    fs.writeFileSync(filePath, 'stale');
+    const before = fs.statSync(filePath).ino;
+
+    writeFileOwnerOnly(filePath, 'fresh');
+
+    expect(fs.statSync(filePath).ino).not.toBe(before);
+    expect(fs.readdirSync(workdir)).toEqual(['.pos']);
+  });
+
+  test('leaves no temporary file behind when the rename fails', () => {
+    fs.mkdirSync(filePath);
+
+    expect(() => writeFileOwnerOnly(filePath, 'x')).toThrow();
+    expect(fs.readdirSync(workdir)).toEqual(['.pos']);
+  });
+
+  // Creating a symlink on Windows needs a privilege CI runners do not have.
+  test.skipIf(process.platform === 'win32')('writes through a symlink instead of replacing it', () => {
+    const real = path.join(workdir, 'real.json');
+    fs.writeFileSync(real, 'stale');
+    fs.symlinkSync(real, filePath);
+
+    writeFileOwnerOnly(filePath, 'fresh');
+
+    expect(fs.lstatSync(filePath).isSymbolicLink()).toBe(true);
+    expect(fs.readFileSync(real, 'utf8')).toBe('fresh');
+  });
+
   // The reason restrictToOwner returns a boolean instead of throwing: a file that vanished
   // under us, or a filesystem that refuses the call, must not fail the command that just
   // wrote credentials successfully.
