@@ -107,9 +107,9 @@ describe('portals', () => {
 
       expect(Portal.requestGlobalTokenDevice).toHaveBeenCalledWith({ portalUrl: 'http://localhost:4000', clientName: `shared on ${os.hostname()}` });
       expect(Portal.fetchGlobalToken).toHaveBeenCalledTimes(2);
-      expect(getPortal('shared')).toMatchObject({
-        url: 'http://localhost:4000', token: GLOBAL_TOKEN, credential_id: 7, email: 'me@example.com', scopes: ['*'],
-        two_factor_mode: 'enforced'
+      expect(getPortal('shared')).toEqual({
+        url: 'http://localhost:4000', token: GLOBAL_TOKEN, email: 'me@example.com', scopes: ['*'],
+        expires_at: expect.any(String)
       });
     });
 
