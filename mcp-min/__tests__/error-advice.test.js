@@ -285,7 +285,7 @@ describe('a name that is not in .pos says which names are', () => {
 });
 
 /**
- * Three places build a remedy today and there will be more. `runBy` is the half that is easy to
+ * Several places build a remedy and there will be more. `runBy` is the half that is easy to
  * leave off and the half that matters: without it, an agent holding a shell runs a command that
  * stops on a password prompt — the whole reason `refresh-token` is not a tool.
  *
@@ -337,7 +337,7 @@ describe('every command this server offers an agent says who runs it', () => {
   });
 
   test('the scan finds the ones there are, so it is not passing on an empty list', () => {
-    expect(offers().map(({ file }) => file).sort()).toEqual(['auth.js', 'auth.js', 'tests/crash-check.js', 'tests/module-check.js', 'tests/run.js']);
+    expect(offers().map(({ file }) => file).sort()).toEqual(['auth.js', 'auth.js', 'auth.js', 'auth.js', 'tests/crash-check.js', 'tests/module-check.js', 'tests/run.js', 'tool-error.js']);
   });
 
   test('none of them leaves out runBy', () => {

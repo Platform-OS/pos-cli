@@ -64,7 +64,7 @@ describe('uploads-push', () => {
     expect(mockPresignUrl).toHaveBeenCalledWith(
       'instances/test-instance-123/property_uploads/data.public_property_upload_import.zip',
       tempFile,
-      { url: 'https://staging.example.com', token: 'secret123' }
+      expect.any(MockGateway)
     );
     expect(mockUploadFile).toHaveBeenCalledWith(tempFile, 'https://s3.example.com/upload');
   });
@@ -188,8 +188,13 @@ describe('uploads-push', () => {
    * this call, or cleared by this call finishing first. The credentials travel with the call now,
    * and what this pins is that they are not exported at all.
    */
-  test('passes its credentials to presignUrl instead of putting them in the environment', async () => {
+  test('passes its Gateway to presignUrl instead of putting credentials in the environment', async () => {
+    const built = [];
     class MockGateway {
+      constructor(auth) {
+        this.auth = auth;
+        built.push(this);
+      }
       async getInstance() {
         return { id: 'inst-001' };
       }
@@ -207,7 +212,10 @@ describe('uploads-push', () => {
       { Gateway: MockGateway, presignUrl: mockPresignUrl, uploadFile: mockUploadFile, settings: mockSettings }
     );
 
-    expect(mockPresignUrl.mock.calls[0][2]).toEqual({ url: 'https://staging.example.com', token: 'secret123' });
+    // presignUrl calls gateway.presign(): a plain {url, token} here throws at runtime.
+    expect(built).toHaveLength(1);
+    expect(mockPresignUrl.mock.calls[0][2]).toBe(built[0]);
+    expect(built[0].auth).toMatchObject({ url: 'https://staging.example.com', token: 'secret123' });
     expect(duringTheCall).toEqual({ token: undefined, url: undefined });
   });
 

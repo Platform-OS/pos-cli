@@ -1,6 +1,7 @@
 // Shared authentication utilities for mcp-min tools
 import files from '../lib/files.js';
 import { settingsFromDotPos, settingsFromEnv } from '../lib/settings.js';
+import { bindToInstance } from '../lib/globalBinding.js';
 import { mask } from './redact.js';
 import { ToolError } from './tool-error.js';
 
@@ -29,6 +30,14 @@ export function refreshTokenRemedy(auth) {
   const env = DOT_POS_SOURCE.exec(auth?.source ?? '')?.[1];
   if (!env) return undefined;
 
+  // A portal environment holds no token of its own; `env refresh-token` refuses it and names this.
+  if (auth.portal) {
+    return {
+      command: `pos-cli portal add ${auth.portal} --force`,
+      runBy: 'a person at a terminal: it opens the Partner Portal in a browser to approve a new token'
+    };
+  }
+
   return {
     command: `pos-cli env refresh-token ${env}`,
     runBy: 'a person at a terminal: it asks for a password and a second factor'
@@ -55,7 +64,10 @@ export function refreshTokenRemedy(auth) {
  * @returns {Promise<{url, email?, token?, source}>}
  */
 export async function resolveAuth(params, ctx = {}, options = {}) {
-  const auth = await resolve(params, ctx, options);
+  let auth = await resolve(params, ctx, options);
+  // A global token is never sent to an instance: tools get one bound to it, as the CLI does in
+  // fetchSettings (lib/globalBinding.js). An anonymous tool sends no credential at all.
+  if (!options.anonymous) auth = { ...(await bindToInstance(auth, environmentOf(auth.source))), source: auth.source };
   // `runTool` builds meta.auth from this. Recording it here is what lets a tool stop assembling
   // the same masked block itself, and keeps it out of the thirteen that used to.
   //
@@ -65,6 +77,12 @@ export async function resolveAuth(params, ctx = {}, options = {}) {
   // tool cannot forget to.
   ctx.resolvedAuth = options.anonymous ? { url: auth.url, source: auth.source } : auth;
   return auth;
+}
+
+// The .pos environment a resolved credential came from (`.pos(staging)`), where a bound token
+// is kept; null for MPKIT_* and explicit params, whose bound tokens are kept in memory.
+function environmentOf(source) {
+  return /^\.pos\((.*)\)$/.exec(source || '')?.[1] || null;
 }
 
 async function resolve(params, ctx, { anonymous = false } = {}) {
@@ -96,7 +114,7 @@ async function resolve(params, ctx, { anonymous = false } = {}) {
   // command line — but here the name is the instruction, so an unknown one is an error rather
   // than a quiet redirect to whatever those variables point at.
   if (params?.env) {
-    const found = settingsModule.settingsFromDotPos(params.env);
+    const found = fromDotPos(settingsModule, filesModule, params.env);
     if (found?.url && found?.token) return { ...found, source: `.pos(${params.env})` };
     // The entry is there but unusable: the file needs fixing, which is not something the caller
     // can do by changing an argument.
@@ -112,12 +130,35 @@ async function resolve(params, ctx, { anonymous = false } = {}) {
   const conf = filesModule.getConfig();
   const names = conf ? Object.keys(conf) : [];
   const firstEnv = names[0];
-  if (firstEnv && conf[firstEnv]?.url && conf[firstEnv]?.token) {
+  // A portal environment holds no token of its own: it resolves through settingsFromDotPos.
+  const first = conf?.[firstEnv]?.portal ? fromDotPos(settingsModule, filesModule, firstEnv) : conf?.[firstEnv];
+  if (first?.url && first?.token) {
     requireNamedInstance(ctx, names, firstEnv);
-    return { ...conf[firstEnv], source: `.pos(${firstEnv})` };
+    return { ...first, source: `.pos(${firstEnv})` };
   }
 
   throw ToolError.auth('AUTH_MISSING', 'Provide url, email and token, or configure .pos / MPKIT_* environment variables');
+}
+
+/**
+ * A `.pos` environment's settings. One added with `--portal` names a portal that may not be on
+ * this machine — a `.pos` copied from a colleague, or a portal removed since — which
+ * `settingsFromDotPos` throws as a plain Error and `classify` would call a defect in pos-cli.
+ */
+export function fromDotPos(settingsModule, filesModule, name) {
+  try {
+    return settingsModule.settingsFromDotPos(name);
+  } catch (error) {
+    const portal = readConfig(filesModule)[name]?.portal;
+    if (!portal) throw error;
+    throw ToolError.project('PORTAL_MISSING', String(error.message), {
+      portal,
+      remedy: {
+        command: `pos-cli portal add ${portal} --url <partner portal url>`,
+        runBy: 'a person at a terminal: it opens the Partner Portal in a browser to approve a token'
+      }
+    });
+  }
 }
 
 // Already the error path: an unreadable `.pos` has no names to offer, which is where an empty one

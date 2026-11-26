@@ -1,4 +1,4 @@
-import{i as e,r as t}from"./CwzdSdKo.js";var n=[`SCHEDULED`,`DEAD`,`RUNNING`],r={get:async(t,r)=>{let i=parseInt(t?.page)>0?parseInt(t.page):1,a=``;t?.id&&(a=`id: { value: ${JSON.stringify(String(t.id))} }`);let o=``;n.includes(t?.type)&&(o=`type: ${t.type}`);let s=`
+import{n as e,r as t}from"./9O3AIQt7.js";var n=[`SCHEDULED`,`DEAD`,`RUNNING`],r={get:async(e,r)=>{let i=parseInt(e?.page)>0?parseInt(e.page):1,a=``;e?.id&&(a=`id: { value: ${JSON.stringify(String(e.id))} }`);let o=``;n.includes(e?.type)&&(o=`type: ${e.type}`);let s=`
       query {
         admin_background_jobs(
           per_page: 20,
@@ -39,22 +39,22 @@ import{i as e,r as t}from"./CwzdSdKo.js";var n=[`SCHEDULED`,`DEAD`,`RUNNING`],r=
             updated_at
           }
         }
-      }`;return e({query:s},r).then(e=>e.admin_background_jobs)},delete:async e=>{let n=Object.fromEntries(e.properties.entries()).id,r=`
+      }`;return t({query:s},r).then(e=>e.admin_background_jobs)},delete:async t=>{let n=Object.fromEntries(t.properties.entries()).id,r=`
       mutation {
         admin_background_job_delete(id: ${JSON.stringify(String(n))}) {
           id
         }
       }
-    `;return t({query:r},!1)},retry:async e=>{let n=Object.fromEntries(e.properties.entries()).id,r=`
+    `;return e({query:r},!1)},retry:async t=>{let n=Object.fromEntries(t.properties.entries()).id,r=`
       mutation {
         admin_background_job_retry(id: ${JSON.stringify(String(n))}){
           id
         }
       }
-    `;return t({query:r},!1)},stop:async e=>{let n=Object.fromEntries(e.properties.entries()).id,r=`
+    `;return e({query:r},!1)},stop:async t=>{let n=Object.fromEntries(t.properties.entries()).id,r=`
       mutation {
         admin_background_job_stop(id: ${JSON.stringify(String(n))}){
           id
         }
       }
-    `;return t({query:r},!1)}};export{r as t};
+    `;return e({query:r},!1)}};export{r as t};

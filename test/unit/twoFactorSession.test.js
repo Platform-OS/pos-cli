@@ -193,6 +193,20 @@ describe('the session store', () => {
     expect(sessions.map(s => s.token)).toEqual(['session-token', 'session-token', 'session-token']);
   });
 
+  // Sessions are kept per instance and token, so a step-up is shared on the same terms: a
+  // per-instance token and a global one for the same instance each get their own session.
+  test('does not hand one token the step-up another token started for the same instance', async () => {
+    Portal.twoFactorSession.mockImplementation(({ token }) => Promise.resolve({ token: `session-for-${token}`, expires_at: inOneHour() }));
+
+    const [first, second] = await Promise.all([
+      startSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'long-lived', otpCode: '123456' }),
+      startSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'posg_other', otpCode: '123456' })
+    ]);
+
+    expect(Portal.twoFactorSession).toHaveBeenCalledTimes(2);
+    expect([first.token, second.token]).toEqual(['session-for-long-lived', 'session-for-posg_other']);
+  });
+
   // ...and the sharing must not outlive the request, or the next command would be handed
   // a stale promise instead of prompting.
   test('starts a fresh step-up once the previous one has settled', async () => {
@@ -213,7 +227,9 @@ describe('the session store', () => {
 
     await startSession({ portalUrl: PORTAL, instanceUrl: unregistered, token: 'long-lived', otpCode: '123456' });
 
-    expect(readSession(unregistered, PORTAL).token).toBe('session-token');
+    expect(readSession(unregistered, PORTAL, 'long-lived').token).toBe('session-token');
+    // A session is the token it was stepped up from: another token for the same URL has none.
+    expect(readSession(unregistered, PORTAL, 'another-token')).toBeNull();
     expect(readConfig().staging.two_factor_session).toBeUndefined();
   });
 });
@@ -250,6 +266,49 @@ describe('portalUrlFor', () => {
 });
 
 describe('ensureSession', () => {
+  // The token enforces a second factor its account no longer has: no session can ever be
+  // had, so the step-up ends with an explanation instead of a prompt.
+  test('ends the step-up without prompting when the account has no second factor', async () => {
+    Portal.tokenInfo.mockResolvedValue({ two_factor_required: true, two_factor_session: false });
+    Portal.twoFactorSession.mockRejectedValue(Object.assign(new Error('Request failed with status 403'), {
+      name: 'StatusCodeError',
+      statusCode: 403,
+      response: { statusCode: 403, body: { error: 'two_factor_not_enabled', errors: ['not enabled'] } }
+    }));
+    answers.push('123456');
+
+    const error = await ensureSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'long-lived' }).catch(e => e);
+
+    expect(error.name).toBe('TwoFactorError');
+    expect(error.message).toContain('two-factor authentication is not enabled on its account');
+    expect(Portal.twoFactorSession).toHaveBeenCalledTimes(1);
+    expect(answers).toEqual(['123456']);
+    expect(readSession(INSTANCE, PORTAL)).toBeFalsy();
+  });
+
+  // A bound token (MPKIT_TOKEN) whose account started needing a second factor after it was
+  // bound: the Portal refuses it before any code, and says how to get past it.
+  test.each([
+    ['bound_token', 'bound to one instance'],
+    ['two_factor_session_presented', 'a two-factor session already'],
+    ['two_factor_not_required', 'does not need a two-factor session']
+  ])('explains a %s refusal of the step-up without prompting', async (code, explanation) => {
+    Portal.tokenInfo.mockResolvedValue({ two_factor_required: true, two_factor_session: false });
+    Portal.twoFactorSession.mockRejectedValue(Object.assign(new Error('Request failed with status 422'), {
+      name: 'StatusCodeError',
+      statusCode: 422,
+      response: { statusCode: 422, body: { error: code, errors: ['...'] } }
+    }));
+    answers.push('123456');
+
+    const error = await ensureSession({ portalUrl: PORTAL, instanceUrl: INSTANCE, token: 'posg_bound' }).catch(e => e);
+
+    expect(error.name).toBe('TwoFactorError');
+    expect(error.message).toContain(explanation);
+    expect(Portal.twoFactorSession).toHaveBeenCalledTimes(1);
+    expect(answers).toEqual(['123456']);
+  });
+
   test('does nothing when the portal does not require a second factor', async () => {
     Portal.tokenInfo.mockResolvedValue({ two_factor_required: false, two_factor_session: false });
 

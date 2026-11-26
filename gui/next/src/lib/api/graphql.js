@@ -9,6 +9,20 @@
 // bundles it into this app without pulling anything Node-only in.
 import { graphQLErrors, formatGraphQLErrors } from '../../../../../lib/graph/response.js';
 import { serverUrl } from '#lib/api/address.js';
+import { notificationsState } from '#lib/state/notifications.svelte.js';
+
+
+// purpose:		tells the user the instance refused a request the token has no scope for
+// arguments:	response body from the instance (object)
+// ------------------------------------------------------------------------
+const notifyInsufficientScope = (res) => {
+  const scopes = Array.isArray(res.required_scopes) ? res.required_scopes : [];
+  const reason = scopes.length
+    ? `It needs ${scopes.join(', ')}.`
+    : (res.errors || []).map(error => typeof error === 'string' ? error : error?.message).filter(Boolean).join(' ');
+
+  notificationsState.create('error', `This token's scopes do not allow that, so the instance refused it.${reason ? ` ${reason}` : ''}`);
+};
 
 
 
@@ -42,6 +56,16 @@ const graphql = (body, options) => {
   })
     .then((res) => res.json())
     .then((res) => {
+      // refused by the instance because the token lacks a scope; the body is
+      // { error, required_scopes } and may carry no `errors` at all, so one is added: without
+      // it this resolved `res.data`, undefined, and a refusal read as an empty success
+      if(res?.error === 'insufficient_scope') {
+        notifyInsufficientScope(res);
+        if(!graphQLErrors(res)) {
+          res = { ...res, errors: [{ message: 'This token\'s scopes do not allow that, so the instance refused it.' }] };
+        }
+      }
+
       const errors = graphQLErrors(res);
 
       if(errors) {

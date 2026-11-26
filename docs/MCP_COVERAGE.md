@@ -52,6 +52,9 @@ rather than a synchronous answer.
 | `dns compare` | later | — | Read-only; same reason as `dns export`. |
 | `env add` | exposed | `env-add` | |
 | `env list` | exposed | `envs-list` | |
+| `portal add` | never | — | Opens the Partner Portal in a browser for the person to sign in, confirm with a code or password, and approve a global token. Minting a credential belongs to the person, not the agent. |
+| `portal list` | never | — | Lists credentials this machine holds; an agent needs none of it, and the environments it uses resolve their portal on their own. |
+| `portal remove` | never | — | Revokes a credential. The person's call, like `env refresh-token`. |
 | `env refresh-token` | never | — | Prompts for a password and a two-factor code. Interactive by design, and re-issuing a credential belongs to the person, not the agent. What the agent needs instead is to be told to ask for it — tracked in TASK-30. |
 | `exec liquid` | exposed | `liquid-exec` | |
 | `exec graphql` | exposed | `graphql-exec` | |

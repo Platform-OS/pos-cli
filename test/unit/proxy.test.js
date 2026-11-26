@@ -38,6 +38,7 @@ import logger from '#lib/logger.js';
 import sleep from '#lib/utils/sleep.js';
 import Portal from '#lib/portal.js';
 import Gateway from '#lib/proxy.js';
+import { rememberBoundThisRun } from '#lib/globalBinding.js';
 
 const PORTAL = 'http://portal.test';
 const INSTANCE = 'http://shop.example.com';
@@ -259,4 +260,167 @@ describe('a Gateway meeting an instance that cannot reach the partner portal', (
 
     expect(apiRequest).toHaveBeenCalledTimes(3);
   });
+});
+
+// The instance's presign endpoints read the credential from a bare `token:` header. They
+// used to be sent MARKETPLACE_TOKEN directly, so a two-factor session never reached them
+// and an instance that asks for one there refused every asset upload with no step-up.
+describe('presign', () => {
+  const PRESIGN = `${INSTANCE}/api/private/urls/presign-directory?directory=instances%2F1%2Fassets`;
+
+  test('presents a stored session in the token header, not the long-lived token', async () => {
+    writeConfig({ two_factor_session: { token: 'session-token', expires_at: inOneHour() } });
+    apiRequest.mockResolvedValue({ url: 'https://s3.example.com' });
+
+    await new Gateway(settings()).presign(PRESIGN, { timeout: 30000 });
+
+    const { headers, timeout, uri } = apiRequest.mock.calls[0][0];
+    expect(uri).toBe(PRESIGN);
+    expect(timeout).toBe(30000);
+    expect(headers.token).toBe('session-token');
+    expect(headers.marketplace_domain).toBe('shop.example.com');
+    expect(headers.Authorization).toBeUndefined();
+  });
+
+  test('presents the long-lived token when there is no session', async () => {
+    apiRequest.mockResolvedValue({});
+
+    await new Gateway(settings()).presign(PRESIGN);
+
+    expect(apiRequest.mock.calls[0][0].headers.token).toBe('long-lived');
+  });
+
+  test('steps up when the instance asks for a session, and retries with it', async () => {
+    apiRequest.mockRejectedValueOnce(sessionRequired()).mockResolvedValueOnce({ url: 'signed' });
+    Portal.twoFactorSession.mockResolvedValue({ token: 'session-token', expires_at: inOneHour() });
+    process.env.POS_PORTAL_OTP_CODE = '123456';
+
+    await expect(new Gateway(settings()).presign(PRESIGN)).resolves.toEqual({ url: 'signed' });
+
+    expect(apiRequest.mock.calls[1][0].headers.token).toBe('session-token');
+  });
+});
+
+// A global token is one bearer credential for every instance its owner can reach. Nothing
+// on this side may assume the token names the instance: the session is still asked for,
+// and stored, against the instance being talked to.
+describe('a global token', () => {
+  test('steps up against the instance in use and stores the session under it', async () => {
+    writeConfig({ token: 'global-token' });
+    apiRequest.mockRejectedValueOnce(sessionRequired()).mockResolvedValueOnce('served');
+    Portal.twoFactorSession.mockResolvedValue({ token: 'global-session', expires_at: inOneHour() });
+    process.env.POS_PORTAL_OTP_CODE = '123456';
+
+    await expect(new Gateway(settings({ token: 'global-token' })).ping()).resolves.toBe('served');
+
+    expect(Portal.twoFactorSession).toHaveBeenCalledWith(
+      expect.objectContaining({ token: 'global-token', instanceDomain: INSTANCE, portalUrl: PORTAL })
+    );
+    expect(apiRequest.mock.calls[1][0].headers.Authorization).toBe('Token global-session');
+
+    const stored = JSON.parse(fs.readFileSync(path.join(workdir, '.pos'), 'utf8'));
+    expect(stored.staging.two_factor_session.token).toBe('global-session');
+    expect(stored.staging.token).toBe('global-token');
+  });
+});
+
+// Several commands print only error.message, so a scope refusal has to say what it is
+// there, while staying the StatusCodeError every other check reads.
+describe('an insufficient-scope refusal', () => {
+  const insufficient = () =>
+    Object.assign(new Error('Request failed with status 403'), {
+      name: 'StatusCodeError',
+      statusCode: 403,
+      options: { uri: `${INSTANCE}/api/graph` },
+      response: {
+        statusCode: 403,
+        body: { error: 'insufficient_scope', required_scopes: ['records:write'], errors: [{ message: 'This token does not have the records:write scope' }] }
+      }
+    });
+
+  test('keeps its shape and explains itself in its message, without stepping up', async () => {
+    apiRequest.mockRejectedValue(insufficient());
+
+    const error = await new Gateway(settings()).graph({ query: 'mutation { x }' }).catch(e => e);
+
+    expect(error.name).toBe('StatusCodeError');
+    expect(error.statusCode).toBe(403);
+    expect(error.message).toContain('This token does not have the records:write scope needed for this on shop.example.com');
+    expect(Portal.twoFactorSession).not.toHaveBeenCalled();
+  });
+
+  test('is explained after a step-up too', async () => {
+    apiRequest.mockRejectedValueOnce(sessionRequired()).mockRejectedValueOnce(insufficient());
+    Portal.twoFactorSession.mockResolvedValue({ token: 'session-token', expires_at: inOneHour() });
+    process.env.POS_PORTAL_OTP_CODE = '123456';
+
+    const error = await new Gateway(settings()).graph({ query: 'mutation { x }' }).catch(e => e);
+
+    expect(error.message).toContain('records:write');
+  });
+});
+
+// A global token in a Gateway is always one bound to the instance (fetchSettings binds it):
+// it carries its own second factor and cannot be stepped up.
+describe('a Gateway holding a bound global token', () => {
+  test('sends the bound token, never an injected global session', async () => {
+    process.env.POS_PORTAL_SESSION_TOKEN = 'posg_a-global-session';
+    apiRequest.mockResolvedValue('served');
+
+    await new Gateway(settings({ token: 'posg_bound' })).ping();
+
+    const sent = apiRequest.mock.calls[0][0].headers.Authorization;
+    expect(sent).toBe('Token posg_bound');
+  });
+
+  test('ends the run saying to run it again, instead of stepping up with the bound token', async () => {
+    apiRequest.mockRejectedValue(sessionRequired());
+
+    const error = await new Gateway(settings({ token: 'posg_bound', restartCommand: 'pos-cli sync staging' })).ping().catch(e => e);
+
+    expect(error.message).toContain('has ended');
+    expect(error.message).toContain('pos-cli sync staging');
+    expect(error.message).not.toContain('refresh-token');
+    expect(apiRequest).toHaveBeenCalledTimes(1);
+  });
+
+  // The Portal issued it for this instance moments ago: an instance refusing it outright is one
+  // that does not accept global tokens yet, and running again would fail the same way.
+  test('says the instance does not accept global tokens when it refuses one bound this run', async () => {
+    rememberBoundThisRun('posg_fresh');
+    apiRequest.mockRejectedValue(Object.assign(new Error('401'), { statusCode: 401, response: { body: {} } }));
+
+    const error = await new Gateway(settings({ token: 'posg_fresh' })).ping().catch(e => e);
+
+    expect(error.message).toBe(
+      'http://shop.example.com refused a token the Partner Portal issued for it moments ago, so this instance does not accept ' +
+      'Partner Portal global tokens yet: it runs a platformOS release from before them. Until it is upgraded, use a ' +
+      'token for this instance alone: pos-cli env add <environment> --url http://shop.example.com (without --portal), which ' +
+      'signs you in through the browser.'
+    );
+  });
+
+  test('still says the token ended when an instance asks a token bound this run for a second factor', async () => {
+    rememberBoundThisRun('posg_fresh-2fa');
+    apiRequest.mockRejectedValue(sessionRequired());
+
+    const error = await new Gateway(settings({ token: 'posg_fresh-2fa' })).ping().catch(e => e);
+
+    expect(error.message).toContain('has ended');
+  });
+});
+
+// The tests module's pages are page routes, rendered by tenant Liquid with every header in
+// context.headers; they check the instance's environment, not a credential.
+test('sends no credential to the tests module pages', async () => {
+  apiRequest.mockResolvedValue('{}');
+  const gateway = new Gateway(settings());
+
+  await gateway.test('example');
+  await gateway.testRunAsync();
+
+  for (const [options] of apiRequest.mock.calls) {
+    expect(options.headers.Authorization).toBeUndefined();
+    expect(options.headers.token).toBeUndefined();
+  }
 });

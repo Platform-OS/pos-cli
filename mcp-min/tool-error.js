@@ -12,6 +12,10 @@
  */
 
 import { isPartnerPortalUnavailable, partnerPortalReason, retryAfterSeconds } from '../lib/utils/partnerPortal.js';
+import {
+  isInstanceNotCovered, isInsufficientScopeRefusal, isTokenRefusal, isTwoFactorNotEnabled, requiredScopesOf, tokenRefusalMessage
+} from '../lib/utils/tokenScopes.js';
+import { isTwoFactorError } from '../lib/utils/twoFactor.js';
 
 /** The closed set, with the next action each one implies. */
 export const ERROR_KINDS = Object.freeze({
@@ -156,6 +160,53 @@ const portalOutage = (err, details) => ToolError.unavailable(
 );
 
 /**
+ * `auth` failures that `pos-cli env refresh-token` cannot fix, so `run-tool.js` attaches no
+ * refresh remedy to them. A token refusal is a valid token limited by its scopes or its rules —
+ * a refresh hands back one with the same limits — and a two-factor stop needs a code, not a token.
+ */
+export const REFRESH_CANNOT_HELP = new Set([
+  'INSUFFICIENT_SCOPE', 'TWO_FACTOR_NOT_ENABLED', 'INSTANCE_NOT_COVERED', 'TWO_FACTOR_REQUIRED', 'GLOBAL_TOKEN_REFUSED'
+]);
+
+const tokenRefusalCode = (err) => {
+  if (isInsufficientScopeRefusal(err)) return 'INSUFFICIENT_SCOPE';
+  if (isTwoFactorNotEnabled(err)) return 'TWO_FACTOR_NOT_ENABLED';
+  if (isInstanceNotCovered(err)) return 'INSTANCE_NOT_COVERED';
+  return 'UNAUTHORIZED';
+};
+
+// The message is the one the CLI prints (lib/utils/tokenScopes.js), which already says the token is
+// valid and what would help; the scopes are a field as well, for an agent that branches on them.
+const tokenRefusal = (err, details) => {
+  const requiredScopes = requiredScopesOf(err);
+  return ToolError.auth(tokenRefusalCode(err), tokenRefusalMessage(err), {
+    ...details, ...(requiredScopes.length && { requiredScopes })
+  });
+};
+
+// A global token that could not be traded for one bound to the instance (lib/globalBinding.js).
+// Its message names the Portal and the fix; the reason decides the kind.
+const bindingFailure = (err) => {
+  switch (err.reason) {
+    case 'instance_not_covered':
+      return ToolError.auth('INSTANCE_NOT_COVERED', err.message);
+    case 'refused':
+      return ToolError.auth('GLOBAL_TOKEN_REFUSED', err.message, err.portal ? {
+        remedy: {
+          command: `pos-cli portal add ${err.portal} --force`,
+          runBy: 'a person at a terminal: it opens the Partner Portal in a browser to approve a new token'
+        }
+      } : undefined);
+    case 'portal_error':
+      return ToolError.unavailable('PARTNER_PORTAL_UNAVAILABLE', err.message, { statusCode: err.statusCode });
+    case 'unreachable':
+      return ToolError.unavailable(err.code || UNCLASSIFIED.unavailable, err.message);
+    default:
+      return ToolError.internal(UNCLASSIFIED.internal, err.message);
+  }
+};
+
+/**
  * A ceiling on the text in `details`, which the model pays for in tokens while it is already
  * dealing with a failure.
  */
@@ -209,6 +260,9 @@ const boundedDetails = (details) => {
  */
 export function classify(err) {
   if (err instanceof ToolError) return err;
+  if (err?.name === 'GlobalBindingError') return bindingFailure(err);
+  // A second factor this process cannot type: the message says what to run, and by whom.
+  if (isTwoFactorError(err)) return ToolError.auth('TWO_FACTOR_REQUIRED', String(err.message));
 
   const status = err?.statusCode ?? err?.status;
   const code = fromCauses(err, 'code');
@@ -223,6 +277,7 @@ export function classify(err) {
   // a worse answer than "we do not know what this is".
   if (status >= 400) {
     if (isPartnerPortalUnavailable(err)) return portalOutage(err, details);
+    if (isTokenRefusal(err)) return tokenRefusal(err, details);
 
     const kind = kindForStatus(status);
     // A Map, so a status arriving as a string cannot reach Object.prototype.

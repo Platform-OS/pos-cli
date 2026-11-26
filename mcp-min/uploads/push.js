@@ -46,9 +46,10 @@ const uploadsPushTool = {
     // which told the caller a TypeError of ours was worth retrying.
     let uploadUrl, accessUrl;
     try {
-      // Passed, not exported: MARKETPLACE_* is process-wide, so this call and a deploy's
-      // background upload could each restore the other's values.
-      ({ uploadUrl, accessUrl } = await presignUrlFn(s3Path, filePath, { url: auth.url, token: auth.token }));
+      // The Gateway, not MARKETPLACE_*: those are process-wide, so this call and a deploy's
+      // background upload could each restore the other's values. The Gateway also carries this
+      // call's two-factor session, which a presign has to present like any other instance call.
+      ({ uploadUrl, accessUrl } = await presignUrlFn(s3Path, filePath, gateway));
       await uploadFileFn(filePath, uploadUrl);
     } catch (e) {
       if (e instanceof ToolError) throw e;

@@ -20,6 +20,10 @@ program
     'if you have a token you can add it directly to pos-cli configuration without connecting to portal'
   )
   .option(
+    '--portal <name>',
+    'use the global token of a portal added with pos-cli portal add, instead of a token for this instance alone. Example: shared'
+  )
+  .option(
     '--otp-code <otpCode>',
     'two-factor code (or a recovery code) for accounts with 2FA enabled. Can also be set as POS_PORTAL_OTP_CODE. Only needed with --email; you are prompted for one when it is missing'
   )

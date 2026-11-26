@@ -437,4 +437,86 @@ describe('a rejected stored credential says how it is fixed', () => {
     expect(result.error.kind).toBe(kind);
     expect(result.error.details).toBeUndefined();
   });
+  /** The Instance's and the Partner Portal's refusals of a valid token for what it may not do. */
+  const tokenRefusal = (error, extra = {}) => () => Object.assign(new Error('Request failed with status 403'), {
+    name: 'StatusCodeError',
+    statusCode: 403,
+    options: { uri: 'https://staging.example.com/api/graph' },
+    response: { statusCode: 403, body: { error, ...extra } }
+  });
+
+  // The token is valid, so a refresh hands back one with the same scopes: the advice `auth` carries
+  // everywhere else is the one thing that cannot help here.
+  test.each([
+    ['insufficient_scope', 'INSUFFICIENT_SCOPE', { required_scopes: ['records:write'] }],
+    ['instance_not_covered', 'INSTANCE_NOT_COVERED', {}],
+    ['two_factor_not_enabled', 'TWO_FACTOR_NOT_ENABLED', {}]
+  ])('a token refused with %s is told so, and not sent to refresh-token', async (error, code, extra) => {
+    const result = await runTool(refused(tokenRefusal(error, extra)), { env: 'staging' }, context());
+
+    expect(result.error).toMatchObject({ kind: 'auth', code });
+    expect(result.error.message).not.toBe('Request failed with status 403');
+    expect(result.error.details).not.toHaveProperty('remedy');
+  });
+
+  test('a missing scope is named, and kept as a field', async () => {
+    const result = await runTool(refused(tokenRefusal('insufficient_scope', { required_scopes: ['records:write'] })), { env: 'staging' }, context());
+
+    expect(result.error.message).toContain('records:write');
+    expect(result.error.details.requiredScopes).toEqual(['records:write']);
+  });
+
+  // A second factor this process cannot type was `internal`, "a defect in pos-cli".
+  test('a two-factor stop is an auth failure that a refresh cannot fix', async () => {
+    const twoFactor = () => Object.assign(new Error('Run `pos-cli deploy staging` again: it asks for a code.'), { name: 'TwoFactorError' });
+    const result = await runTool(refused(twoFactor), { env: 'staging' }, context());
+
+    expect(result.error).toMatchObject({ kind: 'auth', code: 'TWO_FACTOR_REQUIRED' });
+    expect(result.error.details).toBeUndefined();
+  });
+
+  // `env refresh-token` refuses a portal environment: its portal's token is the one to renew.
+  test('a portal environment is sent to renew its portal, not to refresh-token', async () => {
+    const config = { staging: { url: 'https://staging.example.com', portal: 'shared' } };
+    const ctx = {
+      files: { getConfig: () => config },
+      settings: { settingsFromDotPos: () => ({ url: 'https://staging.example.com', portal: 'shared', token: 'per-instance' }) }
+    };
+
+    // No portals here: a developer's own `shared` portal would otherwise be bound against for real.
+    vi.stubEnv('POS_PORTALS_FILE', path.join(MCP_MIN, '__tests__', 'no-such-portals.json'));
+    const result = await runTool(refused(), { env: 'staging' }, ctx);
+
+    expect(result.error.details.remedy.command).toBe('pos-cli portal add shared --force');
+  });
+
+  // A `.pos` copied from a colleague names a portal this machine has not added.
+  test('a portal that is not on this machine is a project failure naming the command to add it', async () => {
+    const config = { staging: { url: 'https://staging.example.com', portal: 'shared' } };
+    const ctx = {
+      files: { getConfig: () => config },
+      settings: { settingsFromDotPos: () => { throw new Error('There is no portal named "shared" on this machine.'); } }
+    };
+
+    const result = await runTool(refused(), { env: 'staging' }, ctx);
+
+    expect(result.error).toMatchObject({ kind: 'project', code: 'PORTAL_MISSING' });
+    expect(result.error.details.remedy).toMatchObject({ command: 'pos-cli portal add shared --url <partner portal url>', runBy: expect.stringMatching(/person/) });
+  });
+
+  test.each([
+    ['refused', 'auth', 'GLOBAL_TOKEN_REFUSED'],
+    ['instance_not_covered', 'auth', 'INSTANCE_NOT_COVERED'],
+    ['portal_error', 'unavailable', 'PARTNER_PORTAL_UNAVAILABLE'],
+    ['unreachable', 'unavailable', 'ECONNREFUSED']
+  ])('a global token that could not be bound (%s) keeps its message, and is not a defect', async (reason, kind, code) => {
+    const failure = () => Object.assign(new Error('The global token was refused by https://partners.example.com.'), {
+      name: 'GlobalBindingError', reason, portal: 'shared', code: 'ECONNREFUSED'
+    });
+    const result = await runTool(refused(failure), { env: 'staging' }, context());
+
+    expect(result.error).toMatchObject({ kind, code, message: 'The global token was refused by https://partners.example.com.' });
+    if (reason === 'refused') expect(result.error.details.remedy.command).toBe('pos-cli portal add shared --force');
+    else expect(result.error.details?.remedy).toBeUndefined();
+  });
 });

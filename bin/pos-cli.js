@@ -38,6 +38,7 @@ program
   .command('mcp-config', 'display the MCP server tool configuration')
   .command('migrations', 'manage migrations')
   .command('modules', 'manage modules')
+  .command('portal', 'manage Partner Portals this machine is signed in to (global tokens shared by environments)')
   .command('pull', 'export app data to a zip file')
   .command('sync <environment>', 'update environment on file change').alias('s')
   .command('test', 'run tests on instance')
